@@ -1,0 +1,52 @@
+selscan is an implementation of some haplotype based scans for selection including iHS and XP-EHH.
+
+A typical iHS scan would be run something like:
+
+./selscan --ihs --alt --hap <haplotypes> --map <mapfile> --out <outfile>
+
+Other options are below, currently listed without much explanation.  Some options have not been tested, but iHS and XPEHH are working correctly.
+
+--alt <bool> If --ihs is set, this flag will calculate the exact homozygosity of the sample instead of using allele frequencies.
+	If --sumsq or --sqsum or --sumfreq is set, this flag will change ratio from H_c/H to H_c/(H_r + 1).
+
+--cutoff <double> The EHH decay cutoff.
+
+--filter <double> If a site has a MAF below this value, the program will not use it as a core snp.
+
+--gap-scale <int> Gap scale parameter.  If a gap is encountered between two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is scaled by GAP_SCALE/GAP.
+
+--garud <bool> Set this flag to calculate the Garud et al. statistic.
+
+--hap <string> A hapfile with one row per individual, and one column per variant.  Variants should be coded 0/1/-9.
+
+--hapfreq <double> The rare haplotype frequency cutoff.
+
+--help <bool> Prints this help dialog.
+
+--ihp <bool> Set this flag to calculate iHP.
+
+--ihs <bool> Set this flag to calculate iHS.
+
+--map <string> A mapfile with one row per variant site.  Formatted <chr#> <locusID> <genetic pos> <physical pos>.
+
+--max-gap <int> Maximum allowed gap between two snps.
+
+--out <string> The basename for all output files.
+
+--query <string> Query a specific locus instead of scanning the whole dataset.
+
+--qwin <int> The length of the query window in each direction from the query locus.
+
+--ref <string> A hapfile with one row per individual, and one column per variant.  Variants should be coded 0/1/-9. This is the reference population for XP-EHH
+ calculations.  Ignored otherwise.
+
+--sqsum <bool> Set this flag to calculate the square of the summed allele frequencies * ratio.
+
+--sumfreq <bool> Set this flag to calculate the sum of the allele frequencies * ratio.
+
+--sumsq <bool> Set this flag to calculate the sum of squared allele frequencies * ratio.
+
+--threads <int> The number of threads to spawn during the calculation.  Partitions locus calculations across threads.
+
+--xpehh <bool> Set this flag to calculate XP-EHH.
+
