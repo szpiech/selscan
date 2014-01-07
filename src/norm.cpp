@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <gsl/gsl_statistics.h>
+#include <gsl/gsl_sort.h>
 
 using namespace std;
 
@@ -41,7 +42,7 @@ int checkIHSfile(ifstream &fin);
 void readAll(ifstream fin[],int fileLoci[], int nfiles, double freq[], double score[]);
 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
-void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[]);
+void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff,double lowerCutoff);
 
 //void normalizeBins(double freq[], double data[], int nloci, int numBins);
 int countFields(const string &str);
@@ -67,6 +68,7 @@ int main(int argc, char* argv[])
   int* fileLoci = new int[nfiles];
   ifstream* fin = new ifstream[nfiles];
   ofstream* fout = new ofstream[nfiles];
+  ofstream fout2;
   int totalLoci = 0;
 
   if(!isint(argv[1]))
@@ -114,7 +116,27 @@ int main(int argc, char* argv[])
 
     }
 
+
+
+  string infoOutfile = filename[0];
+  infoOutfile += ".bins.info";
+  
+  fout2.open(infoOutfile.c_str());
+  
+  if(fout2.fail())
+    {
+      cerr << "ERROR: Could not open " << infoOutfile << " for reading.\n";
+      return 1;
+    }
+  fout2 << "Input files:\n";
+  for(int i = 0; i < nfiles; i++)
+    {
+      fout2 << filename[i] << endl;
+    }
+
   cerr << "Total loci: " << totalLoci << endl;
+  fout2 << "Total loci: " << totalLoci << endl;
+
 
   for(int i = 0; i < nfiles; i++)
     {
@@ -126,11 +148,17 @@ int main(int argc, char* argv[])
 
       if(fout[i].fail())
 	{
-	  cerr << "ERROR: Could not open " << filename << " for reading.\n";
+	  cerr << "ERROR: Could not open " << outfilename[i] << " for reading.\n";
 	  return 1;
 	}
     }
 
+  fout2 << "\nOutput files:\n";
+  for(int i = 0; i < nfiles; i++)
+    {
+      fout2 << outfilename[i] << endl;
+    }
+  fout2 << endl;
 
   cerr << "Reading all frequency and iHS data.\n";
   double* freq = new double[totalLoci];
@@ -165,19 +193,32 @@ int main(int argc, char* argv[])
   cerr << "Calculating mean and variance per frequency bin.\n";
   getMeanVarBins(freq,score,totalLoci,mean,variance,n,numBins,threshold);
 
+  gsl_sort(score, 1, totalLoci);
+  double upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.995);
+  double lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.005);
+
+  cerr << "Top 0.5% cutoff: " << upperCutoff << endl;
+  cerr << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
+  fout2 << "Top 0.5% cutoff: " << upperCutoff << endl;
+  fout2 << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
+
   delete [] freq;
   delete [] score;
-
-  cout << "bin\tnum\tmean\tvariance\n";
+  
+  //Output bins info to file.
+  fout2 << "bin\tnum\tmean\tvariance\n";
   for(int i = 0; i < numBins; i++)
     {
-      cout << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+      fout2 << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
     }
+  fout2.close();
 
+
+  //Read each file and create normed files.
   for (int i = 0; i < nfiles; i++)
     {
       cerr << "Normalizing " << filename[i] << "\n";
-      normalizeDataByBins(fin[i],fout[i],fileLoci[i],mean,variance,n,numBins,threshold);
+      normalizeDataByBins(fin[i],fout[i],fileLoci[i],mean,variance,n,numBins,threshold,upperCutoff,lowerCutoff);
     }
 
   cerr << "Finished.\n";
@@ -224,10 +265,27 @@ void getMeanVarBins(double freq[], double data[], int nloci, double mean[], doub
       mean[b] = temp;
     }
 
+  //normalize the full data array
+  //so that we can calculate quntiles later
+  for (int i = 0; i < nloci; i++)
+    {
+      if(data[i] == MISSING) continue;
+      for (int b = 0; b < numBins; b++)
+	{
+	  if(freq[i] < threshold[b])
+	    {
+	      data[i] = (data[i] - mean[b]) / sqrt(variance[b]);
+	      break;
+	    }
+	}
+    }
+ 
   return;
 }
 
-void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[])
+//Reads a file, calculates the normalized score, and
+//outputs the original row plus normed score
+void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff, double lowerCutoff)
 {
 
   string name;
@@ -263,7 +321,9 @@ void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double me
 	       << ihh1 << "\t" 
 	       << ihh2 << "\t" 
 	       << data << "\t" 
-	       << normedData << endl;
+	       << normedData << "\t";
+	  if(normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
+	  else fout << "0\n";
 	}
     }
 
