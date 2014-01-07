@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include <vector>
 #include <cctype>
 
 using namespace std;
@@ -20,6 +21,9 @@ class param_t
   bool addFlag(string flag, char value, string label, string description);
   bool addFlag(string flag, string value, string label, string description);
   bool addFlag(string flag, const char value[], string label, string description);
+
+  bool addListFlag(string flag, string value, string label, string description);
+  bool addListFlag(string flag, const char value[], string label, string description);
   
   void printHelp();
 
@@ -31,6 +35,8 @@ class param_t
   char getCharFlag(string flag);
   string getStringFlag(string flag);
 
+  vector<string> getStringListFlag(string flag);
+
   param_t();
 
 
@@ -41,6 +47,8 @@ class param_t
   map<string,int> argi;
   map<string,char> argch;
   map<string,string> args;
+
+  map<string,vector< string > > listargs;
 
   map<string,string> help;
   map<string,bool> isSet;
