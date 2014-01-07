@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cctype>
+#include <vector>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_sort.h>
 
@@ -43,6 +44,8 @@ void readAll(ifstream fin[],int fileLoci[], int nfiles, double freq[], double sc
 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
 void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff,double lowerCutoff);
+
+void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles);
 
 //void normalizeBins(double freq[], double data[], int nloci, int numBins);
 int countFields(const string &str);
@@ -219,13 +222,92 @@ int main(int argc, char* argv[])
     {
       cerr << "Normalizing " << filename[i] << "\n";
       normalizeDataByBins(fin[i],fout[i],fileLoci[i],mean,variance,n,numBins,threshold,upperCutoff,lowerCutoff);
+      fin[i].close();
+      fout[i].close();
     }
 
   cerr << "Finished.\n";
 
   delete [] threshold;
 
+  analyzeWindows(outfilename,fileLoci,nfiles,100000,20);
+
+
   return 0;
+}
+
+void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles)
+{
+  //int totalLoci = 0;
+  //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
+  vector<int>* winStarts = new vector<int>[nfiles];
+  vector<int>* nSNPs = new vector<int>[nfiles];
+  vector<double>* fracCrit = new vector<double>[nfiles];
+
+  ifstream* fin = new ifstream[nfiles];
+  ofstream* fout = new ofstream[nfiles];
+  string* winfilename = new string[nfiles];
+
+  char str[10];
+  sprintf(str,"%d",winSize/1000);
+
+  string name;
+  int pos;
+  double freq, ihh1, ihh2, data, normedData;
+  bool crit;
+
+  for (int i = 0; i < nfiles; i++)
+    {
+      fin[i].open(normedfiles[i].c_str());
+      if(fin[i].fail())
+	{
+	  cerr << "ERROR: Could not open " << normedfiles[i] << " for reading.\n";
+	  throw -1;
+	}
+      //generate winfile names
+      winfilename[i] = normedfiles[i];
+      winfilename[i] += ".";
+      winfilename[i] += str;
+      winfilename[i] += "kb.windows";
+
+      //Load information into vectors for analysis
+      int winStart = 1;
+      int winEnd = winStart + winSize - 1;
+      int numSNPs = 0;
+      int numCrit = 0;
+      for(int j = 0; j < fileLoci[i]; j++)
+	{
+	  fin[i] >> name;
+	  fin[i] >> pos;
+	  fin[i] >> freq;
+	  fin[i] >> ihh1;
+	  fin[i] >> ihh2;
+	  fin[i] >> data;
+	  fin[i] >> normedData;
+	  fin[i] >> crit;
+	  
+	  while(pos > winEnd)
+	    {
+	      winStarts[i].push_back(winStart);
+	      nSNPs[i].push_back(numSNPs);
+	      fracCrit[i].push_back(double(numCrit)/double(numSNPs));
+	      cerr << winStart << "\t" << winEnd << "\t" << numSNPs << "\t" << double(numCrit)/double(numSNPs) << endl;
+	      winStart += winSize;
+	      winEnd += winSize;
+	      numSNPs = 0;
+	      numCrit = 0;
+	    }
+
+	  numSNPs++;
+	  numCrit+=crit;
+
+	}
+
+
+    }
+  
+  
+
 }
 
 
