@@ -17,8 +17,29 @@
 #include <vector>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_sort.h>
+#include "param_t.h"
 
 using namespace std;
+
+string ARG_FREQ_BINS = "--bins";
+int DEFAULT_FREQ_BINS = 100;
+string HELP_FREQ_BINS = "The number of frequency bins in [0,1] for score normalization.";
+
+string ARG_FILES = "--files";
+string DEFAULT_FILES = "infile";
+string HELP_FILES = "A list of files delimited by whitespace for joint normalization.  Expected format:\n\t<locus name> <positon> <freq> <ihh1> <ihh2> <ihs>";
+
+string ARG_LOG = "--log";
+string DEFAULT_LOG = "logfile";
+string HELP_LOG = "The log file name.";
+
+string ARG_WINSIZE = "--winsize";
+int DEFAULT_WINSIZE = 100000;
+string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage of extreme SNPs.";
+
+string ARG_QBINS = "--qbins";
+int DEFAULT_QBINS = 20;
+string HELP_QBINS = "Outlying windows are binned by number of sites within each window.  This is the number of quantile bins to use.";
 
 const int MISSING = -9999;
 
@@ -51,42 +72,62 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 int countFields(const string &str);
 bool isint(string str);
 
+ofstream flog;
+
 int main(int argc, char* argv[])
 {
-  if (argc <= 2)
+  param_t params;
+
+  params.addFlag(ARG_FREQ_BINS,DEFAULT_FREQ_BINS,"",HELP_FREQ_BINS);
+  params.addListFlag(ARG_FILES,DEFAULT_FILES,"",HELP_FILES);
+  params.addFlag(ARG_LOG,DEFAULT_LOG,"",HELP_LOG);
+  params.addFlag(ARG_WINSIZE,DEFAULT_WINSIZE,"",HELP_WINSIZE);
+  params.addFlag(ARG_QBINS,DEFAULT_QBINS,"",HELP_QBINS);
+
+  try
     {
-      cerr << "USAGE: " << argv[0] << " <bins> <infile1> ... <infileN>\n";
-      cerr << "Input files are expected to have the following format:\n"
-	   << "\t<locus name> <positon> <freq> <ihh1> <ihh2> <ihs>\n";
-      cerr << "Normalized scores are output to <infile1>.<bins>bins.norm ... <infileN>.<bins>bins.norm in the following format:\n"
-	   << "\t<locus name> <positon> <freq> <ihh1> <ihh2> <ihs> <normed ihs>\n";
-      return 0;
+      params.parseCommandLine(argc,argv);
     }
-
-  int nfiles = argc-2;
-  cerr << "You have provided "<< nfiles << " iHS output files for joint normalization.\n";
-
-  string* filename = new string[nfiles];
-  string* outfilename = new string[nfiles];
-  int* fileLoci = new int[nfiles];
-  ifstream* fin = new ifstream[nfiles];
-  ofstream* fout = new ofstream[nfiles];
-  ofstream fout2;
-  int totalLoci = 0;
-
-  if(!isint(argv[1]))
+  catch (...)
     {
-      cerr << "ERROR: Number of frequency bins must be an integer.\n";
       return 1;
     }
+ 
+  int numBins = params.getIntFlag(ARG_FREQ_BINS);
+  vector<string> filename = params.getStringListFlag(ARG_FILES);
+  int nfiles = filename.size();
+  int winSize = params.getIntFlag(ARG_WINSIZE);
+  string infoOutfile = params.getStringFlag(ARG_LOG);
+  int numQBins = params.getIntFlag(ARG_QBINS);
 
-  int numBins = atoi(argv[1]);
-  
   if(numBins <= 0)
     {
       cerr << "ERROR: Must have a positive integer of frequency bins.\n";
       return 1;
     }
+
+  if(numQBins <= 0)
+    {
+      cerr << "ERROR: Must have a positive integer of quantile bins.\n";
+      return 1;
+    }
+  
+  if(winSize <= 0)
+    {
+      cerr << "ERROR: Must have a positive integer window size.\n";
+      return 1;
+    }
+
+  cerr << "You have provided "<< nfiles << " iHS output files for joint normalization.\n";
+
+  //string* filename = new string[nfiles];
+  string* outfilename = new string[nfiles];
+  int* fileLoci = new int[nfiles];
+  ifstream* fin = new ifstream[nfiles];
+  ofstream* fout = new ofstream[nfiles];
+  int totalLoci = 0;
+ 
+  
   
   //For each file, open it, and check it for integrity
   //Also record total number of lines so we can allocate
@@ -94,11 +135,11 @@ int main(int argc, char* argv[])
   //be used to calculate E[X] and E[X^2]
   for(int i = 0; i < nfiles; i++)
     {
-      filename[i] = argv[i+2];
+      //filename[i] = argv[i+2];
       fin[i].open(filename[i].c_str());
       if(fin[i].fail())
 	{
-	  cerr << "ERROR: Could not open " << filename << " for reading.\n";
+	  cerr << "ERROR: Could not open " << filename[i] << " for reading.\n";
 	  return 1;
 	}
       else
@@ -118,27 +159,22 @@ int main(int argc, char* argv[])
 	}
 
     }
-
-
-
-  string infoOutfile = filename[0];
-  infoOutfile += ".bins.info";
   
-  fout2.open(infoOutfile.c_str());
+  flog.open(infoOutfile.c_str());
   
-  if(fout2.fail())
+  if(flog.fail())
     {
       cerr << "ERROR: Could not open " << infoOutfile << " for reading.\n";
       return 1;
     }
-  fout2 << "Input files:\n";
+  flog << "Input files:\n";
   for(int i = 0; i < nfiles; i++)
     {
-      fout2 << filename[i] << endl;
+      flog << filename[i] << endl;
     }
 
   cerr << "Total loci: " << totalLoci << endl;
-  fout2 << "Total loci: " << totalLoci << endl;
+  flog << "Total loci: " << totalLoci << endl;
 
 
   for(int i = 0; i < nfiles; i++)
@@ -156,12 +192,12 @@ int main(int argc, char* argv[])
 	}
     }
 
-  fout2 << "\nOutput files:\n";
+  flog << "\nOutput files:\n";
   for(int i = 0; i < nfiles; i++)
     {
-      fout2 << outfilename[i] << endl;
+      flog << outfilename[i] << endl;
     }
-  fout2 << endl;
+  flog << endl;
 
   cerr << "Reading all frequency and iHS data.\n";
   double* freq = new double[totalLoci];
@@ -202,19 +238,19 @@ int main(int argc, char* argv[])
 
   cerr << "Top 0.5% cutoff: " << upperCutoff << endl;
   cerr << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
-  fout2 << "Top 0.5% cutoff: " << upperCutoff << endl;
-  fout2 << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
+  flog << "Top 0.5% cutoff: " << upperCutoff << endl;
+  flog << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
 
   delete [] freq;
   delete [] score;
   
   //Output bins info to file.
-  fout2 << "bin\tnum\tmean\tvariance\n";
+  flog << "bin\tnum\tmean\tvariance\n";
   for(int i = 0; i < numBins; i++)
     {
-      fout2 << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+      flog << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
     }
-  fout2.close();
+  flog.close();
 
 
   //Read each file and create normed files.
@@ -230,7 +266,7 @@ int main(int argc, char* argv[])
 
   delete [] threshold;
 
-  analyzeWindows(outfilename,fileLoci,nfiles,100000,20);
+  analyzeWindows(outfilename,fileLoci,nfiles,winSize,numQBins);
 
 
   return 0;
