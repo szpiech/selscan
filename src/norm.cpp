@@ -41,34 +41,23 @@ string ARG_QBINS = "--qbins";
 int DEFAULT_QBINS = 20;
 string HELP_QBINS = "Outlying windows are binned by number of sites within each window.  This is the number of quantile bins to use.";
 
-const int MISSING = -9999;
+string ARG_MINSNPS = "--min-snps";
+int DEFAULT_MINSNPS = 10;
+string HELP_MINSNPS = "Only consider a window if it has at least this many SNPs.";
 
-struct data_t
-{
-  int *pos;
-  double *freq;
-  double *data;
-  double *ihh1;
-  double *ihh2;
-  int nloci;
-  int ncols;
-  string *lociNames;
-};
+const int MISSING = -9999;
 
 //returns number of lines in file
 //throws 0 if the file fails
 int checkIHSfile(ifstream &fin);
 
-//void normalizeScores(double data[], int nloci);
-//void readData(ifstream &fin, data_t &data);
 void readAll(ifstream fin[],int fileLoci[], int nfiles, double freq[], double score[]);
 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
 void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff,double lowerCutoff);
 
-void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles);
+void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
 
-//void normalizeBins(double freq[], double data[], int nloci, int numBins);
 int countFields(const string &str);
 bool isint(string str);
 
@@ -83,6 +72,7 @@ int main(int argc, char* argv[])
   params.addFlag(ARG_LOG,DEFAULT_LOG,"",HELP_LOG);
   params.addFlag(ARG_WINSIZE,DEFAULT_WINSIZE,"",HELP_WINSIZE);
   params.addFlag(ARG_QBINS,DEFAULT_QBINS,"",HELP_QBINS);
+  params.addFlag(ARG_MINSNPS,DEFAULT_MINSNPS,"",HELP_MINSNPS);
 
   try
     {
@@ -99,6 +89,7 @@ int main(int argc, char* argv[])
   int winSize = params.getIntFlag(ARG_WINSIZE);
   string infoOutfile = params.getStringFlag(ARG_LOG);
   int numQBins = params.getIntFlag(ARG_QBINS);
+  int minSNPs = params.getIntFlag(ARG_MINSNPS);
 
   if(numBins <= 0)
     {
@@ -127,8 +118,16 @@ int main(int argc, char* argv[])
   ofstream* fout = new ofstream[nfiles];
   int totalLoci = 0;
  
+  //logging
+  flog.open(infoOutfile.c_str());
+  if(flog.fail())
+    {
+      cerr << "ERROR: Could not open " << infoOutfile << " for reading.\n";
+      return 1;
+    }
   
-  
+  flog << "Input files:\n";
+
   //For each file, open it, and check it for integrity
   //Also record total number of lines so we can allocate
   //enough space for the array of paired data that will
@@ -140,11 +139,13 @@ int main(int argc, char* argv[])
       if(fin[i].fail())
 	{
 	  cerr << "ERROR: Could not open " << filename[i] << " for reading.\n";
+	  flog << "ERROR: Could not open " << filename[i] << " for reading.\n";
 	  return 1;
 	}
       else
 	{
 	  cerr << "Opened " << filename[i] << endl;
+	  flog << filename[i] << endl;
 	}
 
       //check integrity of file and keep count of the number of lines
@@ -159,22 +160,9 @@ int main(int argc, char* argv[])
 	}
 
     }
-  
-  flog.open(infoOutfile.c_str());
-  
-  if(flog.fail())
-    {
-      cerr << "ERROR: Could not open " << infoOutfile << " for reading.\n";
-      return 1;
-    }
-  flog << "Input files:\n";
-  for(int i = 0; i < nfiles; i++)
-    {
-      flog << filename[i] << endl;
-    }
 
-  cerr << "Total loci: " << totalLoci << endl;
-  flog << "Total loci: " << totalLoci << endl;
+  cerr << "\nTotal loci: " << totalLoci << endl;
+  flog << "\nTotal loci: " << totalLoci << endl;
 
 
   for(int i = 0; i < nfiles; i++)
@@ -229,29 +217,30 @@ int main(int argc, char* argv[])
       threshold[b] = minFreq + (b+1)*step;
     }
 
-  cerr << "Calculating mean and variance per frequency bin.\n";
+  cerr << "Calculating mean and variance per frequency bin:\n\n";
   getMeanVarBins(freq,score,totalLoci,mean,variance,n,numBins,threshold);
 
   gsl_sort(score, 1, totalLoci);
   double upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.995);
   double lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.005);
 
-  cerr << "Top 0.5% cutoff: " << upperCutoff << endl;
-  cerr << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
-  flog << "Top 0.5% cutoff: " << upperCutoff << endl;
-  flog << "Bottom 0.5% cutoff: " << lowerCutoff << endl;
+  cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
+  cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+  flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
+  flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
 
   delete [] freq;
   delete [] score;
   
   //Output bins info to file.
+  cerr << "bin\tnum\tmean\tvariance\n";
   flog << "bin\tnum\tmean\tvariance\n";
   for(int i = 0; i < numBins; i++)
     {
+      cerr << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
       flog << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
     }
-  flog.close();
-
+  
 
   //Read each file and create normed files.
   for (int i = 0; i < nfiles; i++)
@@ -262,17 +251,22 @@ int main(int argc, char* argv[])
       fout[i].close();
     }
 
-  cerr << "Finished.\n";
-
   delete [] threshold;
+  delete [] mean;
+  delete [] variance;
+  delete [] n;
+  delete [] fin;
+  delete [] fout;
 
-  analyzeWindows(outfilename,fileLoci,nfiles,winSize,numQBins);
+  cerr << "\nAnalyzing windows:\n\n";
 
+  analyzeWindows(outfilename,fileLoci,nfiles,winSize,numQBins,minSNPs);
 
+  flog.close();
   return 0;
 }
 
-void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles)
+void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
   //int totalLoci = 0;
   //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
@@ -291,6 +285,7 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
   int pos;
   double freq, ihh1, ihh2, data, normedData;
   bool crit;
+  int numWindows = 0;
 
   for (int i = 0; i < nfiles; i++)
     {
@@ -305,6 +300,13 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
       winfilename[i] += ".";
       winfilename[i] += str;
       winfilename[i] += "kb.windows";
+
+      fout[i].open(winfilename[i].c_str());
+      if(fout[i].fail())
+	{
+	  cerr << "ERROR: Could not open " << winfilename[i] << " for writing.\n";
+	  throw -1;
+	}
 
       //Load information into vectors for analysis
       int winStart = 1;
@@ -326,8 +328,11 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 	    {
 	      winStarts[i].push_back(winStart);
 	      nSNPs[i].push_back(numSNPs);
-	      fracCrit[i].push_back(double(numCrit)/double(numSNPs));
-	      cerr << winStart << "\t" << winEnd << "\t" << numSNPs << "\t" << double(numCrit)/double(numSNPs) << endl;
+	      if(numSNPs == 0) fracCrit[i].push_back(-1);
+	      else fracCrit[i].push_back(double(numCrit)/double(numSNPs));
+	      
+	      if(numSNPs >= minSNPs && numCrit > 0) numWindows++;
+	      
 	      winStart += winSize;
 	      winEnd += winSize;
 	      numSNPs = 0;
@@ -339,11 +344,154 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 
 	}
 
+      //numWindows += winStarts[i].size();
 
     }
   
+  for(int i = 0; i < nfiles; i++) fin[i].close();
+  delete [] fin;
   
+  cerr << numWindows << " nonzero windows.\n";
+  flog << numWindows << " nonzero windows.\n";
+  double* allSNPsPerWindow = new double[numWindows];
+  double* allFracCritPerWindow = new double[numWindows];
+  int k = 0;
+  //Load all num SNPs per window into a single double vector to determine quantile boundaries across
+  for (int i = 0; i < nfiles; i++)
+    {
+      for (int j = 0; j < nSNPs[i].size();j++)
+	{
+	  if(nSNPs[i][j] >= minSNPs && fracCrit[i][j] > 0)
+	    {
+	      allSNPsPerWindow[k] = nSNPs[i][j];
+	      allFracCritPerWindow[k] = fracCrit[i][j];
+	      k++;
+	    }
+	}
+    }
 
+  //Sort allSNPsPerWindow and rearrange allFracCritPerWindow based on that sorting
+  gsl_sort2(allSNPsPerWindow, 1, allFracCritPerWindow, 1, numWindows);
+  
+  double* quantileBound = new double[numQuantiles];
+  //determine quantile boundaries
+  for (int i = 0; i < numQuantiles; i++)
+    {
+      quantileBound[i] = gsl_stats_quantile_from_sorted_data (allSNPsPerWindow, 1, numWindows, double(i+1)/double(numQuantiles));
+    }
+
+  /*
+   *instead of splitting into a mini vector for each quantile bin, just pass a reference to the
+   *start of the slice plus its size to gsl_stats_quantile_from_sorted_data
+   *will need the number of snps per quantile bin
+   */
+  int b = 0;//quantileBoundary index
+  int count = 0;//number in quantile, not necessarily equal across quantiles because of ties
+  int start = 0;//starting index for the sort function
+  map<string,double>* topWindowBoundary = new map<string,double>[numQuantiles];
+  cerr << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+  flog << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+  for(int i = 0; i < numWindows; i++)
+    {
+      if(allSNPsPerWindow[i] <= quantileBound[b])
+	{
+	  count++;
+	}
+      else
+	{
+	  gsl_sort(&(allFracCritPerWindow[start]),1,count);
+	  
+	  topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.999);
+	  topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.995);
+	  topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.990);
+	  topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.950);
+	  
+	  cerr << quantileBound[b] << " " 
+	       << topWindowBoundary[b]["0.1"] << " " 
+	       << topWindowBoundary[b]["0.5"] << " " 
+	       << topWindowBoundary[b]["1.0"] << " " 
+	       << topWindowBoundary[b]["5.0"] << endl;
+	  
+	  flog << quantileBound[b] << " " 
+	       << topWindowBoundary[b]["0.1"] << " " 
+	       << topWindowBoundary[b]["0.5"] << " " 
+	       << topWindowBoundary[b]["1.0"] << " " 
+	       << topWindowBoundary[b]["5.0"] << endl;
+
+	  start = i;
+	  count = 0;
+	  b++;
+	}
+    }
+
+  gsl_sort(&(allFracCritPerWindow[start]),1,count);
+  topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.999);
+  topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.995);
+  topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.990);
+  topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]),1,count,0.950);
+ 
+  cerr << quantileBound[b] << " " 
+       << topWindowBoundary[b]["0.1"] << " " 
+       << topWindowBoundary[b]["0.5"] << " " 
+       << topWindowBoundary[b]["1.0"] << " " 
+       << topWindowBoundary[b]["5.0"] << "\n\n";
+ 
+  flog << quantileBound[b] << " " 
+       << topWindowBoundary[b]["0.1"] << " " 
+       << topWindowBoundary[b]["0.5"] << " " 
+       << topWindowBoundary[b]["1.0"] << " " 
+       << topWindowBoundary[b]["5.0"] << "\n\n";
+ 
+  delete [] allSNPsPerWindow;
+  delete [] allFracCritPerWindow;
+
+  for (int i = 0; i < nfiles; i++)
+    {
+      cerr << "Creating window file " << winfilename[i] << endl;
+      flog << "Creating window file " << winfilename[i] << endl;
+      for (int j = 0; j < nSNPs[i].size();j++)
+	{
+	  if(nSNPs[i][j] < minSNPs || fracCrit[i][j] <= 0)
+	    {
+	      fout[i] << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
+	      continue;
+	    }
+	  double percentile = 100.0;
+	  for (b = 0; b < numQuantiles; b++)
+	    {
+	      if(nSNPs[i][j] <= quantileBound[b]) break;
+	    }
+	  if(fracCrit[i][j] > topWindowBoundary[b]["0.1"])
+	    {
+	      percentile = 0.1;
+	    }
+	  else if (fracCrit[i][j] > topWindowBoundary[b]["0.5"])
+	    {
+	      percentile = 0.5;
+	    }
+	  else if (fracCrit[i][j] > topWindowBoundary[b]["1.0"])
+	    {
+	      percentile = 1.0;
+	    }
+	  else if (fracCrit[i][j] > topWindowBoundary[b]["5.0"])
+	    {
+	      percentile = 5.0;
+	    }
+	 
+	  fout[i] << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
+	}
+    }
+
+  for (int i = 0; i < nfiles; i++) fout[i].close();
+  delete [] fout;
+  delete [] quantileBound;
+  delete [] topWindowBoundary;
+  delete [] winStarts;
+  delete [] nSNPs;
+  delete [] fracCrit;
+  delete [] winfilename;
+  
+  return;
 }
 
 
@@ -448,71 +596,6 @@ void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double me
   return;
 }
 
-/*
-void normalizeBins(double freq[], double data[], int nloci, int numBins)
-{
-  
-  double *mean = new double[numBins];
-  double *variance = new double[numBins];
-  int *n = new int[numBins];
-  
-  //initialize
-  for (int b = 0; b < numBins; b++)
-    {
-      n[b] = 0;
-      mean[b] = 0;
-      variance[b] = 0;
-    }
-
-  //Calculate sum(x_i) stored in mean[b], and sum(x_i^2) stored in variance[b] in each frequency bin b
-  for (int i = 0; i < nloci; i++)
-    {
-      if(data[i] == MISSING) continue;
-      for (int b = 0; b < numBins; b++)
-	{
-	  if(freq[i] < double(b+1)/double(numBins))
-	    {
-	      n[b]++;
-	      mean[b] += data[i];
-	      variance[b] += data[i]*data[i];
-	      break;
-	    }
-	}
-    }
-
-  //Transform the sum(x_i) and sum(x_i^2) into mean and variances for each bin
-  double temp;
-  for (int b = 0; b < numBins; b++)
-    {
-      temp = ( variance[b] - (mean[b]*mean[b])/(n[b]) ) / (n[b] - 1);
-      variance[b] = temp;
-      temp = mean[b]/n[b];
-      mean[b] = temp;
-    }
-
-
-  //For each locus, determine the frequency bin it belongs to
-  //and transform the value
-  for (int i = 0; i < nloci; i++)
-    {
-      if(data[i] == MISSING) continue;
-      for (int b = 0; b < numBins; b++)
-	{
-	  if(freq[i] < double(b+1)/double(numBins))
-	    {
-	      temp = (data[i] - mean[b]) / sqrt(variance[b]);
-	      data[i] = temp;
-	      break;
-	    }
-	}
-    }
-
-  delete [] mean;
-  delete [] variance;
-  delete [] n;
-
-}
-*/
 
 //returns number of lines in file
 int checkIHSfile(ifstream &fin)
