@@ -51,10 +51,10 @@ const int MISSING = -9999;
 //throws 0 if the file fails
 int checkIHSfile(ifstream &fin);
 
-void readAll(ifstream fin[],int fileLoci[], int nfiles, double freq[], double score[]);
+void readAll(vector<string> filename,int fileLoci[], int nfiles, double freq[], double score[]);
 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
-void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff,double lowerCutoff);
+void normalizeDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff,double lowerCutoff);
 
 void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
 
@@ -111,18 +111,21 @@ int main(int argc, char* argv[])
 
   cerr << "You have provided "<< nfiles << " iHS output files for joint normalization.\n";
 
-  //string* filename = new string[nfiles];
   string* outfilename = new string[nfiles];
   int* fileLoci = new int[nfiles];
-  ifstream* fin = new ifstream[nfiles];
-  ofstream* fout = new ofstream[nfiles];
+  
+  //ifstream* fin = new ifstream[nfiles];
+  //ofstream* fout = new ofstream[nfiles];
+  
+  ifstream fin;
+  
   int totalLoci = 0;
  
   //logging
   flog.open(infoOutfile.c_str());
   if(flog.fail())
     {
-      cerr << "ERROR: Could not open " << infoOutfile << " for reading.\n";
+      cerr << "ERROR: " << infoOutfile << " " << strerror(errno) << endl;
       return 1;
     }
   
@@ -134,12 +137,15 @@ int main(int argc, char* argv[])
   //be used to calculate E[X] and E[X^2]
   for(int i = 0; i < nfiles; i++)
     {
-      //filename[i] = argv[i+2];
-      fin[i].open(filename[i].c_str());
-      if(fin[i].fail())
+      char str[10];
+      sprintf(str,"%d",numBins);
+      outfilename[i] = filename[i] + "." + str + "bins.norm";
+
+      fin.open(filename[i].c_str());
+      if(fin.fail())
 	{
-	  cerr << "ERROR: Could not open " << filename[i] << " for reading.\n";
-	  flog << "ERROR: Could not open " << filename[i] << " for reading.\n";
+	  cerr << "ERROR: " << strerror(errno);
+	  flog << "ERROR: " << strerror(errno);
 	  return 1;
 	}
       else
@@ -151,34 +157,18 @@ int main(int argc, char* argv[])
       //check integrity of file and keep count of the number of lines
       try
 	{
-	  fileLoci[i] = checkIHSfile(fin[i]);
+	  fileLoci[i] = checkIHSfile(fin);
 	  totalLoci += fileLoci[i];
 	}
       catch (...)
 	{
 	  return 1;
 	}
-
+      fin.close();
     }
 
   cerr << "\nTotal loci: " << totalLoci << endl;
   flog << "\nTotal loci: " << totalLoci << endl;
-
-
-  for(int i = 0; i < nfiles; i++)
-    {
-      char str[10];
-      sprintf(str,"%d",numBins);
-      outfilename[i] = filename[i] + "." + str + "bins.norm";
-
-      fout[i].open(outfilename[i].c_str());
-
-      if(fout[i].fail())
-	{
-	  cerr << "ERROR: Could not open " << outfilename[i] << " for reading.\n";
-	  return 1;
-	}
-    }
 
   flog << "\nOutput files:\n";
   for(int i = 0; i < nfiles; i++)
@@ -191,7 +181,7 @@ int main(int argc, char* argv[])
   double* freq = new double[totalLoci];
   double* score = new double[totalLoci];
   //read in all data 
-  readAll(fin,fileLoci,nfiles,freq,score);
+  readAll(filename,fileLoci,nfiles,freq,score);
 
   double *mean = new double[numBins];
   double *variance = new double[numBins];
@@ -246,17 +236,15 @@ int main(int argc, char* argv[])
   for (int i = 0; i < nfiles; i++)
     {
       cerr << "Normalizing " << filename[i] << "\n";
-      normalizeDataByBins(fin[i],fout[i],fileLoci[i],mean,variance,n,numBins,threshold,upperCutoff,lowerCutoff);
-      fin[i].close();
-      fout[i].close();
+      normalizeDataByBins(filename[i],outfilename[i],fileLoci[i],mean,variance,n,numBins,threshold,upperCutoff,lowerCutoff);
+      //fin[i].close();
+      //fout[i].close();
     }
 
   delete [] threshold;
   delete [] mean;
   delete [] variance;
   delete [] n;
-  delete [] fin;
-  delete [] fout;
 
   cerr << "\nAnalyzing windows:\n\n";
 
@@ -274,8 +262,8 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
   vector<int>* nSNPs = new vector<int>[nfiles];
   vector<double>* fracCrit = new vector<double>[nfiles];
 
-  ifstream* fin = new ifstream[nfiles];
-  ofstream* fout = new ofstream[nfiles];
+  ifstream fin;
+  ofstream fout;
   string* winfilename = new string[nfiles];
 
   char str[10];
@@ -289,25 +277,27 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 
   for (int i = 0; i < nfiles; i++)
     {
-      fin[i].open(normedfiles[i].c_str());
-      if(fin[i].fail())
+      fin.open(normedfiles[i].c_str());
+      if(fin.fail())
 	{
-	  cerr << "ERROR: Could not open " << normedfiles[i] << " for reading.\n";
+	  cerr << "ERROR: " << normedfiles[i] << " " << strerror(errno);
 	  throw -1;
 	}
+
       //generate winfile names
       winfilename[i] = normedfiles[i];
       winfilename[i] += ".";
       winfilename[i] += str;
       winfilename[i] += "kb.windows";
 
+      /*
       fout[i].open(winfilename[i].c_str());
       if(fout[i].fail())
 	{
 	  cerr << "ERROR: Could not open " << winfilename[i] << " for writing.\n";
 	  throw -1;
 	}
-
+      */
       //Load information into vectors for analysis
       int winStart = 1;
       int winEnd = winStart + winSize - 1;
@@ -315,14 +305,14 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
       int numCrit = 0;
       for(int j = 0; j < fileLoci[i]; j++)
 	{
-	  fin[i] >> name;
-	  fin[i] >> pos;
-	  fin[i] >> freq;
-	  fin[i] >> ihh1;
-	  fin[i] >> ihh2;
-	  fin[i] >> data;
-	  fin[i] >> normedData;
-	  fin[i] >> crit;
+	  fin >> name;
+	  fin >> pos;
+	  fin >> freq;
+	  fin >> ihh1;
+	  fin >> ihh2;
+	  fin >> data;
+	  fin >> normedData;
+	  fin >> crit;
 	  
 	  while(pos > winEnd)
 	    {
@@ -343,14 +333,9 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 	  numCrit+=crit;
 
 	}
-
-      //numWindows += winStarts[i].size();
-
+      fin.close();
     }
-  
-  for(int i = 0; i < nfiles; i++) fin[i].close();
-  delete [] fin;
-  
+    
   cerr << numWindows << " nonzero windows.\n";
   flog << numWindows << " nonzero windows.\n";
   double* allSNPsPerWindow = new double[numWindows];
@@ -447,13 +432,19 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 
   for (int i = 0; i < nfiles; i++)
     {
+      fout.open(winfilename[i].c_str());
+      if(fout.fail())
+	{
+	  cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
+	  throw -1;
+	}
       cerr << "Creating window file " << winfilename[i] << endl;
       flog << "Creating window file " << winfilename[i] << endl;
       for (int j = 0; j < nSNPs[i].size();j++)
 	{
 	  if(nSNPs[i][j] < minSNPs || fracCrit[i][j] <= 0)
 	    {
-	      fout[i] << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
+	      fout << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
 	      continue;
 	    }
 	  double percentile = 100.0;
@@ -478,12 +469,11 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 	      percentile = 5.0;
 	    }
 	 
-	  fout[i] << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
+	  fout << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
 	}
+      fout.close();
     }
 
-  for (int i = 0; i < nfiles; i++) fout[i].close();
-  delete [] fout;
   delete [] quantileBound;
   delete [] topWindowBoundary;
   delete [] winStarts;
@@ -551,8 +541,18 @@ void getMeanVarBins(double freq[], double data[], int nloci, double mean[], doub
 
 //Reads a file, calculates the normalized score, and
 //outputs the original row plus normed score
-void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff, double lowerCutoff)
+void normalizeDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff, double lowerCutoff)
 {
+  ifstream fin;
+  ofstream fout;
+
+  fin.open(filename.c_str());
+  fout.open(outfilename.c_str());
+  if(fout.fail())
+    {
+      cerr << "ERROR: " << outfilename << " " << strerror(errno);
+      throw 1;
+    }
 
   string name;
   int pos;
@@ -593,6 +593,9 @@ void normalizeDataByBins(ifstream &fin, ofstream &fout, int &fileLoci, double me
 	}
     }
 
+  fin.close();
+  fout.close();
+
   return;
 }
 
@@ -627,27 +630,26 @@ int checkIHSfile(ifstream &fin)
   return nloci;
 }
 
-void readAll(ifstream fin[], int fileLoci[], int nfiles, double freq[], double score[])
+void readAll(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
+  ifstream fin;
   string junk;
   int overallCount = 0;
   for (int i = 0; i < nfiles; i++)
     {
-      int start = fin[i].tellg();
+      fin.open(filename[i].c_str());
 
       for (int j = 0; j < fileLoci[i]; j++)
 	{
-	  fin[i] >> junk;
-	  fin[i] >> junk;
-	  fin[i] >> freq[overallCount];
-	  fin[i] >> junk;
-	  fin[i] >> junk;
-	  fin[i] >> score[overallCount];
+	  fin >> junk;
+	  fin >> junk;
+	  fin >> freq[overallCount];
+	  fin >> junk;
+	  fin >> junk;
+	  fin >> score[overallCount];
 	  overallCount++;
 	}
-      
-      fin[i].clear();
-      fin[i].seekg(start);
+      fin.close();
     }
 
   return;
