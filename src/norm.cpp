@@ -45,6 +45,18 @@ string ARG_MINSNPS = "--min-snps";
 int DEFAULT_MINSNPS = 10;
 string HELP_MINSNPS = "Only consider a window if it has at least this many SNPs.";
 
+string ARG_SNPWIN = "--snp-win";
+bool DEFAULT_SNPWIN = false;
+string HELP_SNPWIN = "If set, will use windows of a constant SNP size with varying bp length.";
+
+string ARG_SNPWINSIZE = "--snp-win-size";
+int DEFAULT_SNPWINSIZE = 50;
+string HELP_SNPWINSIZE = "The number of SNPs in a window.";
+
+string ARG_BPWIN = "--bp-win";
+bool DEFAULT_BPWIN = false;
+string HELP_BPWIN = "If set, will use windows of a constant bp size with varying number of SNPs.";
+
 const int MISSING = -9999;
 
 //returns number of lines in file
@@ -56,7 +68,7 @@ void readAll(vector<string> filename,int fileLoci[], int nfiles, double freq[], 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
 void normalizeDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[],double upperCutoff,double lowerCutoff);
 
-void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
+void analyzeBPWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
 
 int countFields(const string &str);
 bool isint(string str);
@@ -73,6 +85,10 @@ int main(int argc, char* argv[])
   params.addFlag(ARG_WINSIZE,DEFAULT_WINSIZE,"",HELP_WINSIZE);
   params.addFlag(ARG_QBINS,DEFAULT_QBINS,"",HELP_QBINS);
   params.addFlag(ARG_MINSNPS,DEFAULT_MINSNPS,"",HELP_MINSNPS);
+  params.addFlag(ARG_SNPWIN,DEFAULT_SNPWIN,"",HELP_SNPWIN);
+  params.addFlag(ARG_SNPWINSIZE,DEFAULT_SNPWINSIZE,"",HELP_SNPWINSIZE);
+  params.addFlag(ARG_BPWIN,DEFAULT_BPWIN,"",HELP_BPWIN);
+
 
   try
     {
@@ -90,6 +106,9 @@ int main(int argc, char* argv[])
   string infoOutfile = params.getStringFlag(ARG_LOG);
   int numQBins = params.getIntFlag(ARG_QBINS);
   int minSNPs = params.getIntFlag(ARG_MINSNPS);
+  int snpWinSize = params.getIntFlag(ARG_SNPWINSIZE);
+  bool BPWIN = params.getBoolFlag(ARG_BPWIN);
+  bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
 
   if(numBins <= 0)
     {
@@ -209,7 +228,7 @@ int main(int argc, char* argv[])
 
   cerr << "Calculating mean and variance per frequency bin:\n\n";
   getMeanVarBins(freq,score,totalLoci,mean,variance,n,numBins,threshold);
-
+  /*
   gsl_sort(score, 1, totalLoci);
   double upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.995);
   double lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.005);
@@ -218,7 +237,9 @@ int main(int argc, char* argv[])
   cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
   flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
   flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
-
+  */
+  double upperCutoff = 2;
+  double lowerCutoff = -2;
   delete [] freq;
   delete [] score;
   
@@ -246,16 +267,74 @@ int main(int argc, char* argv[])
   delete [] variance;
   delete [] n;
 
-  cerr << "\nAnalyzing windows:\n\n";
-
-  analyzeWindows(outfilename,fileLoci,nfiles,winSize,numQBins,minSNPs);
+  if(BPWIN) analyzeBPWindows(outfilename,fileLoci,nfiles,winSize,numQBins,minSNPs);
+  //if(SNPWIN) analyzeSNPWindows(outfilename,fileLoci,nfiles,snpWinSize);
 
   flog.close();
   return 0;
 }
-
-void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+/*
+void analyzeSNPWindows(string normedfiles[],int fileLoci[], int nfiles, int snpWinSize)
 {
+  cerr << "\nAnalyzing SNP windows:\n\n";
+  vector<int>* winStarts = new vector<int>[nfiles];
+  vector<int>* winEnds = new vector<int>[nfiles];
+  vector<string>* startSNP = new vector<int>[nfiles];
+  vector<string>* endSNP = new vector<int>[nfiles];
+  vector<double>* fracCrit = new vector<double>[nfiles];
+  ifstream fin;
+  ofstream fout;
+  string* winfilename = new string[nfiles];
+  
+  char str[10];
+  sprintf(str,"%d",snpWinSize);
+
+  string name;
+  int pos;
+  double freq, ihh1, ihh2, data, normedData;
+  bool crit;
+  int numWindows = 0;
+
+  for (int i = 0; i < nfiles; i++)
+    {
+      fin.open(normedfiles[i].c_str());
+      if(fin.fail())
+	{
+	  cerr << "ERROR: " << normedfiles[i] << " " << strerror(errno);
+	  throw -1;
+	}
+      
+      //generate winfile names
+      winfilename[i] = normedfiles[i];
+      winfilename[i] += ".";
+      winfilename[i] += str;
+      winfilename[i] += "snp.windows";
+
+      //Load information into vectors for analysis
+      int winStart = 1;
+      int winEnd = winStart + winSize - 1;
+      int snpsInWin = 0;
+      int numCrit = 0;
+      for(int j = 0; j < fileLoci[i]; j++)
+	{
+	  fin >> name;
+	  fin >> pos;
+	  fin >> freq;
+	  fin >> ihh1;
+	  fin >> ihh2;
+	  fin >> data;
+	  fin >> normedData;
+	  fin >> crit;
+
+	  snpsInWin++;
+	  numCrit+=crit;
+	}
+    }
+}
+*/
+void analyzeBPWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+{
+  cerr << "\nAnalyzing BP windows:\n\n";
   //int totalLoci = 0;
   //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
   vector<int>* winStarts = new vector<int>[nfiles];
@@ -290,14 +369,6 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
       winfilename[i] += str;
       winfilename[i] += "kb.windows";
 
-      /*
-      fout[i].open(winfilename[i].c_str());
-      if(fout[i].fail())
-	{
-	  cerr << "ERROR: Could not open " << winfilename[i] << " for writing.\n";
-	  throw -1;
-	}
-      */
       //Load information into vectors for analysis
       int winStart = 1;
       int winEnd = winStart + winSize - 1;
@@ -448,25 +519,27 @@ void analyzeWindows(string normedfiles[],int fileLoci[], int nfiles, int winSize
 	      continue;
 	    }
 	  double percentile = 100.0;
+
 	  for (b = 0; b < numQuantiles; b++)
 	    {
 	      if(nSNPs[i][j] <= quantileBound[b]) break;
 	    }
-	  if(fracCrit[i][j] > topWindowBoundary[b]["0.1"])
+
+	  if(fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
 	    {
-	      percentile = 0.1;
+	      percentile = 5.0;
 	    }
-	  else if (fracCrit[i][j] > topWindowBoundary[b]["0.5"])
-	    {
-	      percentile = 0.5;
-	    }
-	  else if (fracCrit[i][j] > topWindowBoundary[b]["1.0"])
+	  else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"] && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
 	    {
 	      percentile = 1.0;
 	    }
-	  else if (fracCrit[i][j] > topWindowBoundary[b]["5.0"])
+	  else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
 	    {
-	      percentile = 5.0;
+	      percentile = 0.5;
+	    }
+	  else if(fracCrit[i][j] >= topWindowBoundary[b]["0.1"])
+	    {
+	      percentile = 0.1;
 	    }
 	 
 	  fout << winStarts[i][j] << "\t" << winStarts[i][j]+winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
