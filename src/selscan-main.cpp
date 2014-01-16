@@ -1844,7 +1844,6 @@ double calculateSumFreq(map<string,int> &count, int total, bool EXACT)
 
 double calculateGarud(map<string,int> &count, int total, bool EXACT)
 {
-  //double freqCutoff = HAP_FREQ_CUTOFF;
   double first = 0;
   double second = 0;
   double freq = 0;
@@ -1854,32 +1853,49 @@ double calculateGarud(map<string,int> &count, int total, bool EXACT)
   map<string,int>::iterator it;
   for(it = count.begin(); it != count.end(); it++)
     {
-      freq = double(it->second)/double(total);
-      homozygosity += freq*freq;
-      
-      if(freq > first)
+      if(EXACT)
 	{
-	  second = first;
-	  first = freq;
+	  homozygosity += (it->second > 1) ? nCk(it->second,2)/nCk(total,2) : 0;
+
+	  if(it->second > first)
+	    {
+	      second = first;
+	      first = it->second;
+	    }
+	  else if (it->second > second)
+	    {
+	      second = it->second;
+	    }
 	}
-      else if (freq > second)
+      else
 	{
-	  second = freq;
+	  freq = double(it->second)/double(total);
+	  homozygosity += freq*freq;
+
+	  if(freq > first)
+	    {
+	      second = first;
+	      first = freq;
+	    }
+	  else if (freq > second)
+	    {
+	      second = freq;
+	    }
 	}
     }
  
-  commonFreq = first + second;
-  commonFreqSq = first*first + second*second;
-  /*
-  if(commonFreq*commonFreq + homozygosity - commonFreqSq < 0)
+  if(EXACT)
     {
-      cerr << "start\n";
-      for(it = count.begin(); it != count.end(); it++)
-	{
-	  cerr << it->first << " " << it->second << endl;
-	}
-      cerr << "end\n";
+      commonFreq = ((first + second) > 1) ? nCk((first + second),2)/nCk(total,2) : 0;
+      commonFreqSq += (first > 1) ? nCk(first,2)/nCk(total,2) : 0;
+      commonFreqSq += (second > 1) ? nCk(second,2)/nCk(total,2) : 0;
+      return commonFreq + homozygosity - commonFreqSq;
+      
     }
-  */
-  return commonFreq*commonFreq + homozygosity - commonFreqSq;
+  else
+    {
+      commonFreq = first + second;
+      commonFreqSq = first*first + second*second;
+      return commonFreq*commonFreq + homozygosity - commonFreqSq;
+    }
 }
