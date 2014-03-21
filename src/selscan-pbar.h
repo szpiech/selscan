@@ -6,10 +6,10 @@ using namespace std;
 
 struct Bar
 {
-  double total;
-  double current;
-  int totalTicks;
-  int currentTick;
+    double total;
+    double current;
+    int totalTicks;
+    int currentTick;
 };
 
 void advanceBar(Bar &bar, double inc);

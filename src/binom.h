@@ -4,7 +4,7 @@
 
 long double gammaln(long double);
 long double factln(int);
-long double nCk(int,int);
+long double nCk(int, int);
 long double fact(int x);
 
 #endif

@@ -13,49 +13,49 @@ const string ARG_HELP = "--help";
 
 class param_t
 {
- public:
+public:
 
-  bool addFlag(string flag, bool value, string label, string description);
-  bool addFlag(string flag, double value, string label, string description);
-  bool addFlag(string flag, int value, string label, string description);
-  bool addFlag(string flag, char value, string label, string description);
-  bool addFlag(string flag, string value, string label, string description);
-  bool addFlag(string flag, const char value[], string label, string description);
+    bool addFlag(string flag, bool value, string label, string description);
+    bool addFlag(string flag, double value, string label, string description);
+    bool addFlag(string flag, int value, string label, string description);
+    bool addFlag(string flag, char value, string label, string description);
+    bool addFlag(string flag, string value, string label, string description);
+    bool addFlag(string flag, const char value[], string label, string description);
 
-  bool addListFlag(string flag, string value, string label, string description);
-  bool addListFlag(string flag, const char value[], string label, string description);
-  
-  void printHelp();
+    bool addListFlag(string flag, string value, string label, string description);
+    bool addListFlag(string flag, const char value[], string label, string description);
 
-  bool parseCommandLine(int argc, char *argv[]);
-  
-  bool getBoolFlag(string flag);
-  double getDoubleFlag(string flag);
-  int getIntFlag(string flag);
-  char getCharFlag(string flag);
-  string getStringFlag(string flag);
+    void printHelp();
 
-  vector<string> getStringListFlag(string flag);
+    bool parseCommandLine(int argc, char *argv[]);
 
-  param_t();
+    bool getBoolFlag(string flag);
+    double getDoubleFlag(string flag);
+    int getIntFlag(string flag);
+    char getCharFlag(string flag);
+    string getStringFlag(string flag);
+
+    vector<string> getStringListFlag(string flag);
+
+    param_t();
 
 
- private:
-  
-  map<string,bool> argb;
-  map<string,double> argd;
-  map<string,int> argi;
-  map<string,char> argch;
-  map<string,string> args;
+private:
 
-  map<string,vector< string > > listargs;
+    map<string, bool> argb;
+    map<string, double> argd;
+    map<string, int> argi;
+    map<string, char> argch;
+    map<string, string> args;
 
-  map<string,string> help;
-  map<string,bool> isSet;
+    map<string, vector< string > > listargs;
 
-  bool goodDouble(string str);
-  bool goodInt(string str);
-  bool goodChar(string str);
+    map<string, string> help;
+    map<string, bool> isSet;
+
+    bool goodDouble(string str);
+    bool goodInt(string str);
+    bool goodChar(string str);
 };
 
 #endif
