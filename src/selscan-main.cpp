@@ -57,9 +57,9 @@ const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
 const string HELP_XP = "Set this flag to calculate XP-EHH.";
 
-const string ARG_EXACT = "--alt";
-const bool DEFAULT_EXACT = false;
-const string HELP_EXACT = "If --ihs is set, this flag will calculate the exact homozygosity of the sample instead of using allele frequencies.\n\tIf --sumsq or --sqsum or --sumfreq is set, this flag will change ratio from H_c/H to H_c/(H_r + 1).";
+const string ARG_ALT = "--alt";
+const bool DEFAULT_ALT = false;
+const string HELP_ALT = "Set this flag to calculate homozygosity based on haplotype frequencies in the observed data.";
 
 const string ARG_FREQ = "--filter";
 const double DEFAULT_FREQ = 0.05;
@@ -137,7 +137,7 @@ bool familyDidSplit(const string &hapStr, const int hapCount,
                     int **hapColor, const int nhaps, const int colorIndex,
                     const int previousLoc, string &mostCommonHap);
 
-double calculateHomozygosity(map<string, int> &count, int total, bool EXACT);
+double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 
 int main(int argc, char *argv[])
 {
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
-    params.addFlag(ARG_EXACT, DEFAULT_EXACT, "", HELP_EXACT);
+    params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
     params.addFlag(ARG_FREQ, DEFAULT_FREQ, "", HELP_FREQ);
     params.addFlag(ARG_QUERY, DEFAULT_QUERY, "", HELP_QUERY);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     double EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
     double FILTER = params.getDoubleFlag(ARG_FREQ);
 
-    bool EXACT = params.getBoolFlag(ARG_EXACT);
+    bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
     else if (CALC_XP) outFilename += ".xpehh";
     else if (CALC_SOFT) outFilename += ".soft";
 
-    if (EXACT) outFilename += ".alt";
+    if (ALT) outFilename += ".alt";
 
     if (numThreads < 1)
     {
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
     flog << "Max gap parameter: " << MAX_GAP << "\n";
     flog << "EHH cutoff value: " << EHH_CUTOFF << "\n";
     flog << "Alt flag set: ";
-    if (EXACT) flog << "yes\n";
+    if (ALT) flog << "yes\n";
     else flog << "no\n";
     flog.flush();
 
@@ -495,7 +495,7 @@ int main(int argc, char *argv[])
         ihs = new double[hapData->nloci];
         freq = new double[hapData->nloci];
         cerr << "Starting iHS calculations with alt flag ";
-        if (!EXACT) cerr << "not ";
+        if (!ALT) cerr << "not ";
         cerr << "set.\n";
 
         work_order_t *order;
@@ -551,7 +551,7 @@ int main(int argc, char *argv[])
         ihs = new double[hapData->nloci];
         freq = new double[hapData->nloci];
         cerr << "Starting soft iHS calculations with alt flag ";
-        if (!EXACT) cerr << "not ";
+        if (!ALT) cerr << "not ";
         cerr << "set.\n";
 
         work_order_t *order;
@@ -648,7 +648,7 @@ void query_locus(void *order)
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool EXACT = p->params->getBoolFlag(ARG_EXACT);
+    bool ALT = p->params->getBoolFlag(ARG_ALT);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
     int locus = p->queryLoc;
@@ -744,8 +744,8 @@ void query_locus(void *order)
         fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, tempIndex, derivedCurrentColor, true);
         fillColors(ancestralHapColor, ancestralHapCount, haplotypeList, nhaps, tempIndex, ancestralCurrentColor, true);
 
-        current_derived_ehh = (*calc)(derivedHapCount, numDerived, EXACT);
-        current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, EXACT);
+        current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
+        current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
         char tempStr[100];
         sprintf(tempStr, "%d\t%f\t%f", physicalPos[i] - physicalPos[locus], current_derived_ehh, current_ancestral_ehh);
         tempResults[tempIndex] = string(tempStr);
@@ -817,8 +817,8 @@ void query_locus(void *order)
         fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, i - stopLeft, derivedCurrentColor, false);
         fillColors(ancestralHapColor, ancestralHapCount, haplotypeList, nhaps, i - stopLeft, ancestralCurrentColor, false);
 
-        current_derived_ehh = (*calc)(derivedHapCount, numDerived, EXACT);
-        current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, EXACT);
+        current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
+        current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
 
         (*fout) << physicalPos[i] - physicalPos[locus] << "\t"
                 << current_derived_ehh << "\t"
@@ -882,7 +882,7 @@ void query_locus_soft(void *order)
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool EXACT = p->params->getBoolFlag(ARG_EXACT);
+    bool ALT = p->params->getBoolFlag(ARG_ALT);
 
     int locus = p->queryLoc;
     int queryPad = p->params->getIntFlag(ARG_QWIN);
@@ -1246,7 +1246,7 @@ void calc_ihs(void *order)
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool EXACT = p->params->getBoolFlag(ARG_EXACT);
+    bool ALT = p->params->getBoolFlag(ARG_ALT);
     double FILTER = p->params->getDoubleFlag(ARG_FREQ);
 
 
@@ -1368,7 +1368,7 @@ void calc_ihs(void *order)
 
             if (current_derived_ehh > EHH_CUTOFF)
             {
-                current_derived_ehh = (*calc)(derivedHapCount, numDerived, EXACT);
+                current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
 
                 //directly calculate ihs, iteratively
                 //Trapezoid rule
@@ -1378,7 +1378,7 @@ void calc_ihs(void *order)
 
             if (current_ancestral_ehh > EHH_CUTOFF)
             {
-                current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, EXACT);
+                current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
 
                 //directly calculate ihs, iteratively
                 //Trapezoid rule
@@ -1476,7 +1476,7 @@ void calc_ihs(void *order)
 
             if (current_derived_ehh > EHH_CUTOFF)
             {
-                current_derived_ehh = (*calc)(derivedHapCount, numDerived, EXACT);
+                current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
 
                 //directly calculate ihs, iteratively
                 //Trapezoid rule
@@ -1486,7 +1486,7 @@ void calc_ihs(void *order)
 
             if (current_ancestral_ehh > EHH_CUTOFF)
             {
-                current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, EXACT);
+                current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
 
                 //directly calculate ihs, iteratively
                 //Trapezoid rule
@@ -1535,7 +1535,7 @@ void calc_soft_ihs(void *order)
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool EXACT = p->params->getBoolFlag(ARG_EXACT);
+    bool ALT = p->params->getBoolFlag(ARG_ALT);
     double FILTER = p->params->getDoubleFlag(ARG_FREQ);
 
     int step = (stop - start) / (pbar->totalTicks);
@@ -1796,7 +1796,7 @@ void calc_xpihh(void *order)
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool EXACT = p->params->getBoolFlag(ARG_EXACT);
+    bool ALT = p->params->getBoolFlag(ARG_ALT);
 
     //Weird offset thing mentioned in Sabetti et al. (2007) that is apparently used to calculate iHH
     //subtract this from EHH when integrating
@@ -1865,21 +1865,7 @@ void calc_xpihh(void *order)
         derivedCountPooled = derivedCount1 + derivedCount2;
 
         //when calculating xp-ehh, ehh does not necessarily start at 1
-        if (EXACT)
-        {
-            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            previous_pop1_ehh = current_pop1_ehh;
-
-            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            previous_pop2_ehh = current_pop2_ehh;
-
-            current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            previous_pooled_ehh = current_pooled_ehh;
-        }
-        else
+        if (ALT)
         {
             double f = double(derivedCount1) / double(nhaps1);
             current_pop1_ehh = f * f + (1 - f) * (1 - f);
@@ -1891,6 +1877,20 @@ void calc_xpihh(void *order)
 
             f = double(derivedCountPooled) / double(nhaps1 + nhaps2);
             current_pooled_ehh = f * f + (1 - f) * (1 - f);
+            previous_pooled_ehh = current_pooled_ehh;
+        }
+        else
+        {
+            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            previous_pop1_ehh = current_pop1_ehh;
+
+            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            previous_pop2_ehh = current_pop2_ehh;
+
+            current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
+            current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
             previous_pooled_ehh = current_pooled_ehh;
         }
 
@@ -1947,9 +1947,9 @@ void calc_xpihh(void *order)
                 else hapCountPooled[hapStr]++;
             }
 
-            current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, EXACT);
-            current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, EXACT);
-            current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, EXACT);
+            current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
+            current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, ALT);
 
             //directly calculate ihh, iteratively
             //Trapezoid rule
@@ -2022,21 +2022,7 @@ void calc_xpihh(void *order)
         derivedCountPooled = derivedCount1 + derivedCount2;
 
         //when calculating xp-ehh, ehh does not necessarily start at 1
-        if (EXACT)
-        {
-            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            previous_pop1_ehh = current_pop1_ehh;
-
-            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            previous_pop2_ehh = current_pop2_ehh;
-
-            current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            previous_pooled_ehh = current_pooled_ehh;
-        }
-        else
+        if (ALT)
         {
             double f = double(derivedCount1) / double(nhaps1);
             current_pop1_ehh = f * f + (1 - f) * (1 - f);
@@ -2048,6 +2034,20 @@ void calc_xpihh(void *order)
 
             f = double(derivedCountPooled) / double(nhaps1 + nhaps2);
             current_pooled_ehh = f * f + (1 - f) * (1 - f);
+            previous_pooled_ehh = current_pooled_ehh;
+        }
+        else
+        {
+            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            previous_pop1_ehh = current_pop1_ehh;
+
+            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            previous_pop2_ehh = current_pop2_ehh;
+
+            current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
+            current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
             previous_pooled_ehh = current_pooled_ehh;
         }
 
@@ -2105,9 +2105,9 @@ void calc_xpihh(void *order)
                 else hapCountPooled[hapStr]++;
             }
 
-            current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, EXACT);
-            current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, EXACT);
-            current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, EXACT);
+            current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
+            current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, ALT);
 
             //directly calculate ihh1, iteratively
             //Trapezoid rule
@@ -2147,21 +2147,21 @@ void calc_xpihh(void *order)
 }
 
 
-double calculateHomozygosity(map<string, int> &count, int total, bool EXACT)
+double calculateHomozygosity(map<string, int> &count, int total, bool ALT)
 {
     double freq = 0;
     double homozygosity = 0;
     map<string, int>::iterator it;
     for (it = count.begin(); it != count.end(); it++)
     {
-        if (EXACT)
-        {
-            homozygosity += (it->second > 1) ? nCk(it->second, 2) / nCk(total, 2) : 0;
-        }
-        else
+        if (ALT)
         {
             freq = double(it->second) / double(total);
             homozygosity += freq * freq;
+        }
+        else
+        {
+            homozygosity += (it->second > 1) ? nCk(it->second, 2) / nCk(total, 2) : 0;
         }
     }
 
