@@ -1,0 +1,13 @@
+To install the binaries, just place them somewhere in your $PATH.
+
+To compile:
+
+make selscan 
+
+ought to work on *nix systems.  To compile on Windows, you'll have to procure a 
+Windows version of the pthreads library 
+(<http://www.sourceware.org/pthreads-win32/> might work).
+
+The program norm depends on GSL.  The libraries included on GitHub are 
+compiled for OSX.  If you wish to compile norm on other systems, you'll have to 
+procure a GSL installation for your system (<http://www.gnu.org/software/gsl/>).
