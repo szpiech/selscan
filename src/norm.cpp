@@ -1,12 +1,20 @@
-/*
- * Normalize iHS scores across multiple files (i.e. chromosomes)
- * Simple CLI: ./norm <bins> <outfile1> ... <outfile22>
- * First:
- *  Read in all data needed only for calculating E[X] and E[X^2] of the whole data
- * Second:
- *  Load each file separately and normalize, output results by simply adding a column with the normed score
- */
+/* norm -- a program for downstream analysis of iHS scores calculated by selscan
+   Copyright (C) 2014  Zachary A Szpiech
 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 #include <iostream>
 #include <fstream>

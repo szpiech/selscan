@@ -1,5 +1,24 @@
+/* param_t -- an interface for command line processing
+   Copyright (C) 2014  Zachary A Szpiech
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 #include "param_t.h"
 #include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 
@@ -7,8 +26,12 @@ bool param_t::addFlag(string flag, bool value, string label, string description)
 {
     if (help.count(flag) == 0)
     {
+        string buffer;
+        if(value) buffer = "true";
+        else buffer = "false";
         argb[flag] = value;
-        help[flag] = "<bool> " + description;
+        help[flag] = "<bool>: " + description + "\n\tDefault: " + buffer;
+        labels[flag] = label;
     }
     else
     {
@@ -23,8 +46,13 @@ bool param_t::addFlag(string flag, double value, string label, string descriptio
 {
     if (help.count(flag) == 0)
     {
+        string buffer;
+        char charBuffer[100];
+        sprintf(charBuffer, "%.2f", value);
+        buffer = charBuffer;
         argd[flag] = value;
-        help[flag] = "<double> " + description;
+        help[flag] = "<double>: " + description + "\n\tDefault: " + buffer;
+        labels[flag] = label;
     }
     else
     {
@@ -39,8 +67,13 @@ bool param_t::addFlag(string flag, int value, string label, string description)
 {
     if (help.count(flag) == 0)
     {
+        string buffer;
+        char charBuffer[100];
+        sprintf(charBuffer, "%d", value);
+        buffer = charBuffer;
         argi[flag] = value;
-        help[flag] = "<int> " + description;
+        help[flag] = "<int>: " + description + "\n\tDefault: " + buffer;
+        labels[flag] = label;
     }
     else
     {
@@ -55,8 +88,13 @@ bool param_t::addFlag(string flag, char value, string label, string description)
 {
     if (help.count(flag) == 0)
     {
+        string buffer;
+        char charBuffer[100];
+        sprintf(charBuffer, "%c", value);
+        buffer = charBuffer;
         argch[flag] = value;
-        help[flag] = "<char> " + description;
+        help[flag] = "<char>: " + description + "\n\tDefault: " + buffer;
+        labels[flag] = label;
     }
     else
     {
@@ -72,7 +110,8 @@ bool param_t::addFlag(string flag, string value, string label, string descriptio
     if (help.count(flag) == 0)
     {
         args[flag] = value;
-        help[flag] = "<string> " + description;
+        help[flag] = "<string>: " + description + "\n\tDefault: " + value;
+        labels[flag] = label;
     }
     else
     {
@@ -93,7 +132,8 @@ bool  param_t::addListFlag(string flag, string value, string label, string descr
     if (help.count(flag) == 0)
     {
         listargs[flag].push_back(value);
-        help[flag] = "<string> " + description;
+        help[flag] = "<string1> ... <stringN>: " + description + "\n\tDefault: " + value;
+        labels[flag] = label;
     }
     else
     {
@@ -113,11 +153,16 @@ void param_t::printHelp()
 {
     map<string, string>::iterator it;
 
-    cerr << "\n++++++++++Command Line Arguments++++++++++\n\n";
+    cerr << preamble << endl;
+
+    cerr << "----------Command Line Arguments----------\n\n";
 
     for (it = help.begin(); it != help.end(); it++)
     {
-        cerr << (*it).first << " " << (*it).second <<  "\n";
+        if (labels[(*it).first].compare("SILENT") != 0)
+        {
+            cerr << (*it).first << " " << (*it).second << "\n\n";
+        }
     }
 
     return;
@@ -351,4 +396,10 @@ vector<string> param_t::getStringListFlag(string flag)
     if (listargs.count(flag) > 0) return listargs[flag];
 
     cerr << "ERROR: There are no string list flags named " << flag << "\n";
+}
+
+void param_t::setPreamble(string str)
+{
+    preamble = str;
+    return;
 }

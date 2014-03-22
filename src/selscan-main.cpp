@@ -1,3 +1,20 @@
+/* selscan -- a program to calculate EHH-based scans for positive selection in genomes
+   Copyright (C) 2014  Zachary A Szpiech
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -13,21 +30,50 @@
 
 using namespace std;
 
+const string PREAMBLE = "\nselscan -- a program to calculate EHH-based scans for positive selection in genomes.\n\
+Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
+\n\
+selscan currently implements EHH, iHS, and XP-EHH.\n\
+\n\
+Citations:\n\
+\n\
+ZA Szpiech and RD Hernandez (201X) Journal, xx: xx-xx.\n\
+PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
+BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
+PC Sabeti, et al. (2002) Nature, 419: 832–837.\n\
+\n\
+To calculate EHH:\n\
+\n\
+./selscan --ehh <locusID> --hap <haps> --map <mapfile> --out <outfile>\n\
+\n\
+To calculate iHS:\n\
+\n\
+./selscan --ihs --hap <haps> --map <mapfile> --out <outfile>\n\
+\n\
+To calculate XP-EHH:\n\
+\n\
+./selscan --xpehh --hap <pop1 haps> --ref <pop2 haps> --map <mapfile> --out <outfile>\n";
+
 const string ARG_THREAD = "--threads";
 const int DEFAULT_THREAD = 1;
-const string HELP_THREAD = "The number of threads to spawn during the calculation.  Partitions locus calculations across threads.";
+const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
+\tPartitions loci across threads.";
 
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
-const string HELP_FILENAME_POP1 = "A hapfile with one row per individual, and one column per variant.  Variants should be coded 0/1/-9.";
+const string HELP_FILENAME_POP1 = "A hapfile with one row per individual, and one column per\n\
+\tvariant. Variants should be coded 0/1/-9.";
 
 const string ARG_FILENAME_POP2 = "--ref";
 const string DEFAULT_FILENAME_POP2 = "__hapfile2";
-const string HELP_FILENAME_POP2 = "A hapfile with one row per individual, and one column per variant.  Variants should be coded 0/1/-9. This is the reference population for XP-EHH calculations.  Ignored otherwise.";
+const string HELP_FILENAME_POP2 = "A hapfile with one row per individual, and one column per\n\
+\tvariant. Variants should be coded 0/1/-9. This is the 'reference'\n\
+\tpopulation for XP-EHH calculations.  Ignored otherwise.";
 
 const string ARG_FILENAME_MAP = "--map";
 const string DEFAULT_FILENAME_MAP = "__mapfile";
-const string HELP_FILENAME_MAP = "A mapfile with one row per variant site.  Formatted <chr#> <locusID> <genetic pos> <physical pos>.";
+const string HELP_FILENAME_MAP = "A mapfile with one row per variant site.\n\
+\tFormatted <chr#> <locusID> <genetic pos> <physical pos>.";
 
 const string ARG_OUTFILE = "--out";
 const string DEFAULT_OUTFILE = "outfile";
@@ -39,11 +85,13 @@ const string HELP_CUTOFF = "The EHH decay cutoff.";
 
 const string ARG_MAX_GAP = "--max-gap";
 const int DEFAULT_MAX_GAP = 200000;
-const string HELP_MAX_GAP = "Maximum allowed gap between two snps.";
+const string HELP_MAX_GAP = "Maximum allowed gap in bp between two snps.";
 
 const string ARG_GAP_SCALE = "--gap-scale";
 const int DEFAULT_GAP_SCALE = 20000;
-const string HELP_GAP_SCALE = "Gap scale parameter.  If a gap is encountered between two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is scaled by GAP_SCALE/GAP.";
+const string HELP_GAP_SCALE = "Gap scale parameter in bp. If a gap is encountered between\n\
+\ttwo snps > GAP_SCALE and < MAX_GAP, then the genetic distance is\n\
+\tscaled by GAP_SCALE/GAP.";
 
 const string ARG_IHS = "--ihs";
 const bool DEFAULT_IHS = false;
@@ -51,7 +99,7 @@ const string HELP_IHS = "Set this flag to calculate iHS.";
 
 const string ARG_SOFT = "--soft";
 const bool DEFAULT_SOFT = false;
-const string HELP_SOFT = "Set this flag to calculate the soft sweep statistics.";
+const string HELP_SOFT = "";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
@@ -59,19 +107,23 @@ const string HELP_XP = "Set this flag to calculate XP-EHH.";
 
 const string ARG_ALT = "--alt";
 const bool DEFAULT_ALT = false;
-const string HELP_ALT = "Set this flag to calculate homozygosity based on haplotype frequencies in the observed data.";
+const string HELP_ALT = "Set this flag to calculate homozygosity based on haplotype\n\
+\tfrequencies in the observed data.";
 
-const string ARG_FREQ = "--filter";
-const double DEFAULT_FREQ = 0.05;
-const string HELP_FREQ = "If a site has a MAF below this value, the program will not use it as a core snp.";
+const string ARG_MAF = "--maf";
+const double DEFAULT_MAF = 0.05;
+const string HELP_MAF = "If a site has a MAF below this value, the program will not use\n\
+\tit as a core snp.";
 
-const string ARG_QUERY = "--query";
-const string DEFAULT_QUERY = "__NO_LOCUS__";
-const string HELP_QUERY = "Query a specific locus instead of scanning the whole dataset.";
+const string ARG_EHH = "--ehh";
+const string DEFAULT_EHH = "__NO_LOCUS__";
+const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
+\tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
 
-const string ARG_QWIN = "--qwin";
+const string ARG_QWIN = "--ehh-win";
 const int DEFAULT_QWIN = 100000;
-const string HELP_QWIN = "The length of the query window in each direction from the query locus.";
+const string HELP_QWIN = "When calculating EHH, this is the length of the window in bp\n\
+\tin each direction from the query locus.";
 
 
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
@@ -127,7 +179,6 @@ void calc_ihs(void *work_order);
 void calc_xpihh(void *work_order);
 void calc_soft_ihs(void *order);
 
-bool *freqMask(HaplotypeData *hapData, double filter);
 double calcFreq(HaplotypeData *hapData, int locus);
 int queryFound(MapData *mapData, string query);
 void fillColors(int **hapColor, map<string, int> &hapCount,
@@ -142,6 +193,7 @@ double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 int main(int argc, char *argv[])
 {
     param_t params;
+    params.setPreamble(PREAMBLE);
     params.addFlag(ARG_THREAD, DEFAULT_THREAD, "", HELP_THREAD);
     params.addFlag(ARG_FILENAME_POP1, DEFAULT_FILENAME_POP1, "", HELP_FILENAME_POP1);
     params.addFlag(ARG_FILENAME_POP2, DEFAULT_FILENAME_POP2, "", HELP_FILENAME_POP2);
@@ -151,11 +203,11 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
-    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
+    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
-    params.addFlag(ARG_FREQ, DEFAULT_FREQ, "", HELP_FREQ);
-    params.addFlag(ARG_QUERY, DEFAULT_QUERY, "", HELP_QUERY);
+    params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
+    params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
 
     try
@@ -171,7 +223,7 @@ int main(int argc, char *argv[])
     string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
     string outFilename = params.getStringFlag(ARG_OUTFILE);
-    string query = params.getStringFlag(ARG_QUERY);
+    string query = params.getStringFlag(ARG_EHH);
 
     int queryLoc = -1;
     int numThreads = params.getIntFlag(ARG_THREAD);
@@ -179,33 +231,33 @@ int main(int argc, char *argv[])
     int MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
 
     double EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
-    double FILTER = params.getDoubleFlag(ARG_FREQ);
+    double MAF = params.getDoubleFlag(ARG_MAF);
 
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
-    bool SINGLE_QUERY = false;
+    bool SINGLE_EHH = false;
 
-    if (query.compare(DEFAULT_QUERY) != 0) SINGLE_QUERY = true;
+    if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
 
-    if (CALC_IHS + CALC_XP + CALC_SOFT != 1)
+    if (CALC_IHS + CALC_XP + CALC_SOFT + SINGLE_EHH != 1)
     {
-        cerr << "ERROR: Must specify one and only one of iHS (" << ARG_IHS << "), XP-EHH (" << ARG_XP << "), soft iHS (" << ARG_SOFT << ")\n";
+        cerr << "ERROR: Must specify one and only one of EHH (" << ARG_EHH << "), iHS (" << ARG_IHS << "), XP-EHH (" << ARG_XP << ")\n";
         return 1;
     }
 
-    if (SINGLE_QUERY && CALC_XP)
-    {
-        cerr << "Single query with XP-EHH is not yet available.\n";
-        return 1;
-    }
+    /*
+        if (SINGLE_EHH && CALC_XP)
+        {
+            cerr << "Single query with XP-EHH is not yet available.\n";
+            return 1;
+        }
+    */
 
-
-    if (SINGLE_QUERY) outFilename += "." + query;
-
-    if (CALC_IHS) outFilename += ".ihs";
+    if (SINGLE_EHH) outFilename += ".ehh." + query;
+    else if (CALC_IHS) outFilename += ".ihs";
     else if (CALC_XP) outFilename += ".xpehh";
     else if (CALC_SOFT) outFilename += ".soft";
 
@@ -260,17 +312,23 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (SINGLE_QUERY)
+    if (SINGLE_EHH)
     {
         queryLoc = queryFound(mapData, query);
+        double queryFreq = calcFreq(hapData, queryLoc);
         if (queryLoc < 0)
         {
             cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
             return 1;
         }
+        else if (queryFreq < MAF || 1 - queryFreq < MAF)
+        {
+            cerr << "ERROR: EHH for '1' and '0' haplotypes not calculated for " << query << ". MAF < " << MAF << ".\n";
+            return 1;
+        }
         else
         {
-            cerr << "Found " << query << " at line " << queryLoc + 1 << ".\n";
+            cerr << "Found " << query << " in data.\n";
         }
     }
 
@@ -323,8 +381,8 @@ int main(int argc, char *argv[])
 
     if (mapData->nloci < numThreads)
     {
-        numThreads = mapData->nloci;
-        cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " threads instead.\n";
+        numThreads = 1;
+        cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
     }
 
     //Partition loci amongst the specified threads
@@ -342,7 +400,7 @@ int main(int argc, char *argv[])
         NUM_PER_THREAD[i]++;
     }
 
-    if (SINGLE_QUERY)
+    if (SINGLE_EHH)
     {
         work_order_t *order = new work_order_t;
         pthread_t *peer = new pthread_t;
@@ -363,66 +421,13 @@ int main(int argc, char *argv[])
                            (void *)order);
             pthread_join(*peer, NULL);
         }
-        else if (CALC_IHS)
+        else
         {
             pthread_create(peer,
                            NULL,
                            (void *(*)(void *))query_locus,
                            (void *)order);
-
-            ofstream fout2;
-            outFilename += ".score.out";
-            fout2.open(outFilename.c_str());
-            if (fout2.fail())
-            {
-                cerr << "ERROR: could not open " << outFilename << " for writing.\n";
-                return 1;
-            }
-
-            work_order_t *order2 = new work_order_t;
-            pthread_t *peer2 = new pthread_t;
-            order = new work_order_t;
-
-            //A horrible hack, because we don't need to allcoate anywhere near this amount of memory for a single calculation
-            //But otherwise it requires serious modification of the calc_ihs function to get it to run properly
-            ihh1 = new double[mapData->nloci];
-            ihh2 = new double[mapData->nloci];
-            ihs = new double[mapData->nloci];
-            freq = new double[mapData->nloci];
-
-            order2->first_index = queryLoc;
-            order2->last_index = queryLoc + 1;
-            order2->hapData = hapData;
-            order2->mapData = mapData;
-            order2->ihh1 = ihh1;
-            order2->ihh2 = ihh2;
-            order2->ihs = ihs;
-            order2->freq = freq;
-            order2->flog = &flog;
-            order2->bar = &pbar;
-            order2->params = &params;
-            order2->calc = &calculateHomozygosity;
-
-            pthread_create(peer2,
-                           NULL,
-                           (void *(*)(void *))calc_ihs,
-                           (void *)order2);
-
-            pthread_join(*peer2, NULL);
             pthread_join(*peer, NULL);
-
-            if (ihs[queryLoc] != MISSING)
-            {
-                fout2 << mapData->locusName[queryLoc] << "\t"
-                      << mapData->physicalPos[queryLoc] << "\t"
-                      << freq[queryLoc] << "\t"
-                      << ihh1[queryLoc] << "\t"
-                      << ihh2[queryLoc] << "\t"
-                      << ihs[queryLoc] << endl;
-            }
-
-            delete peer2;
-            delete order2;
         }
 
         delete peer;
@@ -747,7 +752,7 @@ void query_locus(void *order)
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
         char tempStr[100];
-        sprintf(tempStr, "%d\t%f\t%f", physicalPos[i] - physicalPos[locus], current_derived_ehh, current_ancestral_ehh);
+        sprintf(tempStr, "%d\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_derived_ehh, current_ancestral_ehh);
         tempResults[tempIndex] = string(tempStr);
         tempIndex--;
     }
@@ -766,6 +771,7 @@ void query_locus(void *order)
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
+            << geneticPos[locus] - geneticPos[locus] << "\t"
             << current_derived_ehh << "\t"
             << current_ancestral_ehh << endl;
 
@@ -821,6 +827,7 @@ void query_locus(void *order)
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
 
         (*fout) << physicalPos[i] - physicalPos[locus] << "\t"
+                << geneticPos[i] - geneticPos[locus] << "\t"
                 << current_derived_ehh << "\t"
                 << current_ancestral_ehh << endl;
     }
@@ -985,7 +992,7 @@ void query_locus_soft(void *order)
         */
 
         char tempStr[100];
-        sprintf(tempStr, "%d\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], current_ehh1, current_ehh12, current_ehh2d1);
+        sprintf(tempStr, "%d\t%f\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_ehh1, current_ehh12, current_ehh2d1);
         tempResults[tempIndex] = string(tempStr);
         tempIndex--;
     }
@@ -1032,6 +1039,7 @@ void query_locus_soft(void *order)
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
+            << geneticPos[locus] - geneticPos[locus] << "\t"
             << current_ehh1 << "\t"
             << current_ehh12 << "\t"
             << current_ehh2d1 << endl;
@@ -1067,6 +1075,7 @@ void query_locus_soft(void *order)
         */
 
         (*fout) << physicalPos[i] - physicalPos[locus] << "\t"
+                << geneticPos[i] - geneticPos[locus] << "\t"
                 << current_ehh1 << "\t"
                 << current_ehh12 << "\t"
                 << current_ehh2d1 << endl;
@@ -1247,7 +1256,7 @@ void calc_ihs(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
-    double FILTER = p->params->getDoubleFlag(ARG_FREQ);
+    double MAF = p->params->getDoubleFlag(ARG_MAF);
 
 
     double (*calc)(map<string, int> &, int, bool) = p->calc;
@@ -1286,13 +1295,13 @@ void calc_ihs(void *order)
             haplotypeList[hap] = digit;
         }
 
-        //If the focal snp has MAF < FILTER, then skip this locus
+        //If the focal snp has MAF < MAF, then skip this locus
         double alleleFreq = double(derivedCount) / double(nhaps);
-        if (alleleFreq < FILTER || alleleFreq > 1 - FILTER)
+        if (alleleFreq < MAF || alleleFreq > 1 - MAF)
         {
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Locus " << locusName[locus]
-                    << " has MAF < " << FILTER << ". Skipping calcualtion at this locus.\n";
+                    << " has MAF < " << MAF << ". Skipping calcualtion at this locus.\n";
             pthread_mutex_unlock(&mutex_log);
             ihs[locus] = MISSING;
             skipLocus = 0;
@@ -1536,7 +1545,7 @@ void calc_soft_ihs(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
-    double FILTER = p->params->getDoubleFlag(ARG_FREQ);
+    double MAF = p->params->getDoubleFlag(ARG_MAF);
 
     int step = (stop - start) / (pbar->totalTicks);
     if (step == 0) step = 1;

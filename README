@@ -1,52 +1,119 @@
-selscan is an implementation of some haplotype based scans for selection including iHS and XP-EHH.
+selscan -- a program to calculate EHH-based scans for positive selection in 
+	genomes.
 
-A typical iHS scan would be run something like:
+Copyright (C) 2014  Zachary A Szpiech
 
-./selscan --ihs --alt --hap <haplotypes> --map <mapfile> --out <outfile>
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+   
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+   
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software Foundation,
+Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-Other options are below, currently listed without much explanation.  Some options have not been tested, but iHS and XPEHH are working correctly.
+Source code and binaries can be found at 
+	https://www.github.com/szpiech/selscan
 
---alt <bool> If --ihs is set, this flag will calculate the exact homozygosity of the sample instead of using allele frequencies.
-	If --sumsq or --sqsum or --sumfreq is set, this flag will change ratio from H_c/H to H_c/(H_r + 1).
+selscan currently implements EHH, iHS, and XP-EHH.
 
---cutoff <double> The EHH decay cutoff.
+Citations:
 
---filter <double> If a site has a MAF below this value, the program will not use it as a core snp.
+ZA Szpiech and RD Hernandez (201X) selscan: an efficient multi-threaded program 
+	to calculate EHH-based scans for positive selection. Journal, xx: xx-xx.
+PC Sabeti, et al. (2007) Genome-wide detection and characterization of positive 
+	selection in human populations. Nature, 449: 913–918.
+BF Voight, et al. (2006) A map of recent positive selection in the human 
+	genome. PLoS Biology, 4: e72.
+PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
+	genome from haplotype structure. Nature, 419: 832–837.
 
---gap-scale <int> Gap scale parameter.  If a gap is encountered between two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is scaled by GAP_SCALE/GAP.
+To calculate EHH:
 
---garud <bool> Set this flag to calculate the Garud et al. statistic.
+./selscan --ehh <locusID> --hap <haplotypes> --map <mapfile> --out <outfile>
 
---hap <string> A hapfile with one row per individual, and one column per variant.  Variants should be coded 0/1/-9.
+Output file: <outfile>.ehh.<locusID>[.alt].out
+Format: <physicalPos> <geneticPos> <'1' EHH> <'0' EHH>
 
---hapfreq <double> The rare haplotype frequency cutoff.
+To calculate iHS:
 
---help <bool> Prints this help dialog.
+./selscan --ihs --hap <haplotypes> --map <mapfile> --out <outfile>
 
---ihp <bool> Set this flag to calculate iHP.
+Output file: <outfile>.ihs[.alt].out
+Format: <locusID> <physicalPos> <'1' freq> <ihh1> <ihh0> <unstandardized iHS>
 
---ihs <bool> Set this flag to calculate iHS.
+To calculate XP-EHH:
 
---map <string> A mapfile with one row per variant site.  Formatted <chr#> <locusID> <genetic pos> <physical pos>.
+./selscan --xpehh --hap <pop1 haplotypes> --ref <pop2 haplotypes> --map <mapfile> --out <outfile>
 
---max-gap <int> Maximum allowed gap between two snps.
+Output file: <outfile>.ihs[.alt].out
+Format: <locusID> <physicalPos> <geneticPos> <popA '1' freq> <ihhA> <popB '1' freq> <ihhB> <unstandardized XPEHH>
 
---out <string> The basename for all output files.
+Examples:
 
---query <string> Query a specific locus instead of scanning the whole dataset.
+selscan --ihs --hap example.hap --map example.map --out example
+selscan --ehh Locus4077 --hap example.hap --map example.map --out example
+selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.map --out example2
 
---qwin <int> The length of the query window in each direction from the query locus.
+----------Command Line Arguments----------
 
---ref <string> A hapfile with one row per individual, and one column per variant.  Variants should be coded 0/1/-9. This is the reference population for XP-EHH
- calculations.  Ignored otherwise.
+--hap <string>: A hapfile with one row per individual, and one column per 
+	variant.  Variants should be coded 0/1/-9.
+	Default: __hapfile1
 
---sqsum <bool> Set this flag to calculate the square of the summed allele frequencies * ratio.
+--map <string>: A mapfile with one row per variant site.  
+	Formatted <chr#> <locusID> <genetic pos> <physical pos>. 
+	Default: __mapfile
 
---sumfreq <bool> Set this flag to calculate the sum of the allele frequencies * ratio.
+--ref <string>: A hapfile with one row per individual, and one column per 
+	variant.  Variants should be coded 0/1/-9. 	This is the 'reference' 
+	population for XP-EHH calculations.  Ignored otherwise.
+	Default: __hapfile2
 
---sumsq <bool> Set this flag to calculate the sum of squared allele frequencies * ratio.
+--out <string>: The basename for all output files.
+	Default: outfile
 
---threads <int> The number of threads to spawn during the calculation.  Partitions locus calculations across threads.
+--ehh <string>: Calculate EHH of the '1' and '0' haplotypes at the specified 
+	locus.  Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH> 
+	Default: __NO_LOCUS__
 
---xpehh <bool> Set this flag to calculate XP-EHH.
+--ihs <bool>: Set this flag to calculate iHS. 
+	Default: false
 
+--xpehh <bool>: Set this flag to calculate XP-EHH.
+	Default: false
+
+--ehh-win <int>: When calculating EHH, this is the length of the window in bp 
+	in each direction from the query locus.
+	Default: 100000
+
+--cutoff <double>: The EHH decay cutoff.
+	Default: 0.05
+
+--gap-scale <int>: Gap scale parameter in bp.
+	If a gap is encountered between two snps > GAP_SCALE and < MAX_GAP, then 
+	the genetic distance is scaled by GAP_SCALE/GAP.
+	Default: 20000
+
+--maf <double>: If a site has a MAF below this value, the program will not use 
+	it as a core snp.
+	Default: 0.05
+
+--max-gap <int>: Maximum allowed gap in bp between two snps.
+	Default: 200000
+
+--threads <int>: The number of threads to spawn during the calculation.  
+	Partitions loci across threads.
+	Default: 1
+
+--alt <bool>: Set this flag to calculate homozygosity based on haplotype 
+	frequencies in the observed data. 
+	Default: false
+
+--help <bool>: Prints this help dialog.
+	Default: false
