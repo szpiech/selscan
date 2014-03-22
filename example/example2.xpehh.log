@@ -1,0 +1,12 @@
+../src/selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.map --threads 4 
+
+Calculating XP-EHH.
+Haplotypes filename: example2.pop1.hap
+Reference haplotypes filename: example2.pop2.hap
+Map filename: example2.map
+Output file: outfile.xpehh.out
+Threads: 4
+Scale parameter: 20000
+Max gap parameter: 200000
+EHH cutoff value: 0.05
+Alt flag set: no
