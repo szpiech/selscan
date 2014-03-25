@@ -3,6 +3,7 @@
 #G++FLAG = -g -Wall -Werror
 
 #for *nix systems
+<<<<<<< HEAD
 #CC = g++
 #G++FLAG = -O3 -m64 -mmmx -msse -msse2
 #PTHREAD = -pthread
@@ -20,9 +21,27 @@ G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
 I_PATH2 = -I../include/pthreads-win32 
 PTHREAD = ../lib/pthreads-win32/libpthreadGC2.a 
 #norm
+=======
+CC = g++
+G++FLAG = -O3 -m64 -mmmx -msse -msse2
+PTHREAD = -pthread
+I_PATH2 = ../include
+
+#for windows
+#CC = g++.exe
+#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+#I_PATH2 = -I../include/pthreads-win32 
+#PTHREAD = ../lib/pthreads-win32/libpthreadGC2.a 
+
+#For static linking of norm program to gsl libs
+>>>>>>> 0bd93c3fc75fd6d4e992ee43a588d7f70809ff20
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 I_PATH = -I../include
+<<<<<<< HEAD
 L_PATH = ../lib/win32
+=======
+L_PATH = ../lib
+>>>>>>> 0bd93c3fc75fd6d4e992ee43a588d7f70809ff20
 
 
 #For dynamic linking
