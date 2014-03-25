@@ -192,6 +192,11 @@ double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 
 int main(int argc, char *argv[])
 {
+
+    #ifdef PTW32_STATIC_LIB
+    pthread_win32_process_attach_np();
+    #endif
+
     param_t params;
     params.setPreamble(PREAMBLE);
     params.addFlag(ARG_THREAD, DEFAULT_THREAD, "", HELP_THREAD);
@@ -609,6 +614,11 @@ int main(int argc, char *argv[])
 
     flog.close();
     fout.close();
+
+    #ifdef PTW32_STATIC_LIB
+    pthread_win32_process_detach_np();
+    #endif
+
     return 0;
 }
 
@@ -2215,3 +2225,5 @@ triplet_t calculateSoft(map<string, int> &count, int total)
 
     return res;
 }
+
+
