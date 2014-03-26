@@ -3,28 +3,28 @@
 #G++FLAG = -g -Wall -Werror
 
 #for *nix systems
-#CC = g++
-#G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#PTHREAD = -pthread
+CC = g++
+G++FLAG = -O3 -m64 -mmmx -msse -msse2
+PTHREAD = -pthread
 #For static linking of norm program to gsl libs
-#LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 #paths for norm
-#I_PATH = -I../include
+I_PATH = -I../include
 #choose linux or osx
-#L_PATH = ../lib/osx
+L_PATH = ../lib/osx
 #L_PATH = ../lib/linux
 
 
 #for windows
-CC = g++.exe
-G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-I_PATH2 = -I../include/pthreads-win32 
-PTHREAD = ../lib/pthreads-win32/libpthreadGC2.a 
+#CC = g++.exe
+#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+#I_PATH2 = -I../include/pthreads-win32 
+#PTHREAD = ../lib/pthreads-win32/libpthreadGC2.a 
 
 #For static linking of norm program to gsl libs
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
-I_PATH = -I../include
-L_PATH = ../lib/win32
+#LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+#I_PATH = -I../include
+#L_PATH = ../lib/win32
 
 #For dynamic linking
 #LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
