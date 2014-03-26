@@ -20,9 +20,8 @@ L_PATH = ../lib/osx
 #for windows, using MinGW build environment
 #CC = g++.exe
 #G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-#I_PATH2 = -I../include/pthreads-win32 
 #PTHREAD = ../lib/pthreads-win32/libpthreadGC2.a 
-#I_PATH = -I../include
+#I_PATH = -I../include -I../include/pthreads-win32 
 #L_PATH = ../lib/win32
 
 all : selscan norm
