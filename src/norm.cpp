@@ -29,13 +29,35 @@
 
 using namespace std;
 
+const string PREAMBLE = "\nnorm -- a program for downstream analysis of selscan output\n\
+Source code and binaries can be found at\n\
+\t<https://www.github.com/szpiech/selscan>\n\
+\n\
+norm currently analyzes iHS output only at this time.\n\
+\n\
+Citations:\n\
+\n\
+ZA Szpiech and RD Hernandez (201X) Journal, xx: xx-xx.\n\
+BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
+\n\
+To normalize iHS output across frequency bins:\n\
+\n\
+./norm --files <file1.ihs.out> ... <fileN.ihs.out>\n\
+\n\
+To normalize iHS output and analyze non-overlapping windows of fixed bp for \n\
+extreme iHS scores:\n\
+\n\
+./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win\n";
+
 string ARG_FREQ_BINS = "--bins";
 int DEFAULT_FREQ_BINS = 100;
 string HELP_FREQ_BINS = "The number of frequency bins in [0,1] for score normalization.";
 
 string ARG_FILES = "--files";
 string DEFAULT_FILES = "infile";
-string HELP_FILES = "A list of files delimited by whitespace for joint normalization.  Expected format:\n\t<locus name> <positon> <freq> <ihh1> <ihh2> <ihs>";
+string HELP_FILES = "A list of files delimited by whitespace for\n\
+\tjoint normalization.\n\
+\tExpected format: <locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>";
 
 string ARG_LOG = "--log";
 string DEFAULT_LOG = "logfile";
@@ -43,27 +65,31 @@ string HELP_LOG = "The log file name.";
 
 string ARG_WINSIZE = "--winsize";
 int DEFAULT_WINSIZE = 100000;
-string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage of extreme SNPs.";
+string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage\n\
+\tof extreme SNPs.";
 
 string ARG_QBINS = "--qbins";
 int DEFAULT_QBINS = 20;
-string HELP_QBINS = "Outlying windows are binned by number of sites within each window.  This is the number of quantile bins to use.";
+string HELP_QBINS = "Outlying windows are binned by number of sites within each\n\
+\twindow.  This is the number of quantile bins to use.";
 
 string ARG_MINSNPS = "--min-snps";
 int DEFAULT_MINSNPS = 10;
-string HELP_MINSNPS = "Only consider a window if it has at least this many SNPs.";
+string HELP_MINSNPS = "Only consider a bp window if it has at least this many SNPs.";
 
 string ARG_SNPWIN = "--snp-win";
 bool DEFAULT_SNPWIN = false;
-string HELP_SNPWIN = "If set, will use windows of a constant SNP size with varying bp length.";
+string HELP_SNPWIN = "<not implemented> If set, will use windows of a constant\n\
+\tSNP size with varying bp length.";
 
 string ARG_SNPWINSIZE = "--snp-win-size";
 int DEFAULT_SNPWINSIZE = 50;
-string HELP_SNPWINSIZE = "The number of SNPs in a window.";
+string HELP_SNPWINSIZE = "<not implemented> The number of SNPs in a window.";
 
 string ARG_BPWIN = "--bp-win";
 bool DEFAULT_BPWIN = false;
-string HELP_BPWIN = "If set, will use windows of a constant bp size with varying number of SNPs.";
+string HELP_BPWIN = "If set, will use windows of a constant bp size with varying\n\
+\tnumber of SNPs.";
 
 string ARG_IHS = "--ihs";
 bool DEFAULT_IHS = false;
@@ -98,7 +124,7 @@ ofstream flog;
 int main(int argc, char *argv[])
 {
     param_t params;
-
+    params.setPreamble(PREAMBLE);
     params.addFlag(ARG_FREQ_BINS, DEFAULT_FREQ_BINS, "", HELP_FREQ_BINS);
     params.addListFlag(ARG_FILES, DEFAULT_FILES, "", HELP_FILES);
     params.addFlag(ARG_LOG, DEFAULT_LOG, "", HELP_LOG);
