@@ -43,7 +43,7 @@ binom.o : binom.cpp
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm : norm.o param_t.o
-	$(CC) -o norm norm.o param_t.o $(LINK_OPTS)
+	$(CC) $(G++FLAG) -o norm norm.o param_t.o $(LINK_OPTS)
 
 norm.o : norm.cpp
 	$(CC) $(G++FLAG) -c norm.cpp $(I_PATH)
