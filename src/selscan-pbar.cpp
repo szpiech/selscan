@@ -17,6 +17,7 @@
 */
 
 #include "selscan-pbar.h"
+#include <pthread.h>
 
 pthread_mutex_t mutex_progress = PTHREAD_MUTEX_INITIALIZER;
 

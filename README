@@ -117,3 +117,67 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 
 --help <bool>: Prints this help dialog.
 	Default: false
+
+################################################################################
+################################################################################
+
+norm -- a program for downstream analysis of selscan output
+Source code and binaries can be found at
+	<https://www.github.com/szpiech/selscan>
+
+norm currently analyzes iHS output only at this time.
+
+Citations:
+
+ZA Szpiech and RD Hernandez (201X) Journal, xx: xx-xx.
+BF Voight, et al. (2006) PLoS Biology, 4: e72.
+
+To normalize iHS output across frequency bins:
+
+./norm --files <file1.ihs.out> ... <fileN.ihs.out>
+
+To normalize iHS output and analyze non-overlapping windows of fixed bp for 
+extreme iHS scores:
+
+./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
+
+----------Command Line Arguments----------
+
+--bins <int>: The number of frequency bins in [0,1] for score normalization.
+	Default: 100
+
+--bp-win <bool>: If set, will use windows of a constant bp size with varying
+	number of SNPs.
+	Default: false
+
+--files <string1> ... <stringN>: A list of files delimited by whitespace for
+	joint normalization.
+	Expected format: <locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>
+	Default: infile
+
+--first <bool>: Output only the first file's normalization.
+	Default: false
+
+--help <bool>: Prints this help dialog.
+	Default: false
+
+--log <string>: The log file name.
+	Default: logfile
+
+--min-snps <int>: Only consider a bp window if it has at least this many SNPs.
+	Default: 10
+
+--qbins <int>: Outlying windows are binned by number of sites within each
+	window.  This is the number of quantile bins to use.
+	Default: 20
+
+--snp-win <bool>: <not implemented> If set, will use windows of a constant
+	SNP size with varying bp length.
+	Default: false
+
+--snp-win-size <int>: <not implemented> The number of SNPs in a window.
+	Default: 50
+
+--winsize <int>: The non-overlapping window size for calculating the percentage
+	of extreme SNPs.
+	Default: 100000
