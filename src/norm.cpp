@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <vector>
+#include <cstring>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_sort.h>
 #include "param_t.h"
