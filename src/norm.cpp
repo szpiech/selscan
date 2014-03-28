@@ -38,7 +38,7 @@ norm currently analyzes iHS output only at this time.\n\
 \n\
 Citations:\n\
 \n\
-ZA Szpiech and RD Hernandez (201X) Journal, xx: xx-xx.\n\
+ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]\n\
 BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 \n\
 To normalize iHS output across frequency bins:\n\
