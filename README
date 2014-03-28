@@ -20,7 +20,9 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 Source code and binaries can be found at 
 	https://www.github.com/szpiech/selscan
 
-selscan currently implements EHH, iHS, and XP-EHH.
+selscan currently implements EHH, iHS, and XP-EHH, and requires phased data. 
+It should be run separately for each chromosome and population (or population 
+pair for XP-EHH).
 
 Citations:
 
