@@ -63,7 +63,7 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 ----------Command Line Arguments----------
 
 --hap <string>: A hapfile with one row per individual, and one column per 
-	variant.  Variants should be coded 0/1/-9.
+	variant.  Variants should be coded 0/1.
 	Default: __hapfile1
 
 --map <string>: A mapfile with one row per variant site.  
@@ -71,7 +71,7 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 	Default: __mapfile
 
 --ref <string>: A hapfile with one row per individual, and one column per 
-	variant.  Variants should be coded 0/1/-9. 	This is the 'reference' 
+	variant.  Variants should be coded 0/1. 	This is the 'reference' 
 	population for XP-EHH calculations.  Ignored otherwise.
 	Default: __hapfile2
 
