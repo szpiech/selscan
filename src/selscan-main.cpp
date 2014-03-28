@@ -62,12 +62,12 @@ const string HELP_THREAD = "The number of threads to spawn during the calculatio
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
 const string HELP_FILENAME_POP1 = "A hapfile with one row per individual, and one column per\n\
-\tvariant. Variants should be coded 0/1/-9.";
+\tvariant. Variants should be coded 0/1";
 
 const string ARG_FILENAME_POP2 = "--ref";
 const string DEFAULT_FILENAME_POP2 = "__hapfile2";
 const string HELP_FILENAME_POP2 = "A hapfile with one row per individual, and one column per\n\
-\tvariant. Variants should be coded 0/1/-9. This is the 'reference'\n\
+\tvariant. Variants should be coded 0/1. This is the 'reference'\n\
 \tpopulation for XP-EHH calculations.  Ignored otherwise.";
 
 const string ARG_FILENAME_MAP = "--map";
