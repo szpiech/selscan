@@ -1,20 +1,3 @@
-/* param_t -- an interface for command line processing
-   Copyright (C) 2014  Zachary A Szpiech
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 #ifndef __PARAM_T_H__
 #define __PARAM_T_H__
 
@@ -41,6 +24,8 @@ public:
 
     bool addListFlag(string flag, string value, string label, string description);
     bool addListFlag(string flag, const char value[], string label, string description);
+    bool addListFlag(string flag, int value, string label, string description);
+
 
     void printHelp();
 
@@ -53,6 +38,7 @@ public:
     string getStringFlag(string flag);
 
     vector<string> getStringListFlag(string flag);
+    vector<int> getIntListFlag(string flag);
 
     void setPreamble(string str);
 
@@ -68,6 +54,7 @@ private:
     map<string, string> args;
 
     map<string, vector< string > > listargs;
+    map<string, vector< int > > listargi;    
 
     map<string, string> help;
     map<string, bool> isSet;
@@ -77,6 +64,8 @@ private:
     bool goodDouble(string str);
     bool goodInt(string str);
     bool goodChar(string str);
+
+    bool flagExists(string flag);
 
     string preamble;
 };

@@ -1,21 +1,3 @@
-/* param_t -- an interface for command line processing
-   Copyright (C) 2014  Zachary A Szpiech
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
-
 #include "param_t.h"
 #include <cstdlib>
 #include <cstdio>
@@ -24,10 +6,10 @@ using namespace std;
 
 bool param_t::addFlag(string flag, bool value, string label, string description)
 {
-    if (help.count(flag) == 0)
+    if (!flagExists(flag))
     {
         string buffer;
-        if(value) buffer = "true";
+        if (value) buffer = "true";
         else buffer = "false";
         argb[flag] = value;
         help[flag] = "<bool>: " + description + "\n\tDefault: " + buffer;
@@ -44,7 +26,7 @@ bool param_t::addFlag(string flag, bool value, string label, string description)
 
 bool param_t::addFlag(string flag, double value, string label, string description)
 {
-    if (help.count(flag) == 0)
+    if (!flagExists(flag))
     {
         string buffer;
         char charBuffer[100];
@@ -65,7 +47,7 @@ bool param_t::addFlag(string flag, double value, string label, string descriptio
 
 bool param_t::addFlag(string flag, int value, string label, string description)
 {
-    if (help.count(flag) == 0)
+    if (!flagExists(flag))
     {
         string buffer;
         char charBuffer[100];
@@ -86,7 +68,7 @@ bool param_t::addFlag(string flag, int value, string label, string description)
 
 bool param_t::addFlag(string flag, char value, string label, string description)
 {
-    if (help.count(flag) == 0)
+    if (!flagExists(flag))
     {
         string buffer;
         char charBuffer[100];
@@ -107,7 +89,7 @@ bool param_t::addFlag(string flag, char value, string label, string description)
 
 bool param_t::addFlag(string flag, string value, string label, string description)
 {
-    if (help.count(flag) == 0)
+    if (!flagExists(flag))
     {
         args[flag] = value;
         help[flag] = "<string>: " + description + "\n\tDefault: " + value;
@@ -127,9 +109,30 @@ bool param_t::addFlag(string flag, const char value[], string label, string desc
     return this->addFlag(flag, string(value), label, description);
 }
 
+bool param_t::addListFlag(string flag, int value, string label, string description)
+{
+    if (!flagExists(flag))
+    {
+        string buffer;
+        char charBuffer[100];
+        sprintf(charBuffer, "%d", value);
+        buffer = charBuffer;
+        listargi[flag].push_back(value);
+        help[flag] = "<int1> ... <intN>: " + description + "\n\tDefault: " + buffer;
+        labels[flag] = label;
+    }
+    else
+    {
+        cerr << "ERROR: " << flag << " already exists.\n";
+        throw 0;
+    }
+
+    return true;
+}
+
 bool  param_t::addListFlag(string flag, string value, string label, string description)
 {
-    if (help.count(flag) == 0)
+    if (!flagExists(flag))
     {
         listargs[flag].push_back(value);
         help[flag] = "<string1> ... <stringN>: " + description + "\n\tDefault: " + value;
@@ -171,14 +174,14 @@ void param_t::printHelp()
 bool param_t::goodDouble(string str)
 {
     string::iterator it;
-    int dashCount = 0;
+    //int dashCount = 0;
     int decimalCount = 0;
     for (it = str.begin(); it != str.end(); it++)
     {
         if (!isdigit(*it) && *it != '.' && *it != '-') return 0;
         if (*it == '.') decimalCount++;
-        if (*it == '-') dashCount++;
-        if (dashCount > 1 || decimalCount > 1) return 0;
+        if (*it == '-' && it != str.begin()) return 0;
+        if (/*dashCount > 1 || */decimalCount > 1) return 0;
     }
     return 1;
 }
@@ -186,12 +189,12 @@ bool param_t::goodDouble(string str)
 bool param_t::goodInt(string str)
 {
     string::iterator it;
-    int dashCount = 0;
+    //int dashCount = 0;
     for (it = str.begin(); it != str.end(); it++)
     {
         if (!isdigit(*it) && *it != '-') return 0;
-        if (*it == '-') dashCount++;
-        if (dashCount > 1) return 0;
+        if (*it == '-' && it != str.begin()) return 0;
+        //if (dashCount > 1) return 0;
     }
     return 1;
 }
@@ -238,6 +241,44 @@ bool param_t::parseCommandLine(int argc, char *argv[])
                 argi[argv[i]] = atoi(argv[i + 1]);
                 isSet[argv[i]] = true;
                 i++;
+            }
+        }
+        else if (listargi.count(argv[i]) > 0)
+        {
+            if (i + 1 >= argc)
+            {
+                cerr << "ERROR: No argument found for " << argv[i] << ".\n";
+                badFlags++;
+                break;
+            }
+            else
+            {
+                listargi[argv[i]].clear();//clear the default value
+                int flagIndex = i;//remember where the flag is in argv
+                while (i + 1 < argc) //go until the end of the list
+                {
+                    if (goodInt(string(argv[i + 1]))) //make sure the next value is OK
+                    {
+                        listargi[argv[flagIndex]].push_back(atoi(argv[i + 1]));
+                        i++;
+                    }
+                    //if it is a bad int...
+                    else if (!goodInt(string(argv[i + 1])) && !flagExists(string(argv[i + 1]))) 
+                    {
+                        cerr << "ERROR: " << argv[i + 1] << " is not a valid integer.\n";
+                        badFlags++;
+                        break;
+                    }
+                    else //if the next value is another flag..
+                    {
+                        if (listargi[argv[flagIndex]].size() == 0)
+                        {
+                            cerr << "ERROR: No arguments found for " << argv[flagIndex] << ".\n";
+                            badFlags++;
+                        }
+                        break;
+                    }
+                }
             }
         }
         else if (argd.count(argv[i]) > 0)
@@ -346,6 +387,11 @@ bool param_t::parseCommandLine(int argc, char *argv[])
     return 0;
 }
 
+bool param_t::flagExists(string flag)
+{
+    return (help.count(flag) > 0);
+}
+
 param_t::param_t()
 {
     this->addFlag(ARG_HELP, false, "__help", "Prints this help dialog.");
@@ -396,6 +442,15 @@ vector<string> param_t::getStringListFlag(string flag)
     if (listargs.count(flag) > 0) return listargs[flag];
 
     cerr << "ERROR: There are no string list flags named " << flag << "\n";
+    throw 0;
+}
+
+vector<int> param_t::getIntListFlag(string flag)
+{
+    if (listargi.count(flag) > 0) return listargi[flag];
+
+    cerr << "ERROR: There are no int list flags named " << flag << "\n";
+    throw 0;
 }
 
 void param_t::setPreamble(string str)
