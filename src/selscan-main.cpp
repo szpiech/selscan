@@ -213,13 +213,13 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
-    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
+    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
-    params.addListFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "", HELP_SOFT_K);
+    params.addListFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
 
     try
     {
