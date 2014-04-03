@@ -1,28 +1,13 @@
 selscan -- a program to calculate EHH-based scans for positive selection in 
-	genomes.
+	genomes
 
 Copyright (C) 2014  Zachary A Szpiech
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
-   
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-   
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software Foundation,
-Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
-Source code and binaries can be found at 
-	https://www.github.com/szpiech/selscan
-
 selscan currently implements EHH, iHS, and XP-EHH, and requires phased data. 
 It should be run separately for each chromosome and population (or population 
-pair for XP-EHH).
+pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
+simply expects haplotype data to be coded 0/1.  Unstandardized iHS scores are 
+thus reported as ln(iHH1/iHH0) based on the coding you have provided.
 
 Citations:
 
@@ -64,7 +49,7 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 
 ----------Command Line Arguments----------
 
---hap <string>: A hapfile with one row per individual, and one column per 
+--hap <string>: A hapfile with one row per haplotype, and one column per 
 	variant.  Variants should be coded 0/1.
 	Default: __hapfile1
 
@@ -72,7 +57,7 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 	Formatted <chr#> <locusID> <genetic pos> <physical pos>. 
 	Default: __mapfile
 
---ref <string>: A hapfile with one row per individual, and one column per 
+--ref <string>: A hapfile with one row per haplotype, and one column per 
 	variant.  Variants should be coded 0/1. 	This is the 'reference' 
 	population for XP-EHH calculations.  Ignored otherwise.
 	Default: __hapfile2
@@ -113,8 +98,9 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 	Partitions loci across threads.
 	Default: 1
 
---alt <bool>: Set this flag to calculate homozygosity based on haplotype 
-	frequencies in the observed data. 
+--alt <bool>: Set this flag to calculate homozygosity based on the sum of the
+	squared haplotype frequencies in the observed data instead of using 
+	binomial coefficients. 
 	Default: false
 
 --help <bool>: Prints this help dialog.

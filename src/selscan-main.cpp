@@ -5,12 +5,12 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
@@ -61,12 +61,12 @@ const string HELP_THREAD = "The number of threads to spawn during the calculatio
 
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
-const string HELP_FILENAME_POP1 = "A hapfile with one row per individual, and one column per\n\
+const string HELP_FILENAME_POP1 = "A hapfile with one row per haplotype, and one column per\n\
 \tvariant. Variants should be coded 0/1";
 
 const string ARG_FILENAME_POP2 = "--ref";
 const string DEFAULT_FILENAME_POP2 = "__hapfile2";
-const string HELP_FILENAME_POP2 = "A hapfile with one row per individual, and one column per\n\
+const string HELP_FILENAME_POP2 = "A hapfile with one row per haplotype, and one column per\n\
 \tvariant. Variants should be coded 0/1. This is the 'reference'\n\
 \tpopulation for XP-EHH calculations.  Ignored otherwise.";
 
@@ -99,7 +99,11 @@ const string HELP_IHS = "Set this flag to calculate iHS.";
 
 const string ARG_SOFT = "--soft";
 const bool DEFAULT_SOFT = false;
-const string HELP_SOFT = "";
+const string HELP_SOFT = "Calculate the EHH1K decay for soft sweep detection.";
+
+const string ARG_SOFT_K = "--ehh1k";
+const int DEFAULT_SOFT_K = 2;
+const string HELP_SOFT_K = "A list of all EHH1K to compute.";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
@@ -193,9 +197,9 @@ double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 int main(int argc, char *argv[])
 {
 
-    #ifdef PTW32_STATIC_LIB
+#ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
-    #endif
+#endif
 
     param_t params;
     params.setPreamble(PREAMBLE);
@@ -208,12 +212,13 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
-    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
+    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
+    params.addListFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "", HELP_SOFT_K);
 
     try
     {
@@ -243,6 +248,8 @@ int main(int argc, char *argv[])
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
+
+    vector< int > EHH1K_VALUES = params.getIntListFlag(ARG_SOFT_K);
 
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
@@ -615,9 +622,9 @@ int main(int argc, char *argv[])
     flog.close();
     fout.close();
 
-    #ifdef PTW32_STATIC_LIB
+#ifdef PTW32_STATIC_LIB
     pthread_win32_process_detach_np();
-    #endif
+#endif
 
     return 0;
 }
@@ -2187,7 +2194,12 @@ double calculateHomozygosity(map<string, int> &count, int total, bool ALT)
     return homozygosity;
 }
 
-
+//Have to modify the function to handle the arbitrary declaration
+//of EHH1K_VALUES
+//If we pass, the MAX of that vector, plus the vector iteself
+//We should be able to track up to the max in an array (up to what we do now for k = 2)
+//return an array that is pre-allocated to the side of EKK1k_VALUES,
+//and the index of that array corresponds to the indicies of EHH1K_VALUES
 triplet_t calculateSoft(map<string, int> &count, int total)
 {
     triplet_t res;
@@ -2203,7 +2215,10 @@ triplet_t calculateSoft(map<string, int> &count, int total)
     for (it = count.begin(); it != count.end(); it++)
     {
         homozygosity += (it->second > 1) ? nCk(it->second, 2) / nCk(total, 2) : 0;
-
+        //We can either do what is effectively a bubble sort here for the first K
+        //sorted values
+        //Or we can do a complete sort outside of the for loop
+        //Will have to think about the scaling issues here
         if (it->second > first)
         {
             second = first;
@@ -2215,6 +2230,7 @@ triplet_t calculateSoft(map<string, int> &count, int total)
         }
     }
 
+    //here we have a forloop over the EHH1k_VALUES elements
     double firstFreq = (first > 1) ? nCk(first, 2) / nCk(total, 2) : 0;
     double secondFreq = (second > 1) ? nCk(second, 2) / nCk(total, 2) : 0;
     double comboFreq = ((first + second) > 1) ? nCk((first + second), 2) / nCk(total, 2) : 0;
