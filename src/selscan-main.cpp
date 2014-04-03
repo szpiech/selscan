@@ -111,8 +111,9 @@ const string HELP_XP = "Set this flag to calculate XP-EHH.";
 
 const string ARG_ALT = "--alt";
 const bool DEFAULT_ALT = false;
-const string HELP_ALT = "Set this flag to calculate homozygosity based on haplotype\n\
-\tfrequencies in the observed data.";
+const string HELP_ALT = "Set this flag to calculate homozygosity based on the sum of the\n\
+\tsquared haplotype frequencies in the observed data instead of using\n\
+\tbinomial coefficients.";
 
 const string ARG_MAF = "--maf";
 const double DEFAULT_MAF = 0.05;
