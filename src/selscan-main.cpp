@@ -103,7 +103,7 @@ const string HELP_SOFT = "Calculate the EHH1K decay for soft sweep detection.";
 
 const string ARG_SOFT_K = "--ehh1k";
 const int DEFAULT_SOFT_K = 2;
-const string HELP_SOFT_K = "A list of all EHH1K to compute.";
+const string HELP_SOFT_K = "Specify K to compute for EHH1K.";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
-    params.addListFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
+    params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
 
     try
     {
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
 
-    vector< int > EHH1K_VALUES = params.getIntListFlag(ARG_SOFT_K);
+    int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
@@ -303,6 +303,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if(EHH1K < 1)
+    {
+        cerr << "ERROR: EHH1K must be > 0.\n";
+        return 1;
+    }
+
     HaplotypeData *hapData, *hapData2;
     MapData *mapData;
 
@@ -323,6 +329,11 @@ int main(int argc, char *argv[])
     catch (...)
     {
         return 1;
+    }
+
+    if(EHH1K >= hapData->nhaps)
+    {
+        
     }
 
     if (SINGLE_EHH)
