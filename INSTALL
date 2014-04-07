@@ -1,7 +1,13 @@
-To install the binaries, just place them somewhere in your $PATH.
+Pre-compiled binaries for OSX, Linux, and Windows can be found in
+
+bin/osx/
+bin/linux/
+bin/win/
+
+To install the binaries, just place them somewhere in your $PATH (i.e. ~/bin/).
 
 selscan depends on the pthread library, which should be available by default
-in any build environment on a *nix system.  On Windows, I have had success
+in any build environment on a OSX/Linux system.  On Windows, I have had success
 building selscan using pthreads-win32 (http://www.sourceware.org/pthreads-win32/)
 and compiling in a MinGW environment (http://www.mingw.org/). I have provided
 a compiled version of the pthreads-win32 library in lib/pthreads-win32/.
@@ -10,10 +16,14 @@ To build (some lines in the Makefile may need to be commented/uncommented):
 
 make selscan 
 
-The program norm depends on GNU GSL (http://www.gnu.org/software/gsl/). Individual
-libraries compiled for OSX, Linux, and Windows are provided in lib/osx/, lib/linux, 
-lib/win32.
+The selscan binary will appear in the src/ directory when built.
+
+The program norm depends on GNU GSL (http://www.gnu.org/software/gsl/). There shouldn't be 
+a strict need to download and install these yourself, as I've provided pre-compiled static 
+versions of GSL for OSX, Linux, and Windows in lib/osx/, lib/linux/, and lib/win32/.
 
 To build (some lines in the Makefile may need to be commented/uncommented):
 
 make norm 
+
+The norm binary will appear in the src/ directory when built.
