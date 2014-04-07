@@ -20,28 +20,48 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+USAGE:
+
 To calculate EHH:
 
 ./selscan --ehh <locusID> --hap <haplotypes> --map <mapfile> --out <outfile>
 
-Output file: <outfile>.ehh.<locusID>[.alt].out
-Format: <physicalPos> <geneticPos> <'1' EHH> <'0' EHH>
+Output file: 
+
+<outfile>.ehh.<locusID>[.alt].out
+
+Format: 
+
+<physicalPos> <geneticPos> <'1' EHH> <'0' EHH>
+
+The first two columns give the distance from the core locus.  When these values are
+negative, the haplotype extends upstream.
 
 To calculate iHS:
 
 ./selscan --ihs --hap <haplotypes> --map <mapfile> --out <outfile>
 
-Output file: <outfile>.ihs[.alt].out
-Format: <locusID> <physicalPos> <'1' freq> <ihh1> <ihh0> <unstandardized iHS>
+Output file: 
+
+<outfile>.ihs[.alt].out
+
+Format: 
+
+<locusID> <physicalPos> <'1' freq> <ihh1> <ihh0> <unstandardized iHS>
 
 To calculate XP-EHH:
 
 ./selscan --xpehh --hap <pop1 haplotypes> --ref <pop2 haplotypes> --map <mapfile> --out <outfile>
 
-Output file: <outfile>.ihs[.alt].out
-Format: <locusID> <physicalPos> <geneticPos> <popA '1' freq> <ihhA> <popB '1' freq> <ihhB> <unstandardized XPEHH>
+Output file: 
 
-Examples:
+<outfile>.ihs[.alt].out
+
+Format: 
+
+<locusID> <physicalPos> <geneticPos> <popA '1' freq> <ihhA> <popB '1' freq> <ihhB> <unstandardized XPEHH>
+
+EXAMPLES:
 
 selscan --ihs --hap example.hap --map example.map --out example
 selscan --ehh Locus4077 --hap example.hap --map example.map --out example
@@ -120,14 +140,34 @@ Citations:
 ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]
 BF Voight, et al. (2006) PLoS Biology, 4: e72.
 
+USAGE:
+
 To normalize iHS output across frequency bins:
 
 ./norm --files <file1.ihs.out> ... <fileN.ihs.out>
+
+Files: 
+
+<file1.ihs.out>.[nBins]bins.norm ... <fileN.ihs.out>.[nBins]bins.norm
+
+Format: 
+
+<locusID> <physicalPos> <'1' freq in the sample> <ihh1> <ihh0> <unstandardized iHS> <standardized iHS> <is |iHS| > 2>
 
 To normalize iHS output and analyze non-overlapping windows of fixed bp for 
 extreme iHS scores:
 
 ./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
+
+This produces the same output as above plus the following
+
+Files: 
+
+<file1.ihs.out>.[nBins]bins.norm.[size]kb.windows ... <fileN.ihs.out>.[nBins]bins.norm.[size]kb.windows
+
+Format: 
+
+<window start> <window stop> <num iHS scores in window> <% of |iHS| scores > 2> <genome wide percentile>
 
 ----------Command Line Arguments----------
 
