@@ -503,7 +503,7 @@ int main(int argc, char *argv[])
         releaseHapData(hapData2);
         cerr << "\nFinished.\n";
 
-        fout << "pos gpos p1 ihh1 p2 ihh2 xpehh\n";
+        fout << "pos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
         for (int i = 0; i < mapData->nloci; i++)
         {
             if (ihh1[i] != MISSING && ihh2[i] != MISSING && ihh1[i] != 0 && ihh2[i] != 0)
