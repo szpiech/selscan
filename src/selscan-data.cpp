@@ -168,6 +168,11 @@ HaplotypeData *readHaplotypeData(string filename)
         for (int locus = 0; locus < data->nloci; locus++)
         {
             fin >> data->data[hap][locus];
+            if(data->data[hap][locus] != 0 && data->data[hap][locus] != 1)
+            {
+                cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                throw 0;
+            }
         }
     }
 
