@@ -168,7 +168,7 @@ HaplotypeData *readHaplotypeData(string filename)
         for (int locus = 0; locus < data->nloci; locus++)
         {
             fin >> data->data[hap][locus];
-            if(data->data[hap][locus] != 0 && data->data[hap][locus] != 1)
+            if(data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
             {
                 cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
                 throw 0;
@@ -193,13 +193,13 @@ HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci)
     data->nhaps = nhaps;
     data->nloci = nloci;
 
-    data->data = new short*[nhaps];
+    data->data = new char*[nhaps];
     for (unsigned int i = 0; i < nhaps; i++)
     {
-        data->data[i] = new short[nloci];
+        data->data[i] = new char[nloci];
         for (unsigned int j = 0; j < nloci; j++)
         {
-            data->data[i][j] = MISSING;
+            data->data[i][j] = MISSING_CHAR;
         }
     }
 
