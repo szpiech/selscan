@@ -139,6 +139,8 @@ struct work_order_t
     int last_index;
     int queryLoc;
 
+    int id;
+
     string filename;
 
     HaplotypeData *hapData;
@@ -409,6 +411,7 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
     }
 
+/*
     //Partition loci amongst the specified threads
     unsigned long int *NUM_PER_THREAD = new unsigned long int[numThreads];
     unsigned long int div = mapData->nloci / numThreads;
@@ -423,7 +426,7 @@ int main(int argc, char *argv[])
     {
         NUM_PER_THREAD[i]++;
     }
-
+*/
     if (SINGLE_EHH)
     {
         work_order_t *order = new work_order_t;
@@ -474,9 +477,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->first_index = prev_index;
-            order->last_index = prev_index + NUM_PER_THREAD[i];
-            prev_index += NUM_PER_THREAD[i];
+            order->id = i;
             order->hapData1 = hapData;
             order->hapData2 = hapData2;
             order->mapData = mapData;
@@ -533,9 +534,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->first_index = prev_index;
-            order->last_index = prev_index + NUM_PER_THREAD[i];
-            prev_index += NUM_PER_THREAD[i];
+            order->id = i;
             order->hapData = hapData;
             order->mapData = mapData;
             order->ihh1 = ihh1;
@@ -589,9 +588,9 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->first_index = prev_index;
-            order->last_index = prev_index + NUM_PER_THREAD[i];
-            prev_index += NUM_PER_THREAD[i];
+            //order->first_index = prev_index;
+            //order->last_index = prev_index + NUM_PER_THREAD[i];
+            //prev_index += NUM_PER_THREAD[i];
             order->hapData = hapData;
             order->mapData = mapData;
             order->ihh1 = ihh1;
@@ -1272,8 +1271,9 @@ void calc_ihs(void *order)
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
-    int start = p->first_index;
-    int stop = p->last_index;
+    //int start = p->first_index;
+    //int stop = p->last_index;
+    int id = p->id;
     double *ihs = p->ihs;
     double *ihh1 = p->ihh1;
     double *ihh2 = p->ihh2;
@@ -1286,18 +1286,20 @@ void calc_ihs(void *order)
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
 
     int MAX_EXTEND = 1000000;
 
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
-    int step = (stop - start) / (pbar->totalTicks);
+    //int step = (stop - start) / (pbar->totalTicks);
+    int step = (nloci/numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
     bool isDerived;
     string hapStr;
 
-    for (int locus = start; locus < stop; locus++)
+    for (int locus = id; locus < nloci; locus+=numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
@@ -1853,8 +1855,9 @@ void calc_xpihh(void *order)
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
 
-    int start = p->first_index;
-    int stop = p->last_index;
+    //int start = p->first_index;
+    //int stop = p->last_index;
+    int id = p->id;
 
     ofstream *flog = p->flog;
     Bar *pbar = p->bar;
@@ -1863,15 +1866,17 @@ void calc_xpihh(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
 
     int MAX_EXTEND = 1000000;
 
-    int step = (stop - start) / (pbar->totalTicks);
+    //int step = (stop - start) / (pbar->totalTicks);
+    int step = (nloci/numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
     string hapStr;
 
-    for (int locus = start; locus < stop; locus++)
+    for (int locus = id; locus < nloci; locus+=numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
