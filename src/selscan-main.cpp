@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if(EHH1K < 1)
+    if (EHH1K < 1)
     {
         cerr << "ERROR: EHH1K must be > 0.\n";
         return 1;
@@ -331,9 +331,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if(EHH1K >= hapData->nhaps)
+    if (EHH1K >= hapData->nhaps)
     {
-        
+
     }
 
     if (SINGLE_EHH)
@@ -1287,6 +1287,7 @@ void calc_ihs(void *order)
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
 
+    int MAX_EXTEND = 1000000;
 
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
@@ -1330,7 +1331,7 @@ void calc_ihs(void *order)
         {
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Locus " << locusName[locus]
-                    << " has MAF < " << MAF << ". Skipping calcualtion at this locus.\n";
+                    << " has MAF < " << MAF << ". Skipping calculation at " << locusName[locus] << "\n";
             pthread_mutex_unlock(&mutex_log);
             ihs[locus] = MISSING;
             skipLocus = 0;
@@ -1341,13 +1342,18 @@ void calc_ihs(void *order)
         {
             if (nextLocus < 0)
             {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus]
-                        << "bp > " << MAX_GAP << "bp. Skipping calcualtion at this locus.\n";
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -1398,7 +1404,7 @@ void calc_ihs(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: locus " << locusName[locus]
-                        << " (number " << locus + 1 << ") is monomorphic.  Skipping calcualtion at this locus.\n";
+                        << " (number " << locus + 1 << ") is monomorphic.  Skipping calculation at this locus.\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -1423,6 +1429,9 @@ void calc_ihs(void *order)
                 ancestral_ihh += 0.5 * scale * (geneticPos[currentLocus + 1] - geneticPos[currentLocus]) * (current_ancestral_ehh + previous_ancestral_ehh);
                 previous_ancestral_ehh = current_ancestral_ehh;
             }
+
+            //check if currentLocus is beyond 1Mb
+            if (physicalPos[locus] - physicalPos[currentLocus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList;
@@ -1456,13 +1465,18 @@ void calc_ihs(void *order)
         {
             if (nextLocus > nloci - 1)
             {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus]
-                        << "bp > " << MAX_GAP << "bp. Skipping calcualtion at this locus.\n";
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -1507,7 +1521,7 @@ void calc_ihs(void *order)
             if (numDerived == 0 || numAncestral == 0)
             {
                 //(*flog) << "WARNING: locus " << locusName[locus]
-                //   << " (number " << locus+1 << ") is monomorphic.  Skipping calcualtion at this locus.\n";
+                //   << " (number " << locus+1 << ") is monomorphic.  Skipping calculation at this locus.\n";
                 skipLocus = 1;
                 break;
             }
@@ -1531,6 +1545,10 @@ void calc_ihs(void *order)
                 ancestral_ihh += 0.5 * scale * (geneticPos[currentLocus] - geneticPos[currentLocus - 1]) * (current_ancestral_ehh + previous_ancestral_ehh);
                 previous_ancestral_ehh = current_ancestral_ehh;
             }
+
+            //check if currentLocus is beyond 1Mb
+            if (physicalPos[currentLocus] - physicalPos[locus] >= MAX_EXTEND) break;
+
         }
 
         delete [] haplotypeList;
@@ -1632,12 +1650,17 @@ void calc_soft_ihs(void *order)
         {
             if (nextLocus < 0)
             {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP << "bp. Skipping calcualtion at this locus.\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -1736,12 +1759,17 @@ void calc_soft_ihs(void *order)
         {
             if (nextLocus > nloci - 1)
             {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calcualtion at this locus.\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -1835,6 +1863,8 @@ void calc_xpihh(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+
+    int MAX_EXTEND = 1000000;
 
     //Weird offset thing mentioned in Sabetti et al. (2007) that is apparently used to calculate iHH
     //subtract this from EHH when integrating
@@ -1934,11 +1964,19 @@ void calc_xpihh(void *order)
 
         while (current_pooled_ehh > EHH_CUTOFF)
         {
-            if (nextLocus < 0) break;
+            if (nextLocus < 0)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
+                break;
+            }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP << "bp. Skipping calcualtion at this locus.\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -1998,6 +2036,9 @@ void calc_xpihh(void *order)
             previous_pop2_ehh = current_pop2_ehh;
 
             previous_pooled_ehh = current_pooled_ehh;
+
+            //check if currentLocus is beyond 1Mb
+            if (physicalPos[locus] - physicalPos[currentLocus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList1;
@@ -2092,11 +2133,19 @@ void calc_xpihh(void *order)
 
         while (current_pooled_ehh > EHH_CUTOFF)
         {
-            if (nextLocus > nloci - 1) break;
+            if (nextLocus > nloci - 1)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
+                break;
+            }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calcualtion at this locus.\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2156,6 +2205,9 @@ void calc_xpihh(void *order)
             previous_pop2_ehh = current_pop2_ehh;
 
             previous_pooled_ehh = current_pooled_ehh;
+
+            //check if currentLocus is beyond 1Mb
+            if (physicalPos[currentLocus] - physicalPos[locus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList1;
