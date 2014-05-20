@@ -130,15 +130,20 @@ const int DEFAULT_QWIN = 100000;
 const string HELP_QWIN = "When calculating EHH, this is the length of the window in bp\n\
 \tin each direction from the query locus.";
 
+const string ARG_MAX_EXTEND = "--max-extend";
+const int DEFAULT_MAX_EXTEND = 1000000;
+const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
+\tSet <= 0 for no restriction.";
+
+const string ARG_SKIP = "--skip-low-freq";
+const bool DEFAULT_SKIP = false;
+const string HELP_SKIP = "Do not include low frequency variants in the construction of haplotypes (iHS only).";
 
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 struct work_order_t
 {
-    int first_index;
-    int last_index;
     int queryLoc;
-
     int id;
 
     string filename;
@@ -160,8 +165,6 @@ struct work_order_t
 
     double *ihh2;
     double *freq2;
-
-    bool *pass;
 
     ofstream *flog;
     ofstream *fout;
@@ -222,6 +225,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
     params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
+    params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
+    params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
 
     try
     {
@@ -251,6 +256,7 @@ int main(int argc, char *argv[])
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
+    bool SKIP = params.getBoolFlag(ARG_SKIP);
 
     int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
@@ -400,7 +406,6 @@ int main(int argc, char *argv[])
     flog.flush();
 
     Bar pbar;
-    barInit(pbar, mapData->nloci, 78);
 
     double *ihs, *ihh1, *ihh2;
     double *freq, *freq1, *freq2;
@@ -411,22 +416,6 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
     }
 
-/*
-    //Partition loci amongst the specified threads
-    unsigned long int *NUM_PER_THREAD = new unsigned long int[numThreads];
-    unsigned long int div = mapData->nloci / numThreads;
-
-    for (int i = 0; i < numThreads; i++)
-    {
-        NUM_PER_THREAD[i] = 0;
-        NUM_PER_THREAD[i] += div;
-    }
-
-    for (int i = 0; i < (mapData->nloci) % numThreads; i++)
-    {
-        NUM_PER_THREAD[i]++;
-    }
-*/
     if (SINGLE_EHH)
     {
         work_order_t *order = new work_order_t;
@@ -462,13 +451,21 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    ihh1 = new double[mapData->nloci];
-    ihh2 = new double[mapData->nloci];
-
     if (CALC_XP)
     {
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+
         freq1 = new double[hapData->nloci];
         freq2 = new double[hapData2->nloci];
+
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq1[i] = calcFreq(hapData, i);
+            freq2[i] = calcFreq(hapData2, i);
+        }
+
+        barInit(pbar, mapData->nloci, 78);
 
         cerr << "Starting XP-EHH calculations.\n";
         work_order_t *order;
@@ -522,8 +519,85 @@ int main(int argc, char *argv[])
     }
     else if (CALC_IHS)
     {
-        ihs = new double[hapData->nloci];
+
         freq = new double[hapData->nloci];
+
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        double *newfreq;
+
+        int count = 0;
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq[i] = calcFreq(hapData, i);
+            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        }
+
+        if (SKIP) //prefilter all sites < MAF
+        {
+            cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            flog << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            newfreq = new double [count];
+            newMapData = initMapData(count);
+            newMapData->chr = mapData->chr;
+            int j = 0;
+            for (int locus = 0; locus < mapData->nloci; locus++)
+            {
+                if (freq[locus] < MAF || 1 - freq[locus] < MAF)
+                {
+                    continue;
+                }
+                else
+                {
+                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                    newMapData->locusName[j] = mapData->locusName[locus];
+                    newfreq[j] = freq[locus];
+                    j++;
+                }
+            }
+
+            newHapData = initHaplotypeData(hapData->nhaps, count);
+
+            for (int hap = 0; hap < newHapData->nhaps; hap++)
+            {
+                j = 0;
+                for (int locus = 0; locus < mapData->nloci; locus++)
+                {
+                    if (freq[locus] < MAF || 1 - freq[locus] < MAF)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        newHapData->data[hap][j] = hapData->data[hap][locus];
+                        j++;
+                    }
+                }
+            }
+
+            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+            delete [] freq;
+            freq = newfreq;
+            newfreq = NULL;
+
+            releaseHapData(hapData);
+            hapData = newHapData;
+            newHapData = NULL;
+
+            releaseMapData(mapData);
+            mapData = newMapData;
+            newMapData = NULL;
+        }
+
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+        ihs = new double[hapData->nloci];
+
+        barInit(pbar, mapData->nloci, 78);
+
         cerr << "Starting iHS calculations with alt flag ";
         if (!ALT) cerr << "not ";
         cerr << "set.\n";
@@ -1271,8 +1345,6 @@ void calc_ihs(void *order)
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
-    //int start = p->first_index;
-    //int stop = p->last_index;
     int id = p->id;
     double *ihs = p->ihs;
     double *ihh1 = p->ihh1;
@@ -1287,52 +1359,29 @@ void calc_ihs(void *order)
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
-
-    int MAX_EXTEND = 1000000;
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
+    //bool SKIP = p->params->getBoolFlag(ARG_SKIP);
 
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
     //int step = (stop - start) / (pbar->totalTicks);
-    int step = (nloci/numThreads) / (pbar->totalTicks);
+    int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
     bool isDerived;
     string hapStr;
 
-    for (int locus = id; locus < nloci; locus+=numThreads)
+    for (int locus = id; locus < nloci; locus += numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
         ihs[locus] = 0;
-        freq[locus] = MISSING;
+        //freq[locus] = MISSING;
         ihh1[locus] = MISSING;
         ihh2[locus] = MISSING;
-
-        //EHH to the left of the core snp
-        double current_derived_ehh = 1;
-        double current_ancestral_ehh = 1;
-        double previous_derived_ehh = 1;
-        double previous_ancestral_ehh = 1;
-        int currentLocus = locus;
-        int nextLocus = locus - 1;
         bool skipLocus = 0;
-        double derived_ihh = 0;
-        double ancestral_ihh = 0;
-        double derivedCount = 0;
-        //A list of all the haplotypes
-        //Starts with just the focal snp and grows outward
-        string *haplotypeList = new string[nhaps];
-        for (int hap = 0; hap < nhaps; hap++)
-        {
-            derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
-            //char digit[2];
-            //sprintf(digit, "%d", data[hap][locus]);
-            haplotypeList[hap] = data[hap][locus];
-        }
-
         //If the focal snp has MAF < MAF, then skip this locus
-        double alleleFreq = double(derivedCount) / double(nhaps);
-        if (alleleFreq < MAF || alleleFreq > 1 - MAF)
+        if (freq[locus] < MAF || freq[locus] > 1 - MAF)
         {
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Locus " << locusName[locus]
@@ -1341,6 +1390,25 @@ void calc_ihs(void *order)
             ihs[locus] = MISSING;
             skipLocus = 0;
             continue;
+        }
+
+        //EHH to the left of the core snp
+        double current_derived_ehh = 1;
+        double current_ancestral_ehh = 1;
+        double previous_derived_ehh = 1;
+        double previous_ancestral_ehh = 1;
+        int currentLocus = locus;
+        int nextLocus = locus - 1;
+        double derived_ihh = 0;
+        double ancestral_ihh = 0;
+        //double derivedCount = 0;
+        //A list of all the haplotypes
+        //Starts with just the focal snp and grows outward
+        string *haplotypeList = new string[nhaps];
+        for (int hap = 0; hap < nhaps; hap++)
+        {
+            //derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+            haplotypeList[hap] = data[hap][locus];
         }
 
         while (current_derived_ehh > EHH_CUTOFF || current_ancestral_ehh > EHH_CUTOFF)
@@ -1497,9 +1565,6 @@ void calc_ihs(void *order)
             for (int hap = 0; hap < nhaps; hap++)
             {
                 isDerived = ( data[hap][locus] == '1') ? 1 : 0;
-                //build haplotype string
-                //char digit[2];
-                //sprintf(digit, "%d", data[hap][currentLocus]);
                 haplotypeList[hap] += data[hap][currentLocus];
                 hapStr = haplotypeList[hap];
 
@@ -1567,7 +1632,7 @@ void calc_ihs(void *order)
             ihh1[locus] = derived_ihh;
             ihh2[locus] = ancestral_ihh;
             ihs[locus] = log(derived_ihh / ancestral_ihh);
-            freq[locus] = double(derivedCount) / double(nhaps);
+            //freq[locus] = double(derivedCount) / double(nhaps);
         }
     }
 }
@@ -1581,8 +1646,9 @@ void calc_soft_ihs(void *order)
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
-    int start = p->first_index;
-    int stop = p->last_index;
+    //int start = p->first_index;
+    //int stop = p->last_index;
+    int id = p->id;
     double *h1 = p->ihh1;
     double *h2dh1 = p->ihh2;
     double *h12 = p->ihs;
@@ -1595,11 +1661,12 @@ void calc_soft_ihs(void *order)
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
 
-    int step = (stop - start) / (pbar->totalTicks);
+    int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
-    for (int locus = start; locus < stop; locus++)
+    for (int locus = id; locus < nloci; locus += numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
@@ -1855,8 +1922,6 @@ void calc_xpihh(void *order)
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
 
-    //int start = p->first_index;
-    //int stop = p->last_index;
     int id = p->id;
 
     ofstream *flog = p->flog;
@@ -1868,23 +1933,22 @@ void calc_xpihh(void *order)
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
 
-    int MAX_EXTEND = 1000000;
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
 
-    //int step = (stop - start) / (pbar->totalTicks);
-    int step = (nloci/numThreads) / (pbar->totalTicks);
+    int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
     string hapStr;
 
-    for (int locus = id; locus < nloci; locus+=numThreads)
+    for (int locus = id; locus < nloci; locus += numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
         ihh1[locus] = 0;
         ihh2[locus] = 0;
 
-        freq1[locus] = MISSING;
-        freq2[locus] = MISSING;
+        //freq1[locus] = MISSING;
+        //freq2[locus] = MISSING;
 
         //EHH to the left of the core snp
         double current_pooled_ehh = 1;
@@ -2239,13 +2303,13 @@ void calc_xpihh(void *order)
         if (ihh1[locus] != MISSING)
         {
             ihh1[locus] = ihhPop1;
-            freq1[locus] = double(derivedCount1) / double(nhaps1);
+            //freq1[locus] = double(derivedCount1) / double(nhaps1);
         }
 
         if (ihh2[locus] != MISSING)
         {
             ihh2[locus] = ihhPop2;
-            freq2[locus] = double(derivedCount2) / double(nhaps2);
+            //freq2[locus] = double(derivedCount2) / double(nhaps2);
         }
     }
 }
