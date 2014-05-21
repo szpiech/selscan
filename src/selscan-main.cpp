@@ -2153,7 +2153,7 @@ void calc_xpihh(void *order)
             if (hap < nhaps1)
             {
                 //sprintf(digit, "%d", data1[hap][locus]);
-                haplotypeList1[hap] = data2[hap - nhaps1][locus];
+                haplotypeList1[hap] = data1[hap][locus];
                 derivedCount1 += data1[hap][locus];
 
                 //Pooled
