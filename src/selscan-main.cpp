@@ -543,7 +543,7 @@ int main(int argc, char *argv[])
             int j = 0;
             for (int locus = 0; locus < mapData->nloci; locus++)
             {
-                if (freq[locus] < MAF || 1 - freq[locus] < MAF)
+                if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
                 {
                     continue;
                 }
@@ -564,7 +564,7 @@ int main(int argc, char *argv[])
                 j = 0;
                 for (int locus = 0; locus < mapData->nloci; locus++)
                 {
-                    if (freq[locus] < MAF || 1 - freq[locus] < MAF)
+                    if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
                     {
                         continue;
                     }
