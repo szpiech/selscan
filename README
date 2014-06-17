@@ -22,6 +22,8 @@ PC Sabeti, et al. (2002) Detecting recent positive selection in the human
 
 USAGE:
 
+Data must be phased and have no missing genotypes.
+
 To calculate EHH:
 
 ./selscan --ehh <locusID> --hap <haplotypes> --map <mapfile> --out <outfile>
@@ -82,6 +84,16 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 	population for XP-EHH calculations.  Ignored otherwise.
 	Default: __hapfile2
 
+--tped <string>: A TPED file containing haplotype and map data.
+	Variants should be coded 0/1
+	Default: __hapfile1
+
+--tped-ref <string>: A TPED file containing haplotype and map data.
+	Variants should be coded 0/1. This is the 'reference'
+	population for XP-EHH calculations and should contain the same number
+	of loci as the query population. Ignored otherwise.
+	Default: __hapfile2
+
 --out <string>: The basename for all output files.
 	Default: outfile
 
@@ -113,6 +125,13 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 
 --max-gap <int>: Maximum allowed gap in bp between two snps.
 	Default: 200000
+
+--max-extend <int>: The maximum distance an EHH decay curve is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 1000000
+
+--skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
+	Default: false
 
 --threads <int>: The number of threads to spawn during the calculation.  
 	Partitions loci across threads.

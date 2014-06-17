@@ -5,12 +5,12 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
@@ -69,6 +69,62 @@ MapData *readMapData(string filename, int expected_loci)
         fin >> data->locusName[locus];
         fin >> data->geneticPos[locus];
         fin >> data->physicalPos[locus];
+    }
+
+    fin.close();
+    return data;
+}
+
+MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
+{
+    ifstream fin;
+    cerr << "Opening " << filename << "...\n";
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    int fileStart = fin.tellg();
+    string line;
+    int nloci = 0;
+    int num_cols = 4;
+    int current_cols = 0;
+    while (getline(fin, line))
+    {
+        nloci++;
+        current_cols = countFields(line);
+        if (current_cols != num_cols + expected_haps)
+        {
+            cerr << "ERROR: line " << nloci << " of " << filename << " has " << current_cols
+                 << ", but expected " << num_cols + expected_haps << ".\n";
+            throw 0;
+        }
+    }
+
+    if (nloci != expected_loci)
+    {
+        cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci << ".\n";
+        throw 0;
+    }
+
+    fin.clear(); // clear error flags
+    fin.seekg(fileStart);
+
+    cerr << "Loading map data for " << nloci << " loci\n";
+
+    MapData *data = initMapData(nloci);
+
+    string chr;
+    for (int locus = 0; locus < data->nloci; locus++)
+    {
+        fin >> data->chr;
+        fin >> data->locusName[locus];
+        fin >> data->geneticPos[locus];
+        fin >> data->physicalPos[locus];
+        getline(fin, line);
     }
 
     fin.close();
@@ -168,7 +224,79 @@ HaplotypeData *readHaplotypeData(string filename)
         for (int locus = 0; locus < data->nloci; locus++)
         {
             fin >> data->data[hap][locus];
-            if(data->data[hap][locus] != 0 && data->data[hap][locus] != 1)
+            if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
+            {
+                cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                throw 0;
+            }
+        }
+    }
+
+    fin.close();
+
+    return data;
+}
+
+HaplotypeData *readHaplotypeDataTPED(string filename)
+{
+    ifstream fin;
+    cerr << "Opening " << filename << "...\n";
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    int numMapCols = 4;
+    int fileStart = fin.tellg();
+    string line;
+    int nloci = 0;
+    int previous_nhaps = -1;
+    int current_nhaps = 0;
+    //Counts number of haps (cols) and number of loci (rows)
+    //if any lines differ, send an error message and throw an exception
+    while (getline(fin, line))
+    {
+        //getline(fin,line);
+        //if(fin.eof()) break;
+        nloci++;
+        current_nhaps = countFields(line);
+        //cout << "nloci: " << current_nhaps << endl;
+        if (previous_nhaps < 0)
+        {
+            previous_nhaps = current_nhaps;
+            continue;
+        }
+        else if (previous_nhaps != current_nhaps)
+        {
+            cerr << "ERROR: line " << nloci << " of " << filename << " has " << current_nhaps
+                 << " fields, but the previous line has " << previous_nhaps << " fields.\n";
+            throw 0;
+        }
+        previous_nhaps = current_nhaps;
+    }
+
+    fin.clear(); // clear error flags
+    fin.seekg(fileStart);
+
+    cerr << "Loading " << current_nhaps - numMapCols << " haplotypes and " << nloci << " loci...\n";
+
+    HaplotypeData *data = initHaplotypeData(current_nhaps - numMapCols, nloci);
+
+    string junk;
+
+    for (int locus = 0; locus < data->nloci; locus++)
+    {
+        for (int i = 0; i < numMapCols; i++)
+        {
+            fin >> junk;
+        }
+        for (int hap = 0; hap < data->nhaps; hap++)
+        {
+            fin >> data->data[hap][locus];
+            if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
             {
                 cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
                 throw 0;
@@ -193,13 +321,13 @@ HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci)
     data->nhaps = nhaps;
     data->nloci = nloci;
 
-    data->data = new short*[nhaps];
+    data->data = new char *[nhaps];
     for (unsigned int i = 0; i < nhaps; i++)
     {
-        data->data[i] = new short[nloci];
+        data->data[i] = new char[nloci];
         for (unsigned int j = 0; j < nloci; j++)
         {
-            data->data[i][j] = MISSING;
+            data->data[i][j] = MISSING_CHAR;
         }
     }
 

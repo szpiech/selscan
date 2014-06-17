@@ -59,6 +59,18 @@ const int DEFAULT_THREAD = 1;
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
 \tPartitions loci across threads.";
 
+const string ARG_FILENAME_POP1_TPED = "--tped";
+const string DEFAULT_FILENAME_POP1_TPED = "__hapfile1";
+const string HELP_FILENAME_POP1_TPED = "A TPED file containing haplotype and map data.\n\
+\tVariants should be coded 0/1";
+
+const string ARG_FILENAME_POP2_TPED = "--tped-ref";
+const string DEFAULT_FILENAME_POP2_TPED = "__hapfile2";
+const string HELP_FILENAME_POP2_TPED = "A TPED file containing haplotype and map data.\n\
+\tVariants should be coded 0/1. This is the 'reference'\n\
+\tpopulation for XP-EHH calculations and should contain the same number\n\
+\tof loci as the query population. Ignored otherwise.";
+
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
 const string HELP_FILENAME_POP1 = "A hapfile with one row per haplotype, and one column per\n\
@@ -130,14 +142,21 @@ const int DEFAULT_QWIN = 100000;
 const string HELP_QWIN = "When calculating EHH, this is the length of the window in bp\n\
 \tin each direction from the query locus.";
 
+const string ARG_MAX_EXTEND = "--max-extend";
+const int DEFAULT_MAX_EXTEND = 1000000;
+const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
+\tSet <= 0 for no restriction.";
+
+const string ARG_SKIP = "--skip-low-freq";
+const bool DEFAULT_SKIP = false;
+const string HELP_SKIP = "Do not include low frequency variants in the construction of haplotypes (iHS only).";
 
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 struct work_order_t
 {
-    int first_index;
-    int last_index;
     int queryLoc;
+    int id;
 
     string filename;
 
@@ -158,8 +177,6 @@ struct work_order_t
 
     double *ihh2;
     double *freq2;
-
-    bool *pass;
 
     ofstream *flog;
     ofstream *fout;
@@ -207,6 +224,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_THREAD, DEFAULT_THREAD, "", HELP_THREAD);
     params.addFlag(ARG_FILENAME_POP1, DEFAULT_FILENAME_POP1, "", HELP_FILENAME_POP1);
     params.addFlag(ARG_FILENAME_POP2, DEFAULT_FILENAME_POP2, "", HELP_FILENAME_POP2);
+    params.addFlag(ARG_FILENAME_POP1_TPED, DEFAULT_FILENAME_POP1_TPED, "", HELP_FILENAME_POP1_TPED);
+    params.addFlag(ARG_FILENAME_POP2_TPED, DEFAULT_FILENAME_POP2_TPED, "", HELP_FILENAME_POP2_TPED);
     params.addFlag(ARG_FILENAME_MAP, DEFAULT_FILENAME_MAP, "", HELP_FILENAME_MAP);
     params.addFlag(ARG_OUTFILE, DEFAULT_OUTFILE, "", HELP_OUTFILE);
     params.addFlag(ARG_CUTOFF, DEFAULT_CUTOFF, "", HELP_CUTOFF);
@@ -220,6 +239,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
     params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
+    params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
+    params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
 
     try
     {
@@ -233,6 +254,13 @@ int main(int argc, char *argv[])
     string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
     string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
+    string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
+    string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
+
+    bool TPED = false;
+
+    if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+
     string outFilename = params.getStringFlag(ARG_OUTFILE);
     string query = params.getStringFlag(ARG_EHH);
 
@@ -249,6 +277,7 @@ int main(int argc, char *argv[])
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
+    bool SKIP = params.getBoolFlag(ARG_SKIP);
 
     int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
@@ -296,13 +325,22 @@ int main(int argc, char *argv[])
         cerr << "ERROR: EHH cut off must be > 0 and < 1.";
         return 1;
     }
-
-    if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
+    if (TPED)
     {
-        cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
-        return 1;
+        if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
+        {
+            cerr << "ERROR: You are calculating iHS for " << tpedFilename << ", but have also given a second data file (" << tpedFilename2 << ").\n";
+            return 1;
+        }
     }
-
+    else
+    {
+        if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
+        {
+            cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
+            return 1;
+        }
+    }
     if (EHH1K < 1)
     {
         cerr << "ERROR: EHH1K must be > 0.\n";
@@ -314,17 +352,34 @@ int main(int argc, char *argv[])
 
     try
     {
-        hapData = readHaplotypeData(hapFilename);
-        if (CALC_XP)
+        if (TPED)
         {
-            hapData2 = readHaplotypeData(hapFilename2);
-            if (hapData->nloci != hapData2->nloci)
+            hapData = readHaplotypeDataTPED(tpedFilename);
+            if (CALC_XP)
             {
-                cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
-                return 1;
+                hapData2 = readHaplotypeDataTPED(tpedFilename2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
             }
+            mapData = readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps);
         }
-        mapData = readMapData(mapFilename, hapData->nloci);
+        else
+        {
+            hapData = readHaplotypeData(hapFilename);
+            if (CALC_XP)
+            {
+                hapData2 = readHaplotypeData(hapFilename2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
+            }
+            mapData = readMapData(mapFilename, hapData->nloci);
+        }
     }
     catch (...)
     {
@@ -384,10 +439,18 @@ int main(int argc, char *argv[])
     flog << "\n\nCalculating ";
     if (CALC_XP) flog << "XP-EHH.\n";
     else flog << " iHS.\n";
-    flog << "Haplotypes filename: " << hapFilename << "\n";
-    if (CALC_XP) flog << "Reference haplotypes filename: " << hapFilename2 << "\n";
-    flog << "Map filename: " << mapFilename << "\n";
-    flog << "Output file: " << outFilename << "\n";
+    if (TPED)
+    {
+        flog << "Input filename: " << tpedFilename << "\n";
+        if (CALC_XP) flog << "Reference input filename: " << tpedFilename2 << "\n";
+        flog << "Output file: " << outFilename << "\n";
+    }
+    {
+        flog << "Haplotypes filename: " << hapFilename << "\n";
+        if (CALC_XP) flog << "Reference haplotypes filename: " << hapFilename2 << "\n";
+        flog << "Map filename: " << mapFilename << "\n";
+        flog << "Output file: " << outFilename << "\n";
+    }
     flog << "Threads: " << numThreads << "\n";
     flog << "Scale parameter: " << SCALE_PARAMETER << "\n";
     flog << "Max gap parameter: " << MAX_GAP << "\n";
@@ -398,7 +461,6 @@ int main(int argc, char *argv[])
     flog.flush();
 
     Bar pbar;
-    barInit(pbar, mapData->nloci, 78);
 
     double *ihs, *ihh1, *ihh2;
     double *freq, *freq1, *freq2;
@@ -407,21 +469,6 @@ int main(int argc, char *argv[])
     {
         numThreads = 1;
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
-    }
-
-    //Partition loci amongst the specified threads
-    unsigned long int *NUM_PER_THREAD = new unsigned long int[numThreads];
-    unsigned long int div = mapData->nloci / numThreads;
-
-    for (int i = 0; i < numThreads; i++)
-    {
-        NUM_PER_THREAD[i] = 0;
-        NUM_PER_THREAD[i] += div;
-    }
-
-    for (int i = 0; i < (mapData->nloci) % numThreads; i++)
-    {
-        NUM_PER_THREAD[i]++;
     }
 
     if (SINGLE_EHH)
@@ -459,13 +506,21 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    ihh1 = new double[mapData->nloci];
-    ihh2 = new double[mapData->nloci];
-
     if (CALC_XP)
     {
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+
         freq1 = new double[hapData->nloci];
         freq2 = new double[hapData2->nloci];
+
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq1[i] = calcFreq(hapData, i);
+            freq2[i] = calcFreq(hapData2, i);
+        }
+
+        barInit(pbar, mapData->nloci, 78);
 
         cerr << "Starting XP-EHH calculations.\n";
         work_order_t *order;
@@ -474,9 +529,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->first_index = prev_index;
-            order->last_index = prev_index + NUM_PER_THREAD[i];
-            prev_index += NUM_PER_THREAD[i];
+            order->id = i;
             order->hapData1 = hapData;
             order->hapData2 = hapData2;
             order->mapData = mapData;
@@ -521,8 +574,85 @@ int main(int argc, char *argv[])
     }
     else if (CALC_IHS)
     {
-        ihs = new double[hapData->nloci];
+
         freq = new double[hapData->nloci];
+
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        double *newfreq;
+
+        int count = 0;
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq[i] = calcFreq(hapData, i);
+            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        }
+
+        if (SKIP) //prefilter all sites < MAF
+        {
+            cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            flog << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            newfreq = new double [count];
+            newMapData = initMapData(count);
+            newMapData->chr = mapData->chr;
+            int j = 0;
+            for (int locus = 0; locus < mapData->nloci; locus++)
+            {
+                if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                {
+                    continue;
+                }
+                else
+                {
+                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                    newMapData->locusName[j] = mapData->locusName[locus];
+                    newfreq[j] = freq[locus];
+                    j++;
+                }
+            }
+
+            newHapData = initHaplotypeData(hapData->nhaps, count);
+
+            for (int hap = 0; hap < newHapData->nhaps; hap++)
+            {
+                j = 0;
+                for (int locus = 0; locus < mapData->nloci; locus++)
+                {
+                    if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        newHapData->data[hap][j] = hapData->data[hap][locus];
+                        j++;
+                    }
+                }
+            }
+
+            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+            delete [] freq;
+            freq = newfreq;
+            newfreq = NULL;
+
+            releaseHapData(hapData);
+            hapData = newHapData;
+            newHapData = NULL;
+
+            releaseMapData(mapData);
+            mapData = newMapData;
+            newMapData = NULL;
+        }
+
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+        ihs = new double[hapData->nloci];
+
+        barInit(pbar, mapData->nloci, 78);
+
         cerr << "Starting iHS calculations with alt flag ";
         if (!ALT) cerr << "not ";
         cerr << "set.\n";
@@ -533,9 +663,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->first_index = prev_index;
-            order->last_index = prev_index + NUM_PER_THREAD[i];
-            prev_index += NUM_PER_THREAD[i];
+            order->id = i;
             order->hapData = hapData;
             order->mapData = mapData;
             order->ihh1 = ihh1;
@@ -589,9 +717,9 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->first_index = prev_index;
-            order->last_index = prev_index + NUM_PER_THREAD[i];
-            prev_index += NUM_PER_THREAD[i];
+            //order->first_index = prev_index;
+            //order->last_index = prev_index + NUM_PER_THREAD[i];
+            //prev_index += NUM_PER_THREAD[i];
             order->hapData = hapData;
             order->mapData = mapData;
             order->ihh1 = ihh1;
@@ -658,9 +786,9 @@ double calcFreq(HaplotypeData *hapData, int locus)
 
     for (int hap = 0; hap < hapData->nhaps; hap++)
     {
-        if (hapData->data[hap][locus] != -9)
+        if (hapData->data[hap][locus] != MISSING_CHAR)
         {
-            freq += hapData->data[hap][locus];
+            freq += ( hapData->data[hap][locus] == '1' ) ? 1 : 0;
             total++;
         }
     }
@@ -670,7 +798,7 @@ double calcFreq(HaplotypeData *hapData, int locus)
 void query_locus(void *order)
 {
     work_order_t *p = (work_order_t *)order;
-    short **data = p->hapData->data;
+    char **data = p->hapData->data;
     int nloci = p->hapData->nloci;
     int nhaps = p->hapData->nhaps;
     int *physicalPos = p->mapData->physicalPos;
@@ -708,10 +836,10 @@ void query_locus(void *order)
     string *haplotypeList = new string[nhaps];
     for (int hap = 0; hap < nhaps; hap++)
     {
-        derivedCount += data[hap][locus];
-        char digit[2];
-        sprintf(digit, "%d", data[hap][locus]);
-        haplotypeList[hap] = digit;
+        derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+        //char digit[2];
+        //sprintf(digit, "%d", data[hap][locus]);
+        haplotypeList[hap] = data[hap][locus];
     }
 
     if (derivedCount == 0 || derivedCount == nhaps)
@@ -752,11 +880,11 @@ void query_locus(void *order)
 
         for (int hap = 0; hap < nhaps; hap++)
         {
-            bool isDerived = data[hap][locus];
+            bool isDerived = ( data[hap][locus] == '1') ? 1 : 0;
             //build haplotype string
-            char digit[2];
-            sprintf(digit, "%d", data[hap][i]);
-            haplotypeList[hap] += digit;
+            //char digit[2];
+            //sprintf(digit, "%d", data[hap][i]);
+            haplotypeList[hap] += data[hap][i];
             string hapStr = haplotypeList[hap];
 
             if (isDerived)
@@ -809,9 +937,9 @@ void query_locus(void *order)
     haplotypeList = new string[nhaps];
     for (int hap = 0; hap < nhaps; hap++)
     {
-        char digit[2];
-        sprintf(digit, "%d", data[hap][locus]);
-        haplotypeList[hap] = digit;
+        //char digit[2];
+        //sprintf(digit, "%d", data[hap][locus]);
+        haplotypeList[hap] = data[hap][locus];
     }
 
     derivedCurrentColor = 0;
@@ -826,11 +954,11 @@ void query_locus(void *order)
         map<string, int> derivedHapCount;
         for (int hap = 0; hap < nhaps; hap++)
         {
-            bool isDerived = data[hap][locus];
+            bool isDerived = ( data[hap][locus] == '1' ) ? 1 : 0;
             //build haplotype string
-            char digit[2];
-            sprintf(digit, "%d", data[hap][i]);
-            haplotypeList[hap] += digit;
+            //char digit[2];
+            //sprintf(digit, "%d", data[hap][i]);
+            haplotypeList[hap] += data[hap][i];
             string hapStr = haplotypeList[hap];
 
             if (isDerived)
@@ -905,7 +1033,7 @@ void query_locus(void *order)
 void query_locus_soft(void *order)
 {
     work_order_t *p = (work_order_t *)order;
-    short **data = p->hapData->data;
+    char **data = p->hapData->data;
     int nloci = p->hapData->nloci;
     int nhaps = p->hapData->nhaps;
     int *physicalPos = p->mapData->physicalPos;
@@ -1266,14 +1394,13 @@ bool familyDidSplit(const string &hapStr, const int hapCount, int **hapColor, co
 void calc_ihs(void *order)
 {
     work_order_t *p = (work_order_t *)order;
-    short **data = p->hapData->data;
+    char **data = p->hapData->data;
     int nloci = p->hapData->nloci;
     int nhaps = p->hapData->nhaps;
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
-    int start = p->first_index;
-    int stop = p->last_index;
+    int id = p->id;
     double *ihs = p->ihs;
     double *ihh1 = p->ihh1;
     double *ihh2 = p->ihh2;
@@ -1286,48 +1413,30 @@ void calc_ihs(void *order)
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
-
-    int MAX_EXTEND = 1000000;
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
+    //bool SKIP = p->params->getBoolFlag(ARG_SKIP);
 
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
-    int step = (stop - start) / (pbar->totalTicks);
+    //int step = (stop - start) / (pbar->totalTicks);
+    int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
-    for (int locus = start; locus < stop; locus++)
+    bool isDerived;
+    string hapStr;
+
+    for (int locus = id; locus < nloci; locus += numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
         ihs[locus] = 0;
-        freq[locus] = MISSING;
+        //freq[locus] = MISSING;
         ihh1[locus] = MISSING;
         ihh2[locus] = MISSING;
-
-        //EHH to the left of the core snp
-        double current_derived_ehh = 1;
-        double current_ancestral_ehh = 1;
-        double previous_derived_ehh = 1;
-        double previous_ancestral_ehh = 1;
-        int currentLocus = locus;
-        int nextLocus = locus - 1;
         bool skipLocus = 0;
-        double derived_ihh = 0;
-        double ancestral_ihh = 0;
-        double derivedCount = 0;
-        //A list of all the haplotypes
-        //Starts with just the focal snp and grows outward
-        string *haplotypeList = new string[nhaps];
-        for (int hap = 0; hap < nhaps; hap++)
-        {
-            derivedCount += data[hap][locus];
-            char digit[2];
-            sprintf(digit, "%d", data[hap][locus]);
-            haplotypeList[hap] = digit;
-        }
-
         //If the focal snp has MAF < MAF, then skip this locus
-        double alleleFreq = double(derivedCount) / double(nhaps);
-        if (alleleFreq < MAF || alleleFreq > 1 - MAF)
+        if (freq[locus] < MAF || freq[locus] > 1 - MAF)
         {
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Locus " << locusName[locus]
@@ -1336,6 +1445,25 @@ void calc_ihs(void *order)
             ihs[locus] = MISSING;
             skipLocus = 0;
             continue;
+        }
+
+        //EHH to the left of the core snp
+        double current_derived_ehh = 1;
+        double current_ancestral_ehh = 1;
+        double previous_derived_ehh = 1;
+        double previous_ancestral_ehh = 1;
+        int currentLocus = locus;
+        int nextLocus = locus - 1;
+        double derived_ihh = 0;
+        double ancestral_ihh = 0;
+        //double derivedCount = 0;
+        //A list of all the haplotypes
+        //Starts with just the focal snp and grows outward
+        string *haplotypeList = new string[nhaps];
+        for (int hap = 0; hap < nhaps; hap++)
+        {
+            //derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+            haplotypeList[hap] = data[hap][locus];
         }
 
         while (current_derived_ehh > EHH_CUTOFF || current_ancestral_ehh > EHH_CUTOFF)
@@ -1374,12 +1502,9 @@ void calc_ihs(void *order)
 
             for (int hap = 0; hap < nhaps; hap++)
             {
-                bool isDerived = data[hap][locus];
-                //build haplotype string
-                char digit[2];
-                sprintf(digit, "%d", data[hap][currentLocus]);
-                haplotypeList[hap] += digit;
-                string hapStr = haplotypeList[hap];
+                isDerived = ( data[hap][locus] == '1' ) ? 1 : 0;
+                haplotypeList[hap] += data[hap][currentLocus];
+                hapStr = haplotypeList[hap];
 
                 if (isDerived)
                 {
@@ -1456,9 +1581,9 @@ void calc_ihs(void *order)
         haplotypeList = new string[nhaps];
         for (int hap = 0; hap < nhaps; hap++)
         {
-            char digit[2];
-            sprintf(digit, "%d", data[hap][locus]);
-            haplotypeList[hap] = digit;
+            //char digit[2];
+            //sprintf(digit, "%d", data[hap][locus]);
+            haplotypeList[hap] = data[hap][locus];
         }
 
         while (current_ancestral_ehh > EHH_CUTOFF || current_derived_ehh > EHH_CUTOFF)
@@ -1494,12 +1619,9 @@ void calc_ihs(void *order)
             map<string, int> derivedHapCount;
             for (int hap = 0; hap < nhaps; hap++)
             {
-                bool isDerived = data[hap][locus];
-                //build haplotype string
-                char digit[2];
-                sprintf(digit, "%d", data[hap][currentLocus]);
-                haplotypeList[hap] += digit;
-                string hapStr = haplotypeList[hap];
+                isDerived = ( data[hap][locus] == '1') ? 1 : 0;
+                haplotypeList[hap] += data[hap][currentLocus];
+                hapStr = haplotypeList[hap];
 
                 if (isDerived)
                 {
@@ -1565,7 +1687,7 @@ void calc_ihs(void *order)
             ihh1[locus] = derived_ihh;
             ihh2[locus] = ancestral_ihh;
             ihs[locus] = log(derived_ihh / ancestral_ihh);
-            freq[locus] = double(derivedCount) / double(nhaps);
+            //freq[locus] = double(derivedCount) / double(nhaps);
         }
     }
 }
@@ -1573,14 +1695,15 @@ void calc_ihs(void *order)
 void calc_soft_ihs(void *order)
 {
     work_order_t *p = (work_order_t *)order;
-    short **data = p->hapData->data;
+    char **data = p->hapData->data;
     int nloci = p->hapData->nloci;
     int nhaps = p->hapData->nhaps;
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
-    int start = p->first_index;
-    int stop = p->last_index;
+    //int start = p->first_index;
+    //int stop = p->last_index;
+    int id = p->id;
     double *h1 = p->ihh1;
     double *h2dh1 = p->ihh2;
     double *h12 = p->ihs;
@@ -1593,11 +1716,12 @@ void calc_soft_ihs(void *order)
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
 
-    int step = (stop - start) / (pbar->totalTicks);
+    int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
-    for (int locus = start; locus < stop; locus++)
+    for (int locus = id; locus < nloci; locus += numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
@@ -1838,12 +1962,12 @@ void calc_xpihh(void *order)
 {
     work_order_t *p = (work_order_t *)order;
 
-    short **data1 = p->hapData1->data;
+    char **data1 = p->hapData1->data;
     int nhaps1 = p->hapData1->nhaps;
     double *ihh1 = p->ihh1;
     double *freq1 = p->freq1;
 
-    short **data2 = p->hapData2->data;
+    char **data2 = p->hapData2->data;
     int nhaps2 = p->hapData2->nhaps;
     double *ihh2 = p->ihh2;
     double *freq2 = p->freq2;
@@ -1853,8 +1977,7 @@ void calc_xpihh(void *order)
     double *geneticPos = p->mapData->geneticPos;
     string *locusName = p->mapData->locusName;
 
-    int start = p->first_index;
-    int stop = p->last_index;
+    int id = p->id;
 
     ofstream *flog = p->flog;
     Bar *pbar = p->bar;
@@ -1863,25 +1986,24 @@ void calc_xpihh(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
 
-    int MAX_EXTEND = 1000000;
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
 
-    //Weird offset thing mentioned in Sabetti et al. (2007) that is apparently used to calculate iHH
-    //subtract this from EHH when integrating
-    //double offset = EHH_CUTOFF-(1.0/double(nhaps));
-
-    int step = (stop - start) / (pbar->totalTicks);
+    int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
-    for (int locus = start; locus < stop; locus++)
+    string hapStr;
+
+    for (int locus = id; locus < nloci; locus += numThreads)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
         ihh1[locus] = 0;
         ihh2[locus] = 0;
 
-        freq1[locus] = MISSING;
-        freq2[locus] = MISSING;
+        //freq1[locus] = MISSING;
+        //freq2[locus] = MISSING;
 
         //EHH to the left of the core snp
         double current_pooled_ehh = 1;
@@ -1910,24 +2032,23 @@ void calc_xpihh(void *order)
         haplotypeListPooled = new string[nhaps1 + nhaps2];
         for (int hap = 0; hap < nhaps1 + nhaps2; hap++)
         {
-            char digit[2];
+            //char digit[2];
             //Pop1
             if (hap < nhaps1)
             {
-                sprintf(digit, "%d", data1[hap][locus]);
-                haplotypeList1[hap] = digit;
-                derivedCount1 += data1[hap][locus];
+                //sprintf(digit, "%d", data1[hap][locus]);
+                haplotypeList1[hap] = data1[hap][locus];
+                haplotypeListPooled[hap] = data1[hap][locus];
+                derivedCount1 += ( data1[hap][locus] == '1') ? 1 : 0;
             }
             //Pop2
             else
             {
-                sprintf(digit, "%d", data2[hap - nhaps1][locus]);
-                haplotypeList2[hap - nhaps1] = digit;
-                derivedCount2 += data2[hap - nhaps1][locus];
+                //sprintf(digit, "%d", data2[hap - nhaps1][locus]);
+                haplotypeList2[hap - nhaps1] = data2[hap - nhaps1][locus];
+                haplotypeListPooled[hap] = data2[hap - nhaps1][locus];
+                derivedCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
             }
-
-            //Pooled
-            haplotypeListPooled[hap] = digit;
         }
 
         derivedCountPooled = derivedCount1 + derivedCount2;
@@ -1997,30 +2118,35 @@ void calc_xpihh(void *order)
             //build haplotype strings
             for (int hap = 0; hap < nhaps1 + nhaps2; hap++)
             {
-                char digit[2];
-                string hapStr;
+                //char digit[2];
                 if (hap < nhaps1) //Pop1
                 {
-                    sprintf(digit, "%d", data1[hap][currentLocus]);
-                    haplotypeList1[hap] += digit;
+                    //sprintf(digit, "%d", data1[hap][currentLocus]);
+                    haplotypeList1[hap] += data1[hap][currentLocus];
                     hapStr = haplotypeList1[hap];
                     if (hapCount1.count(hapStr) == 0) hapCount1[hapStr] = 1;
                     else hapCount1[hapStr]++;
+
+                    //Pooled
+                    haplotypeListPooled[hap] += data1[hap][currentLocus];
+                    hapStr = haplotypeListPooled[hap];
+                    if (hapCountPooled.count(hapStr) == 0) hapCountPooled[hapStr] = 1;
+                    else hapCountPooled[hapStr]++;
                 }
                 else //Pop2
                 {
-                    sprintf(digit, "%d", data2[hap - nhaps1][currentLocus]);
-                    haplotypeList2[hap - nhaps1] += digit;
+                    //sprintf(digit, "%d", data2[hap - nhaps1][currentLocus]);
+                    haplotypeList2[hap - nhaps1] += data2[hap - nhaps1][currentLocus];
                     hapStr = haplotypeList2[hap - nhaps1];
                     if (hapCount2.count(hapStr) == 0) hapCount2[hapStr] = 1;
                     else hapCount2[hapStr]++;
-                }
 
-                //Pooled
-                haplotypeListPooled[hap] += digit;
-                hapStr = haplotypeListPooled[hap];
-                if (hapCountPooled.count(hapStr) == 0) hapCountPooled[hapStr] = 1;
-                else hapCountPooled[hapStr]++;
+                    //Pooled
+                    haplotypeListPooled[hap] += data2[hap - nhaps1][currentLocus];
+                    hapStr = haplotypeListPooled[hap];
+                    if (hapCountPooled.count(hapStr) == 0) hapCountPooled[hapStr] = 1;
+                    else hapCountPooled[hapStr]++;
+                }
             }
 
             current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
@@ -2078,24 +2204,26 @@ void calc_xpihh(void *order)
         haplotypeListPooled = new string[nhaps1 + nhaps2];
         for (int hap = 0; hap < nhaps1 + nhaps2; hap++)
         {
-            char digit[2];
             //Pop1
             if (hap < nhaps1)
             {
-                sprintf(digit, "%d", data1[hap][locus]);
-                haplotypeList1[hap] = digit;
+                //sprintf(digit, "%d", data1[hap][locus]);
+                haplotypeList1[hap] = data1[hap][locus];
                 derivedCount1 += data1[hap][locus];
+
+                //Pooled
+                haplotypeListPooled[hap] = data1[hap][locus];
             }
             //Pop2
             else
             {
-                sprintf(digit, "%d", data2[hap - nhaps1][locus]);
-                haplotypeList2[hap - nhaps1] = digit;
+                //sprintf(digit, "%d", data2[hap - nhaps1][locus]);
+                haplotypeList2[hap - nhaps1] = data2[hap - nhaps1][locus];
                 derivedCount2 += data2[hap - nhaps1][locus];
-            }
 
-            //Pooled
-            haplotypeListPooled[hap] = digit;
+                //Pooled
+                haplotypeListPooled[hap] = data2[hap - nhaps1][locus];
+            }
         }
 
         derivedCountPooled = derivedCount1 + derivedCount2;
@@ -2164,32 +2292,37 @@ void calc_xpihh(void *order)
             //build haplotype strings
             for (int hap = 0; hap < nhaps1 + nhaps2; hap++)
             {
-                char digit[2];
-                string hapStr;
+                //char digit[2];
+                //string hapStr;
 
                 //pop1
                 if (hap < nhaps1)
                 {
-                    sprintf(digit, "%d", data1[hap][currentLocus]);
-                    haplotypeList1[hap] += digit;
+                    haplotypeList1[hap] += data1[hap][currentLocus];
                     hapStr = haplotypeList1[hap];
                     if (hapCount1.count(hapStr) == 0) hapCount1[hapStr] = 1;
                     else hapCount1[hapStr]++;
+
+                    //Pooled
+                    haplotypeListPooled[hap] += data1[hap][currentLocus];
+                    hapStr = haplotypeListPooled[hap];
+                    if (hapCountPooled.count(hapStr) == 0) hapCountPooled[hapStr] = 1;
+                    else hapCountPooled[hapStr]++;
                 }
                 //Pop2
                 else
                 {
-                    sprintf(digit, "%d", data2[hap - nhaps1][currentLocus]);
-                    haplotypeList2[hap - nhaps1] += digit;
+                    haplotypeList2[hap - nhaps1] += data2[hap - nhaps1][currentLocus];
                     hapStr = haplotypeList2[hap - nhaps1];
                     if (hapCount2.count(hapStr) == 0) hapCount2[hapStr] = 1;
                     else hapCount2[hapStr]++;
+
+                    //Pooled
+                    haplotypeListPooled[hap] += data2[hap - nhaps1][currentLocus];
+                    hapStr = haplotypeListPooled[hap];
+                    if (hapCountPooled.count(hapStr) == 0) hapCountPooled[hapStr] = 1;
+                    else hapCountPooled[hapStr]++;
                 }
-                //Pooled
-                haplotypeListPooled[hap] += digit;
-                hapStr = haplotypeListPooled[hap];
-                if (hapCountPooled.count(hapStr) == 0) hapCountPooled[hapStr] = 1;
-                else hapCountPooled[hapStr]++;
             }
 
             current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
@@ -2225,13 +2358,13 @@ void calc_xpihh(void *order)
         if (ihh1[locus] != MISSING)
         {
             ihh1[locus] = ihhPop1;
-            freq1[locus] = double(derivedCount1) / double(nhaps1);
+            //freq1[locus] = double(derivedCount1) / double(nhaps1);
         }
 
         if (ihh2[locus] != MISSING)
         {
             ihh2[locus] = ihhPop2;
-            freq2[locus] = double(derivedCount2) / double(nhaps2);
+            //freq2[locus] = double(derivedCount2) / double(nhaps2);
         }
     }
 }
