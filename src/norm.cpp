@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
 
         cerr << "Calculating mean and variance per frequency bin:\n\n";
         getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold);
-        /*
+        
         gsl_sort(score, 1, totalLoci);
         double upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.995);
         double lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.005);
@@ -288,9 +288,9 @@ int main(int argc, char *argv[])
         cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
         flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
         flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
-        */
-        double upperCutoff = 2;
-        double lowerCutoff = -2;
+        
+        //double upperCutoff = 2;
+        //double lowerCutoff = -2;
         delete [] freq;
         delete [] score;
 

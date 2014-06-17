@@ -51,6 +51,7 @@ void releaseMapData(MapData *data);
 //returns a populated MapData structure if successful
 //throws an exception otherwise
 MapData *readMapData(string filename, int expected_loci);
+MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps);
 
 //allocates the 2-d array and populated it with -9
 HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci);
@@ -60,6 +61,7 @@ void releaseHapData(HaplotypeData *data);
 //returns a populated HaplotypeData structure if successful
 //throws an exception otherwise
 HaplotypeData *readHaplotypeData(string filename);
+HaplotypeData *readHaplotypeDataTPED(string filename);
 
 //counts the number of "fields" in a string
 //where a field is defined as a contiguous set of non whitespace

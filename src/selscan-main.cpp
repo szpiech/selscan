@@ -59,6 +59,18 @@ const int DEFAULT_THREAD = 1;
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
 \tPartitions loci across threads.";
 
+const string ARG_FILENAME_POP1_TPED = "--tped";
+const string DEFAULT_FILENAME_POP1_TPED = "__hapfile1";
+const string HELP_FILENAME_POP1_TPED = "A TPED file containing haplotype and map data.\n\
+\tVariants should be coded 0/1";
+
+const string ARG_FILENAME_POP2_TPED = "--tped-ref";
+const string DEFAULT_FILENAME_POP2_TPED = "__hapfile2";
+const string HELP_FILENAME_POP2_TPED = "A TPED file containing haplotype and map data.\n\
+\tVariants should be coded 0/1. This is the 'reference'\n\
+\tpopulation for XP-EHH calculations and should contain the same number\n\
+\tof loci as the query population. Ignored otherwise.";
+
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
 const string HELP_FILENAME_POP1 = "A hapfile with one row per haplotype, and one column per\n\
@@ -212,6 +224,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_THREAD, DEFAULT_THREAD, "", HELP_THREAD);
     params.addFlag(ARG_FILENAME_POP1, DEFAULT_FILENAME_POP1, "", HELP_FILENAME_POP1);
     params.addFlag(ARG_FILENAME_POP2, DEFAULT_FILENAME_POP2, "", HELP_FILENAME_POP2);
+    params.addFlag(ARG_FILENAME_POP1_TPED, DEFAULT_FILENAME_POP1_TPED, "", HELP_FILENAME_POP1_TPED);
+    params.addFlag(ARG_FILENAME_POP2_TPED, DEFAULT_FILENAME_POP2_TPED, "", HELP_FILENAME_POP2_TPED);
     params.addFlag(ARG_FILENAME_MAP, DEFAULT_FILENAME_MAP, "", HELP_FILENAME_MAP);
     params.addFlag(ARG_OUTFILE, DEFAULT_OUTFILE, "", HELP_OUTFILE);
     params.addFlag(ARG_CUTOFF, DEFAULT_CUTOFF, "", HELP_CUTOFF);
@@ -240,6 +254,13 @@ int main(int argc, char *argv[])
     string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
     string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
+    string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
+    string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
+
+    bool TPED = false;
+
+    if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+
     string outFilename = params.getStringFlag(ARG_OUTFILE);
     string query = params.getStringFlag(ARG_EHH);
 
@@ -304,13 +325,22 @@ int main(int argc, char *argv[])
         cerr << "ERROR: EHH cut off must be > 0 and < 1.";
         return 1;
     }
-
-    if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
+    if (TPED)
     {
-        cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
-        return 1;
+        if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
+        {
+            cerr << "ERROR: You are calculating iHS for " << tpedFilename << ", but have also given a second data file (" << tpedFilename2 << ").\n";
+            return 1;
+        }
     }
-
+    else
+    {
+        if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
+        {
+            cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
+            return 1;
+        }
+    }
     if (EHH1K < 1)
     {
         cerr << "ERROR: EHH1K must be > 0.\n";
@@ -322,17 +352,34 @@ int main(int argc, char *argv[])
 
     try
     {
-        hapData = readHaplotypeData(hapFilename);
-        if (CALC_XP)
+        if (TPED)
         {
-            hapData2 = readHaplotypeData(hapFilename2);
-            if (hapData->nloci != hapData2->nloci)
+            hapData = readHaplotypeDataTPED(tpedFilename);
+            if (CALC_XP)
             {
-                cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
-                return 1;
+                hapData2 = readHaplotypeDataTPED(tpedFilename2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
             }
+            mapData = readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps);
         }
-        mapData = readMapData(mapFilename, hapData->nloci);
+        else
+        {
+            hapData = readHaplotypeData(hapFilename);
+            if (CALC_XP)
+            {
+                hapData2 = readHaplotypeData(hapFilename2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
+            }
+            mapData = readMapData(mapFilename, hapData->nloci);
+        }
     }
     catch (...)
     {
@@ -392,10 +439,18 @@ int main(int argc, char *argv[])
     flog << "\n\nCalculating ";
     if (CALC_XP) flog << "XP-EHH.\n";
     else flog << " iHS.\n";
-    flog << "Haplotypes filename: " << hapFilename << "\n";
-    if (CALC_XP) flog << "Reference haplotypes filename: " << hapFilename2 << "\n";
-    flog << "Map filename: " << mapFilename << "\n";
-    flog << "Output file: " << outFilename << "\n";
+    if (TPED)
+    {
+        flog << "Input filename: " << tpedFilename << "\n";
+        if (CALC_XP) flog << "Reference input filename: " << tpedFilename2 << "\n";
+        flog << "Output file: " << outFilename << "\n";
+    }
+    {
+        flog << "Haplotypes filename: " << hapFilename << "\n";
+        if (CALC_XP) flog << "Reference haplotypes filename: " << hapFilename2 << "\n";
+        flog << "Map filename: " << mapFilename << "\n";
+        flog << "Output file: " << outFilename << "\n";
+    }
     flog << "Threads: " << numThreads << "\n";
     flog << "Scale parameter: " << SCALE_PARAMETER << "\n";
     flog << "Max gap parameter: " << MAX_GAP << "\n";
