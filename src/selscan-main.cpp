@@ -37,7 +37,7 @@ selscan currently implements EHH, iHS, and XP-EHH.\n\
 \n\
 Citations:\n\
 \n\
-ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]\n\
+ZA Szpiech and RD Hernandez (2014) Molecular Biology and Evolution, doi:10.1093/molbev/msu207\n\
 PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
 BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 PC Sabeti, et al. (2002) Nature, 419: 832–837.\n\
