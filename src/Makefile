@@ -8,13 +8,18 @@
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 
-#for osx or linux systems
+#for osx systems
 CC = g++
-G++FLAG = -O3 -m64 -mmmx -msse -msse2
+G++FLAG = -fast -m64 -mmmx -msse -msse2
 PTHREAD = -pthread
 I_PATH = -I../include
-#choose linux or osx
 L_PATH = ../lib/osx
+
+#for linux systems
+#CC = g++
+#G++FLAG = -O3 -m64 -mmmx -msse -msse2
+#PTHREAD = -pthread
+#I_PATH = -I../include
 #L_PATH = ../lib/linux
 
 #for windows, using MinGW build environment
