@@ -37,7 +37,7 @@ selscan currently implements EHH, iHS, and XP-EHH.\n\
 \n\
 Citations:\n\
 \n\
-ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]\n\
+ZA Szpiech and RD Hernandez (2014) Molecular Biology and Evolution, doi:10.1093/molbev/msu207\n\
 PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
 BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 PC Sabeti, et al. (2002) Nature, 419: 832–837.\n\
@@ -151,6 +151,12 @@ const string ARG_SKIP = "--skip-low-freq";
 const bool DEFAULT_SKIP = false;
 const string HELP_SKIP = "Do not include low frequency variants in the construction of haplotypes (iHS only).";
 
+const string ARG_TRUNC = "--trunc-ok";
+const bool DEFAULT_TRUNC = false;
+const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before reaching the cutoff,\n\
+integrate the curve anyway (iHS only).\n\
+Normal function is to disregard the score for that core.";
+
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 struct work_order_t
@@ -241,6 +247,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
+    params.addFlag(ARG_TRUNC,DEFAULT_TRUNC,"SILENT",HELP_TRUNC);
 
     try
     {
@@ -278,6 +285,7 @@ int main(int argc, char *argv[])
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
     bool SKIP = params.getBoolFlag(ARG_SKIP);
+    bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
     int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
@@ -1412,6 +1420,7 @@ void calc_ihs(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
     int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
@@ -1474,7 +1483,7 @@ void calc_ihs(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                skipLocus = 1;
+                if(!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
@@ -1594,7 +1603,7 @@ void calc_ihs(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                skipLocus = 1;
+                if(!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
