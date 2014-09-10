@@ -11,14 +11,14 @@ LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 #for osx systems
 CC = g++
 G++FLAG = -fast -m64 -mmmx -msse -msse2
-PTHREAD = -pthread
+PTHREAD = -pthread -lz
 I_PATH = -I../include
 L_PATH = ../lib/osx
 
 #for linux systems
 #CC = g++
 #G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#PTHREAD = -pthread
+#PTHREAD = -pthread -lz
 #I_PATH = -I../include
 #L_PATH = ../lib/linux
 
@@ -31,8 +31,8 @@ L_PATH = ../lib/osx
 
 all : selscan norm
 
-selscan : selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o $(PTHREAD)
+selscan : selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o
+	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o $(PTHREAD)
 
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
@@ -54,6 +54,9 @@ norm.o : norm.cpp
 
 param_t.o : param_t.cpp
 	$(CC) $(G++FLAG) -c param_t.cpp
+
+gzstream.o : gzstream.cpp
+	$(CC) $(G++FLAG) -c gzstream.cpp
 
 clean :
 	rm *.o

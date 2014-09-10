@@ -22,7 +22,7 @@
 //throws an exception otherwise
 MapData *readMapData(string filename, int expected_loci)
 {
-    ifstream fin;
+    igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
 
@@ -32,7 +32,7 @@ MapData *readMapData(string filename, int expected_loci)
         throw 0;
     }
 
-    int fileStart = fin.tellg();
+    //int fileStart = fin.tellg();
     string line;
     int nloci = 0;
     int num_cols = 4;
@@ -56,7 +56,15 @@ MapData *readMapData(string filename, int expected_loci)
     }
 
     fin.clear(); // clear error flags
-    fin.seekg(fileStart);
+    //fin.seekg(fileStart);
+    fin.close();
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
 
     cerr << "Loading map data for " << nloci << " loci\n";
 
@@ -77,7 +85,7 @@ MapData *readMapData(string filename, int expected_loci)
 
 MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
 {
-    ifstream fin;
+    igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
 
@@ -87,7 +95,7 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
         throw 0;
     }
 
-    int fileStart = fin.tellg();
+    //int fileStart = fin.tellg();
     string line;
     int nloci = 0;
     int num_cols = 4;
@@ -111,7 +119,15 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
     }
 
     fin.clear(); // clear error flags
-    fin.seekg(fileStart);
+    //fin.seekg(fileStart);
+    fin.close();
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
 
     cerr << "Loading map data for " << nloci << " loci\n";
 
@@ -173,7 +189,7 @@ void releaseMapData(MapData *data)
 //throws an exception otherwise
 HaplotypeData *readHaplotypeData(string filename)
 {
-    ifstream fin;
+    igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
 
@@ -183,7 +199,7 @@ HaplotypeData *readHaplotypeData(string filename)
         throw 0;
     }
 
-    int fileStart = fin.tellg();
+    //int fileStart = fin.tellg();
     string line;
     int nhaps = 0;
     int previous_nloci = -1;
@@ -212,7 +228,15 @@ HaplotypeData *readHaplotypeData(string filename)
     }
 
     fin.clear(); // clear error flags
-    fin.seekg(fileStart);
+    //fin.seekg(fileStart);
+    fin.close();
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
 
     cerr << "Loading " << nhaps << " haplotypes and " << current_nloci << " loci...\n";
 
@@ -239,7 +263,7 @@ HaplotypeData *readHaplotypeData(string filename)
 
 HaplotypeData *readHaplotypeDataTPED(string filename)
 {
-    ifstream fin;
+    igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
 
@@ -250,7 +274,7 @@ HaplotypeData *readHaplotypeDataTPED(string filename)
     }
 
     int numMapCols = 4;
-    int fileStart = fin.tellg();
+    //int fileStart = fin.tellg();
     string line;
     int nloci = 0;
     int previous_nhaps = -1;
@@ -279,7 +303,15 @@ HaplotypeData *readHaplotypeDataTPED(string filename)
     }
 
     fin.clear(); // clear error flags
-    fin.seekg(fileStart);
+    //fin.seekg(fileStart);
+    fin.close();
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
 
     cerr << "Loading " << current_nhaps - numMapCols << " haplotypes and " << nloci << " loci...\n";
 

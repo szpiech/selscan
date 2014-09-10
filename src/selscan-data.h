@@ -21,6 +21,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include "gzstream.h"
 
 using namespace std;
 
