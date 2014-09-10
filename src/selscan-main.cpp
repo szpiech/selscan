@@ -154,7 +154,7 @@ const string HELP_SKIP = "Do not include low frequency variants in the construct
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;
 const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before reaching the cutoff,\n\
-integrate the curve anyway (iHS only).\n\
+integrate the curve anyway (iHS and XPEHH only).\n\
 Normal function is to disregard the score for that core.";
 
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
-    params.addFlag(ARG_TRUNC,DEFAULT_TRUNC,"SILENT",HELP_TRUNC);
+    params.addFlag(ARG_TRUNC,DEFAULT_TRUNC,"",HELP_TRUNC);
 
     try
     {
@@ -1991,6 +1991,7 @@ void calc_xpihh(void *order)
     ofstream *flog = p->flog;
     Bar *pbar = p->bar;
 
+    bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
@@ -2100,7 +2101,7 @@ void calc_xpihh(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                skipLocus = 1;
+                if(!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
@@ -2276,7 +2277,7 @@ void calc_xpihh(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                skipLocus = 1;
+                if(!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
