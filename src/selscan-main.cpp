@@ -2218,7 +2218,7 @@ void calc_xpihh(void *order)
             {
                 //sprintf(digit, "%d", data1[hap][locus]);
                 haplotypeList1[hap] = data1[hap][locus];
-                derivedCount1 += data1[hap][locus];
+                derivedCount1 += ( data1[hap][locus] == '1' ) ? 1 : 0;
 
                 //Pooled
                 haplotypeListPooled[hap] = data1[hap][locus];
@@ -2228,7 +2228,7 @@ void calc_xpihh(void *order)
             {
                 //sprintf(digit, "%d", data2[hap - nhaps1][locus]);
                 haplotypeList2[hap - nhaps1] = data2[hap - nhaps1][locus];
-                derivedCount2 += data2[hap - nhaps1][locus];
+                derivedCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
 
                 //Pooled
                 haplotypeListPooled[hap] = data2[hap - nhaps1][locus];
