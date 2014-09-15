@@ -154,8 +154,8 @@ const string HELP_SKIP = "Do not include low frequency variants in the construct
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;
 const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before reaching the cutoff,\n\
-integrate the curve anyway (iHS and XPEHH only).\n\
-Normal function is to disregard the score for that core.";
+\tintegrate the curve anyway (iHS and XPEHH only).\n\
+\tNormal function is to disregard the score for that core.";
 
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
