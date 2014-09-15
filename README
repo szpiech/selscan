@@ -23,29 +23,29 @@ PC Sabeti, et al. (2002) Detecting recent positive selection in the human
 
 15SEP2014 - Release of 1.0.3.  **A critical bug in the XP-EHH module was introduced in version 1.0.2 and had been fixed in 1.0.3.  Do not use 1.0.2 for calculating XP-EHH scores.**  1.0.3 also introduces support for gzipped input files.  You may pass hap.gz, map.gz. and tped.gz files interchangably with unzipped files using the same command line arguments.  A new command line option is available.
 
-	--trunc-ok <bool>	: If an EHH decay reaches the end of a sequence before reaching the cutoff,
-					      integrate the curve anyway (iHS and XPEHH only).
-						  Normal function is to disregard the score for that core.
-						  Default: false
+--trunc-ok <bool>: If an EHH decay reaches the end of a sequence before reaching the cutoff,
+	integrate the curve anyway (iHS and XPEHH only).
+	Normal function is to disregard the score for that core.
+	Default: false
 
 17JUN2014 - Release of 1.0.2.  General speed improvements have been made, especially with threading.  New support for TPED formatted data and new command line options are available.
 
-	--skip-low-freq : Do not include low frequency variants in the construction of haplotypes (iHS only).
-					  Default: false
+--skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
+	Default: false
 
-	--max-extend	: The maximum distance an EHH decay curve is allowed to extend from the core.
-					  Set <= 0 for no restriction.
-					  Default: 1000000
+--max-extend: The maximum distance an EHH decay curve is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 1000000
 
-	--tped 			: A TPED file containing haplotype and map data.
-					  Variants should be coded 0/1
-			 		  Default: __hapfile1
+--tped <string>: A TPED file containing haplotype and map data.
+	Variants should be coded 0/1
+	Default: __hapfile1
 
-	--tped-ref 		: A TPED file containing haplotype and map data.
-					  Variants should be coded 0/1. This is the 'reference'
-					  population for XP-EHH calculations and should contain the same number
-					  of loci as the query population. Ignored otherwise.
-					  Default: __hapfile2
+--tped-ref <string>: A TPED file containing haplotype and map data.
+	Variants should be coded 0/1. This is the 'reference'
+	population for XP-EHH calculations and should contain the same number
+	of loci as the query population. Ignored otherwise.
+	Default: __hapfile2
 
 10APR2014 - Release of 1.0.1.  Minor bug fixes. XP-EHH output header is now separated by tabs instead of spaces.  Removed references to missing data (which is not accepted), and introduced error checking in the event of non-0/1 data being provided.
 
