@@ -21,9 +21,39 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+15SEP2014 - Release of 1.0.3.  **A critical bug in the XP-EHH module was introduced in version 1.0.2 and had been fixed in 1.0.3.  Do not use 1.0.2 for calculating XP-EHH scores.**  1.0.3 also introduces support for gzipped input files.  You may pass hap.gz, map.gz. and tped.gz files interchangably with unzipped files using the same command line arguments.  A new command line option is available.
+
+	--trunc-ok <bool>	: If an EHH decay reaches the end of a sequence before reaching the cutoff,
+					      integrate the curve anyway (iHS and XPEHH only).
+						  Normal function is to disregard the score for that core.
+						  Default: false
+
+17JUN2014 - Release of 1.0.2.  General speed improvements have been made, especially with threading.  New support for TPED formatted data and new command line options are available.
+
+	--skip-low-freq : Do not include low frequency variants in the construction of haplotypes (iHS only).
+					  Default: false
+
+	--max-extend	: The maximum distance an EHH decay curve is allowed to extend from the core.
+					  Set <= 0 for no restriction.
+					  Default: 1000000
+
+	--tped 			: A TPED file containing haplotype and map data.
+					  Variants should be coded 0/1
+			 		  Default: __hapfile1
+
+	--tped-ref 		: A TPED file containing haplotype and map data.
+					  Variants should be coded 0/1. This is the 'reference'
+					  population for XP-EHH calculations and should contain the same number
+					  of loci as the query population. Ignored otherwise.
+					  Default: __hapfile2
+
+10APR2014 - Release of 1.0.1.  Minor bug fixes. XP-EHH output header is now separated by tabs instead of spaces.  Removed references to missing data (which is not accepted), and introduced error checking in the event of non-0/1 data being provided.
+
+26MAR2014 - Initial release of selscan 1.0.0.
+
 USAGE:
 
-Data must be phased and have no missing genotypes.
+**Data must be phased and have no missing genotypes.**
 
 To calculate EHH:
 
@@ -72,16 +102,16 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 
 ----------Command Line Arguments----------
 
---hap <string>: A hapfile with one row per haplotype, and one column per 
-	variant.  Variants should be coded 0/1.
+--hap <string>: A hapfile with one row per haplotype, and one column per
+	variant. Variants should be coded 0/1
 	Default: __hapfile1
 
---map <string>: A mapfile with one row per variant site.  
-	Formatted <chr#> <locusID> <genetic pos> <physical pos>. 
+--map <string>: A mapfile with one row per variant site.
+	Formatted <chr#> <locusID> <genetic pos> <physical pos>.
 	Default: __mapfile
 
---ref <string>: A hapfile with one row per haplotype, and one column per 
-	variant.  Variants should be coded 0/1. 	This is the 'reference' 
+--ref <string>: A hapfile with one row per haplotype, and one column per
+	variant. Variants should be coded 0/1. This is the 'reference'
 	population for XP-EHH calculations.  Ignored otherwise.
 	Default: __hapfile2
 
@@ -98,50 +128,55 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 --out <string>: The basename for all output files.
 	Default: outfile
 
---ehh <string>: Calculate EHH of the '1' and '0' haplotypes at the specified 
-	locus.  Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH> 
-	Default: __NO_LOCUS__
-
---ihs <bool>: Set this flag to calculate iHS. 
+--ihs <bool>: Set this flag to calculate iHS.
 	Default: false
 
 --xpehh <bool>: Set this flag to calculate XP-EHH.
 	Default: false
 
---ehh-win <int>: When calculating EHH, this is the length of the window in bp 
+--ehh <string>: Calculate EHH of the '1' and '0' haplotypes at the specified
+	locus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>
+	Default: __NO_LOCUS__
+
+--ehh-win <int>: When calculating EHH, this is the length of the window in bp
 	in each direction from the query locus.
 	Default: 100000
 
---cutoff <double>: The EHH decay cutoff.
-	Default: 0.05
-
---gap-scale <int>: Gap scale parameter in bp.
-	If a gap is encountered between two snps > GAP_SCALE and < MAX_GAP, then 
-	the genetic distance is scaled by GAP_SCALE/GAP.
-	Default: 20000
-
---maf <double>: If a site has a MAF below this value, the program will not use 
-	it as a core snp.
-	Default: 0.05
-
 --max-gap <int>: Maximum allowed gap in bp between two snps.
 	Default: 200000
+
+--gap-scale <int>: Gap scale parameter in bp. If a gap is encountered between
+	two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is
+	scaled by GAP_SCALE/GAP.
+	Default: 20000
+
+--cutoff <double>: The EHH decay cutoff.
+	Default: 0.05
 
 --max-extend <int>: The maximum distance an EHH decay curve is allowed to extend from the core.
 	Set <= 0 for no restriction.
 	Default: 1000000
 
+--maf <double>: If a site has a MAF below this value, the program will not use
+	it as a core snp.
+	Default: 0.05
+
 --skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
 	Default: false
 
---threads <int>: The number of threads to spawn during the calculation.  
+--alt <bool>: Set this flag to calculate homozygosity based on the sum of the
+	squared haplotype frequencies in the observed data instead of using
+	binomial coefficients.
+	Default: false
+
+--trunc-ok <bool>: If an EHH decay reaches the end of a sequence before reaching the cutoff,
+	integrate the curve anyway (iHS and XPEHH only).
+	Normal function is to disregard the score for that core.
+	Default: false
+
+--threads <int>: The number of threads to spawn during the calculation.
 	Partitions loci across threads.
 	Default: 1
-
---alt <bool>: Set this flag to calculate homozygosity based on the sum of the
-	squared haplotype frequencies in the observed data instead of using 
-	binomial coefficients. 
-	Default: false
 
 --help <bool>: Prints this help dialog.
 	Default: false
