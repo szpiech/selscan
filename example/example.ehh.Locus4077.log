@@ -1,4 +1,4 @@
-../src/selscan --ehh Locus4077 --hap example.hap --map example.map --out example 
+selscan --ehh Locus4077 --hap example.hap --map example.map --out example 
 
 Calculating  iHS.
 Haplotypes filename: example.hap

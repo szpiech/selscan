@@ -21,7 +21,7 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
-15SEP2014 - Release of 1.0.3.  **A critical bug in the XP-EHH module was introduced in version 1.0.2 and had been fixed in 1.0.3.  Do not use 1.0.2 for calculating XP-EHH scores.**  1.0.3 also introduces support for gzipped input files.  You may pass hap.gz, map.gz. and tped.gz files interchangably with unzipped files using the same command line arguments.  A new command line option is available.
+15SEP2014 - Release of 1.0.3.  **A critical bug in the XP-EHH module was introduced in version 1.0.2 and had been fixed in 1.0.3.  Do not use 1.0.2 for calculating XP-EHH scores.**  Thanks to David McWilliams for finding this error.  1.0.3 also introduces support for gzipped input files.  You may pass hap.gz, map.gz. and tped.gz files interchangably with unzipped files using the same command line arguments.  A new command line option is available.
 
 --trunc-ok <bool>: If an EHH decay reaches the end of a sequence before reaching the cutoff,
 	integrate the curve anyway (iHS and XPEHH only).
