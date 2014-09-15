@@ -6,11 +6,11 @@
 #LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
 
 #for osx systems
-CC = g++
-G++FLAG = -fast -m64 -mmmx -msse -msse2
-LINK_OPTS2 = -pthread -lz
-I_PATH = -I../include
-L_PATH = ../lib/osx
+#CC = g++
+#G++FLAG = -fast -m64 -mmmx -msse -msse2
+#LINK_OPTS2 = -pthread -lz
+#I_PATH = -I../include
+#L_PATH = ../lib/osx
 
 #for linux systems
 #CC = g++
@@ -20,11 +20,11 @@ L_PATH = ../lib/osx
 #L_PATH = ../lib/linux
 
 #for windows, using MinGW build environment
-#CC = g++.exe
-#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-#LINK_OPTS2 = ../lib/pthreads-win32/libpthreadGC2.a 
-#I_PATH = -I../include -I../include/pthreads-win32 
-#L_PATH = ../lib/win32
+CC = g++.exe
+G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
+I_PATH = -I../include -I../include/win32 
+L_PATH = ../lib/win32
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
@@ -38,7 +38,7 @@ selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
 selscan-data.o : selscan-data.cpp
-	$(CC) $(G++FLAG) -c selscan-data.cpp 
+	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
 
 selscan-pbar.o : selscan-pbar.cpp
 	$(CC) $(G++FLAG) -c selscan-pbar.cpp $(I_PATH)
@@ -56,7 +56,7 @@ param_t.o : param_t.cpp
 	$(CC) $(G++FLAG) -c param_t.cpp
 
 gzstream.o : gzstream.cpp
-	$(CC) $(G++FLAG) -c gzstream.cpp
+	$(CC) $(G++FLAG) -c gzstream.cpp $(I_PATH)
 
 clean :
 	rm *.o
