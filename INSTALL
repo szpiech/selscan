@@ -10,7 +10,12 @@ selscan depends on the pthread library, which should be available by default
 in any build environment on a OSX/Linux system.  On Windows, I have had success
 building selscan using pthreads-win32 (http://www.sourceware.org/pthreads-win32/)
 and compiling in a MinGW environment (http://www.mingw.org/). I have provided
-a compiled version of the pthreads-win32 library in lib/pthreads-win32/.
+a compiled version of the pthreads-win32 library in lib/win32/.
+
+selscan (1.0.3+) also depends on zlib (http://www.zlib.net/), which should be
+available by default in OSX/Linux build environments.  On Windows, I have had
+success compiling zlib in a MinGW environment (http://www.mingw.org/).  I have
+provided a compiled version of zlib for win32 in lib/win32/.
 
 To build (some lines in the Makefile may need to be commented/uncommented):
 
