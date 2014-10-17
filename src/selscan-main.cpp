@@ -27,6 +27,7 @@
 #include "selscan-pbar.h"
 #include "binom.h"
 #include "param_t.h"
+#include "hamming_t.h"
 
 using namespace std;
 
@@ -157,6 +158,14 @@ const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before 
 \tintegrate the curve anyway (iHS and XPEHH only).\n\
 \tNormal function is to disregard the score for that core.";
 
+const string ARG_PI = "--pi";
+const bool DEFAULT_PI = false;
+const string HELP_PI = "Set this flag to calculate mean pairwise sequence difference in a sliding window.";
+
+const string ARG_PI_WIN = "--pi-win";
+const int DEFAULT_PI_WIN = 100;
+const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
+
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 struct work_order_t
@@ -197,6 +206,8 @@ struct triplet_t
     double h12;
     double h2dh1;
 };
+
+void calculatePi(HaplotypeData *hapData, MapData *mapData, int winsize, string outFilename);
 
 triplet_t calculateSoft(map<string, int> &count, int total);
 
@@ -247,7 +258,9 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
-    params.addFlag(ARG_TRUNC,DEFAULT_TRUNC,"",HELP_TRUNC);
+    params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
+    params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
+    params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
 
     try
     {
@@ -289,12 +302,17 @@ int main(int argc, char *argv[])
 
     int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
+    bool CALC_PI = params.getBoolFlag(ARG_PI);
+    int PI_WIN = params.getIntFlag(ARG_PI_WIN);
+    char PI_WIN_str[50];
+    sprintf(PI_WIN_str, "%d", PI_WIN);
+
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
 
-    if (CALC_IHS + CALC_XP + CALC_SOFT + SINGLE_EHH != 1)
+    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI != 1)
     {
-        cerr << "ERROR: Must specify one and only one of EHH (" << ARG_EHH << "), iHS (" << ARG_IHS << "), XP-EHH (" << ARG_XP << ")\n";
+        cerr << "ERROR: Must specify one and only one of EHH (" << ARG_EHH << "), iHS (" << ARG_IHS << "), XP-EHH (" << ARG_XP << "), PI (" << ARG_PI << ")\n";
         return 1;
     }
 
@@ -310,6 +328,7 @@ int main(int argc, char *argv[])
     else if (CALC_IHS) outFilename += ".ihs";
     else if (CALC_XP) outFilename += ".xpehh";
     else if (CALC_SOFT) outFilename += ".soft";
+    else if (CALC_PI) outFilename += ".pi." + string(PI_WIN_str) + "bp";
 
     if (ALT) outFilename += ".alt";
 
@@ -352,6 +371,12 @@ int main(int argc, char *argv[])
     if (EHH1K < 1)
     {
         cerr << "ERROR: EHH1K must be > 0.\n";
+        return 1;
+    }
+
+    if (PI_WIN < 1)
+    {
+        cerr << "ERROR: pi window must be > 0.\n";
         return 1;
     }
 
@@ -446,6 +471,7 @@ int main(int argc, char *argv[])
     }
     flog << "\n\nCalculating ";
     if (CALC_XP) flog << "XP-EHH.\n";
+    else if (CALC_PI) flog << "PI.\n";
     else flog << " iHS.\n";
     if (TPED)
     {
@@ -766,6 +792,19 @@ int main(int argc, char *argv[])
             }
         }
     }
+    else if (CALC_PI)
+    {
+        //cerr << "Not implemented.\n";
+        //return 1;
+
+        cerr << "Starting pi calculations with " << PI_WIN << "bp windows.\n";
+
+        calculatePi(hapData, mapData, PI_WIN, outFilename);
+
+        releaseHapData(hapData);
+        cerr << "\nFinished.\n";
+
+    }
 
     flog.close();
     fout.close();
@@ -775,6 +814,91 @@ int main(int argc, char *argv[])
 #endif
 
     return 0;
+}
+
+void calculatePi(HaplotypeData *hapData, MapData *mapData, int winsize, string outFilename)
+{
+    ofstream fout;
+    fout.open(outFilename.c_str());
+    if (fout.fail())
+    {
+        cerr << "ERROR: Failed to open " << outFilename << " for writing.\n";
+        throw 1;
+    }
+
+    int start = 1;
+    int end = mapData->physicalPos[mapData->nloci - 1];
+    int startLocus = 0;
+    int endLocus = 0;
+    //Identify the start and end indicies in the window
+    int winStart = start;
+    int winEnd = winStart + winsize - 1;
+    int pos;
+    int length = 0;
+    double pi = 0;
+    double denominator = (hapData->nhaps) * (hapData->nhaps - 1) * 0.5;
+    int locus;
+    for (locus = 0; locus < mapData->nloci; locus++)
+    {
+        pos = mapData->physicalPos[locus];
+        while (pos > winEnd)
+        {
+            endLocus = locus - 1;
+            length = endLocus - startLocus + 1;
+            fout << winStart << " " << winEnd << " ";
+            //do stuff
+
+            if (length == 0)
+            {
+                pi = 0;
+            }
+            else
+            {
+                for (int i = 0; i < hapData->nhaps; i++)
+                {
+                    for (int j = i + 1; j < hapData->nhaps; j++)
+                    {
+                        pi += hamming_dist_ptr(hapData->data[i] + startLocus, hapData->data[j] + startLocus, length);
+                    }
+                }
+            }
+
+            fout << pi / denominator << endl;
+
+            winStart += winsize;
+            winEnd += winsize;
+
+            startLocus = locus;
+            pi = 0;
+        }
+    }
+    //final window
+    endLocus = locus - 1;
+    length = endLocus - startLocus + 1;
+    fout << winStart << " " << winEnd << " ";
+    //do stuff
+
+    if (length == 0)
+    {
+        pi = 0;
+    }
+    else
+    {
+        for (int i = 0; i < hapData->nhaps; i++)
+        {
+            for (int j = i + 1; j < hapData->nhaps; j++)
+            {
+                pi += hamming_dist_ptr(hapData->data[i] + startLocus, hapData->data[j] + startLocus, length);
+            }
+        }
+    }
+
+    fout << pi / denominator << endl;
+
+
+
+    fout.close();
+    return;
 }
 
 int queryFound(MapData *mapData, string query)
@@ -1483,7 +1607,7 @@ void calc_ihs(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                if(!TRUNC) skipLocus = 1;
+                if (!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
@@ -1603,7 +1727,7 @@ void calc_ihs(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                if(!TRUNC) skipLocus = 1;
+                if (!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
@@ -2101,7 +2225,7 @@ void calc_xpihh(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                if(!TRUNC) skipLocus = 1;
+                if (!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
@@ -2277,7 +2401,7 @@ void calc_xpihh(void *order)
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
                         << ". Skipping calculation at " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                if(!TRUNC) skipLocus = 1;
+                if (!TRUNC) skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
