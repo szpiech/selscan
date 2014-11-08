@@ -5,12 +5,12 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
@@ -50,59 +50,69 @@ extreme iHS scores:\n\
 \n\
 ./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win\n";
 
-string ARG_FREQ_BINS = "--bins";
-int DEFAULT_FREQ_BINS = 100;
-string HELP_FREQ_BINS = "The number of frequency bins in [0,1] for score normalization.";
+const string ARG_FREQ_BINS = "--bins";
+const int DEFAULT_FREQ_BINS = 100;
+const string HELP_FREQ_BINS = "The number of frequency bins in [0,1] for score normalization.";
 
-string ARG_FILES = "--files";
-string DEFAULT_FILES = "infile";
-string HELP_FILES = "A list of files delimited by whitespace for\n\
+const string ARG_FILES = "--files";
+const string DEFAULT_FILES = "infile";
+const string HELP_FILES = "A list of files delimited by whitespace for\n\
 \tjoint normalization.\n\
 \tExpected format: <locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>";
 
-string ARG_LOG = "--log";
-string DEFAULT_LOG = "logfile";
-string HELP_LOG = "The log file name.";
+const string ARG_LOG = "--log";
+const string DEFAULT_LOG = "logfile";
+const string HELP_LOG = "The log file name.";
 
-string ARG_WINSIZE = "--winsize";
-int DEFAULT_WINSIZE = 100000;
-string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage\n\
+const string ARG_WINSIZE = "--winsize";
+const int DEFAULT_WINSIZE = 100000;
+const string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage\n\
 \tof extreme SNPs.";
 
-string ARG_QBINS = "--qbins";
-int DEFAULT_QBINS = 20;
-string HELP_QBINS = "Outlying windows are binned by number of sites within each\n\
+const string ARG_QBINS = "--qbins";
+const int DEFAULT_QBINS = 20;
+const string HELP_QBINS = "Outlying windows are binned by number of sites within each\n\
 \twindow.  This is the number of quantile bins to use.";
 
-string ARG_MINSNPS = "--min-snps";
-int DEFAULT_MINSNPS = 10;
-string HELP_MINSNPS = "Only consider a bp window if it has at least this many SNPs.";
+const string ARG_MINSNPS = "--min-snps";
+const int DEFAULT_MINSNPS = 10;
+const string HELP_MINSNPS = "Only consider a bp window if it has at least this many SNPs.";
 
-string ARG_SNPWIN = "--snp-win";
-bool DEFAULT_SNPWIN = false;
-string HELP_SNPWIN = "<not implemented> If set, will use windows of a constant\n\
+const string ARG_SNPWIN = "--snp-win";
+const bool DEFAULT_SNPWIN = false;
+const string HELP_SNPWIN = "<not implemented> If set, will use windows of a constant\n\
 \tSNP size with varying bp length.";
 
-string ARG_SNPWINSIZE = "--snp-win-size";
-int DEFAULT_SNPWINSIZE = 50;
-string HELP_SNPWINSIZE = "<not implemented> The number of SNPs in a window.";
+const string ARG_SNPWINSIZE = "--snp-win-size";
+const int DEFAULT_SNPWINSIZE = 50;
+const string HELP_SNPWINSIZE = "<not implemented> The number of SNPs in a window.";
 
-string ARG_BPWIN = "--bp-win";
-bool DEFAULT_BPWIN = false;
-string HELP_BPWIN = "If set, will use windows of a constant bp size with varying\n\
+const string ARG_BPWIN = "--bp-win";
+const bool DEFAULT_BPWIN = false;
+const string HELP_BPWIN = "If set, will use windows of a constant bp size with varying\n\
 \tnumber of SNPs.";
 
-string ARG_IHS = "--ihs";
-bool DEFAULT_IHS = false;
-string HELP_IHS = "Do iHS normalization.";
+const string ARG_IHS = "--ihs";
+const bool DEFAULT_IHS = false;
+const string HELP_IHS = "Do iHS normalization.";
 
-string ARG_SOFT = "--soft";
-bool DEFAULT_SOFT = false;
-string HELP_SOFT = "Do soft-iHS normalization.";
+const string ARG_SOFT = "--soft";
+const bool DEFAULT_SOFT = false;
+const string HELP_SOFT = "Do soft-iHS normalization.";
 
-string ARG_FIRST = "--first";
-bool DEFAULT_FIRST = false;
-string HELP_FIRST = "Output only the first file's normalization.";
+const string ARG_FIRST = "--first";
+const bool DEFAULT_FIRST = false;
+const string HELP_FIRST = "Output only the first file's normalization.";
+
+const string ARG_CRIT_NUM = "--crit-val";
+const double DEFAULT_CRIT_NUM = 2;
+const string HELP_CRIT_NUM = "Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.";
+
+const string ARG_CRIT_PERCENT = "--crit-percent";
+const double DEFAULT_CRIT_PERCENT = -1;
+const string HELP_CRIT_PERCENT = "Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.\n\
+\tNot used by default.";
+
 
 const int MISSING = -9999;
 
@@ -136,6 +146,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "", HELP_SNPWINSIZE);
     params.addFlag(ARG_BPWIN, DEFAULT_BPWIN, "", HELP_BPWIN);
     params.addFlag(ARG_FIRST, DEFAULT_FIRST, "", HELP_FIRST);
+    params.addFlag(ARG_CRIT_NUM, DEFAULT_CRIT_NUM, "", HELP_CRIT_NUM);
+    params.addFlag(ARG_CRIT_PERCENT, DEFAULT_CRIT_PERCENT, "", HELP_CRIT_PERCENT);
 
 
     try
@@ -158,6 +170,8 @@ int main(int argc, char *argv[])
     bool BPWIN = params.getBoolFlag(ARG_BPWIN);
     bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
     bool FIRST = params.getBoolFlag(ARG_FIRST);
+    double critNum = params.getIntFlag(ARG_CRIT_NUM);
+    double critPercent = params.getDoubleFlag(ARG_CRIT_PERCENT);
 
     if (numBins <= 0)
     {
@@ -174,6 +188,18 @@ int main(int argc, char *argv[])
     if (winSize <= 0)
     {
         cerr << "ERROR: Must have a positive integer window size.\n";
+        return 1;
+    }
+
+    if (critNum <= 0)
+    {
+        cerr << "ERROR: Must give a positive critical value for |iHS| scores.\n";
+        return 1;
+    }
+
+    if (critPercent != DEFAULT_CRIT_PERCENT && critPercent <= 0 || critPercent >= 1)
+    {
+        cerr << "ERROR: Critical percentile must be in (0,1).\n";
         return 1;
     }
 
@@ -279,18 +305,26 @@ int main(int argc, char *argv[])
 
         cerr << "Calculating mean and variance per frequency bin:\n\n";
         getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold);
-        
-        gsl_sort(score, 1, totalLoci);
-        double upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.995);
-        double lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 0.005);
 
-        cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
-        cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
-        flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
-        flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
-        
-        //double upperCutoff = 2;
-        //double lowerCutoff = -2;
+        gsl_sort(score, 1, totalLoci);
+
+        double upperCutoff, lowerCutoff;
+
+        if (critPercent != DEFAULT_CRIT_PERCENT && critPercent <= 0 || critPercent >= 1)
+        {
+            upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent/2.0 );
+            lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent/2.0);
+
+            cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
+            cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+            flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
+            flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+        }
+        else
+        {
+            upperCutoff = critNum;
+            lowerCutoff = -critNum;
+        }
         delete [] freq;
         delete [] score;
 
@@ -444,7 +478,7 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
                 if (numSNPs == 0) fracCrit[i].push_back(-1);
                 else fracCrit[i].push_back(double(numCrit) / double(numSNPs));
 
-                if (numSNPs >= minSNPs && numCrit > 0) numWindows++;
+                if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
 
                 winStart += winSize;
                 winEnd += winSize;
@@ -468,7 +502,7 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
     {
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
-            if (nSNPs[i][j] >= minSNPs && fracCrit[i][j] > 0)
+            if (nSNPs[i][j] >= minSNPs && fracCrit[i][j] >= 0)
             {
                 allSNPsPerWindow[k] = nSNPs[i][j];
                 allFracCritPerWindow[k] = fracCrit[i][j];
@@ -496,8 +530,14 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
     int count = 0;//number in quantile, not necessarily equal across quantiles because of ties
     int start = 0;//starting index for the sort function
     map<string, double> *topWindowBoundary = new map<string, double>[numQuantiles];
-    cerr << "\nnSNPs 0.1 0.5 1.0 5.0\n";
-    flog << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+
+    //cerr << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+    //flog << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+
+    cerr << "\nnSNPs 1.0 5.0\n";
+    flog << "\nnSNPs 1.0 5.0\n";
+
+
     for (int i = 0; i < numWindows; i++)
     {
         if (allSNPsPerWindow[i] <= quantileBound[b])
@@ -508,20 +548,20 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
         {
             gsl_sort(&(allFracCritPerWindow[start]), 1, count);
 
-            topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
-            topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
+            //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
+            //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
             topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
             topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
 
             cerr << quantileBound[b] << " "
-                 << topWindowBoundary[b]["0.1"] << " "
-                 << topWindowBoundary[b]["0.5"] << " "
+                 //<< topWindowBoundary[b]["0.1"] << " "
+                 //<< topWindowBoundary[b]["0.5"] << " "
                  << topWindowBoundary[b]["1.0"] << " "
                  << topWindowBoundary[b]["5.0"] << endl;
 
             flog << quantileBound[b] << " "
-                 << topWindowBoundary[b]["0.1"] << " "
-                 << topWindowBoundary[b]["0.5"] << " "
+                 //<< topWindowBoundary[b]["0.1"] << " "
+                 //<< topWindowBoundary[b]["0.5"] << " "
                  << topWindowBoundary[b]["1.0"] << " "
                  << topWindowBoundary[b]["5.0"] << endl;
 
@@ -532,20 +572,20 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
     }
 
     gsl_sort(&(allFracCritPerWindow[start]), 1, count);
-    topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
-    topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
+    //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
+    //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
     topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
     topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
 
     cerr << quantileBound[b] << " "
-         << topWindowBoundary[b]["0.1"] << " "
-         << topWindowBoundary[b]["0.5"] << " "
+         //<< topWindowBoundary[b]["0.1"] << " "
+         //<< topWindowBoundary[b]["0.5"] << " "
          << topWindowBoundary[b]["1.0"] << " "
          << topWindowBoundary[b]["5.0"] << "\n\n";
 
     flog << quantileBound[b] << " "
-         << topWindowBoundary[b]["0.1"] << " "
-         << topWindowBoundary[b]["0.5"] << " "
+         //<< topWindowBoundary[b]["0.1"] << " "
+         //<< topWindowBoundary[b]["0.5"] << " "
          << topWindowBoundary[b]["1.0"] << " "
          << topWindowBoundary[b]["5.0"] << "\n\n";
 
@@ -564,7 +604,7 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
         flog << "Creating window file " << winfilename[i] << endl;
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
-            if (nSNPs[i][j] < minSNPs || fracCrit[i][j] <= 0)
+            if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
                 fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
                 continue;
@@ -579,10 +619,11 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
             {
                 percentile = 5.0;
             }
-            else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"] && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
+            else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
             {
                 percentile = 1.0;
             }
+            /*
             else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
             {
                 percentile = 0.5;
@@ -591,7 +632,7 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
             {
                 percentile = 0.1;
             }
-
+            */
             fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
         }
         fout.close();
