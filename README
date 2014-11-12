@@ -21,6 +21,14 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+12NOV2014 - The program norm has been updated to allow for user defined critical values.  Two new command line options.
+
+--crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.
+	Not used by default.
+
+--crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
+	Default: 2.00
+
 17OCT2014 - Release of 1.0.4. A pairwise sequence difference module has been introduced.  This module isn't multithreaded at the moment, but still runs quite fast.  Calculating pi in 100bp windows with 198 haplotypes with 707,980 variants on human chr22 finishes in 77s on the test machine.  Using 100kb windows, it finishes in 34s.  Two new command line options.
 
 --pi <bool>: Set this flag to calculate mean pairwise sequence difference in a sliding window.
