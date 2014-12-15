@@ -433,11 +433,13 @@ int main(int argc, char *argv[])
             cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
             return 1;
         }
+        /*
         else if (queryFreq < MAF || 1 - queryFreq < MAF)
         {
             cerr << "ERROR: EHH for '1' and '0' haplotypes not calculated for " << query << ". MAF < " << MAF << ".\n";
             return 1;
         }
+        */
         else
         {
             cerr << "Found " << query << " in data.\n";
@@ -961,6 +963,7 @@ void query_locus(void *order)
     //EHH to the left of the core snp
     double current_derived_ehh = 1;
     double current_ancestral_ehh = 1;
+    double current_ehh = 1;
     double derivedCount = 0;
 
     //A list of all the haplotypes
@@ -974,13 +977,16 @@ void query_locus(void *order)
         haplotypeList[hap] = data[hap][locus];
     }
 
+    current_ehh = (derivedCount > 1) ? nCk(derivedCount, 2) / nCk(nhaps, 2) : 0;
+
+/*
     if (derivedCount == 0 || derivedCount == nhaps)
     {
         cerr << "ERROR: " << locusName[locus] << " is monomorphic.\n";
         (*fout) << "ERROR: " << locusName[locus] << " is monomorphic.\n";
         return;
     }
-
+*/
     //cerr << "numHaps: " << nhaps << "\nderivedCounts: " << derivedCount << endl;
 
     int **ancestralHapColor = new int *[int(nhaps - derivedCount)];
@@ -1009,6 +1015,7 @@ void query_locus(void *order)
         int numAncestral = 0;
         map<string, int> ancestralHapCount;
         map<string, int> derivedHapCount;
+        map<string, int> hapCount;
 
         for (int hap = 0; hap < nhaps; hap++)
         {
@@ -1033,6 +1040,10 @@ void query_locus(void *order)
                 else ancestralHapCount[hapStr]++;
                 numAncestral++;
             }
+
+            if (hapCount.count(hapStr) == 0) hapCount[hapStr] = 1;
+            else hapCount[hapStr]++;
+
         }
         //Write functions to fill in haplotype colors here
         fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, tempIndex, derivedCurrentColor, true);
@@ -1040,8 +1051,9 @@ void query_locus(void *order)
 
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
+        current_ehh = (*calc)(hapCount, numAncestral + numDerived, ALT);
         char tempStr[100];
-        sprintf(tempStr, "%d\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_derived_ehh, current_ancestral_ehh);
+        sprintf(tempStr, "%d\t%f\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_derived_ehh, current_ancestral_ehh, current_ehh);
         tempResults[tempIndex] = string(tempStr);
         tempIndex--;
     }
@@ -1057,12 +1069,14 @@ void query_locus(void *order)
     //calculate EHH to the right
     current_derived_ehh = 1;
     current_ancestral_ehh = 1;
+    current_ehh = (derivedCount > 1) ? nCk(derivedCount, 2) / nCk(nhaps, 2) : 0;
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
             << geneticPos[locus] - geneticPos[locus] << "\t"
             << current_derived_ehh << "\t"
-            << current_ancestral_ehh << endl;
+            << current_ancestral_ehh << "\t" 
+            << current_ehh << endl;
 
     //A list of all the haplotypes
     //Starts with just the focal snp and grows outward
@@ -1084,6 +1098,8 @@ void query_locus(void *order)
         int numAncestral = 0;
         map<string, int> ancestralHapCount;
         map<string, int> derivedHapCount;
+        map<string, int> hapCount;
+
         for (int hap = 0; hap < nhaps; hap++)
         {
             bool isDerived = ( data[hap][locus] == '1' ) ? 1 : 0;
@@ -1106,6 +1122,9 @@ void query_locus(void *order)
                 else ancestralHapCount[hapStr]++;
                 numAncestral++;
             }
+
+            if (hapCount.count(hapStr) == 0) hapCount[hapStr] = 1;
+            else hapCount[hapStr]++;
         }
 
         //Write functions to fill in haplotype colors here
@@ -1114,11 +1133,13 @@ void query_locus(void *order)
 
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
+        current_ehh = (*calc)(hapCount, numAncestral + numDerived, ALT);
 
         (*fout) << physicalPos[i] - physicalPos[locus] << "\t"
                 << geneticPos[i] - geneticPos[locus] << "\t"
                 << current_derived_ehh << "\t"
-                << current_ancestral_ehh << endl;
+                << current_ancestral_ehh << "\t" 
+                << current_ehh << endl;
     }
 
     delete [] haplotypeList;
