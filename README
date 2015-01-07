@@ -21,6 +21,8 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+07JAN2015 - norm bug fix and --skip-low-freq works for single EHH queries.
+
 12NOV2014 - The program norm has been updated to allow for user defined critical values.  Two new command line options.
 
 --crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.

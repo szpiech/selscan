@@ -509,6 +509,81 @@ int main(int argc, char *argv[])
 
     if (SINGLE_EHH)
     {
+
+        freq = new double[hapData->nloci];
+
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        double *newfreq;
+
+        int count = 0;
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq[i] = calcFreq(hapData, i);
+            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        }
+
+        if (SKIP) //prefilter all sites < MAF
+        {
+            cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            flog << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            newfreq = new double [count];
+            newMapData = initMapData(count);
+            newMapData->chr = mapData->chr;
+            int j = 0;
+            for (int locus = 0; locus < mapData->nloci; locus++)
+            {
+                if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                {
+                    continue;
+                }
+                else
+                {
+                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                    newMapData->locusName[j] = mapData->locusName[locus];
+                    newfreq[j] = freq[locus];
+                    j++;
+                }
+            }
+
+            newHapData = initHaplotypeData(hapData->nhaps, count);
+
+            for (int hap = 0; hap < newHapData->nhaps; hap++)
+            {
+                j = 0;
+                for (int locus = 0; locus < mapData->nloci; locus++)
+                {
+                    if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        newHapData->data[hap][j] = hapData->data[hap][locus];
+                        j++;
+                    }
+                }
+            }
+
+            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+            delete [] freq;
+            freq = newfreq;
+            newfreq = NULL;
+
+            releaseHapData(hapData);
+            hapData = newHapData;
+            newHapData = NULL;
+
+            releaseMapData(mapData);
+            mapData = newMapData;
+            newMapData = NULL;
+        }
+
+
+        
         work_order_t *order = new work_order_t;
         pthread_t *peer = new pthread_t;
         order->hapData = hapData;
