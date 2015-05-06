@@ -21,6 +21,16 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+06MAY2015 - Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
+
+--vcf <string>: A VCF file containing haplotype data.
+	A map file must be specified with --map.
+
+--vcf-ref <string>: A VCF file containing haplotype and map data.
+	Variants should be coded 0/1. This is the 'reference'
+	population for XP-EHH calculations and should contain the same number
+	of loci as the query population. Ignored otherwise.
+
 07JAN2015 - norm bug fix and --skip-low-freq works for single EHH queries.
 
 12NOV2014 - The program norm has been updated to allow for user defined critical values.  Two new command line options.
