@@ -341,6 +341,100 @@ HaplotypeData *readHaplotypeDataTPED(string filename)
     return data;
 }
 
+HaplotypeData *readHaplotypeDataVCF(string filename)
+{
+    igzstream fin;
+    cerr << "Opening " << filename << "...\n";
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    int numMapCols = 9;
+    //int fileStart = fin.tellg();
+    string line;
+    int nloci = 0;
+    int previous_nhaps = -1;
+    int current_nhaps = 0;
+    //Counts number of haps (cols) and number of loci (rows)
+    //if any lines differ, send an error message and throw an exception
+    while (getline(fin, line))
+    {
+        if (line[0] == '#') {
+            continue;
+        }
+        //getline(fin,line);
+        //if(fin.eof()) break;
+        nloci++;
+        current_nhaps = countFields(line);
+        //cout << "nloci: " << current_nhaps << endl;
+        if (previous_nhaps < 0)
+        {
+            previous_nhaps = current_nhaps;
+            continue;
+        }
+        else if (previous_nhaps != current_nhaps)
+        {
+            cerr << "ERROR: line " << nloci << " of " << filename << " has " << current_nhaps
+                 << " fields, but the previous line has " << previous_nhaps << " fields.\n";
+            throw 0;
+        }
+        previous_nhaps = current_nhaps;
+    }
+
+    fin.clear(); // clear error flags
+    //fin.seekg(fileStart);
+    fin.close();
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    int nhaps = (current_nhaps - numMapCols) * 2;
+    int nfields = (current_nhaps - numMapCols);
+    cerr << "Loading " << nhaps << " haplotypes and " << nloci << " loci...\n";
+
+    HaplotypeData *data = initHaplotypeData(nhaps, nloci);
+
+    string junk;
+    char allele1, allele2, separator;
+    for (int locus = 0; locus < data->nloci; locus++)
+    {
+        for (int i = 0; i < numMapCols; i++) fin >> junk;
+
+        for (int field = 0; field < nfields; field++)
+        {
+            fin >> junk;
+            allele1 = junk[0];
+            separator = junk[1];
+            allele2 = junk[2];
+            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
+            {
+                cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                throw 0;
+            }
+
+            //if(separator != '|'){
+            //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+            //    throw 0;
+            //}
+            data->data[field][locus] = allele1;
+            data->data[2*field+1][locus] = allele2;
+        }
+    }
+
+    fin.close();
+
+    return data;
+}
+
+
 HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci)
 {
     if (nhaps < 1 || nloci < 1)

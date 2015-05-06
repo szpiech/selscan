@@ -72,6 +72,18 @@ const string HELP_FILENAME_POP2_TPED = "A TPED file containing haplotype and map
 \tpopulation for XP-EHH calculations and should contain the same number\n\
 \tof loci as the query population. Ignored otherwise.";
 
+const string ARG_FILENAME_POP1_VCF = "--vcf";
+const string DEFAULT_FILENAME_POP1_VCF = "__hapfile1";
+const string HELP_FILENAME_POP1_VCF = "A VCF file containing haplotype data.\n\
+\tA map file must be specified with --map.";
+
+const string ARG_FILENAME_POP2_VCF = "--vcf-ref";
+const string DEFAULT_FILENAME_POP2_VCF = "__hapfile2";
+const string HELP_FILENAME_POP2_VCF = "A VCF file containing haplotype and map data.\n\
+\tVariants should be coded 0/1. This is the 'reference'\n\
+\tpopulation for XP-EHH calculations and should contain the same number\n\
+\tof loci as the query population. Ignored otherwise.";
+
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
 const string HELP_FILENAME_POP1 = "A hapfile with one row per haplotype, and one column per\n\
@@ -243,6 +255,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_FILENAME_POP2, DEFAULT_FILENAME_POP2, "", HELP_FILENAME_POP2);
     params.addFlag(ARG_FILENAME_POP1_TPED, DEFAULT_FILENAME_POP1_TPED, "", HELP_FILENAME_POP1_TPED);
     params.addFlag(ARG_FILENAME_POP2_TPED, DEFAULT_FILENAME_POP2_TPED, "", HELP_FILENAME_POP2_TPED);
+    params.addFlag(ARG_FILENAME_POP1_VCF, DEFAULT_FILENAME_POP1_VCF, "", HELP_FILENAME_POP1_VCF);
+    params.addFlag(ARG_FILENAME_POP2_VCF, DEFAULT_FILENAME_POP2_VCF, "", HELP_FILENAME_POP2_VCF);
     params.addFlag(ARG_FILENAME_MAP, DEFAULT_FILENAME_MAP, "", HELP_FILENAME_MAP);
     params.addFlag(ARG_OUTFILE, DEFAULT_OUTFILE, "", HELP_OUTFILE);
     params.addFlag(ARG_CUTOFF, DEFAULT_CUTOFF, "", HELP_CUTOFF);
@@ -276,10 +290,24 @@ int main(int argc, char *argv[])
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
     string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
     string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
+    string vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
+    string vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
 
     bool TPED = false;
-
     if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+
+    bool VCF = false;
+    if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
+
+    if (VCF && TPED) {
+        cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
+        return 1;
+    }
+
+    if( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename.compare(DEFAULT_FILENAME_POP2) != 0) ){
+        cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
+        return 1;
+    }
 
     string outFilename = params.getStringFlag(ARG_OUTFILE);
     string query = params.getStringFlag(ARG_EHH);
@@ -354,9 +382,21 @@ int main(int argc, char *argv[])
     }
     if (TPED)
     {
-        if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
+        if ((CALC_IHS) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
         {
             cerr << "ERROR: You are calculating iHS for " << tpedFilename << ", but have also given a second data file (" << tpedFilename2 << ").\n";
+            return 1;
+        }
+    }
+    else if (VCF) {
+        if ((CALC_IHS) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
+        {
+            cerr << "ERROR: You are calculating iHS for " << vcfFilename << ", but have also given a second data file (" << vcfFilename2 << ").\n";
+            return 1;
+        }
+
+        if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+            cerr << "ERROR: Must also provide a mapfile.\n";
             return 1;
         }
     }
@@ -367,6 +407,11 @@ int main(int argc, char *argv[])
             cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
             return 1;
         }
+        if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+            cerr << "ERROR: Must also provide a mapfile.\n";
+            return 1;
+        }
+
     }
     if (EHH1K < 1)
     {
@@ -398,6 +443,19 @@ int main(int argc, char *argv[])
                 }
             }
             mapData = readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps);
+        }
+        else if (VCF) {
+            hapData = readHaplotypeDataVCF(vcfFilename);
+            if (CALC_XP)
+            {
+                hapData2 = readHaplotypeDataVCF(vcfFilename2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
+            }
+            mapData = mapData = readMapData(mapFilename, hapData->nloci);
         }
         else
         {
@@ -479,14 +537,19 @@ int main(int argc, char *argv[])
     {
         flog << "Input filename: " << tpedFilename << "\n";
         if (CALC_XP) flog << "Reference input filename: " << tpedFilename2 << "\n";
-        flog << "Output file: " << outFilename << "\n";
+        
     }
-    {
-        flog << "Haplotypes filename: " << hapFilename << "\n";
-        if (CALC_XP) flog << "Reference haplotypes filename: " << hapFilename2 << "\n";
+    else if (VCF){
+        flog << "Input filename: " << vcfFilename << "\n";
+        if (CALC_XP) flog << "Reference input filename: " << vcfFilename2 << "\n";
         flog << "Map filename: " << mapFilename << "\n";
-        flog << "Output file: " << outFilename << "\n";
     }
+    else{
+        flog << "Input filename: " << hapFilename << "\n";
+        if (CALC_XP) flog << "Reference input filename: " << hapFilename2 << "\n";
+        flog << "Map filename: " << mapFilename << "\n";
+    }
+    flog << "Output file: " << outFilename << "\n";
     flog << "Threads: " << numThreads << "\n";
     flog << "Scale parameter: " << SCALE_PARAMETER << "\n";
     flog << "Max gap parameter: " << MAX_GAP << "\n";
@@ -583,7 +646,7 @@ int main(int argc, char *argv[])
         }
 
 
-        
+
         work_order_t *order = new work_order_t;
         pthread_t *peer = new pthread_t;
         order->hapData = hapData;
@@ -1054,14 +1117,14 @@ void query_locus(void *order)
 
     current_ehh = (derivedCount > 1) ? nCk(derivedCount, 2) / nCk(nhaps, 2) : 0;
 
-/*
-    if (derivedCount == 0 || derivedCount == nhaps)
-    {
-        cerr << "ERROR: " << locusName[locus] << " is monomorphic.\n";
-        (*fout) << "ERROR: " << locusName[locus] << " is monomorphic.\n";
-        return;
-    }
-*/
+    /*
+        if (derivedCount == 0 || derivedCount == nhaps)
+        {
+            cerr << "ERROR: " << locusName[locus] << " is monomorphic.\n";
+            (*fout) << "ERROR: " << locusName[locus] << " is monomorphic.\n";
+            return;
+        }
+    */
     //cerr << "numHaps: " << nhaps << "\nderivedCounts: " << derivedCount << endl;
 
     int **ancestralHapColor = new int *[int(nhaps - derivedCount)];
@@ -1150,7 +1213,7 @@ void query_locus(void *order)
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
             << geneticPos[locus] - geneticPos[locus] << "\t"
             << current_derived_ehh << "\t"
-            << current_ancestral_ehh << "\t" 
+            << current_ancestral_ehh << "\t"
             << current_ehh << endl;
 
     //A list of all the haplotypes
@@ -1213,7 +1276,7 @@ void query_locus(void *order)
         (*fout) << physicalPos[i] - physicalPos[locus] << "\t"
                 << geneticPos[i] - geneticPos[locus] << "\t"
                 << current_derived_ehh << "\t"
-                << current_ancestral_ehh << "\t" 
+                << current_ancestral_ehh << "\t"
                 << current_ehh << endl;
     }
 
