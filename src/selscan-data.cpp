@@ -404,10 +404,22 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
 
     string junk;
     char allele1, allele2, separator;
+    bool skipLine = false;
     for (int locus = 0; locus < data->nloci; locus++)
-    {
-        for (int i = 0; i < numMapCols; i++) fin >> junk;
-
+    { 
+        for (int i = 0; i < numMapCols; i++){
+            fin >> junk;
+            if(i == 0 && junk[0] == '#'){
+                skipLine = true;
+                break;
+            }
+        }
+        if(skipLine){
+            getline(fin, junk);
+            skipLine = false;
+            locus--;
+            continue;
+        }
         for (int field = 0; field < nfields; field++)
         {
             fin >> junk;
@@ -416,7 +428,8 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
             allele2 = junk[2];
             if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
             {
-                cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                cerr << allele1 << " " << allele2 << endl;
                 throw 0;
             }
 
@@ -424,7 +437,7 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
             //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
             //    throw 0;
             //}
-            data->data[field][locus] = allele1;
+            data->data[2*field][locus] = allele1;
             data->data[2*field+1][locus] = allele2;
         }
     }

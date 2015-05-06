@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename.compare(DEFAULT_FILENAME_POP2) != 0) ){
+    if( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ){
         cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
         return 1;
     }
