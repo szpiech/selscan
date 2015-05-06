@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     bool BPWIN = params.getBoolFlag(ARG_BPWIN);
     bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
     bool FIRST = params.getBoolFlag(ARG_FIRST);
-    double critNum = params.getIntFlag(ARG_CRIT_NUM);
+    double critNum = params.getDoubleFlag(ARG_CRIT_NUM);
     double critPercent = params.getDoubleFlag(ARG_CRIT_PERCENT);
 
     if (numBins <= 0)
