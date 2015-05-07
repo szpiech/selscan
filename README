@@ -14,6 +14,8 @@ Citations:
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
 	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution, 
 	31: 2824-2827.
+A Ferrer-Admetlla, et al. (2014) On detecting incomplete soft or hard selective sweeps
+	using haplotype structure. Molecular Biology and Evolution, 31: 1275-1291.
 PC Sabeti, et al. (2007) Genome-wide detection and characterization of positive 
 	selection in human populations. Nature, 449: 913–918.
 BF Voight, et al. (2006) A map of recent positive selection in the human 
@@ -21,7 +23,16 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
-06MAY2015 - Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
+07MAY2015 - Release of 1.1.0. Added option to calculate the nSL statistic described in A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.  Also introduced a check on map distance ordering.  Two new command line options.
+
+--nsl <bool>: Set this flag to calculate nSL.
+	Default: false
+
+--max-extend-nsl <int>: The maximum distance an nSL haplotype is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 100
+
+06MAY2015 - Release of 1.0.5. Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
 
 --vcf <string>: A VCF file containing haplotype data.
 	A map file must be specified with --map.

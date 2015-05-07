@@ -34,11 +34,12 @@ using namespace std;
 const string PREAMBLE = "\nselscan -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
 \n\
-selscan currently implements EHH, iHS, and XP-EHH.\n\
+selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
 \n\
 Citations:\n\
 \n\
 ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
+A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
 PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
 BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 PC Sabeti, et al. (2002) Nature, 419: 832–837.\n\
@@ -50,6 +51,10 @@ To calculate EHH:\n\
 To calculate iHS:\n\
 \n\
 ./selscan --ihs --hap <haps> --map <mapfile> --out <outfile>\n\
+\n\
+To calculate nSL:\n\
+\n\
+./selscan --nsl --hap <haps> --map <mapfile> --out <outfile>\n\
 \n\
 To calculate XP-EHH:\n\
 \n\
@@ -122,6 +127,10 @@ const string ARG_IHS = "--ihs";
 const bool DEFAULT_IHS = false;
 const string HELP_IHS = "Set this flag to calculate iHS.";
 
+const string ARG_NSL = "--nsl";
+const bool DEFAULT_NSL = false;
+const string HELP_NSL = "Set this flag to calculate nSL.";
+
 const string ARG_SOFT = "--soft";
 const bool DEFAULT_SOFT = false;
 const string HELP_SOFT = "Calculate the EHH1K decay for soft sweep detection.";
@@ -158,6 +167,11 @@ const string HELP_QWIN = "When calculating EHH, this is the length of the window
 const string ARG_MAX_EXTEND = "--max-extend";
 const int DEFAULT_MAX_EXTEND = 1000000;
 const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
+\tSet <= 0 for no restriction.";
+
+const string ARG_MAX_EXTEND_NSL = "--max-extend-nsl";
+const int DEFAULT_MAX_EXTEND_NSL = 100;
+const string HELP_MAX_EXTEND_NSL = "The maximum distance an nSL haplotype is allowed to extend from the core.\n\
 \tSet <= 0 for no restriction.";
 
 const string ARG_SKIP = "--skip-low-freq";
@@ -227,6 +241,7 @@ void query_locus(void *work_order);
 void query_locus_soft(void *order);
 
 void calc_ihs(void *work_order);
+void calc_nsl(void *work_order);
 void calc_xpihh(void *work_order);
 void calc_soft_ihs(void *order);
 
@@ -263,6 +278,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
+    params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
@@ -271,6 +287,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
     params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
+    params.addFlag(ARG_MAX_EXTEND_NSL, DEFAULT_MAX_EXTEND_NSL, "", HELP_MAX_EXTEND_NSL);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
@@ -304,7 +321,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ){
+    if ( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ) {
         cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
         return 1;
     }
@@ -322,6 +339,7 @@ int main(int argc, char *argv[])
 
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
+    bool CALC_NSL = params.getBoolFlag(ARG_NSL);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
@@ -338,9 +356,14 @@ int main(int argc, char *argv[])
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
 
-    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI != 1)
+    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL != 1)
     {
-        cerr << "ERROR: Must specify one and only one of EHH (" << ARG_EHH << "), iHS (" << ARG_IHS << "), XP-EHH (" << ARG_XP << "), PI (" << ARG_PI << ")\n";
+        cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
+             << ")\n\tiHS (" << ARG_IHS
+             << ")\n\tXP-EHH (" << ARG_XP
+             << ")\n\tPI (" << ARG_PI
+             << ")\n\tnSL (" << ARG_NSL
+             << ")\n";
         return 1;
     }
 
@@ -354,6 +377,7 @@ int main(int argc, char *argv[])
 
     if (SINGLE_EHH) outFilename += ".ehh." + query;
     else if (CALC_IHS) outFilename += ".ihs";
+    else if (CALC_NSL) outFilename += ".nsl";
     else if (CALC_XP) outFilename += ".xpehh";
     else if (CALC_SOFT) outFilename += ".soft";
     else if (CALC_PI) outFilename += ".pi." + string(PI_WIN_str) + "bp";
@@ -367,17 +391,17 @@ int main(int argc, char *argv[])
     }
     if (SCALE_PARAMETER < 1)
     {
-        cerr << "ERROR: Scale parameter must be positive.";
+        cerr << "ERROR: Scale parameter must be positive.\n";
         return 1;
     }
     if (MAX_GAP < 1)
     {
-        cerr << "ERROR: Max gap parameter must be positive.";
+        cerr << "ERROR: Max gap parameter must be positive.\n";
         return 1;
     }
     if (EHH_CUTOFF <= 0 || EHH_CUTOFF >= 1)
     {
-        cerr << "ERROR: EHH cut off must be > 0 and < 1.";
+        cerr << "ERROR: EHH cut off must be > 0 and < 1.\n";
         return 1;
     }
     if (TPED)
@@ -395,7 +419,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+        if ((!CALC_NSL) && mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
             cerr << "ERROR: Must also provide a mapfile.\n";
             return 1;
         }
@@ -407,7 +431,7 @@ int main(int argc, char *argv[])
             cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
             return 1;
         }
-        if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+        if ((!CALC_NSL) && mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
             cerr << "ERROR: Must also provide a mapfile.\n";
             return 1;
         }
@@ -477,6 +501,23 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    //Check if map is in order
+    for (int i = 1; i < mapData->nloci; i++) {
+        if ( mapData->physicalPos[i] <= mapData->physicalPos[i - 1] ) {
+            cerr << "ERROR: Variant physical position must be strictly increasing.\n";
+            cerr << "\t" << mapData->locusName[i] << " " << mapData->physicalPos[i] << " comes after";
+            cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->physicalPos[i - 1] << "\n";
+            return 1;
+        }
+        if ( !CALC_NSL && mapData->geneticPos[i] < mapData->geneticPos[i - 1] ) {
+            cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
+            cerr << "\t" << mapData->locusName[i] << " " << mapData->geneticPos[i] << " comes after";
+            cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->geneticPos[i - 1] << "\n";
+            return 1;
+        }
+    }
+
+
     if (EHH1K >= hapData->nhaps)
     {
 
@@ -537,14 +578,14 @@ int main(int argc, char *argv[])
     {
         flog << "Input filename: " << tpedFilename << "\n";
         if (CALC_XP) flog << "Reference input filename: " << tpedFilename2 << "\n";
-        
+
     }
-    else if (VCF){
+    else if (VCF) {
         flog << "Input filename: " << vcfFilename << "\n";
         if (CALC_XP) flog << "Reference input filename: " << vcfFilename2 << "\n";
         flog << "Map filename: " << mapFilename << "\n";
     }
-    else{
+    else {
         flog << "Input filename: " << hapFilename << "\n";
         if (CALC_XP) flog << "Reference input filename: " << hapFilename2 << "\n";
         flog << "Map filename: " << mapFilename << "\n";
@@ -852,6 +893,137 @@ int main(int argc, char *argv[])
             pthread_create(&(peer[i]),
                            NULL,
                            (void *(*)(void *))calc_ihs,
+                           (void *)order);
+        }
+
+        for (int i = 0; i < numThreads; i++)
+        {
+            pthread_join(peer[i], NULL);
+        }
+
+        delete [] peer;
+        releaseHapData(hapData);
+        cerr << "\nFinished.\n";
+
+        for (int i = 0; i < mapData->nloci; i++)
+        {
+            if (ihs[i] != MISSING && ihh1[i] != 0 && ihh2[i] != 0)
+            {
+                fout << mapData->locusName[i] << "\t"
+                     << mapData->physicalPos[i] << "\t"
+                     << freq[i] << "\t"
+                     << ihh1[i] << "\t"
+                     << ihh2[i] << "\t"
+                     << ihs[i] << endl;
+            }
+        }
+    }
+    else if (CALC_NSL)
+    {
+
+        freq = new double[hapData->nloci];
+
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        double *newfreq;
+
+        int count = 0;
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq[i] = calcFreq(hapData, i);
+            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        }
+        /*
+                if (SKIP) //prefilter all sites < MAF
+                {
+                    cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+                    flog << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+                    newfreq = new double [count];
+                    newMapData = initMapData(count);
+                    newMapData->chr = mapData->chr;
+                    int j = 0;
+                    for (int locus = 0; locus < mapData->nloci; locus++)
+                    {
+                        if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                            newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                            newMapData->locusName[j] = mapData->locusName[locus];
+                            newfreq[j] = freq[locus];
+                            j++;
+                        }
+                    }
+
+                    newHapData = initHaplotypeData(hapData->nhaps, count);
+
+                    for (int hap = 0; hap < newHapData->nhaps; hap++)
+                    {
+                        j = 0;
+                        for (int locus = 0; locus < mapData->nloci; locus++)
+                        {
+                            if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                newHapData->data[hap][j] = hapData->data[hap][locus];
+                                j++;
+                            }
+                        }
+                    }
+
+                    cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+                    flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+                    delete [] freq;
+                    freq = newfreq;
+                    newfreq = NULL;
+
+                    releaseHapData(hapData);
+                    hapData = newHapData;
+                    newHapData = NULL;
+
+                    releaseMapData(mapData);
+                    mapData = newMapData;
+                    newMapData = NULL;
+                }
+        */
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+        ihs = new double[hapData->nloci];
+
+        barInit(pbar, mapData->nloci, 78);
+
+        cerr << "Starting nSL calculations with alt flag ";
+        if (!ALT) cerr << "not ";
+        cerr << "set.\n";
+
+        work_order_t *order;
+        pthread_t *peer = new pthread_t[numThreads];
+        int prev_index = 0;
+        for (int i = 0; i < numThreads; i++)
+        {
+            order = new work_order_t;
+            order->id = i;
+            order->hapData = hapData;
+            order->mapData = mapData;
+            order->ihh1 = ihh1;
+            order->ihh2 = ihh2;
+            order->ihs = ihs;
+            order->freq = freq;
+            order->flog = &flog;
+            order->bar = &pbar;
+            order->params = &params;
+            order->calc = &calculateHomozygosity;
+
+            pthread_create(&(peer[i]),
+                           NULL,
+                           (void *(*)(void *))calc_nsl,
                            (void *)order);
         }
 
@@ -1983,6 +2155,308 @@ void calc_ihs(void *order)
         }
     }
 }
+
+void calc_nsl(void *order)
+{
+    work_order_t *p = (work_order_t *)order;
+    char **data = p->hapData->data;
+    int nloci = p->hapData->nloci;
+    int nhaps = p->hapData->nhaps;
+    int *physicalPos = p->mapData->physicalPos;
+    //double *geneticPos = p->mapData->geneticPos;
+    string *locusName = p->mapData->locusName;
+    int id = p->id;
+    double *ihs = p->ihs;
+    double *ihh1 = p->ihh1;
+    double *ihh2 = p->ihh2;
+    double *freq = p->freq;
+    ofstream *flog = p->flog;
+    Bar *pbar = p->bar;
+
+    int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
+    int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
+    //double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
+    double EHH_CUTOFF = 0;
+    bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
+    double MAF = p->params->getDoubleFlag(ARG_MAF);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? nloci : p->params->getIntFlag(ARG_MAX_EXTEND_NSL);
+
+    double (*calc)(map<string, int> &, int, bool) = p->calc;
+
+    int step = (nloci / numThreads) / (pbar->totalTicks);
+    if (step == 0) step = 1;
+
+    bool isDerived;
+    string hapStr;
+
+    for (int locus = id; locus < nloci; locus += numThreads)
+    {
+        if (locus % step == 0) advanceBar(*pbar, double(step));
+
+        ihs[locus] = 0;
+        //freq[locus] = MISSING;
+        ihh1[locus] = MISSING;
+        ihh2[locus] = MISSING;
+        bool skipLocus = 0;
+        //If the focal snp has MAF < MAF, then skip this locus
+        if (freq[locus] < MAF || freq[locus] > 1 - MAF)
+        {
+            pthread_mutex_lock(&mutex_log);
+            (*flog) << "WARNING: Locus " << locusName[locus]
+                    << " has MAF < " << MAF << ". Skipping calculation at " << locusName[locus] << "\n";
+            pthread_mutex_unlock(&mutex_log);
+            ihs[locus] = MISSING;
+            skipLocus = 0;
+            continue;
+        }
+
+        //EHH to the left of the core snp
+        double current_derived_ehh = 1;
+        double current_ancestral_ehh = 1;
+        double previous_derived_ehh = 1;
+        double previous_ancestral_ehh = 1;
+        int currentLocus = locus;
+        int nextLocus = locus - 1;
+        double derived_ihh = 0;
+        double ancestral_ihh = 0;
+        //double derivedCount = 0;
+        //A list of all the haplotypes
+        //Starts with just the focal snp and grows outward
+        string *haplotypeList = new string[nhaps];
+        for (int hap = 0; hap < nhaps; hap++)
+        {
+            //derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+            haplotypeList[hap] = data[hap][locus];
+        }
+
+        while (current_derived_ehh > EHH_CUTOFF || current_ancestral_ehh > EHH_CUTOFF)
+        {
+            if (nextLocus < 0)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                if (!TRUNC) skipLocus = 1;
+                break;
+            }
+            else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus]
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
+                break;
+            }
+
+            //Check to see if the gap between the markers is huge, if so, scale it in an ad hoc way as in
+            //Voight et al. (2006)
+            double scale = double(SCALE_PARAMETER) / double(physicalPos[currentLocus] - physicalPos[nextLocus]);
+            if (scale > 1) scale = 1;
+
+            currentLocus = nextLocus;
+            nextLocus--;
+
+            int numDerived = 0;
+            int numAncestral = 0;
+            map<string, int> ancestralHapCount;
+            map<string, int> derivedHapCount;
+
+            for (int hap = 0; hap < nhaps; hap++)
+            {
+                isDerived = ( data[hap][locus] == '1' ) ? 1 : 0;
+                haplotypeList[hap] += data[hap][currentLocus];
+                hapStr = haplotypeList[hap];
+
+                if (isDerived)
+                {
+                    //count derived hapoltype
+                    if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
+                    else derivedHapCount[hapStr]++;
+                    numDerived++;
+                }
+                else
+                {
+                    //count ancestral haplotype
+                    if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
+                    else ancestralHapCount[hapStr]++;
+                    numAncestral++;
+                }
+            }
+
+            //We've now counted all of the unique haplotypes extending out of the core SNP
+            //If locus is monomorphic, shoot a warning and skip locus
+            //This probably isn't necessary any more
+            if (numDerived == 0 || numAncestral == 0)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: locus " << locusName[locus]
+                        << " (number " << locus + 1 << ") is monomorphic.  Skipping calculation at this locus.\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
+                break;
+            }
+
+            if (current_derived_ehh > EHH_CUTOFF)
+            {
+                current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
+
+                //directly calculate ihs, iteratively
+                //Trapezoid rule
+                derived_ihh += 0.5 * scale * (current_derived_ehh + previous_derived_ehh);
+                previous_derived_ehh = current_derived_ehh;
+            }
+
+            if (current_ancestral_ehh > EHH_CUTOFF)
+            {
+                current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
+
+                //directly calculate ihs, iteratively
+                //Trapezoid rule
+                ancestral_ihh += 0.5 * scale * (current_ancestral_ehh + previous_ancestral_ehh);
+                previous_ancestral_ehh = current_ancestral_ehh;
+            }
+
+            //check if currentLocus is beyond MAX_EXTEND
+            if (locus - currentLocus >= MAX_EXTEND) break;
+        }
+
+        delete [] haplotypeList;
+
+        if (skipLocus == 1)
+        {
+            ihs[locus] = MISSING;
+            skipLocus = 0;
+            continue;
+        }
+
+        //calculate EHH to the right
+        current_derived_ehh = 1;
+        current_ancestral_ehh = 1;
+        previous_derived_ehh = 1;
+        previous_ancestral_ehh = 1;
+        currentLocus = locus;
+        nextLocus = locus + 1;
+        skipLocus = 0;
+        //A list of all the haplotypes
+        //Starts with just the focal snp and grows outward
+        haplotypeList = new string[nhaps];
+        for (int hap = 0; hap < nhaps; hap++)
+        {
+            //char digit[2];
+            //sprintf(digit, "%d", data[hap][locus]);
+            haplotypeList[hap] = data[hap][locus];
+        }
+
+        while (current_ancestral_ehh > EHH_CUTOFF || current_derived_ehh > EHH_CUTOFF)
+        {
+            if (nextLocus > nloci - 1)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
+                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                if (!TRUNC) skipLocus = 1;
+                break;
+            }
+            else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
+            {
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus]
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                pthread_mutex_unlock(&mutex_log);
+                skipLocus = 1;
+                break;
+            }
+
+            double scale = double(SCALE_PARAMETER) / double(physicalPos[nextLocus] - physicalPos[currentLocus]);
+            if (scale > 1) scale = 1;
+
+            currentLocus = nextLocus;
+            nextLocus++;
+
+            int numDerived = 0;
+            int numAncestral = 0;
+            map<string, int> ancestralHapCount;
+            map<string, int> derivedHapCount;
+            for (int hap = 0; hap < nhaps; hap++)
+            {
+                isDerived = ( data[hap][locus] == '1') ? 1 : 0;
+                haplotypeList[hap] += data[hap][currentLocus];
+                hapStr = haplotypeList[hap];
+
+                if (isDerived)
+                {
+                    //count hapoltypes
+                    if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
+                    else derivedHapCount[hapStr]++;
+                    numDerived++;
+                }
+                else //ancestral
+                {
+                    if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
+                    else ancestralHapCount[hapStr]++;
+                    numAncestral++;
+                }
+            }
+
+            //We've now counted all of the unique haplotypes extending out of the core SNP
+            //If there are no derived alleles at a locus, shoot a warning and skip locus
+            if (numDerived == 0 || numAncestral == 0)
+            {
+                //(*flog) << "WARNING: locus " << locusName[locus]
+                //   << " (number " << locus+1 << ") is monomorphic.  Skipping calculation at this locus.\n";
+                skipLocus = 1;
+                break;
+            }
+
+            if (current_derived_ehh > EHH_CUTOFF)
+            {
+                current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
+
+                //directly calculate ihs, iteratively
+                //Trapezoid rule
+                derived_ihh += 0.5 * scale * (current_derived_ehh + previous_derived_ehh);
+                previous_derived_ehh = current_derived_ehh;
+            }
+
+            if (current_ancestral_ehh > EHH_CUTOFF)
+            {
+                current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
+
+                //directly calculate ihs, iteratively
+                //Trapezoid rule
+                ancestral_ihh += 0.5 * scale * (current_ancestral_ehh + previous_ancestral_ehh);
+                previous_ancestral_ehh = current_ancestral_ehh;
+            }
+
+            //check if currentLocus is beyond MAX_EXTEND
+            if (currentLocus - locus >= MAX_EXTEND) break;
+
+        }
+
+        delete [] haplotypeList;
+
+        if (skipLocus == 1)
+        {
+            ihs[locus] = MISSING;
+            skipLocus = 0;
+            continue;
+        }
+
+        if (ihs[locus] != MISSING)
+        {
+            ihh1[locus] = derived_ihh;
+            ihh2[locus] = ancestral_ihh;
+            ihs[locus] = log(derived_ihh / ancestral_ihh);
+            //freq[locus] = double(derivedCount) / double(nhaps);
+        }
+    }
+}
+
 
 void calc_soft_ihs(void *order)
 {
