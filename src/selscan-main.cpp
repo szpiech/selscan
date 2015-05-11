@@ -31,7 +31,9 @@
 
 using namespace std;
 
-const string PREAMBLE = "\nselscan -- a program to calculate EHH-based scans for positive selection in genomes.\n\
+const string VERSION = "1.1.0";
+
+const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
 \n\
 selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
@@ -258,7 +260,7 @@ double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 
 int main(int argc, char *argv[])
 {
-
+    cerr << "selscan v" + VERSION + "\n";
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
 #endif
@@ -570,7 +572,7 @@ int main(int argc, char *argv[])
     {
         flog << argv[i] << " ";
     }
-    flog << "\n\nCalculating ";
+    flog << "\nv" + VERSION + "\nCalculating ";
     if (CALC_XP) flog << "XP-EHH.\n";
     else if (CALC_PI) flog << "PI.\n";
     else flog << " iHS.\n";
