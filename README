@@ -212,45 +212,33 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 ################################################################################
 ################################################################################
 
-norm -- a program for downstream analysis of selscan output
+norm v1.0.5 -- a program for downstream analysis of selscan output
 Source code and binaries can be found at
 	<https://www.github.com/szpiech/selscan>
-
-norm currently analyzes iHS output only at this time.
 
 Citations:
 
 ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]
+PC Sabeti, et al. (2007) Nature, 449: 913–918.
 BF Voight, et al. (2006) PLoS Biology, 4: e72.
-
-USAGE:
 
 To normalize iHS output across frequency bins:
 
-./norm --files <file1.ihs.out> ... <fileN.ihs.out>
-
-Files: 
-
-<file1.ihs.out>.[nBins]bins.norm ... <fileN.ihs.out>.[nBins]bins.norm
-
-Format: 
-
-<locusID> <physicalPos> <'1' freq in the sample> <ihh1> <ihh0> <unstandardized iHS> <standardized iHS> <is |iHS| > 2>
+./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out>
 
 To normalize iHS output and analyze non-overlapping windows of fixed bp for 
 extreme iHS scores:
 
-./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
+./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
 
-This produces the same output as above plus the following
+To normalize XP-EHH output across frequency bins:
 
-Files: 
+./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out>
 
-<file1.ihs.out>.[nBins]bins.norm.[size]kb.windows ... <fileN.ihs.out>.[nBins]bins.norm.[size]kb.windows
+To normalize XP-EHH output and analyze non-overlapping windows of fixed bp for 
+extreme XP-EHH scores:
 
-Format: 
-
-<window start> <window stop> <num iHS scores in window> <% of |iHS| scores > 2> <genome wide percentile>
+./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out> --bp-win
 
 ----------Command Line Arguments----------
 
@@ -261,15 +249,28 @@ Format:
 	number of SNPs.
 	Default: false
 
+--crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.
+	Not used by default.
+	Default: -1.00
+
+--crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
+	Default: 2.00
+
 --files <string1> ... <stringN>: A list of files delimited by whitespace for
 	joint normalization.
-	Expected format: <locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>
+	Expected format for iHS files (no header):
+	<locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>
+	Expected format for XP-EHH files (one line header):
+	<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>
 	Default: infile
 
 --first <bool>: Output only the first file's normalization.
 	Default: false
 
 --help <bool>: Prints this help dialog.
+	Default: false
+
+--ihs <bool>: Do iHS normalization.
 	Default: false
 
 --log <string>: The log file name.
@@ -282,13 +283,10 @@ Format:
 	window.  This is the number of quantile bins to use.
 	Default: 20
 
---snp-win <bool>: <not implemented> If set, will use windows of a constant
-	SNP size with varying bp length.
-	Default: false
-
---snp-win-size <int>: <not implemented> The number of SNPs in a window.
-	Default: 50
-
 --winsize <int>: The non-overlapping window size for calculating the percentage
 	of extreme SNPs.
 	Default: 100000
+
+--xpehh <bool>: Do XP-EHH normalization.
+	Default: false
+
