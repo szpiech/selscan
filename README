@@ -21,6 +21,14 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+13MAY2015 - norm v1.0.5 is released.  norm will now normalize ihs or xpehh scores.  Two new command line options.
+
+--ihs <bool>: Do iHS normalization.
+
+--xpehh <bool>: Do XP-EHH normalization.
+
+Exactly one of these must be specified when running norm (e.g. ./norm --ihs --files *.ihs.out or ./norm --xpehh --files *.xpehh.out).
+
 06MAY2015 - Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
 
 --vcf <string>: A VCF file containing haplotype data.

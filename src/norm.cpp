@@ -32,7 +32,7 @@ using namespace std;
 
 const string VERSION = "1.0.5";
 
-const string PREAMBLE = "\nnorm v" + VERSION + "-- a program for downstream analysis of selscan output\n\
+const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
 \t<https://www.github.com/szpiech/selscan>\n\
 \n\
@@ -156,7 +156,7 @@ ofstream flog;
 
 int main(int argc, char *argv[])
 {
-    cerr << "norm v" + VERSION + "\n";
+    cerr << "norm v" + VERSION;
     param_t params;
     params.setPreamble(PREAMBLE);
     params.addFlag(ARG_FREQ_BINS, DEFAULT_FREQ_BINS, "", HELP_FREQ_BINS);
@@ -271,7 +271,8 @@ int main(int argc, char *argv[])
     {
         char str[10];
         sprintf(str, "%d", numBins);
-        outfilename[i] = filename[i] + "." + str + "bins.norm";
+        if(IHS) outfilename[i] = filename[i] + "." + str + "bins.norm";
+        if(XPEHH) outfilename[i] = filename[i] + ".norm";
 
         fin.open(filename[i].c_str());
         if (fin.fail())
