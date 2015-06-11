@@ -288,11 +288,11 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
-<<<<<<< HEAD
+    <<< <<< < HEAD
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
-=======
-    params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
->>>>>>> master
+    == == == =
+        params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
+    >>> >>> > master
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
@@ -353,11 +353,11 @@ int main(int argc, char *argv[])
 
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
-<<<<<<< HEAD
+    <<< <<< < HEAD
     bool CALC_NSL = params.getBoolFlag(ARG_NSL);
-=======
-    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
->>>>>>> master
+    == == == =
+        bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+    >>> >>> > master
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (WRITE_DETAILED_IHS && !CALC_IHS){
+    if (WRITE_DETAILED_IHS && !CALC_IHS) {
         cerr << "ERROR: The flag " << ARG_IHS_DETAILED << " must be used with " << ARG_IHS << " \n";
         return 1;
     }
@@ -890,11 +890,12 @@ int main(int argc, char *argv[])
         ihh2 = new double[mapData->nloci];
         ihs = new double[hapData->nloci];
 
-        ihhDerivedLeft = new double[hapData->nloci];
-        ihhDerivedRight = new double[hapData->nloci];
-        ihhAncestralLeft = new double[hapData->nloci];
-        ihhAncestralRight = new double[hapData->nloci];
-
+        if (WRITE_DETAILED_IHS) {
+            ihhDerivedLeft = new double[hapData->nloci];
+            ihhDerivedRight = new double[hapData->nloci];
+            ihhAncestralLeft = new double[hapData->nloci];
+            ihhAncestralRight = new double[hapData->nloci];
+        }
         barInit(pbar, mapData->nloci, 78);
 
         cerr << "Starting iHS calculations with alt flag ";
@@ -948,10 +949,10 @@ int main(int argc, char *argv[])
                      << ihh1[i] << "\t"
                      << ihh2[i] << "\t"
                      << ihs[i];
-                if (!WRITE_DETAILED_IHS) 
+                if (!WRITE_DETAILED_IHS)
                 {
                     fout << endl;
-                } else 
+                } else
                 {
                     fout << "\t"
                          << ihhDerivedLeft[i]    << "\t"
@@ -1928,7 +1929,7 @@ void calc_ihs(void *order)
     int numThreads = p->params->getIntFlag(ARG_THREAD);
     int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
     //bool SKIP = p->params->getBoolFlag(ARG_SKIP);
-
+    bool WRITE_DETAILED_IHS = p->params->getBoolFlag(ARG_IHS_DETAILED);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
     //int step = (stop - start) / (pbar->totalTicks);
@@ -1946,10 +1947,12 @@ void calc_ihs(void *order)
         //freq[locus] = MISSING;
         ihh1[locus] = MISSING;
         ihh2[locus] = MISSING;
-        ihhDerivedLeft[locus]    = MISSING;
-        ihhDerivedRight[locus]   = MISSING;
-        ihhAncestralLeft[locus]  = MISSING;
-        ihhAncestralRight[locus] = MISSING;
+        if (WRITE_DETAILED_IHS) {
+            ihhDerivedLeft[locus]    = MISSING;
+            ihhDerivedRight[locus]   = MISSING;
+            ihhAncestralLeft[locus]  = MISSING;
+            ihhAncestralRight[locus] = MISSING;
+        }
         bool skipLocus = 0;
         //If the focal snp has MAF < MAF, then skip this locus
         if (freq[locus] < MAF || freq[locus] > 1 - MAF)
@@ -1976,7 +1979,7 @@ void calc_ihs(void *order)
         double derived_ihh_left    = 0;
         double ancestral_ihh_left  = 0;
         double derived_ihh_right   = 0;
-        double ancestral_ihh_right = 0;    
+        double ancestral_ihh_right = 0;
 
         //double derivedCount = 0;
         //A list of all the haplotypes
@@ -2215,10 +2218,12 @@ void calc_ihs(void *order)
             ihh1[locus] = derived_ihh;
             ihh2[locus] = ancestral_ihh;
             ihs[locus] = log(derived_ihh / ancestral_ihh);
-            ihhDerivedLeft[locus]    = derived_ihh_left;
-            ihhDerivedRight[locus]   = derived_ihh_right;
-            ihhAncestralLeft[locus]  = ancestral_ihh_left;
-            ihhAncestralRight[locus] = ancestral_ihh_right;
+            if (WRITE_DETAILED_IHS) {
+                ihhDerivedLeft[locus]    = derived_ihh_left;
+                ihhDerivedRight[locus]   = derived_ihh_right;
+                ihhAncestralLeft[locus]  = ancestral_ihh_left;
+                ihhAncestralRight[locus] = ancestral_ihh_right;
+            }
             //freq[locus] = double(derivedCount) / double(nhaps);
         }
     }
