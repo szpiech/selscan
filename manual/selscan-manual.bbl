@@ -1,0 +1,66 @@
+\begin{thebibliography}{}
+
+\bibitem[Browning and Browning(2007)Browning and
+  Browning]{BrowningAndBrowning07}
+Browning, S.~R. and Browning, B.~L. 2007.
+\newblock Rapid and accurate haplotype phasing and missing data inference for
+  whole genome association studies by use of localized haplotype clustering.
+\newblock {\em American Journal of Human Genetics\/}, {81}: 1084--1097.
+
+\bibitem[Delaneau {\em et~al.}(2013)Delaneau, Zagury, and
+  Marchini]{DelaneauEtAl13}
+Delaneau, O., Zagury, J.~F., and Marchini, J. 2013.
+\newblock Improved whole chromosome phasing for disease and population genetic
+  studies.
+\newblock {\em Nature Methods\/}, {10}: 5--6.
+
+\bibitem[Ferrer-Admetlla {\em et~al.}(2014)Ferrer-Admetlla, Liang,
+  Korneliussen, and Nielsen]{FerrerAdmetllaEtAl14}
+Ferrer-Admetlla, A., Liang, M., Korneliussen, T., and Nielsen, R. 2014.
+\newblock On detecting incomplete soft or hard selective sweeps using haplotype
+  structure.
+\newblock {\em Molecular Biology and Evolution\/}, {31}: 1275--1291.
+
+\bibitem[Purcell {\em et~al.}(2007)Purcell, Neale, K., Thomas, Ferreira,
+  Bender, Maller, Sklar, {\relax de Bakker}, Daly, and Sham]{PurcellEtAl07}
+Purcell, S., Neale, B., K., T.-B., Thomas, L., Ferreira, M. A.~R., Bender, D.,
+  Maller, J., Sklar, P., {\relax de Bakker}, P. I.~W., Daly, M.~J., and Sham,
+  P.~C. 2007.
+\newblock {PLINK}: a toolset for whole-genome association and population-based
+  linkage analysis.
+\newblock {\em American Journal of Human Genetics\/}, {81}: 559--575.
+
+\bibitem[Sabeti {\em et~al.}(2002)Sabeti, Reich, Higgins, Levine, Richter,
+  Schaffner, Gabriel, Platko, Patterson, McDonald, Ackerman, Campbell,
+  Altshuler, Cooper, Kwiatkowski, Ward, and Lander]{SabetiEtAl02}
+Sabeti, P.~C., Reich, D.~E., Higgins, J.~M., Levine, H. Z.~P., Richter, D.~J.,
+  Schaffner, S.~F., Gabriel, S.~B., Platko, J.~V., Patterson, N.~J., McDonald,
+  G.~J., Ackerman, H.~C., Campbell, S.~J., Altshuler, D., Cooper, R.,
+  Kwiatkowski, D., Ward, R., and Lander, E.~S. 2002.
+\newblock Detecting recent positive selection in the human genome from
+  haplotype structure.
+\newblock {\em Nature\/}, {419}: 832--837.
+
+\bibitem[Sabeti {\em et~al.}(2007)Sabeti, Varilly, Fry, Lohmueller, Hostetter,
+  Cotsapas, Xie, Byrne, McCarroll, Gaudet, Schaffner, and Lander]{SabetiEtAl07}
+Sabeti, P.~C., Varilly, P., Fry, B., Lohmueller, J., Hostetter, E., Cotsapas,
+  C., Xie, X., Byrne, E.~H., McCarroll, S.~A., Gaudet, R., Schaffner, S.~F.,
+  and Lander, E.~S. 2007.
+\newblock Genome-wide detection and characterization of positive selection in
+  human populations.
+\newblock {\em Nature\/}, {449}(7164): 913--918.
+
+\bibitem[Szpiech and Hernandez(2014)Szpiech and
+  Hernandez]{SzpiechAndHernandez14}
+Szpiech, Z.~A. and Hernandez, R.~D. 2014.
+\newblock selscan: an efficient multithreaded program to perform {EHH}-based
+  scans for positive selection.
+\newblock {\em Molecular Biology and Evolution\/}, {31}: 2824--2827.
+
+\bibitem[Voight {\em et~al.}(2006)Voight, Kudaravalli, Wen, and
+  Pritchard]{VoightEtAl06}
+Voight, B.~F., Kudaravalli, S., Wen, X., and Pritchard, J.~K. 2006.
+\newblock A map of recent positive selection in the human genome.
+\newblock {\em PLoS Biology\/}, {4}: e72.
+
+\end{thebibliography}

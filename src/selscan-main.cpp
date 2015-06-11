@@ -129,6 +129,10 @@ const string ARG_IHS = "--ihs";
 const bool DEFAULT_IHS = false;
 const string HELP_IHS = "Set this flag to calculate iHS.";
 
+const string ARG_IHS_DETAILED = "--ihs-detail";
+const bool DEFAULT_IHS_DETAILED = false;
+const string HELP_IHS_DETAILED = "Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.";
+
 const string ARG_NSL = "--nsl";
 const bool DEFAULT_NSL = false;
 const string HELP_NSL = "Set this flag to calculate nSL.";
@@ -213,6 +217,10 @@ struct work_order_t
     double (*calc)(map<string, int> &, int, bool);
 
     double *ihs;
+    double *ihhDerivedLeft;
+    double *ihhDerivedRight;
+    double *ihhAncestralLeft;
+    double *ihhAncestralRight;
     double *freq;
 
     double *ihh1;
@@ -280,7 +288,11 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
+<<<<<<< HEAD
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
+=======
+    params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
+>>>>>>> master
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
@@ -341,7 +353,11 @@ int main(int argc, char *argv[])
 
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
+<<<<<<< HEAD
     bool CALC_NSL = params.getBoolFlag(ARG_NSL);
+=======
+    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+>>>>>>> master
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
@@ -366,6 +382,11 @@ int main(int argc, char *argv[])
              << ")\n\tPI (" << ARG_PI
              << ")\n\tnSL (" << ARG_NSL
              << ")\n";
+        return 1;
+    }
+
+    if (WRITE_DETAILED_IHS && !CALC_IHS){
+        cerr << "ERROR: The flag " << ARG_IHS_DETAILED << " must be used with " << ARG_IHS << " \n";
         return 1;
     }
 
@@ -605,6 +626,7 @@ int main(int argc, char *argv[])
     Bar pbar;
 
     double *ihs, *ihh1, *ihh2;
+    double *ihhDerivedLeft, *ihhDerivedRight, *ihhAncestralLeft, *ihhAncestralRight;
     double *freq, *freq1, *freq2;
 
     if (mapData->nloci < numThreads)
@@ -868,6 +890,11 @@ int main(int argc, char *argv[])
         ihh2 = new double[mapData->nloci];
         ihs = new double[hapData->nloci];
 
+        ihhDerivedLeft = new double[hapData->nloci];
+        ihhDerivedRight = new double[hapData->nloci];
+        ihhAncestralLeft = new double[hapData->nloci];
+        ihhAncestralRight = new double[hapData->nloci];
+
         barInit(pbar, mapData->nloci, 78);
 
         cerr << "Starting iHS calculations with alt flag ";
@@ -880,17 +907,21 @@ int main(int argc, char *argv[])
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
-            order->id = i;
-            order->hapData = hapData;
-            order->mapData = mapData;
-            order->ihh1 = ihh1;
-            order->ihh2 = ihh2;
-            order->ihs = ihs;
-            order->freq = freq;
-            order->flog = &flog;
-            order->bar = &pbar;
-            order->params = &params;
-            order->calc = &calculateHomozygosity;
+            order->id                = i;
+            order->hapData           = hapData;
+            order->mapData           = mapData;
+            order->ihh1              = ihh1;
+            order->ihh2              = ihh2;
+            order->ihs               = ihs;
+            order->ihhDerivedLeft    = ihhDerivedLeft;
+            order->ihhDerivedRight   = ihhDerivedRight;
+            order->ihhAncestralLeft  = ihhAncestralLeft;
+            order->ihhAncestralRight = ihhAncestralRight;
+            order->freq              = freq;
+            order->flog              = &flog;
+            order->bar               = &pbar;
+            order->params            = &params;
+            order->calc              = &calculateHomozygosity;
 
             pthread_create(&(peer[i]),
                            NULL,
@@ -916,7 +947,18 @@ int main(int argc, char *argv[])
                      << freq[i] << "\t"
                      << ihh1[i] << "\t"
                      << ihh2[i] << "\t"
-                     << ihs[i] << endl;
+                     << ihs[i];
+                if (!WRITE_DETAILED_IHS) 
+                {
+                    fout << endl;
+                } else 
+                {
+                    fout << "\t"
+                         << ihhDerivedLeft[i]    << "\t"
+                         << ihhDerivedRight[i]   << "\t"
+                         << ihhAncestralLeft[i]  << "\t"
+                         << ihhAncestralRight[i] << endl;
+                }
             }
         }
     }
@@ -1869,6 +1911,10 @@ void calc_ihs(void *order)
     double *ihs = p->ihs;
     double *ihh1 = p->ihh1;
     double *ihh2 = p->ihh2;
+    double *ihhDerivedLeft    = p->ihhDerivedLeft;
+    double *ihhDerivedRight   = p->ihhDerivedRight;
+    double *ihhAncestralLeft  = p->ihhAncestralLeft;
+    double *ihhAncestralRight = p->ihhAncestralRight;
     double *freq = p->freq;
     ofstream *flog = p->flog;
     Bar *pbar = p->bar;
@@ -1900,6 +1946,10 @@ void calc_ihs(void *order)
         //freq[locus] = MISSING;
         ihh1[locus] = MISSING;
         ihh2[locus] = MISSING;
+        ihhDerivedLeft[locus]    = MISSING;
+        ihhDerivedRight[locus]   = MISSING;
+        ihhAncestralLeft[locus]  = MISSING;
+        ihhAncestralRight[locus] = MISSING;
         bool skipLocus = 0;
         //If the focal snp has MAF < MAF, then skip this locus
         if (freq[locus] < MAF || freq[locus] > 1 - MAF)
@@ -1922,6 +1972,12 @@ void calc_ihs(void *order)
         int nextLocus = locus - 1;
         double derived_ihh = 0;
         double ancestral_ihh = 0;
+
+        double derived_ihh_left    = 0;
+        double ancestral_ihh_left  = 0;
+        double derived_ihh_right   = 0;
+        double ancestral_ihh_right = 0;    
+
         //double derivedCount = 0;
         //A list of all the haplotypes
         //Starts with just the focal snp and grows outward
@@ -2034,6 +2090,9 @@ void calc_ihs(void *order)
             continue;
         }
 
+        derived_ihh_left   = derived_ihh;
+        ancestral_ihh_left = ancestral_ihh;
+
         //calculate EHH to the right
         current_derived_ehh = 1;
         current_ancestral_ehh = 1;
@@ -2139,6 +2198,9 @@ void calc_ihs(void *order)
 
         }
 
+        derived_ihh_right   = derived_ihh   - derived_ihh_left;
+        ancestral_ihh_right = ancestral_ihh - ancestral_ihh_left;
+
         delete [] haplotypeList;
 
         if (skipLocus == 1)
@@ -2153,6 +2215,10 @@ void calc_ihs(void *order)
             ihh1[locus] = derived_ihh;
             ihh2[locus] = ancestral_ihh;
             ihs[locus] = log(derived_ihh / ancestral_ihh);
+            ihhDerivedLeft[locus]    = derived_ihh_left;
+            ihhDerivedRight[locus]   = derived_ihh_right;
+            ihhAncestralLeft[locus]  = ancestral_ihh_left;
+            ihhAncestralRight[locus] = ancestral_ihh_right;
             //freq[locus] = double(derivedCount) / double(nhaps);
         }
     }

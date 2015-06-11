@@ -30,25 +30,34 @@
 
 using namespace std;
 
-const string PREAMBLE = "\nnorm -- a program for downstream analysis of selscan output\n\
+const string VERSION = "1.0.5";
+
+const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
 \t<https://www.github.com/szpiech/selscan>\n\
-\n\
-norm currently analyzes iHS output only at this time.\n\
 \n\
 Citations:\n\
 \n\
 ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]\n\
+PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
 BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 \n\
 To normalize iHS output across frequency bins:\n\
 \n\
-./norm --files <file1.ihs.out> ... <fileN.ihs.out>\n\
+./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out>\n\
 \n\
 To normalize iHS output and analyze non-overlapping windows of fixed bp for \n\
 extreme iHS scores:\n\
 \n\
-./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win\n";
+./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win\n\
+To normalize XP-EHH output across frequency bins:\n\
+\n\
+./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out>\n\
+\n\
+To normalize XP-EHH output and analyze non-overlapping windows of fixed bp for \n\
+extreme XP-EHH scores:\n\
+\n\
+./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out> --bp-win\n";
 
 const string ARG_FREQ_BINS = "--bins";
 const int DEFAULT_FREQ_BINS = 100;
@@ -58,7 +67,10 @@ const string ARG_FILES = "--files";
 const string DEFAULT_FILES = "infile";
 const string HELP_FILES = "A list of files delimited by whitespace for\n\
 \tjoint normalization.\n\
-\tExpected format: <locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>";
+\tExpected format for iHS files (no header):\n\
+\t<locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>\n\
+\tExpected format for XP-EHH files (one line header):\n\
+\t<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>";
 
 const string ARG_LOG = "--log";
 const string DEFAULT_LOG = "logfile";
@@ -96,6 +108,10 @@ const string ARG_IHS = "--ihs";
 const bool DEFAULT_IHS = false;
 const string HELP_IHS = "Do iHS normalization.";
 
+const string ARG_XPEHH = "--xpehh";
+const bool DEFAULT_XPEHH = false;
+const string HELP_XPEHH = "Do XP-EHH normalization.";
+
 const string ARG_SOFT = "--soft";
 const bool DEFAULT_SOFT = false;
 const string HELP_SOFT = "Do soft-iHS normalization.";
@@ -119,13 +135,19 @@ const int MISSING = -9999;
 //returns number of lines in file
 //throws 0 if the file fails
 int checkIHSfile(ifstream &fin);
+int checkXPEHHfile(ifstream &fin);
 
-void readAll(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[]);
+void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[]);
+void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[]);
 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
-void normalizeDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff);
 
-void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
+void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff);
+void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff);
+
+void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
+void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
+
 
 int countFields(const string &str);
 bool isint(string str);
@@ -134,6 +156,7 @@ ofstream flog;
 
 int main(int argc, char *argv[])
 {
+    cerr << "norm v" + VERSION;
     param_t params;
     params.setPreamble(PREAMBLE);
     params.addFlag(ARG_FREQ_BINS, DEFAULT_FREQ_BINS, "", HELP_FREQ_BINS);
@@ -142,12 +165,14 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_WINSIZE, DEFAULT_WINSIZE, "", HELP_WINSIZE);
     params.addFlag(ARG_QBINS, DEFAULT_QBINS, "", HELP_QBINS);
     params.addFlag(ARG_MINSNPS, DEFAULT_MINSNPS, "", HELP_MINSNPS);
-    params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "", HELP_SNPWIN);
-    params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "", HELP_SNPWINSIZE);
+    params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "SILENT", HELP_SNPWIN);
+    params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "SILENT", HELP_SNPWINSIZE);
     params.addFlag(ARG_BPWIN, DEFAULT_BPWIN, "", HELP_BPWIN);
     params.addFlag(ARG_FIRST, DEFAULT_FIRST, "", HELP_FIRST);
     params.addFlag(ARG_CRIT_NUM, DEFAULT_CRIT_NUM, "", HELP_CRIT_NUM);
     params.addFlag(ARG_CRIT_PERCENT, DEFAULT_CRIT_PERCENT, "", HELP_CRIT_PERCENT);
+    params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
+    params.addFlag(ARG_XPEHH, DEFAULT_XPEHH, "", HELP_XPEHH);
 
 
     try
@@ -172,6 +197,8 @@ int main(int argc, char *argv[])
     bool FIRST = params.getBoolFlag(ARG_FIRST);
     double critNum = params.getDoubleFlag(ARG_CRIT_NUM);
     double critPercent = params.getDoubleFlag(ARG_CRIT_PERCENT);
+    bool IHS = params.getBoolFlag(ARG_IHS);
+    bool XPEHH = params.getBoolFlag(ARG_XPEHH);
 
     if (numBins <= 0)
     {
@@ -197,12 +224,17 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (critPercent != DEFAULT_CRIT_PERCENT && critPercent <= 0 || critPercent >= 1)
+    if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent <= 0 || critPercent >= 1))
     {
         cerr << "ERROR: Critical percentile must be in (0,1).\n";
         return 1;
     }
 
+    
+    if(IHS + XPEHH != 1){
+        cerr << "Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + ".\n";
+        return 1;
+    }
     cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
 
     string *outfilename = new string[nfiles];
@@ -223,7 +255,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    flog << "Input files:\n";
+    for (int i = 0; i < argc; i++)
+    {
+        flog << argv[i] << " ";
+    }
+    flog << "\n\n";
+
+    //flog << "Input files:\n";
 
     //For each file, open it, and check it for integrity
     //Also record total number of lines so we can allocate
@@ -233,7 +271,8 @@ int main(int argc, char *argv[])
     {
         char str[10];
         sprintf(str, "%d", numBins);
-        outfilename[i] = filename[i] + "." + str + "bins.norm";
+        if(IHS) outfilename[i] = filename[i] + "." + str + "bins.norm";
+        if(XPEHH) outfilename[i] = filename[i] + ".norm";
 
         fin.open(filename[i].c_str());
         if (fin.fail())
@@ -245,13 +284,14 @@ int main(int argc, char *argv[])
         else
         {
             cerr << "Opened " << filename[i] << endl;
-            flog << filename[i] << endl;
+            //flog << filename[i] << endl;
         }
 
         //check integrity of file and keep count of the number of lines
         try
         {
-            fileLoci[i] = checkIHSfile(fin);
+            if (IHS) fileLoci[i] = checkIHSfile(fin);
+            if (XPEHH) fileLoci[i] = checkXPEHHfile(fin);
             totalLoci += fileLoci[i];
         }
         catch (...)
@@ -264,20 +304,13 @@ int main(int argc, char *argv[])
     cerr << "\nTotal loci: " << totalLoci << endl;
     flog << "\nTotal loci: " << totalLoci << endl;
 
-    flog << "\nOutput files:\n";
-    for (int i = 0; i < nfiles; i++)
-    {
-        flog << outfilename[i] << endl;
-    }
-    flog << endl;
-    bool NORM_IHS = true;
-    if (NORM_IHS)
+    if (IHS)
     {
         cerr << "Reading all frequency and iHS data.\n";
         double *freq = new double[totalLoci];
         double *score = new double[totalLoci];
         //read in all data
-        readAll(filename, fileLoci, nfiles, freq, score);
+        readAllIHS(filename, fileLoci, nfiles, freq, score);
 
         double *mean = new double[numBins];
         double *variance = new double[numBins];
@@ -310,10 +343,10 @@ int main(int argc, char *argv[])
 
         double upperCutoff, lowerCutoff;
 
-        if (critPercent != DEFAULT_CRIT_PERCENT && critPercent <= 0 || critPercent >= 1)
+        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent <= 0 || critPercent >= 1))
         {
-            upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent/2.0 );
-            lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent/2.0);
+            upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
+            lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
 
             cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
             cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
@@ -343,7 +376,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < nfiles; i++)
         {
             cerr << "Normalizing " << filename[i] << "\n";
-            normalizeDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
+            normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
             //fin[i].close();
             //fout[i].close();
         }
@@ -353,8 +386,95 @@ int main(int argc, char *argv[])
         delete [] variance;
         delete [] n;
 
-        if (BPWIN) analyzeBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
+        if (BPWIN) analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
         //if(SNPWIN) analyzeSNPWindows(outfilename,fileLoci,nfiles,snpWinSize);
+    }
+    else if (XPEHH) {
+
+        cerr << "Reading all XP-EHH data.\n";
+        double *freq1 = new double[totalLoci];
+        double *freq2 = new double[totalLoci];
+        double *score = new double[totalLoci];
+        //read in all data
+        readAllXPEHH(filename, fileLoci, nfiles, freq1, freq2, score);
+        numBins = 1;
+        double *mean = new double[numBins];
+        double *variance = new double[numBins];
+        int *n = new int[numBins];
+
+        double minFreq;
+        double maxFreq;
+        double step;
+
+        //This would use the empirical range to draw bin boundaries
+        //gsl_stats_minmax(&minFreq,&maxFreq,freq,1,totalLoci);
+
+        //This uses the possible range to draw bin boundaries
+        minFreq = 0.0;
+        maxFreq = 1.0;
+
+        step = (maxFreq - minFreq) / double(numBins);
+
+        double *threshold = new double[numBins];
+
+        for (int b = 0; b < numBins; b++)
+        {
+            threshold[b] = minFreq + (b + 1) * step;
+        }
+
+        cerr << "Calculating mean and variance:\n\n";
+        getMeanVarBins(freq1, score, totalLoci, mean, variance, n, numBins, threshold);
+
+        gsl_sort(score, 1, totalLoci);
+
+        double upperCutoff, lowerCutoff;
+
+        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent <= 0 || critPercent >= 1))
+        {
+            upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
+            lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
+
+            cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
+            cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+            flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
+            flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+        }
+        else
+        {
+            upperCutoff = critNum;
+            lowerCutoff = -critNum;
+        }
+        delete [] freq1;
+        delete [] freq2;
+        delete [] score;
+
+        //Output bins info to file.
+        cerr << "num\tmean\tvariance\n";
+        flog << "num\tmean\tvariance\n";
+        for (int i = 0; i < numBins; i++)
+        {
+            cerr << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+            flog << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+        }
+
+
+        //Read each file and create normed files.
+        if (FIRST) nfiles = 1;
+        for (int i = 0; i < nfiles; i++)
+        {
+            cerr << "Normalizing " << filename[i] << "\n";
+            normalizeXPEHHDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
+            //fin[i].close();
+            //fout[i].close();
+        }
+
+        delete [] threshold;
+        delete [] mean;
+        delete [] variance;
+        delete [] n;
+
+        if (BPWIN) analyzeXPEHHBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
+
     }
     flog.close();
     return 0;
@@ -418,7 +538,7 @@ void analyzeSNPWindows(string normedfiles[],int fileLoci[], int nfiles, int snpW
     }
 }
 */
-void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
@@ -648,6 +768,241 @@ void analyzeBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winS
     return;
 }
 
+void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+{
+    cerr << "\nAnalyzing BP windows:\n\n";
+    //int totalLoci = 0;
+    //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
+    vector<int> *winStarts = new vector<int>[nfiles];
+    vector<int> *nSNPs = new vector<int>[nfiles];
+    vector<double> *fracCrit = new vector<double>[nfiles];
+
+    ifstream fin;
+    ofstream fout;
+    string *winfilename = new string[nfiles];
+
+    char str[10];
+    sprintf(str, "%d", winSize / 1000);
+
+    string name, header;
+    int pos;
+    double gpos, freq1, freq2, ihh1, ihh2, data, normedData;
+    bool crit;
+    int numWindows = 0;
+
+    for (int i = 0; i < nfiles; i++)
+    {
+        fin.open(normedfiles[i].c_str());
+        if (fin.fail())
+        {
+            cerr << "ERROR: " << normedfiles[i] << " " << strerror(errno);
+            throw - 1;
+        }
+
+        getline(fin, header);
+
+        //generate winfile names
+        winfilename[i] = normedfiles[i];
+        winfilename[i] += ".";
+        winfilename[i] += str;
+        winfilename[i] += "kb.windows";
+
+        //Load information into vectors for analysis
+        int winStart = 1;
+        int winEnd = winStart + winSize - 1;
+        int numSNPs = 0;
+        int numCrit = 0;
+        for (int j = 0; j < fileLoci[i]; j++)
+        {
+            fin >> name;
+            fin >> pos;
+            fin >> gpos;
+            fin >> freq1;
+            fin >> ihh1;
+            fin >> freq2;
+            fin >> ihh2;
+            fin >> data;
+            fin >> normedData;
+            fin >> crit;
+
+            while (pos > winEnd)
+            {
+                winStarts[i].push_back(winStart);
+                nSNPs[i].push_back(numSNPs);
+                if (numSNPs == 0) fracCrit[i].push_back(-1);
+                else fracCrit[i].push_back(double(numCrit) / double(numSNPs));
+
+                if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
+
+                winStart += winSize;
+                winEnd += winSize;
+                numSNPs = 0;
+                numCrit = 0;
+            }
+
+            numSNPs++;
+            numCrit += crit;
+        }
+        fin.close();
+    }
+
+    cerr << numWindows << " nonzero windows.\n";
+    flog << numWindows << " nonzero windows.\n";
+    double *allSNPsPerWindow = new double[numWindows];
+    double *allFracCritPerWindow = new double[numWindows];
+    int k = 0;
+    //Load all num SNPs per window into a single double vector to determine quantile boundaries across
+    for (int i = 0; i < nfiles; i++)
+    {
+        for (int j = 0; j < nSNPs[i].size(); j++)
+        {
+            if (nSNPs[i][j] >= minSNPs && fracCrit[i][j] >= 0)
+            {
+                allSNPsPerWindow[k] = nSNPs[i][j];
+                allFracCritPerWindow[k] = fracCrit[i][j];
+                k++;
+            }
+        }
+    }
+
+    //Sort allSNPsPerWindow and rearrange allFracCritPerWindow based on that sorting
+    gsl_sort2(allSNPsPerWindow, 1, allFracCritPerWindow, 1, numWindows);
+
+    double *quantileBound = new double[numQuantiles];
+    //determine quantile boundaries
+    for (int i = 0; i < numQuantiles; i++)
+    {
+        quantileBound[i] = gsl_stats_quantile_from_sorted_data (allSNPsPerWindow, 1, numWindows, double(i + 1) / double(numQuantiles));
+    }
+
+    /*
+     *instead of splitting into a mini vector for each quantile bin, just pass a reference to the
+     *start of the slice plus its size to gsl_stats_quantile_from_sorted_data
+     *will need the number of snps per quantile bin
+     */
+    int b = 0;//quantileBoundary index
+    int count = 0;//number in quantile, not necessarily equal across quantiles because of ties
+    int start = 0;//starting index for the sort function
+    map<string, double> *topWindowBoundary = new map<string, double>[numQuantiles];
+
+    //cerr << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+    //flog << "\nnSNPs 0.1 0.5 1.0 5.0\n";
+
+    cerr << "\nnSNPs 1.0 5.0\n";
+    flog << "\nnSNPs 1.0 5.0\n";
+
+
+    for (int i = 0; i < numWindows; i++)
+    {
+        if (allSNPsPerWindow[i] <= quantileBound[b])
+        {
+            count++;
+        }
+        else
+        {
+            gsl_sort(&(allFracCritPerWindow[start]), 1, count);
+
+            //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
+            //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
+            topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
+            topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
+
+            cerr << quantileBound[b] << " "
+                 //<< topWindowBoundary[b]["0.1"] << " "
+                 //<< topWindowBoundary[b]["0.5"] << " "
+                 << topWindowBoundary[b]["1.0"] << " "
+                 << topWindowBoundary[b]["5.0"] << endl;
+
+            flog << quantileBound[b] << " "
+                 //<< topWindowBoundary[b]["0.1"] << " "
+                 //<< topWindowBoundary[b]["0.5"] << " "
+                 << topWindowBoundary[b]["1.0"] << " "
+                 << topWindowBoundary[b]["5.0"] << endl;
+
+            start = i;
+            count = 0;
+            b++;
+        }
+    }
+
+    gsl_sort(&(allFracCritPerWindow[start]), 1, count);
+    //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
+    //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
+    topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
+    topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
+
+    cerr << quantileBound[b] << " "
+         //<< topWindowBoundary[b]["0.1"] << " "
+         //<< topWindowBoundary[b]["0.5"] << " "
+         << topWindowBoundary[b]["1.0"] << " "
+         << topWindowBoundary[b]["5.0"] << "\n\n";
+
+    flog << quantileBound[b] << " "
+         //<< topWindowBoundary[b]["0.1"] << " "
+         //<< topWindowBoundary[b]["0.5"] << " "
+         << topWindowBoundary[b]["1.0"] << " "
+         << topWindowBoundary[b]["5.0"] << "\n\n";
+
+    delete [] allSNPsPerWindow;
+    delete [] allFracCritPerWindow;
+
+    for (int i = 0; i < nfiles; i++)
+    {
+        fout.open(winfilename[i].c_str());
+        if (fout.fail())
+        {
+            cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
+            throw - 1;
+        }
+        cerr << "Creating window file " << winfilename[i] << endl;
+        flog << "Creating window file " << winfilename[i] << endl;
+        for (int j = 0; j < nSNPs[i].size(); j++)
+        {
+            if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
+            {
+                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
+                continue;
+            }
+            double percentile = 100.0;
+            for (b = 0; b < numQuantiles; b++)
+            {
+                if (nSNPs[i][j] <= quantileBound[b]) break;
+            }
+
+            if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
+            {
+                percentile = 5.0;
+            }
+            else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
+            {
+                percentile = 1.0;
+            }
+            /*
+            else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
+            {
+                percentile = 0.5;
+            }
+            else if (fracCrit[i][j] >= topWindowBoundary[b]["0.1"])
+            {
+                percentile = 0.1;
+            }
+            */
+            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
+        }
+        fout.close();
+    }
+
+    delete [] quantileBound;
+    delete [] topWindowBoundary;
+    delete [] winStarts;
+    delete [] nSNPs;
+    delete [] fracCrit;
+    delete [] winfilename;
+
+    return;
+}
+
+
 
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[])
 {
@@ -704,7 +1059,7 @@ void getMeanVarBins(double freq[], double data[], int nloci, double mean[], doub
 
 //Reads a file, calculates the normalized score, and
 //outputs the original row plus normed score
-void normalizeDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
+void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
 {
     ifstream fin;
     ofstream fout;
@@ -762,6 +1117,71 @@ void normalizeDataByBins(string &filename, string &outfilename, int &fileLoci, d
     return;
 }
 
+void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
+{
+    ifstream fin;
+    ofstream fout;
+
+    fin.open(filename.c_str());
+    fout.open(outfilename.c_str());
+    if (fout.fail())
+    {
+        cerr << "ERROR: " << outfilename << " " << strerror(errno);
+        throw 1;
+    }
+
+    string name, header;
+    int pos;
+    double gpos, freq1, freq2, data, normedData, ihh1, ihh2;;
+    int numInBin = 0;
+
+    getline(fin, header);
+
+    fout << header + "\tnormxpehh\tcrit\n";
+
+    for (int j = 0; j < fileLoci; j++)
+    {
+        fin >> name;
+        fin >> pos;
+        fin >> gpos;
+        fin >> freq1;
+        fin >> ihh1;
+        fin >> freq2;
+        fin >> ihh2;
+        fin >> data;
+
+        if (data == MISSING) continue;
+        for (int b = 0; b < numBins; b++)
+        {
+            if (freq1 < threshold[b])
+            {
+                normedData = (data - mean[b]) / sqrt(variance[b]);
+                numInBin = n[b];
+                break;
+            }
+        }
+
+        if (numInBin >= 20)
+        {
+            fout << name << "\t"
+                 << pos << "\t"
+                 << gpos << "\t"
+                 << freq1 << "\t"
+                 << ihh1 << "\t"
+                 << freq2 << "\t"
+                 << ihh2 << "\t"
+                 << data << "\t"
+                 << normedData << "\t";
+            if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
+            else fout << "0\n";
+        }
+    }
+
+    fin.close();
+    fout.close();
+
+    return;
+}
 
 //returns number of lines in file
 int checkIHSfile(ifstream &fin)
@@ -793,7 +1213,7 @@ int checkIHSfile(ifstream &fin)
     return nloci;
 }
 
-void readAll(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
+void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
     ifstream fin;
     string junk;
@@ -817,6 +1237,65 @@ void readAll(vector<string> filename, int fileLoci[], int nfiles, double freq[],
 
     return;
 }
+
+int checkXPEHHfile(ifstream &fin)
+{
+    string line;
+    int expected_cols = 8;
+    int current_cols = 0;
+
+    //beginning of the file stream
+    int start = fin.tellg();
+
+    int nloci = 0;
+    while (getline(fin, line))
+    {
+        nloci++;
+        current_cols = countFields(line);
+        if ((current_cols != expected_cols) && nloci > 1)
+        {
+            cerr << "ERROR: line " << nloci << " has " << current_cols
+                 << " columns, but expected " << expected_cols << " columns.\n";
+            throw 0;
+        }
+        //previous_cols = current_cols;
+    }
+
+    nloci--;
+
+    fin.clear();
+    fin.seekg(start);
+
+    return nloci;
+}
+
+void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[])
+{
+    ifstream fin;
+    string junk;
+    int overallCount = 0;
+    for (int i = 0; i < nfiles; i++)
+    {
+        fin.open(filename[i].c_str());
+        getline(fin, junk);
+        for (int j = 0; j < fileLoci[i]; j++)
+        {
+            fin >> junk;
+            fin >> junk;
+            fin >> junk;
+            fin >> freq1[overallCount];
+            fin >> junk;
+            fin >> freq2[overallCount];
+            fin >> junk;
+            fin >> score[overallCount];
+            overallCount++;
+        }
+        fin.close();
+    }
+
+    return;
+}
+
 
 int countFields(const string &str)
 {

@@ -23,7 +23,18 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
-07MAY2015 - Release of 1.1.0. Added option to calculate the nSL statistic described in A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.  Also introduced a check on map distance ordering.  Two new command line options.
+
+15JUNE2015 - Release of 1.1.0. tomkinsc adds the --ihs-detail parameter which, when provided as an adjunct to --ihs, will cause selscan to write out four additional columns to the output file of iHS calculations (in order): derived_ihh_left, derived_ihh_right, ancestral_ihh_left, and ancestral_ihh_right.
+
+An example file row follows, with header added for clarity.
+
+locus           phys-pos        1_freq          ihh_1           ihh_0           ihs             derived_ihh_left     derived_ihh_right    ancestral_ihh_left      ancestral_ihh_right
+
+16133705        16133705        0.873626        0.0961264       0.105545        -0.0934761      0.0505176             0.0456087           0.0539295               0.0516158
+
+From these values we can calculate iHS, but it is preserved in the output for convenience. Having left and right integral information may assist certain machine learning models that gain information from iHH asymmetry. 
+
+selscan can now calculate the nSL statistic described in A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.  Also introduced a check on map distance ordering.  Three new command line options.
 
 --nsl <bool>: Set this flag to calculate nSL.
 	Default: false
@@ -32,7 +43,17 @@ PC Sabeti, et al. (2002) Detecting recent positive selection in the human
 	Set <= 0 for no restriction.
 	Default: 100
 
+--ihs-detail <bool> : Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.
+
 06MAY2015 - Release of 1.0.5. Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
+
+13MAY2015 - norm v1.0.5 is released.  norm will now normalize ihs or xpehh scores.  Two new command line options.
+
+--ihs <bool>: Do iHS normalization.
+
+--xpehh <bool>: Do XP-EHH normalization.
+
+Exactly one of these must be specified when running norm (e.g. ./norm --ihs --files *.ihs.out or ./norm --xpehh --files *.xpehh.out).
 
 --vcf <string>: A VCF file containing haplotype data.
 	A map file must be specified with --map.
@@ -223,45 +244,33 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 ################################################################################
 ################################################################################
 
-norm -- a program for downstream analysis of selscan output
+norm v1.0.5 -- a program for downstream analysis of selscan output
 Source code and binaries can be found at
 	<https://www.github.com/szpiech/selscan>
-
-norm currently analyzes iHS output only at this time.
 
 Citations:
 
 ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]
+PC Sabeti, et al. (2007) Nature, 449: 913–918.
 BF Voight, et al. (2006) PLoS Biology, 4: e72.
-
-USAGE:
 
 To normalize iHS output across frequency bins:
 
-./norm --files <file1.ihs.out> ... <fileN.ihs.out>
-
-Files: 
-
-<file1.ihs.out>.[nBins]bins.norm ... <fileN.ihs.out>.[nBins]bins.norm
-
-Format: 
-
-<locusID> <physicalPos> <'1' freq in the sample> <ihh1> <ihh0> <unstandardized iHS> <standardized iHS> <is |iHS| > 2>
+./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out>
 
 To normalize iHS output and analyze non-overlapping windows of fixed bp for 
 extreme iHS scores:
 
-./norm --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
+./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
 
-This produces the same output as above plus the following
+To normalize XP-EHH output across frequency bins:
 
-Files: 
+./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out>
 
-<file1.ihs.out>.[nBins]bins.norm.[size]kb.windows ... <fileN.ihs.out>.[nBins]bins.norm.[size]kb.windows
+To normalize XP-EHH output and analyze non-overlapping windows of fixed bp for 
+extreme XP-EHH scores:
 
-Format: 
-
-<window start> <window stop> <num iHS scores in window> <% of |iHS| scores > 2> <genome wide percentile>
+./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out> --bp-win
 
 ----------Command Line Arguments----------
 
@@ -272,15 +281,28 @@ Format:
 	number of SNPs.
 	Default: false
 
+--crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.
+	Not used by default.
+	Default: -1.00
+
+--crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
+	Default: 2.00
+
 --files <string1> ... <stringN>: A list of files delimited by whitespace for
 	joint normalization.
-	Expected format: <locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>
+	Expected format for iHS files (no header):
+	<locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>
+	Expected format for XP-EHH files (one line header):
+	<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>
 	Default: infile
 
 --first <bool>: Output only the first file's normalization.
 	Default: false
 
 --help <bool>: Prints this help dialog.
+	Default: false
+
+--ihs <bool>: Do iHS normalization.
 	Default: false
 
 --log <string>: The log file name.
@@ -293,13 +315,10 @@ Format:
 	window.  This is the number of quantile bins to use.
 	Default: 20
 
---snp-win <bool>: <not implemented> If set, will use windows of a constant
-	SNP size with varying bp length.
-	Default: false
-
---snp-win-size <int>: <not implemented> The number of SNPs in a window.
-	Default: 50
-
 --winsize <int>: The non-overlapping window size for calculating the percentage
 	of extreme SNPs.
 	Default: 100000
+
+--xpehh <bool>: Do XP-EHH normalization.
+	Default: false
+
