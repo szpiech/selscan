@@ -288,11 +288,8 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
-    <<< <<< < HEAD
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
-    == == == =
-        params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
-    >>> >>> > master
+    params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
@@ -353,11 +350,8 @@ int main(int argc, char *argv[])
 
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
-    <<< <<< < HEAD
     bool CALC_NSL = params.getBoolFlag(ARG_NSL);
-    == == == =
-        bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
-    >>> >>> > master
+    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
@@ -709,8 +703,6 @@ int main(int argc, char *argv[])
             mapData = newMapData;
             newMapData = NULL;
         }
-
-
 
         work_order_t *order = new work_order_t;
         pthread_t *peer = new pthread_t;
