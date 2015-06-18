@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "1.1.0";
+const string VERSION = "1.1.0a";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -423,16 +423,16 @@ int main(int argc, char *argv[])
     }
     if (TPED)
     {
-        if ((CALC_IHS) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
+        if ((!CALC_XP) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
         {
-            cerr << "ERROR: You are calculating iHS for " << tpedFilename << ", but have also given a second data file (" << tpedFilename2 << ").\n";
+            cerr << "ERROR: You are not calculating XP-EHH for, but have given a second data file (" << tpedFilename2 << ").\n";
             return 1;
         }
     }
     else if (VCF) {
-        if ((CALC_IHS) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
+        if ((!CALC_XP) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
         {
-            cerr << "ERROR: You are calculating iHS for " << vcfFilename << ", but have also given a second data file (" << vcfFilename2 << ").\n";
+            cerr << "ERROR: You are not calculating XP-EHH for, but have given a second data file (" << vcfFilename2 << ").\n";
             return 1;
         }
 
@@ -443,12 +443,12 @@ int main(int argc, char *argv[])
     }
     else
     {
-        if ((CALC_IHS) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
+        if ((!CALC_XP) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
         {
-            cerr << "ERROR: You are calculating iHS for " << hapFilename << ", but have also given a second data file (" << hapFilename2 << ").\n";
+            cerr << "ERROR: You are not calculating XP-EHH for, but have given a second data file (" << hapFilename2 << ").\n";
             return 1;
         }
-        if ((!CALC_NSL) && mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+        if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
             cerr << "ERROR: Must also provide a mapfile.\n";
             return 1;
         }
@@ -496,7 +496,12 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            mapData = readMapData(mapFilename, hapData->nloci);
+            if(!CALC_NSL) {
+                mapData = readMapData(mapFilename, hapData->nloci);
+            }
+            else{//Load physical positions
+                mapData = readMapDataVCF(vcfFilename, hapData->nloci);
+            }
         }
         else
         {
