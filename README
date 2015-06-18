@@ -3,7 +3,7 @@ selscan -- a program to calculate EHH-based scans for positive selection in
 
 Copyright (C) 2014  Zachary A Szpiech
 
-selscan currently implements EHH, iHS, and XP-EHH, and requires phased data. 
+selscan currently implements EHH, iHS, XP-EHH, and nSL, and requires phased data. 
 It should be run separately for each chromosome and population (or population 
 pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
 simply expects haplotype data to be coded 0/1.  Unstandardized iHS scores are 
@@ -125,7 +125,7 @@ Output file:
 
 Format: 
 
-<physicalPos> <geneticPos> <'1' EHH> <'0' EHH>
+<physicalPos> <geneticPos> <'1' EHH> <'0' EHH> <full sample EHH>
 
 The first two columns give the distance from the core locus.  When these values are
 negative, the haplotype extends upstream.
@@ -162,18 +162,82 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 
 ----------Command Line Arguments----------
 
+--alt <bool>: Set this flag to calculate homozygosity based on the sum of the
+	squared haplotype frequencies in the observed data instead of using
+	binomial coefficients.
+	Default: false
+
+--cutoff <double>: The EHH decay cutoff.
+	Default: 0.05
+
+--ehh <string>: Calculate EHH of the '1' and '0' haplotypes at the specified
+	locus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>
+	Default: __NO_LOCUS__
+
+--ehh-win <int>: When calculating EHH, this is the length of the window in bp
+	in each direction from the query locus.
+	Default: 100000
+
+--gap-scale <int>: Gap scale parameter in bp. If a gap is encountered between
+	two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is
+	scaled by GAP_SCALE/GAP.
+	Default: 20000
+
 --hap <string>: A hapfile with one row per haplotype, and one column per
 	variant. Variants should be coded 0/1
 	Default: __hapfile1
+
+--help <bool>: Prints this help dialog.
+	Default: false
+
+--ihs <bool>: Set this flag to calculate iHS.
+	Default: false
+
+--ihs-detail <bool>: Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.
+	Default: false
+
+--maf <double>: If a site has a MAF below this value, the program will not use
+	it as a core snp.
+	Default: 0.05
 
 --map <string>: A mapfile with one row per variant site.
 	Formatted <chr#> <locusID> <genetic pos> <physical pos>.
 	Default: __mapfile
 
+--max-extend <int>: The maximum distance an EHH decay curve is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 1000000
+
+--max-extend-nsl <int>: The maximum distance an nSL haplotype is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 100
+
+--max-gap <int>: Maximum allowed gap in bp between two snps.
+	Default: 200000
+
+--nsl <bool>: Set this flag to calculate nSL.
+	Default: false
+
+--out <string>: The basename for all output files.
+	Default: outfile
+
+--pi <bool>: Set this flag to calculate mean pairwise sequence difference in a sliding window.
+	Default: false
+
+--pi-win <int>: Sliding window size in bp for calculating pi.
+	Default: 100
+
 --ref <string>: A hapfile with one row per haplotype, and one column per
 	variant. Variants should be coded 0/1. This is the 'reference'
 	population for XP-EHH calculations.  Ignored otherwise.
 	Default: __hapfile2
+
+--skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
+	Default: false
+
+--threads <int>: The number of threads to spawn during the calculation.
+	Partitions loci across threads.
+	Default: 1
 
 --tped <string>: A TPED file containing haplotype and map data.
 	Variants should be coded 0/1
@@ -185,61 +249,24 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 	of loci as the query population. Ignored otherwise.
 	Default: __hapfile2
 
---out <string>: The basename for all output files.
-	Default: outfile
-
---ihs <bool>: Set this flag to calculate iHS.
-	Default: false
-
---xpehh <bool>: Set this flag to calculate XP-EHH.
-	Default: false
-
---ehh <string>: Calculate EHH of the '1' and '0' haplotypes at the specified
-	locus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>
-	Default: __NO_LOCUS__
-
---ehh-win <int>: When calculating EHH, this is the length of the window in bp
-	in each direction from the query locus.
-	Default: 100000
-
---max-gap <int>: Maximum allowed gap in bp between two snps.
-	Default: 200000
-
---gap-scale <int>: Gap scale parameter in bp. If a gap is encountered between
-	two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is
-	scaled by GAP_SCALE/GAP.
-	Default: 20000
-
---cutoff <double>: The EHH decay cutoff.
-	Default: 0.05
-
---max-extend <int>: The maximum distance an EHH decay curve is allowed to extend from the core.
-	Set <= 0 for no restriction.
-	Default: 1000000
-
---maf <double>: If a site has a MAF below this value, the program will not use
-	it as a core snp.
-	Default: 0.05
-
---skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
-	Default: false
-
---alt <bool>: Set this flag to calculate homozygosity based on the sum of the
-	squared haplotype frequencies in the observed data instead of using
-	binomial coefficients.
-	Default: false
-
 --trunc-ok <bool>: If an EHH decay reaches the end of a sequence before reaching the cutoff,
 	integrate the curve anyway (iHS and XPEHH only).
 	Normal function is to disregard the score for that core.
 	Default: false
 
---threads <int>: The number of threads to spawn during the calculation.
-	Partitions loci across threads.
-	Default: 1
+--vcf <string>: A VCF file containing haplotype data.
+	A map file must be specified with --map.
+	Default: __hapfile1
 
---help <bool>: Prints this help dialog.
+--vcf-ref <string>: A VCF file containing haplotype and map data.
+	Variants should be coded 0/1. This is the 'reference'
+	population for XP-EHH calculations and should contain the same number
+	of loci as the query population. Ignored otherwise.
+	Default: __hapfile2
+
+--xpehh <bool>: Set this flag to calculate XP-EHH.
 	Default: false
+
 
 ################################################################################
 ################################################################################
