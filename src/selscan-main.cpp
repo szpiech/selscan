@@ -496,7 +496,7 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            mapData = mapData = readMapData(mapFilename, hapData->nloci);
+            mapData = readMapData(mapFilename, hapData->nloci);
         }
         else
         {
