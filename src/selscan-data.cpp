@@ -147,6 +147,69 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
     return data;
 }
 
+MapData *readMapDataVCF(string filename, int expected_loci) {
+    igzstream fin;
+    cerr << "Opening " << filename << "...\n";
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    string line;
+    int nloci = 0;
+    int numCommentedLines = 0;
+    while (getline(fin, line))
+    {
+        if (line[0] == '#') {
+            numCommentedLines++;
+        }
+        else {
+            nloci++;
+        }
+    }
+
+    if (nloci != expected_loci)
+    {
+        cerr << "ERROR: Expected " << expected_loci << " loci in file but found " << nloci << ".\n";
+        throw 0;
+    }
+
+    fin.clear(); // clear error flags
+    //fin.seekg(fileStart);
+    fin.close();
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    cerr << "Loading map data for " << nloci << " loci\n";
+
+    for (int i = 0; i < numCommentedLines; i++) {
+        getline(fin, line);
+    }
+
+    MapData *data = initMapData(nloci);
+
+    string chr;
+    for (int locus = 0; locus < data->nloci; locus++)
+    {
+        fin >> data->chr;
+        fin >> data->physicalPos[locus];
+        fin >> data->locusName[locus];
+        getline(fin, line);
+        data->geneticPos[locus] = MISSING;
+    }
+
+    fin.close();
+    return data;
+}
+
 //allocates the arrays and populates them with MISSING or "--" depending on type
 MapData *initMapData(int nloci)
 {
@@ -406,15 +469,15 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
     char allele1, allele2, separator;
     bool skipLine = false;
     for (int locus = 0; locus < data->nloci; locus++)
-    { 
-        for (int i = 0; i < numMapCols; i++){
+    {
+        for (int i = 0; i < numMapCols; i++) {
             fin >> junk;
-            if(i == 0 && junk[0] == '#'){
+            if (i == 0 && junk[0] == '#') {
                 skipLine = true;
                 break;
             }
         }
-        if(skipLine){
+        if (skipLine) {
             getline(fin, junk);
             skipLine = false;
             locus--;
@@ -437,8 +500,8 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
             //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
             //    throw 0;
             //}
-            data->data[2*field][locus] = allele1;
-            data->data[2*field+1][locus] = allele2;
+            data->data[2 * field][locus] = allele1;
+            data->data[2 * field + 1][locus] = allele2;
         }
     }
 

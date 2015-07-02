@@ -37,13 +37,13 @@ selscan : selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstrea
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
-selscan-data.o : selscan-data.cpp
+selscan-data.o : selscan-data.cpp selscan-data.h
 	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
 
-selscan-pbar.o : selscan-pbar.cpp
+selscan-pbar.o : selscan-pbar.cpp selscan-pbar.h
 	$(CC) $(G++FLAG) -c selscan-pbar.cpp $(I_PATH)
 
-binom.o : binom.cpp
+binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm : norm.o param_t.o
@@ -52,13 +52,13 @@ norm : norm.o param_t.o
 norm.o : norm.cpp
 	$(CC) $(G++FLAG) -c norm.cpp $(I_PATH)
 
-param_t.o : param_t.cpp
+param_t.o : param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c param_t.cpp
 
-gzstream.o : gzstream.cpp
+gzstream.o : gzstream.cpp gzstream.h
 	$(CC) $(G++FLAG) -c gzstream.cpp $(I_PATH)
 
-hamming_t.o : hamming_t.cpp
+hamming_t.o : hamming_t.cpp hamming_t.h
 	$(CC) $(G++FLAG) -c hamming_t.cpp $(I_PATH)
 
 clean :
