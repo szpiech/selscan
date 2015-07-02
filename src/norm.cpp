@@ -1188,6 +1188,7 @@ int checkIHSfile(ifstream &fin)
 {
     string line;
     int expected_cols = 6;
+    int expected_cols_alternate = 10; // this is the case if --ihs-detail is specified (four extra columns for iHH left/right and ancestral/derived)
     int current_cols = 0;
 
     //beginning of the file stream
@@ -1198,10 +1199,10 @@ int checkIHSfile(ifstream &fin)
     {
         nloci++;
         current_cols = countFields(line);
-        if ((current_cols != expected_cols) && nloci > 1)
+        if ((current_cols != expected_cols && current_cols != expected_cols_alternate) && nloci > 1)
         {
             cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " columns.\n";
+                 << " columns, but expected " << expected_cols << " or " << expected_cols_alternate << " columns.\n";
             throw 0;
         }
         //previous_cols = current_cols;
