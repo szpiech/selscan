@@ -148,6 +148,9 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
 void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
 void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
 
+int countCols(ifstream &fin);
+int colsToSkip(ifstream &fin, int numCols);
+void skipCols(ifstream &fin, int numCols);
 
 int countFields(const string &str);
 bool isint(string str);
@@ -538,6 +541,56 @@ void analyzeSNPWindows(string normedfiles[],int fileLoci[], int nfiles, int snpW
     }
 }
 */
+
+// return number of columns in file
+int countCols(ifstream &fin)
+{
+    int current_cols = 0;
+    int currentPos = fin.tellg();
+
+    string line;
+    // read the rest of this line
+    getline(fin, line);
+    // read the next full line
+    getline(fin, line);
+
+    current_cols = countFields(line);
+
+    fin.clear();
+    // restore the previous position
+    fin.seekg(currentPos);
+
+    currentPos = fin.tellg();
+
+    return current_cols;
+}
+
+int colsToSkip(ifstream &fin, int numCols)
+{
+    // determine the number of cols to skip 
+    // (the number more than the number we care about: 6)
+    int presentNumCols = countCols(fin);
+    int numberColsToSkip = 0;
+    string junk;
+
+    if ( presentNumCols > numCols)
+    {
+        numberColsToSkip = presentNumCols - numCols;
+    }
+
+    return numberColsToSkip;
+}
+
+void skipCols(ifstream &fin, int numCols)
+{
+    string junk;
+    
+    for(int i=0; i<numCols; i++)   
+    {
+        fin >> junk;
+    }
+}
+
 void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
     cerr << "\nAnalyzing BP windows:\n\n";
@@ -1076,6 +1129,12 @@ void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci
     int pos;
     double freq, data, normedData, ihh1, ihh2;;
     int numInBin = 0;
+    string junk;
+
+    // determine the number of cols to skip 
+    // (the number more than the number we care about: 6)
+    int numColsToSkip = 0;
+    numColsToSkip = colsToSkip(fin, 6);
 
     for (int j = 0; j < fileLoci; j++)
     {
@@ -1085,6 +1144,9 @@ void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci
         fin >> ihh1;
         fin >> ihh2;
         fin >> data;
+
+        // read in and skip extra columns
+        skipCols(fin, numColsToSkip);
 
         if (data == MISSING) continue;
         for (int b = 0; b < numBins; b++)
@@ -1223,6 +1285,9 @@ void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq
     {
         fin.open(filename[i].c_str());
 
+        int numColsToSkip = 0;
+        numColsToSkip = colsToSkip(fin, 6);
+
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> junk;
@@ -1231,6 +1296,7 @@ void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq
             fin >> junk;
             fin >> junk;
             fin >> score[overallCount];
+            skipCols(fin, numColsToSkip);
             overallCount++;
         }
         fin.close();
