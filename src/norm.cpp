@@ -30,7 +30,7 @@
 
 using namespace std;
 
-const string VERSION = "1.0.5";
+const string VERSION = "1.1.0a";
 
 const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
@@ -38,7 +38,7 @@ Source code and binaries can be found at\n\
 \n\
 Citations:\n\
 \n\
-ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]\n\
+ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
 PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
 BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 \n\

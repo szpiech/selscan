@@ -23,6 +23,8 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+28OCT2015 - Updates to norm so that it can handle output from selscan when --ihs-detail is used.
+
 18JUNE2015 - v1.1.0a - When calculating nSL, a mapfile is no longer required for VCF.  Physical distances will be read directly from VCF.  A mapfile specifying physical distances is stille required for .hap files when calculating nSL.  selscan now appropriately reports an error if this is not provided.
 
 15JUNE2015 - Release of 1.1.0. tomkinsc adds the --ihs-detail parameter which, when provided as an adjunct to --ihs, will cause selscan to write out four additional columns to the output file of iHS calculations (in order): derived_ihh_left, derived_ihh_right, ancestral_ihh_left, and ancestral_ihh_right.
@@ -272,13 +274,13 @@ selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.m
 ################################################################################
 ################################################################################
 
-norm v1.0.5 -- a program for downstream analysis of selscan output
+norm v1.1.0a -- a program for downstream analysis of selscan output
 Source code and binaries can be found at
 	<https://www.github.com/szpiech/selscan>
 
 Citations:
 
-ZA Szpiech and RD Hernandez (2014) arXiv:1403.6854 [q-bio.PE]
+ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.
 PC Sabeti, et al. (2007) Nature, 449: 913–918.
 BF Voight, et al. (2006) PLoS Biology, 4: e72.
 
@@ -290,7 +292,6 @@ To normalize iHS output and analyze non-overlapping windows of fixed bp for
 extreme iHS scores:
 
 ./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
-
 To normalize XP-EHH output across frequency bins:
 
 ./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out>
