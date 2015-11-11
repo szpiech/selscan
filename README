@@ -287,6 +287,8 @@ selscan --nsl --hap example.hap --map example.map --out example
 ################################################################################
 ################################################################################
 
+**NOTE that nSL output files can be normalized with the --ihs flag
+
 norm v1.1.0a -- a program for downstream analysis of selscan output
 Source code and binaries can be found at
 	<https://www.github.com/szpiech/selscan>
@@ -300,6 +302,10 @@ BF Voight, et al. (2006) PLoS Biology, 4: e72.
 To normalize iHS output across frequency bins:
 
 ./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out>
+
+To normalize nSL output across frequency bins:
+
+./norm --ihs --files <file1.nsl.out> ... <fileN.nsl.out>
 
 To normalize iHS output and analyze non-overlapping windows of fixed bp for 
 extreme iHS scores:
