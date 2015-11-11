@@ -151,17 +151,30 @@ To calculate XP-EHH:
 
 Output file: 
 
-<outfile>.ihs[.alt].out
+<outfile>.xpehh[.alt].out
 
 Format: 
 
 <locusID> <physicalPos> <geneticPos> <popA '1' freq> <ihhA> <popB '1' freq> <ihhB> <unstandardized XPEHH>
+
+To calculate nSL:
+
+./selscan --nsl --hap <haplotypes> --map <mapfile> --out <outfile>
+
+Output file: 
+
+<outfile>.nsl[.alt].out
+
+Format: 
+
+<locusID> <physical position> <'1' freq> <sL1> <sL0> <unstandardized nSL>
 
 EXAMPLES:
 
 selscan --ihs --hap example.hap --map example.map --out example
 selscan --ehh Locus4077 --hap example.hap --map example.map --out example
 selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.map --out example2
+selscan --nsl --hap example.hap --map example.map --out example
 
 ----------Command Line Arguments----------
 
