@@ -17,7 +17,7 @@
 
 \newcommand{\negspace}{\!\!\!\!\!\!\!\!\!\!\!\!}
 
-\title{{\tt selscan} v 1.1.0 User Manual}
+\title{{\tt selscan} v 1.1.0b User Manual}
 \date{\today}
 \author{Zachary A Szpiech}
 
@@ -409,7 +409,11 @@ Contrast with Equations \ref{eq:ehh} and \ref{eq:ehh-core}.
 
 \subsubsection{{\tt --skip-low-freq}}
 
-Set {\tt --skip-low-freq} during an iHS scan to pre-filter all sites with a MAF less than that specified with {\tt --maf}.  If sites are not pre-filtered, {\tt selscan} will use these sites to construct haplotypes, but will not use them as core sites (and thus will not report a score).
+**This flag no longer functions.  It is effectively on by default.  If you wish to include low frequency sites use {\tt --keep-low-freq}.** Set {\tt --skip-low-freq} during an iHS scan to pre-filter all sites with a MAF less than that specified with {\tt --maf}.  If sites are not pre-filtered, {\tt selscan} will use these sites to construct haplotypes, but will not use them as core sites (and thus will not report a score).
+
+\subsubsection{{\tt --keep-low-freq}}
+
+Set {\tt --keep-low-freq} during an iHS scan to use low MAF sites to construct haplotypes, but {\tt selscan} will not use them as core sites (and thus will not report a score).
 
 \subsubsection{{\tt --ehh-win <int>}}
 
