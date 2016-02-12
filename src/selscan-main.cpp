@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "1.1.0a";
+const string VERSION = "1.1.0b";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -182,7 +182,12 @@ const string HELP_MAX_EXTEND_NSL = "The maximum distance an nSL haplotype is all
 
 const string ARG_SKIP = "--skip-low-freq";
 const bool DEFAULT_SKIP = false;
-const string HELP_SKIP = "Do not include low frequency variants in the construction of haplotypes (iHS only).";
+const string HELP_SKIP = "**This flag is now on by default. If you want to include low frequency variants\n\
+in the construction of your haplotypes please use the --keep-low-freq flag.";
+
+const string ARG_KEEP = "--keep-low-freq";
+const bool DEFAULT_KEEP = false;
+const string HELP_KEEP = "Include low frequency variants in the construction of your haplotypes.";
 
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;
@@ -300,6 +305,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
     params.addFlag(ARG_MAX_EXTEND_NSL, DEFAULT_MAX_EXTEND_NSL, "", HELP_MAX_EXTEND_NSL);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
+    params.addFlag(ARG_KEEP, DEFAULT_KEEP, "", HELP_KEEP);
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
@@ -355,7 +361,10 @@ int main(int argc, char *argv[])
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
-    bool SKIP = params.getBoolFlag(ARG_SKIP);
+    bool SKIP = !params.getBool(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
+    if(params.getBoolFlag(ARG_SKIP)){
+        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    }
     bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
     int EHH1K = params.getIntFlag(ARG_SOFT_K);
@@ -596,6 +605,11 @@ int main(int argc, char *argv[])
     if (CALC_XP) flog << "XP-EHH.\n";
     else if (CALC_PI) flog << "PI.\n";
     else flog << " iHS.\n";
+
+    if(params.getBoolFlag(ARG_SKIP)){
+        flog << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    }
+
     if (TPED)
     {
         flog << "Input filename: " << tpedFilename << "\n";
