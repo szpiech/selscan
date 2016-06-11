@@ -17,6 +17,63 @@
 */
 #include "selscan-data.h"
 
+
+double calcFreq(HaplotypeData *hapData, int locus, bool counts)
+{
+    double total = 0;
+    double freq = 0;
+
+    for (int hap = 0; hap < hapData->nhaps; hap++)
+    {
+        if (hapData->data[hap][locus] != MISSING_CHAR)
+        {
+            freq += ( hapData->data[hap][locus] == '1' ) ? 1 : 0;
+            total++;
+        }
+    }
+    return counts ? freq : (freq / total);
+}
+
+freq_t* init_freq_t(int nhaps, int nloci) {
+    freq_t *freq = new freq_t;
+    freq->counts = new long[nloci];
+    for (int i = 0; i < nloci; i++) freq->counts[i] = 0;
+    freq->nloci = nloci;
+    freq->first_singelton_pos = -1;
+    freq->last_singelton_pos = -1;
+    freq->numSingeltons = 0;
+    freq->singelton_loc = new vector<int>;
+    freq->sin2ind = new map<int,int>;
+    return freq;
+}
+
+
+freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData)
+{
+    freq_t *freq = init_freq_t(hapData->nhaps, hapData->nloci);
+    int val;
+    int hapIndex;
+    int singeltonLoc;
+    for (int locus = 0; locus < hapData->nloci; locus++) {
+
+        for (int hap = 0; hap < hapData->nhaps; hap++) {
+            val = ( hapData->data[hap][locus] == '1' ) ? 1 : 0;
+            freq->counts[locus] += val;
+            if (val == 1) hapIndex = hap;
+        }
+
+        if (freq->counts[locus] == 1) {
+            singeltonLoc = mapData->physicalPos[locus];
+            freq->numSingeltons++;
+            freq->singelton_loc->push_back(singeltonLoc);
+            freq->sin2ind->operator[](singeltonLoc) = hapIndex;
+            freq->last_singelton_pos = singeltonLoc;
+            if (freq->first_singelton_pos == -1) freq->first_singelton_pos = singeltonLoc;
+        }
+    }
+    return freq;
+}
+
 //reads in map data and also does basic checks on integrity of format
 //returns a populated MapData structure if successful
 //throws an exception otherwise

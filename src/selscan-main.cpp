@@ -31,15 +31,16 @@
 
 using namespace std;
 
-const string VERSION = "1.1.0b";
+const string VERSION = "1.1.1";
 
-const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
+const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based (and other) scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
 \n\
-selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
+selscan currently implements EHH, iHS, XP-EHH, nSL, and SDS.\n\
 \n\
 Citations:\n\
 \n\
+Y Field, et al. (2016) http://dx.doi.org/10.1101/052084\n\
 ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
 A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
 PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
@@ -136,6 +137,10 @@ const string HELP_IHS_DETAILED = "Set this flag to write out left and right iHH 
 const string ARG_NSL = "--nsl";
 const bool DEFAULT_NSL = false;
 const string HELP_NSL = "Set this flag to calculate nSL.";
+
+const string ARG_SDS = "--sds";
+const bool DEFAULT_SDS = false;
+const string HELP_SDS = "Sed this flag to calculate the Singleton Density Score.";
 
 const string ARG_SOFT = "--soft";
 const bool DEFAULT_SOFT = false;
@@ -259,8 +264,8 @@ void calc_ihs(void *work_order);
 void calc_nsl(void *work_order);
 void calc_xpihh(void *work_order);
 void calc_soft_ihs(void *order);
+void calc_sds(void *order);
 
-double calcFreq(HaplotypeData *hapData, int locus);
 int queryFound(MapData *mapData, string query);
 void fillColors(int **hapColor, map<string, int> &hapCount,
                 string *haplotypeList, int hapListLength,
@@ -294,6 +299,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
+    params.addFlag(ARG_SDS, DEFAULT_SDS, "", HELP_SDS);
     params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
@@ -357,12 +363,13 @@ int main(int argc, char *argv[])
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
     bool CALC_NSL = params.getBoolFlag(ARG_NSL);
+    bool CALC_SDS = params.getBoolFlag(ARG_SDS);
     bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
     bool SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
-    if(params.getBoolFlag(ARG_SKIP)){
+    if (params.getBoolFlag(ARG_SKIP)) {
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
     bool TRUNC = params.getBoolFlag(ARG_TRUNC);
@@ -377,13 +384,14 @@ int main(int argc, char *argv[])
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
 
-    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL != 1)
+    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SDS != 1)
     {
         cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
              << ")\n\tiHS (" << ARG_IHS
              << ")\n\tXP-EHH (" << ARG_XP
              << ")\n\tPI (" << ARG_PI
              << ")\n\tnSL (" << ARG_NSL
+             << ")\n\tSDS (" << ARG_SDS
              << ")\n";
         return 1;
     }
@@ -404,6 +412,7 @@ int main(int argc, char *argv[])
     if (SINGLE_EHH) outFilename += ".ehh." + query;
     else if (CALC_IHS) outFilename += ".ihs";
     else if (CALC_NSL) outFilename += ".nsl";
+    else if (CALC_SDS) outFilename += ".sds";
     else if (CALC_XP) outFilename += ".xpehh";
     else if (CALC_SOFT) outFilename += ".soft";
     else if (CALC_PI) outFilename += ".pi." + string(PI_WIN_str) + "bp";
@@ -505,10 +514,10 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            if(!CALC_NSL) {
+            if (!CALC_NSL) {
                 mapData = readMapData(mapFilename, hapData->nloci);
             }
-            else{//Load physical positions
+            else { //Load physical positions
                 mapData = readMapDataVCF(vcfFilename, hapData->nloci);
             }
         }
@@ -606,7 +615,7 @@ int main(int argc, char *argv[])
     else if (CALC_PI) flog << "PI.\n";
     else flog << " iHS.\n";
 
-    if(params.getBoolFlag(ARG_SKIP)){
+    if (params.getBoolFlag(ARG_SKIP)) {
         flog << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
 
@@ -648,8 +657,7 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
     }
 
-    if (SINGLE_EHH)
-    {
+    if (SINGLE_EHH) {
 
         freq = new double[hapData->nloci];
 
@@ -756,8 +764,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if (CALC_XP)
-    {
+    if (CALC_XP) {
         ihh1 = new double[mapData->nloci];
         ihh2 = new double[mapData->nloci];
 
@@ -822,8 +829,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    else if (CALC_IHS)
-    {
+    else if (CALC_IHS) {
 
         freq = new double[hapData->nloci];
 
@@ -974,8 +980,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    else if (CALC_NSL)
-    {
+    else if (CALC_NSL) {
 
         freq = new double[hapData->nloci];
 
@@ -1105,8 +1110,21 @@ int main(int argc, char *argv[])
             }
         }
     }
-    else if (CALC_SOFT)
-    {
+    else if (CALC_SDS) {
+        freq = new double[hapData->nloci];
+
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        double *newfreq;
+
+        int count = 0;
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq[i] = calcFreq(hapData, i, true);//these will be counts not
+            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        }
+    }
+    else if (CALC_SOFT) {
         ihs = new double[hapData->nloci];
         freq = new double[hapData->nloci];
         cerr << "Starting soft iHS calculations with alt flag ";
@@ -1160,8 +1178,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    else if (CALC_PI)
-    {
+    else if (CALC_PI) {
         //cerr << "Not implemented.\n";
         //return 1;
 
@@ -1277,22 +1294,6 @@ int queryFound(MapData *mapData, string query)
     }
 
     return -1;
-}
-
-double calcFreq(HaplotypeData *hapData, int locus)
-{
-    double total = 0;
-    double freq = 0;
-
-    for (int hap = 0; hap < hapData->nhaps; hap++)
-    {
-        if (hapData->data[hap][locus] != MISSING_CHAR)
-        {
-            freq += ( hapData->data[hap][locus] == '1' ) ? 1 : 0;
-            total++;
-        }
-    }
-    return (freq / total);
 }
 
 void query_locus(void *order)

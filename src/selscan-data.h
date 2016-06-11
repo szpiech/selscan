@@ -5,12 +5,12 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
@@ -21,6 +21,8 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <map>
 #include "gzstream.h"
 
 using namespace std;
@@ -30,19 +32,32 @@ const char MISSING_CHAR = '9';
 
 struct HaplotypeData
 {
-    char **data;
-    int nhaps;
-    int nloci;
+  char **data;
+  int nhaps;
+  int nloci;
 };
 
 struct MapData
 {
-    int *physicalPos;
-    double *geneticPos;
-    string *locusName;
-    int nloci;
-    string chr;
+  int *physicalPos;
+  double *geneticPos;
+  string *locusName;
+  int nloci;
+  string chr;
 };
+
+struct freq_t {
+  long* counts;
+  int nloci;
+  int first_singelton_pos;
+  int last_singelton_pos;
+  vector<int>* singelton_loc;
+  map<int, int>* sin2ind;
+  int numSingeltons;
+};
+
+freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData);
+double calcFreq(HaplotypeData *hapData, int locus, bool counts = false);
 
 //allocates the arrays and populates them with -9 or "--" depending on type
 MapData *initMapData(int nloci);
