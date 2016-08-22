@@ -1,16 +1,29 @@
+//selscan-main.cpp
+
+// Skip to content
+// Personal Open source Business Explore
+// Sign upSign inPricingBlogSupport
+// This repository
+// Search
+//  Watch 9  Star 22  Fork 8 szpiech/selscan
+//  Code  Issues 5  Pull requests 0  Pulse  Graphs
+// Branch: master Find file Copy pathselscan/src/selscan-main.cpp
+// 24d4ffb  on Feb 12
+// @szpiech szpiech --keep-low-freq added --skip-low-freq on by default
+// 2 contributors @szpiech @tomkinsc
+// RawBlameHistory     3294 lines (2839 sloc)  113 KB
+
+
 /* selscan -- a program to calculate EHH-based scans for positive selection in genomes
    Copyright (C) 2014  Zachary A Szpiech
-
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
-
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
@@ -268,6 +281,8 @@ void fillColors(int **hapColor, map<string, int> &hapCount,
 bool familyDidSplit(const string &hapStr, const int hapCount,
                     int **hapColor, const int nhaps, const int colorIndex,
                     const int previousLoc, string &mostCommonHap);
+
+double calculateHomozygosity_Wagh(map<string, int> &count, int total, int derivedCount);
 
 double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 
@@ -1013,9 +1028,7 @@ int main(int argc, char *argv[])
                             j++;
                         }
                     }
-
                     newHapData = initHaplotypeData(hapData->nhaps, count);
-
                     for (int hap = 0; hap < newHapData->nhaps; hap++)
                     {
                         j = 0;
@@ -1032,18 +1045,14 @@ int main(int argc, char *argv[])
                             }
                         }
                     }
-
                     cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
                     flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-
                     delete [] freq;
                     freq = newfreq;
                     newfreq = NULL;
-
                     releaseHapData(hapData);
                     hapData = newHapData;
                     newHapData = NULL;
-
                     releaseMapData(mapData);
                     mapData = newMapData;
                     newMapData = NULL;
@@ -1776,9 +1785,7 @@ void query_locus_soft(void *order)
         }
       fout2 << endl;
     }
-
     fout2.close();
-
     string outFilenameAnc = outFilename + ".anc.colormap";
     fout2.open(outFilenameAnc.c_str());
     if(fout2.fail())
@@ -1786,7 +1793,6 @@ void query_locus_soft(void *order)
       cerr << "ERROR: could not open " << outFilenameAnc << " for writing.\n";
       throw 1;
     }
-
     for(int i = 0; i < nhaps-derivedCount; i++)
     {
       for(int j = 0; j < stopRight-stopLeft+1; j++)
@@ -2904,7 +2910,7 @@ void calc_xpihh(void *order)
 
         derivedCountPooled = derivedCount1 + derivedCount2;
 
-        //when calculating xp-ehh, ehh does not necessarily start at 1
+        //when calculating xp-ehh, ehh does not necessarily start at 1 (LAS: making it so it DOES necessarily start at 1)
         if (ALT)
         {
             double f = double(derivedCount1) / double(nhaps1);
@@ -2921,12 +2927,19 @@ void calc_xpihh(void *order)
         }
         else
         {
-            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            
+            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
             previous_pop1_ehh = current_pop1_ehh;
 
-            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+     
+
+            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
             previous_pop2_ehh = current_pop2_ehh;
 
             current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
@@ -3000,8 +3013,11 @@ void calc_xpihh(void *order)
                 }
             }
 
-            current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
-            current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            // current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
+            // current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            current_pop1_ehh = calculateHomozygosity_Wagh(hapCount1,nhaps1,derivedCount1);
+            current_pop2_ehh = calculateHomozygosity_Wagh(hapCount2,nhaps2,derivedCount2);
+                       
             current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, ALT);
 
             //directly calculate ihh, iteratively
@@ -3096,13 +3112,27 @@ void calc_xpihh(void *order)
         }
         else
         {
-            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            // previous_pop1_ehh = current_pop1_ehh;
+
+            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            // previous_pop2_ehh = current_pop2_ehh;
+
+            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
             previous_pop1_ehh = current_pop1_ehh;
 
-            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            previous_pop2_ehh = current_pop2_ehh;
+     
+
+            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+            previous_pop2_ehh = current_pop2_ehh;            
 
             current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
             current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
@@ -3176,8 +3206,11 @@ void calc_xpihh(void *order)
                 }
             }
 
-            current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
-            current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            // current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
+            // current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            current_pop1_ehh = calculateHomozygosity_Wagh(hapCount1,nhaps1,derivedCount1);
+            current_pop2_ehh = calculateHomozygosity_Wagh(hapCount2,nhaps2,derivedCount2);
+
             current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, ALT);
 
             //directly calculate ihh1, iteratively
@@ -3220,8 +3253,21 @@ void calc_xpihh(void *order)
     }
 }
 
+double calculateHomozygosity_Wagh(map<string, int> &count, int total, int derivedCount)
+{
+    double freq = 0;
+    double homozygosity = 0;
+    map<string, int>::iterator it;
+    for (it = count.begin(); it != count.end(); it++)
+    {
+        homozygosity += (it->second > 1) ? nCk(it->second,2)/(nCk(derivedCount, 2) + nCk(total-derivedCount, 2)) : 0;
+    }
+        
+    return homozygosity;
+}
 
-double calculateHomozygosity(map<string, int> &count, int total, bool ALT)
+
+double calculateHomozygosity(map<string, int> &count, int total, bool ALT) // Called by XP-EHH
 {
     double freq = 0;
     double homozygosity = 0;
@@ -3233,6 +3279,7 @@ double calculateHomozygosity(map<string, int> &count, int total, bool ALT)
             freq = double(it->second) / double(total);
             homozygosity += freq * freq;
         }
+
         else
         {
             homozygosity += (it->second > 1) ? nCk(it->second, 2) / nCk(total, 2) : 0;
@@ -3289,5 +3336,4 @@ triplet_t calculateSoft(map<string, int> &count, int total)
 
     return res;
 }
-
 
