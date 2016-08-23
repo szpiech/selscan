@@ -168,6 +168,11 @@ const string HELP_ALT = "Set this flag to calculate homozygosity based on the su
 \tsquared haplotype frequencies in the observed data instead of using\n\
 \tbinomial coefficients.";
 
+const string ARG_WAGH = "--wagh";
+const bool DEFAULT_WAGH = false;
+const string HELP_WAGH = "Set this flag to calculate XP-EHH using definition of EHH which\n\
+\tseparates core SNP alleles in the denominator.";
+
 const string ARG_MAF = "--maf";
 const double DEFAULT_MAF = 0.05;
 const string HELP_MAF = "If a site has a MAF below this value, the program will not use\n\
@@ -324,6 +329,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
+    params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
 
     try
     {
@@ -370,6 +376,7 @@ int main(int argc, char *argv[])
     double MAF = params.getDoubleFlag(ARG_MAF);
 
     bool ALT = params.getBoolFlag(ARG_ALT);
+    bool WAGH = params.getBoolFlag(ARG_WAGH);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
     bool CALC_NSL = params.getBoolFlag(ARG_NSL);
     bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
@@ -1320,6 +1327,7 @@ void query_locus(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
     int locus = p->queryLoc;
@@ -1575,6 +1583,7 @@ void query_locus_soft(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
 
     int locus = p->queryLoc;
     int queryPad = p->params->getIntFlag(ARG_QWIN);
@@ -1941,6 +1950,7 @@ void calc_ihs(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
@@ -2268,6 +2278,7 @@ void calc_nsl(void *order)
     //double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     double EHH_CUTOFF = 0;
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
@@ -2571,6 +2582,7 @@ void calc_soft_ihs(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
 
@@ -2843,6 +2855,7 @@ void calc_xpihh(void *order)
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
+    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
 
     int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
@@ -2927,24 +2940,33 @@ void calc_xpihh(void *order)
         }
         else
         {
-            
-            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
-            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
-            previous_pop1_ehh = current_pop1_ehh;
+            if (WAGH)
+            {
 
-     
+                current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+                current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+                previous_pop1_ehh = current_pop1_ehh;
 
-            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-            previous_pop2_ehh = current_pop2_ehh;
+                current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+                current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+                previous_pop2_ehh = current_pop2_ehh;
+
+            }
+            else
+            {
+                current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+                current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+                previous_pop1_ehh = current_pop1_ehh;
+
+                current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+                current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+                previous_pop2_ehh = current_pop2_ehh;        
+
+            }
 
             current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
             current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            previous_pooled_ehh = current_pooled_ehh;
+            previous_pooled_ehh = current_pooled_ehh;    
         }
 
         while (current_pooled_ehh > EHH_CUTOFF)
@@ -3013,10 +3035,19 @@ void calc_xpihh(void *order)
                 }
             }
 
-            // current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
-            // current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
-            current_pop1_ehh = calculateHomozygosity_Wagh(hapCount1,nhaps1,derivedCount1);
-            current_pop2_ehh = calculateHomozygosity_Wagh(hapCount2,nhaps2,derivedCount2);
+            if (WAGH)
+            {
+                current_pop1_ehh = calculateHomozygosity_Wagh(hapCount1,nhaps1,derivedCount1);
+                current_pop2_ehh = calculateHomozygosity_Wagh(hapCount2,nhaps2,derivedCount2);
+
+            }
+            else
+            {
+                current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
+                current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+
+            }
+
                        
             current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, ALT);
 
@@ -3112,6 +3143,27 @@ void calc_xpihh(void *order)
         }
         else
         {
+
+            if (WAGH)
+            {
+                current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+                current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+                previous_pop1_ehh = current_pop1_ehh;
+
+                current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+                current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+                previous_pop2_ehh = current_pop2_ehh;                  
+            }
+            else
+            {
+                current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+                current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+                previous_pop1_ehh = current_pop1_ehh;
+
+                current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+                current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0; 
+                previous_pop2_ehh = current_pop2_ehh;                
+            }
             // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
             // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
             // previous_pop1_ehh = current_pop1_ehh;
@@ -3122,17 +3174,17 @@ void calc_xpihh(void *order)
 
             // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
             // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
-            current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
-            previous_pop1_ehh = current_pop1_ehh;
+            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
+            // previous_pop1_ehh = current_pop1_ehh;
 
      
 
             // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
             // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-            current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-            previous_pop2_ehh = current_pop2_ehh;            
+            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
+            // previous_pop2_ehh = current_pop2_ehh;            
 
             current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
             current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
@@ -3206,10 +3258,19 @@ void calc_xpihh(void *order)
                 }
             }
 
-            // current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
-            // current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
-            current_pop1_ehh = calculateHomozygosity_Wagh(hapCount1,nhaps1,derivedCount1);
-            current_pop2_ehh = calculateHomozygosity_Wagh(hapCount2,nhaps2,derivedCount2);
+            if (WAGH)
+            {
+                current_pop1_ehh = calculateHomozygosity_Wagh(hapCount1,nhaps1,derivedCount1);
+                current_pop2_ehh = calculateHomozygosity_Wagh(hapCount2,nhaps2,derivedCount2);
+
+            }
+            else
+            {
+
+                current_pop1_ehh = calculateHomozygosity(hapCount1, nhaps1, ALT);
+                current_pop2_ehh = calculateHomozygosity(hapCount2, nhaps2, ALT);
+            }
+
 
             current_pooled_ehh = calculateHomozygosity(hapCountPooled, nhaps1 + nhaps2, ALT);
 
