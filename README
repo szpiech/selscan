@@ -23,6 +23,8 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+23AUG2016 (LAS) -- To compile, un-comment relevant lines in src/Makefile (linux, osx, windows), and run "make" in command line in src folder
+
 23AUG2016 (LAS) -- Change XP-EHH to use version of EHH that has (N_A choose 2) + (N_a choose 2) in the denominator (splits haplotypes based on which allele is present at the core SNP). This provides better performance for incomplete sweeps.
 
 
