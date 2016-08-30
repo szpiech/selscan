@@ -49,14 +49,29 @@ struct MapData
 struct freq_t {
   long* counts;
   int nloci;
+  int nhaps;
   int first_singelton_pos;
   int last_singelton_pos;
   vector<int>* singelton_loc;
   map<int, int>* sin2ind;
-  int numSingeltons;
+  int numSingletons;
+  int numToFilter;
 };
 
-freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData);
+struct dist_t {
+  char allele1;
+  char allele2;
+  double dist;
+};
+
+struct minimizer_param_t{
+  int nind;
+  dist_t *dist;
+};
+
+double get_distance_to_nearest_singelton(int ind, int locusPos, freq_t* freq_single, int nextSingletonIndex);
+
+freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData, double MAF);
 double calcFreq(HaplotypeData *hapData, int locus, bool counts = false);
 
 //allocates the arrays and populates them with -9 or "--" depending on type

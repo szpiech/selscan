@@ -39,16 +39,18 @@ freq_t* init_freq_t(int nhaps, int nloci) {
     freq->counts = new long[nloci];
     for (int i = 0; i < nloci; i++) freq->counts[i] = 0;
     freq->nloci = nloci;
+    freq->nhaps = nhaps;
     freq->first_singelton_pos = -1;
     freq->last_singelton_pos = -1;
-    freq->numSingeltons = 0;
+    freq->numSingletons = 0;
+    freq->numToFilter = 0;
     freq->singelton_loc = new vector<int>;
-    freq->sin2ind = new map<int,int>;
+    freq->sin2ind = new map<int, int>;
     return freq;
 }
 
 
-freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData)
+freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData, double MAF)
 {
     freq_t *freq = init_freq_t(hapData->nhaps, hapData->nloci);
     int val;
@@ -64,13 +66,26 @@ freq_t* calcFreq(HaplotypeData *hapData, MapData *mapData)
 
         if (freq->counts[locus] == 1) {
             singeltonLoc = mapData->physicalPos[locus];
-            freq->numSingeltons++;
+            freq->numSingletons++;
             freq->singelton_loc->push_back(singeltonLoc);
             freq->sin2ind->operator[](singeltonLoc) = hapIndex;
             freq->last_singelton_pos = singeltonLoc;
             if (freq->first_singelton_pos == -1) freq->first_singelton_pos = singeltonLoc;
         }
+
     }
+    
+    for (int locus = 0; locus < hapData->nloci; locus++) {
+        if (freq->counts[locus] <= MAF * double(freq->nhaps) ||
+                (1 - MAF) * double(freq->nhaps) <= freq->counts[locus] ||
+                mapData->physicalPos[locus] < freq->first_singelton_pos ||
+                mapData->physicalPos[locus] > freq->last_singelton_pos) {
+            freq->numToFilter++;
+        }
+    }
+
+    //cerr << freq->first_singelton_pos << " " << freq->last_singelton_pos << endl;
+
     return freq;
 }
 

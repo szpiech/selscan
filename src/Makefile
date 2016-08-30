@@ -32,7 +32,7 @@ LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 all : selscan norm
 
 selscan : selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
+	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2) $(LINK_OPTS)
 
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)

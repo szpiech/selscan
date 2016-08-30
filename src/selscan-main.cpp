@@ -28,6 +28,8 @@
 #include "binom.h"
 #include "param_t.h"
 #include "hamming_t.h"
+#include <gsl/gsl_multimin.h>
+#include <limits>
 
 using namespace std;
 
@@ -233,6 +235,8 @@ struct work_order_t
     double *ihhAncestralRight;
     double *freq;
 
+    freq_t *freq_single;
+
     double *ihh1;
     double *freq1;
 
@@ -265,6 +269,17 @@ void calc_nsl(void *work_order);
 void calc_xpihh(void *work_order);
 void calc_soft_ihs(void *order);
 void calc_sds(void *order);
+
+double scaleVar(double var, double min);
+double unscaleVar(double var, double min);
+void get_MLE_4d(double &alpha_a, double &beta_a, double &alpha_d, double &beta_d, int nind, dist_t *dist);
+double my_f4d(const gsl_vector *v, void *params);
+void my_df4d(const gsl_vector *v, void *params, gsl_vector *df);
+void my_fdf4d (const gsl_vector *x, void *params, double *f, gsl_vector *df);
+double loglikelihood(double d, double alpha_a, double beta_a, double alpha_d, double beta_d, char a1, char a2);
+void dloglikelihood(double &daa, double &dba, double &dad, double &dbd, double d, double alpha_a, double beta_a, double alpha_d, double beta_d, char a1, char a2);
+double C(double d, double beta_1, double beta_2);
+
 
 int queryFound(MapData *mapData, string query);
 void fillColors(int **hapColor, map<string, int> &hapCount,
@@ -1111,18 +1126,103 @@ int main(int argc, char *argv[])
         }
     }
     else if (CALC_SDS) {
-        freq = new double[hapData->nloci];
+        //freq = new double[hapData->nloci];
+
+        freq_t *freq_single = calcFreq(hapData, mapData, MAF);
+
+        cerr << "Found " << freq_single->numSingletons << " singletons.\n";
+        flog << "Found " << freq_single->numSingletons << " singletons.\n";
 
         MapData *newMapData;
         HaplotypeData *newHapData;
         double *newfreq;
 
-        int count = 0;
-        for (int i = 0; i < hapData->nloci; i++)
-        {
-            freq[i] = calcFreq(hapData, i, true);//these will be counts not
-            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        int count = mapData->nloci - freq_single->numToFilter;
+
+        cerr << "Removing all variants < " << MAF << ".\n";
+        flog << "Removing all variants < " << MAF << ".\n";
+        newfreq = new double [count];
+        newMapData = initMapData(count);
+        newMapData->chr = mapData->chr;
+        int j = 0;
+
+        newHapData = initHaplotypeData(hapData->nhaps, count);
+
+        for (int hap = 0; hap < newHapData->nhaps; hap++) {
+            j = 0;
+            for (int locus = 0; locus < mapData->nloci; locus++) {
+                if (freq_single->counts[locus] <= MAF * double(freq_single->nhaps) ||
+                        (1 - MAF)*double(freq_single->nhaps) <= freq_single->counts[locus] ||
+                        mapData->physicalPos[locus] < freq_single->first_singelton_pos ||
+                        mapData->physicalPos[locus] > freq_single->last_singelton_pos) {
+                    continue;
+                }
+                else {
+                    if (hap == 0) {
+                        newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                        newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                        newMapData->locusName[j] = mapData->locusName[locus];
+                        newfreq[j] = double(freq_single->counts[locus]) / double(freq_single->nhaps);
+                    }
+                    newHapData->data[hap][j] = hapData->data[hap][locus];
+                    j++;
+                }
+            }
         }
+
+        cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+        flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+        //delete [] freq;
+        freq = newfreq;
+        newfreq = NULL;
+
+        releaseHapData(hapData);
+        hapData = newHapData;
+        newHapData = NULL;
+
+        releaseMapData(mapData);
+        mapData = newMapData;
+        newMapData = NULL;
+
+        ihs = new double[hapData->nloci];
+
+        barInit(pbar, mapData->nloci, 78);
+
+        cerr << "Starting SDS calculations.\n";
+
+        work_order_t *order;
+        pthread_t *peer = new pthread_t[numThreads];
+        int prev_index = 0;
+        for (int i = 0; i < numThreads; i++)
+        {
+            order = new work_order_t;
+            order->id                = i;
+            order->hapData           = hapData;
+            order->mapData           = mapData;
+            order->ihs               = ihs;
+            order->freq_single       = freq_single;
+            order->freq              = freq;
+            order->flog              = &flog;
+            order->bar               = &pbar;
+            order->params            = &params;
+
+            pthread_create(&(peer[i]),
+                           NULL,
+                           (void *(*)(void *))calc_sds,
+                           (void *)order);
+        }
+
+        for (int i = 0; i < numThreads; i++)
+        {
+            pthread_join(peer[i], NULL);
+        }
+
+        delete [] peer;
+        releaseHapData(hapData);
+        cerr << "\nFinished.\n";
+
+
     }
     else if (CALC_SOFT) {
         ihs = new double[hapData->nloci];
@@ -1909,6 +2009,392 @@ bool familyDidSplit(const string &hapStr, const int hapCount, int **hapColor, co
         return true;
     }
     else return true;
+}
+
+void calc_sds(void *order)
+{
+    work_order_t *p = (work_order_t *)order;
+    char **data = p->hapData->data;
+    int nloci = p->hapData->nloci;
+    int nhaps = p->hapData->nhaps;
+    int *physicalPos = p->mapData->physicalPos;
+    double *geneticPos = p->mapData->geneticPos;
+    string *locusName = p->mapData->locusName;
+    int id = p->id;
+    double *sds = p->ihs;
+    double *freq = p->freq;
+    freq_t *freq_single = p->freq_single;
+    ofstream *flog = p->flog;
+    Bar *pbar = p->bar;
+
+//    int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
+    int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
+//    double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
+//    bool ALT = p->params->getBoolFlag(ARG_ALT);
+//    bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
+    double MAF = p->params->getDoubleFlag(ARG_MAF);
+    int numThreads = p->params->getIntFlag(ARG_THREAD);
+//    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
+
+    int step = (nloci / numThreads) / (pbar->totalTicks);
+    if (step == 0) step = 1;
+
+    int nind = nhaps / 2;
+
+    int nextSingletonIndex = 0;
+
+    string testFile = "test.sds";
+    ofstream testOut;
+    testOut.open(testFile.c_str());
+
+    /*
+        string ancFile = "test.ancestral.dist";
+        string derFile = "test.derived.dist";
+
+        ofstream ancOut;
+        ofstream derOut;
+
+        ancOut.open(ancFile.c_str());
+        derOut.open(derFile.c_str());
+    */
+//    int max_0 = 4078;
+//    int start_0 = 4077;
+    for (int locus = id; locus < nloci; locus += numThreads)
+//    for (int locus = start_0; locus < max_0; locus += numThreads)
+
+    {
+        /*
+        derOut << physicalPos[locus];
+        ancOut << physicalPos[locus];
+        */
+        if (locus % step == 0) advanceBar(*pbar, double(step));
+
+        if (freq_single->singelton_loc->at(nextSingletonIndex) < physicalPos[locus]) {
+            do {
+                nextSingletonIndex++;
+            } while (freq_single->singelton_loc->at(nextSingletonIndex) < physicalPos[locus]);
+        }
+
+        sds[locus] = 0;
+
+        dist_t* dist = new dist_t[nind];
+        double distance;
+        for (int ind = 0; ind < nind; ind++) {
+            dist[ind].allele1 = data[2 * ind][locus];
+            dist[ind].allele2 = data[2 * ind + 1][locus];
+            distance = get_distance_to_nearest_singelton(ind, physicalPos[locus], freq_single, nextSingletonIndex);
+            dist[ind].dist = distance;
+            /*
+            if (dist[ind].allele1 == '1') {
+                derOut << " " << dist[ind].dist1;
+                ancOut << " NA";
+            }
+            else if (dist[ind].allele1 == '0') {
+                derOut << " NA";
+                ancOut << " " << dist[ind].dist1;
+            }
+            else {
+                derOut << " NA";
+                ancOut << " NA";
+            }
+            if (dist[ind].allele2 == '1') {
+                derOut << " " << dist[ind].dist2;
+                ancOut << " NA";
+            }
+            else if (dist[ind].allele2 == '0') {
+                derOut << " NA";
+                ancOut << " " << dist[ind].dist2;
+            }
+            else {
+                derOut << " NA";
+                ancOut << " NA";
+            }
+            */
+        }
+        /*
+        derOut << " NA\n";
+        ancOut << " NA\n";
+        */
+
+        double alpha_a = 0.1;
+        double beta_a = 0.2;
+        double alpha_d = 0.1;
+        double beta_d = 0.2;
+
+        get_MLE_4d(alpha_a, beta_a, alpha_d, beta_d, nind, dist);
+        testOut << locusName[locus] << " "
+                << physicalPos[locus] << " "
+                << freq[locus] << " "
+                << beta_a << " "
+                << beta_d << " "
+                << log(alpha_a) - log(beta_a) - log(alpha_d) + log(beta_d) << endl;
+    }
+}
+
+double scaleVar(double var, double min = 0) {
+    return log(var - min);
+}
+
+double unscaleVar(double var, double min = 0) {
+    return min + exp(var);
+}
+
+void get_MLE_4d(double &alpha_a, double &beta_a, double &alpha_d, double &beta_d, int nind, dist_t *dist) {
+    minimizer_param_t *p = new minimizer_param_t;
+    p->nind = nind;
+    p->dist = dist;
+
+    size_t iter = 0;
+    int status;
+    const gsl_multimin_fdfminimizer_type *T;
+    gsl_multimin_fdfminimizer *s;
+
+    gsl_vector *x;//holds alphas and betas
+    gsl_multimin_function_fdf my_func;
+
+    my_func.n = 4;
+    my_func.f = my_f4d;
+    my_func.df = my_df4d;
+    my_func.fdf = my_fdf4d;
+    my_func.params = p;
+
+    x = gsl_vector_alloc (4);
+
+    gsl_vector_set (x, 0, scaleVar(alpha_a));
+    gsl_vector_set (x, 1, scaleVar(beta_a));
+    gsl_vector_set (x, 2, scaleVar(alpha_d));
+    gsl_vector_set (x, 3, scaleVar(beta_d));
+
+    /*
+        gsl_vector_set (x, 0, alpha_a);
+        gsl_vector_set (x, 1, beta_a);
+        gsl_vector_set (x, 2, alpha_d);
+        gsl_vector_set (x, 3, beta_d);
+    */
+    //T = gsl_multimin_fdfminimizer_vector_bfgs2;
+    T = gsl_multimin_fdfminimizer_steepest_descent;
+    s = gsl_multimin_fdfminimizer_alloc (T, 4);
+
+    gsl_multimin_fdfminimizer_set (s, &my_func, x, 0.1, 1e-4);
+
+    do
+    {
+        iter++;
+        status = gsl_multimin_fdfminimizer_iterate (s);
+
+        if (status)
+            break;
+
+        status = gsl_multimin_test_gradient (s->gradient, 1e-3);
+        /*
+                if (status == GSL_SUCCESS)
+                    printf ("Minimum found at:\n");
+
+                printf ("%5d %.5f %.5f %.5f %.5f %10.5f\n", int(iter),
+                        unscaleVar( gsl_vector_get (s->x, 0) ),
+                        unscaleVar( gsl_vector_get (s->x, 1) ),
+                        unscaleVar( gsl_vector_get (s->x, 2) ),
+                        unscaleVar( gsl_vector_get (s->x, 3) ),
+                        0 - s->f);
+        */
+    }
+    while (status == GSL_CONTINUE && iter < 1000);
+
+    alpha_a = unscaleVar(gsl_vector_get (s->x, 0));
+    beta_a = unscaleVar(gsl_vector_get (s->x, 1));
+    alpha_d = unscaleVar(gsl_vector_get (s->x, 2));
+    beta_d = unscaleVar(gsl_vector_get (s->x, 3));
+    /*
+    alpha_a = gsl_vector_get (s->x, 0);
+    beta_a = gsl_vector_get (s->x, 1);
+    alpha_d = gsl_vector_get (s->x, 2);
+    beta_d = gsl_vector_get (s->x, 3);
+    */
+    gsl_multimin_fdfminimizer_free (s);
+    gsl_vector_free (x);
+
+    return;
+}
+
+void get_MLE_2d() {
+
+}
+
+double my_f4d(const gsl_vector *v, void *params) {
+    double alpha_a, beta_a, alpha_d, beta_d;
+    minimizer_param_t *p = (minimizer_param_t *)params;
+    dist_t *dist = p->dist;
+    int nind = p->nind;
+    alpha_a = gsl_vector_get(v, 0);
+    beta_a = gsl_vector_get(v, 1);
+    alpha_d = gsl_vector_get(v, 2);
+    beta_d = gsl_vector_get(v, 3);
+    double res = 0;
+
+    for (int i = 0; i < nind; i++) {
+        res += loglikelihood(dist[i].dist, alpha_a, beta_a, alpha_d, beta_d, dist[i].allele1, dist[i].allele2);
+    }
+    return res;
+}
+
+void my_df4d(const gsl_vector *v, void *params, gsl_vector *df) {
+    double alpha_a, beta_a, alpha_d, beta_d;
+    minimizer_param_t *p = (minimizer_param_t *)params;
+    dist_t *dist = p->dist;
+    int nind = p->nind;
+    alpha_a = gsl_vector_get(v, 0);
+    beta_a = gsl_vector_get(v, 1);
+    alpha_d = gsl_vector_get(v, 2);
+    beta_d = gsl_vector_get(v, 3);
+
+    double daa = 0;
+    double dba = 0;
+    double dad = 0;
+    double dbd = 0;
+
+    double daa_sum = 0;
+    double dba_sum = 0;
+    double dad_sum = 0;
+    double dbd_sum = 0;
+
+    for (int i = 0; i < nind; i++) {
+        dloglikelihood(daa, dba, dad, dbd, dist[i].dist, alpha_a, beta_a, alpha_d, beta_d, dist[i].allele1, dist[i].allele2);
+        daa_sum += daa;
+        dba_sum += dba;
+        dad_sum += dad;
+        dbd_sum += dbd;
+    }
+
+    gsl_vector_set(df, 0, daa_sum);
+    gsl_vector_set(df, 1, dba_sum);
+    gsl_vector_set(df, 2, dad_sum);
+    gsl_vector_set(df, 3, dbd_sum);
+
+    return;
+}
+
+void my_fdf4d (const gsl_vector *x, void *params, double *f, gsl_vector *df) {
+    *f = my_f4d(x, params);
+    my_df4d(x, params, df);
+}
+
+double loglikelihood(double d, double alpha_a, double beta_a, double alpha_d, double beta_d, char a1, char a2) {
+
+    alpha_a = unscaleVar(alpha_a);
+    beta_a = unscaleVar(beta_a);
+    alpha_d = unscaleVar(alpha_d);
+    beta_d = unscaleVar(beta_d);
+
+    if (a1 == a2) {
+        if (a1 == '0') {
+            return 0 - ( log(d) +
+                         log( alpha_a * (2 * alpha_a + 1) ) -
+                         2 * log(d + beta_a) +
+                         2 * alpha_a * (log(beta_a) - log(d + beta_a)) );
+        }
+        else if (a1 == '1') {
+            return 0 - ( log(d) +
+                         log( alpha_d * (2 * alpha_d + 1) ) -
+                         2 * log(d + beta_d) +
+                         2 * alpha_d * (log(beta_d) - log(d + beta_d)) );
+        }
+    }
+    else {
+        return 0 - ( ( log(d) +
+                       log(alpha_d * (alpha_d + 1) * (d + beta_a) * (d + beta_a) +
+                           2 * alpha_a * alpha_d * (d + beta_a) * (d + beta_d) +
+                           alpha_a * (alpha_a + 1) * (d + beta_d) * (d + beta_d)) -
+                       2 * (log((d + beta_d) * (d + beta_d)) + log((d + beta_a) * (d + beta_a))) +
+                       alpha_a * (log(beta_a) - log(d + beta_a)) + alpha_d * (log(beta_d) - log(d + beta_d)) ) );
+    }
+}
+
+void dloglikelihood(double &daa, double &dba, double &dad, double &dbd, double d, double alpha_a, double beta_a, double alpha_d, double beta_d, char a1, char a2) {
+
+    alpha_a = unscaleVar(alpha_a);
+    beta_a = unscaleVar(beta_a);
+    alpha_d = unscaleVar(alpha_d);
+    beta_d = unscaleVar(beta_d);
+
+    if (a1 == a2) {
+        if (a1 == '0') {
+            dad = 0;
+            dbd = 0;
+            dba = 0 - ( 2 * (alpha_a / beta_a - (alpha_a + 1) / (d + beta_a)) );
+            daa = 0 - ( (4 * alpha_a + 1) / (alpha_a * (2 * alpha_a + 1)) + 2 * (log(beta_a) - log(d + beta_a)) );
+        }
+        else if (a1 == '1') {
+            daa = 0;
+            dba = 0;
+            dbd = 0 - ( 2 * (alpha_d / beta_d - (alpha_d + 1) / (d + beta_d)) );
+            dad = 0 - ( (4 * alpha_d + 1) / (alpha_d * (2 * alpha_d + 1)) + 2 * (log(beta_d) - log(d + beta_d)) );
+
+        }
+    }
+    else {
+        daa = 0 - ( (2 * alpha_d * C(d, beta_a, beta_d) + 2 * alpha_a * C(d, beta_d, beta_d) + C(d, beta_d, beta_d)) /
+                    (C(d, beta_a, beta_a) * alpha_d * alpha_d +
+                     C(d, beta_a, beta_a) * alpha_d +
+                     2 * alpha_a * alpha_d * C(d, beta_a, beta_d) +
+                     C(d, beta_d, beta_d) * alpha_a * alpha_a +
+                     C(d, beta_d, beta_d) * alpha_a) +
+                    log(beta_a) - log(d + beta_a) );
+
+        dad = 0 - ( (2 * alpha_a * C(d, beta_d, beta_a) + 2 * alpha_d * C(d, beta_a, beta_a) + C(d, beta_a, beta_a)) /
+                    (C(d, beta_d, beta_d) * alpha_a * alpha_a +
+                     C(d, beta_d, beta_d) * alpha_a +
+                     2 * alpha_d * alpha_a * C(d, beta_d, beta_a) +
+                     C(d, beta_a, beta_a) * alpha_d * alpha_d +
+                     C(d, beta_a, beta_a) * alpha_d) +
+                    log(beta_d) - log(d + beta_d) );
+
+        dba = 0 - ( (alpha_d * (alpha_d + 1) * 2 * (d + beta_a) + 2 * alpha_a * alpha_d * (d + beta_d)) /
+                    (C(d, beta_a, beta_a) * alpha_d * alpha_d +
+                     C(d, beta_a, beta_a) * alpha_d +
+                     2 * alpha_a * alpha_d * C(d, beta_a, beta_d) +
+                     C(d, beta_d, beta_d) * alpha_a * alpha_a +
+                     C(d, beta_d, beta_d) * alpha_a) +
+                    alpha_a / beta_a - (alpha_a + 2) / (d + beta_a) );
+        dbd = 0 - ( (alpha_a * (alpha_a + 1) * 2 * (d + beta_d) + 2 * alpha_d * alpha_a * (d + beta_a)) /
+                    (C(d, beta_d, beta_d) * alpha_a * alpha_a +
+                     C(d, beta_d, beta_d) * alpha_a +
+                     2 * alpha_d * alpha_a * C(d, beta_d, beta_a) +
+                     C(d, beta_a, beta_a) * alpha_d * alpha_d +
+                     C(d, beta_a, beta_a) * alpha_d) +
+                    alpha_d / beta_d - (alpha_d + 2) / (d + beta_d) );
+    }
+
+    return;
+}
+
+double C(double d, double beta_1, double beta_2) {
+    return (d * d + d * beta_1 + d * beta_2 + beta_1 * beta_2);
+}
+
+double get_distance_to_nearest_singelton(int ind, int locusPos, freq_t* freq_single, int nextSingletonIndex) {
+
+    double dist = 0;
+    int onInd = -1;
+    int index = nextSingletonIndex;
+    int pos;
+    do {
+        pos = freq_single->singelton_loc->at(index);
+        onInd = int(freq_single->sin2ind->operator[](pos) / 2);
+        index++;
+    } while (ind != onInd && index < freq_single->numSingletons);
+
+    dist += (pos - locusPos);
+
+    index = nextSingletonIndex - 1;
+    do {
+        pos = freq_single->singelton_loc->at(index);
+        onInd = int(freq_single->sin2ind->operator[](pos) / 2);
+        index--;
+    } while (ind != onInd && index >= 0);
+
+    dist += (locusPos - pos);
+
+    return dist;
 }
 
 void calc_ihs(void *order)
