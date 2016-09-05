@@ -24,6 +24,8 @@ PC Sabeti, et al. (2002) Detecting recent positive selection in the human
 	genome from haplotype structure. Nature, 419: 832–837.
 
 
+05SEPT2016 - Fixed misleading error messages when --trunc-ok used.
+
 12FEB2016 - v 1.1.0b - The flag --skip-low-freq is now on by default and no longer has any function.  selscan now filters low frequency variants by default.  A new flag --keep-low-freq is available if you would like to include low frequency variants when building haplotypes (low frequency variants will still be skipped over as core loci), using this option may reduce the power of iHS scans.
 
 28OCT2015 - Updates to norm so that it can handle output from selscan when --ihs-detail is used.
