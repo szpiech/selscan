@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
 
         double upperCutoff, lowerCutoff;
 
-        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent <= 0 || critPercent >= 1))
+        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 || critPercent < 1))
         {
             upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
             lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
