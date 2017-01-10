@@ -30,7 +30,7 @@
 
 using namespace std;
 
-const string VERSION = "1.1.0a";
+const string VERSION = "1.1.0b";
 
 const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
@@ -351,10 +351,10 @@ int main(int argc, char *argv[])
             upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
             lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
 
-            cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
-            cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
-            flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
-            flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+            cerr << "\nTop cutoff: " << upperCutoff << endl;
+            cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
+            flog << "\nTop cutoff: " << upperCutoff << endl;
+            flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
         }
         else
         {
@@ -432,15 +432,15 @@ int main(int argc, char *argv[])
 
         double upperCutoff, lowerCutoff;
 
-        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent <= 0 || critPercent >= 1))
+        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
         {
             upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
             lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
 
-            cerr << "\nTop 0.5% cutoff: " << upperCutoff << endl;
-            cerr << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
-            flog << "\nTop 0.5% cutoff: " << upperCutoff << endl;
-            flog << "Bottom 0.5% cutoff: " << lowerCutoff << "\n\n";
+            cerr << "\nTop cutoff: " << upperCutoff << endl;
+            cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
+            flog << "\nTop cutoff: " << upperCutoff << endl;
+            flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
         }
         else
         {
