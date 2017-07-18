@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "1.1.0b";
+const string VERSION = "1.2.0";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -137,13 +137,13 @@ const string ARG_NSL = "--nsl";
 const bool DEFAULT_NSL = false;
 const string HELP_NSL = "Set this flag to calculate nSL.";
 
-const string ARG_SOFT = "--soft";
+const string ARG_SOFT = "--ihh12";
 const bool DEFAULT_SOFT = false;
-const string HELP_SOFT = "Calculate the EHH1K decay for soft sweep detection.";
+const string HELP_SOFT = "Set this flag to calculate iHH12.";
 
-const string ARG_SOFT_K = "--ehh1k";
+const string ARG_SOFT_K = "--k";
 const int DEFAULT_SOFT_K = 2;
-const string HELP_SOFT_K = "Specify K to compute for EHH1K.";
+const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
@@ -295,7 +295,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
     params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
-    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "SILENT", HELP_SOFT);
+    params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
     params.addFlag(ARG_XP, DEFAULT_XP, "", HELP_XP);
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
@@ -377,13 +377,14 @@ int main(int argc, char *argv[])
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
 
-    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL != 1)
+    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
     {
         cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
              << ")\n\tiHS (" << ARG_IHS
              << ")\n\tXP-EHH (" << ARG_XP
              << ")\n\tPI (" << ARG_PI
              << ")\n\tnSL (" << ARG_NSL
+             << ")\n\tiHH12 (" << ARG_SOFT
              << ")\n";
         return 1;
     }
@@ -405,7 +406,7 @@ int main(int argc, char *argv[])
     else if (CALC_IHS) outFilename += ".ihs";
     else if (CALC_NSL) outFilename += ".nsl";
     else if (CALC_XP) outFilename += ".xpehh";
-    else if (CALC_SOFT) outFilename += ".soft";
+    else if (CALC_SOFT) outFilename += ".ihh12";
     else if (CALC_PI) outFilename += ".pi." + string(PI_WIN_str) + "bp";
 
     if (ALT) outFilename += ".alt";
@@ -1109,7 +1110,7 @@ int main(int argc, char *argv[])
     {
         ihs = new double[hapData->nloci];
         freq = new double[hapData->nloci];
-        cerr << "Starting soft iHS calculations with alt flag ";
+        cerr << "Starting iHH12 calculations with alt flag ";
         if (!ALT) cerr << "not ";
         cerr << "set.\n";
 
@@ -1149,14 +1150,14 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < mapData->nloci; i++)
         {
-            if (ihs[i] != MISSING && ihh1[i] != MISSING && ihh2[i] != MISSING)
+            if (ihs[i] != MISSING )//&& ihh1[i] != MISSING && ihh2[i] != MISSING)
             {
                 fout << mapData->locusName[i] << "\t";
                 fout << mapData->physicalPos[i] << "\t";
                 fout << freq[i] << "\t";
-                fout << ihh1[i] << "\t"; //ihh1
+                //fout << ihh1[i] << "\t"; //ihh1
                 fout << ihs[i] << "\t"; //ihh12
-                fout << ihh2[i] << endl; //ihh2d1
+                //fout << ihh2[i] << endl; //ihh2d1
             }
         }
     }
@@ -2591,7 +2592,7 @@ void calc_soft_ihs(void *order)
     {
         if (locus % step == 0) advanceBar(*pbar, double(step));
 
-        freq[locus] = MISSING;
+        //freq[locus] = MISSING;
         h1[locus] = -1;
         h2dh1[locus] = -1;
         h12[locus] = -1;
@@ -2618,10 +2619,8 @@ void calc_soft_ihs(void *order)
         string *haplotypeList = new string[nhaps];
         for (int hap = 0; hap < nhaps; hap++)
         {
-            derivedCount += data[hap][locus];
-            char digit[2];
-            sprintf(digit, "%d", data[hap][locus]);
-            haplotypeList[hap] = digit;
+            //derivedCount += data[hap][locus];
+            haplotypeList[hap] = data[hap][locus];
             string hapStr = haplotypeList[hap];
             //count hapoltype freqs
             if (tempHapCount.count(hapStr) == 0) tempHapCount[hapStr] = 1;
@@ -2642,7 +2641,12 @@ void calc_soft_ihs(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
-                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                        << ". Skipping calculation at " << locusName[locus] << ". ";
+                if (!TRUNC){
+                    skipLocus = 1;
+                    (*flog) << "Skipping calculation at " << locusName[locus];
+                }
+                (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2669,9 +2673,7 @@ void calc_soft_ihs(void *order)
             for (int hap = 0; hap < nhaps; hap++)
             {
                 //build haplotype string
-                char digit[2];
-                sprintf(digit, "%d", data[hap][currentLocus]);
-                haplotypeList[hap] += digit;
+                haplotypeList[hap] += data[hap][currentLocus];
                 string hapStr = haplotypeList[hap];
 
                 //count hapoltype freqs
@@ -2693,6 +2695,9 @@ void calc_soft_ihs(void *order)
             previous_ehh2d1 = current_ehh2d1;
             ihh12 += 0.5 * scale * (geneticPos[currentLocus + 1] - geneticPos[currentLocus]) * (current_ehh12 + previous_ehh12);
             previous_ehh12 = current_ehh12;
+
+            //check if currentLocus is beyond 1Mb
+            if (physicalPos[locus] - physicalPos[currentLocus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList;
@@ -2728,9 +2733,7 @@ void calc_soft_ihs(void *order)
         haplotypeList = new string[nhaps];
         for (int hap = 0; hap < nhaps; hap++)
         {
-            char digit[2];
-            sprintf(digit, "%d", data[hap][locus]);
-            haplotypeList[hap] = digit;
+            haplotypeList[hap] = data[hap][locus];
             string hapStr = haplotypeList[hap];
             //count hapoltype freqs
             if (tempHapCount.count(hapStr) == 0) tempHapCount[hapStr] = 1;
@@ -2751,7 +2754,12 @@ void calc_soft_ihs(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
-                        << ". Skipping calculation at " << locusName[locus] << "\n";
+                        << ". Skipping calculation at " << locusName[locus] << ". ";
+                if (!TRUNC){
+                    skipLocus = 1;
+                    (*flog) << "Skipping calculation at " << locusName[locus];
+                }
+                (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2776,9 +2784,7 @@ void calc_soft_ihs(void *order)
             for (int hap = 0; hap < nhaps; hap++)
             {
                 //build haplotype string
-                char digit[2];
-                sprintf(digit, "%d", data[hap][currentLocus]);
-                haplotypeList[hap] += digit;
+                haplotypeList[hap] += data[hap][currentLocus];
                 string hapStr = haplotypeList[hap];
 
                 //count hapoltype freqs
@@ -2800,6 +2806,9 @@ void calc_soft_ihs(void *order)
             previous_ehh2d1 = current_ehh2d1;
             ihh12 += 0.5 * scale * (geneticPos[currentLocus] - geneticPos[currentLocus - 1]) * (current_ehh12 + previous_ehh12);
             previous_ehh12 = current_ehh12;
+
+            //check if currentLocus is beyond 1Mb
+            if (physicalPos[currentLocus] - physicalPos[locus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList;
@@ -2818,7 +2827,7 @@ void calc_soft_ihs(void *order)
             h1[locus] = ihh1;
             h2dh1[locus] = ihh2d1;
             h12[locus] = ihh12;
-            freq[locus] = double(derivedCount) / double(nhaps);
+            //freq[locus] = double(derivedCount) / double(nhaps);
         }
     }
 }
