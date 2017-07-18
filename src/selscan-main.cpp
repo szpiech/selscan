@@ -1187,6 +1187,8 @@ int main(int argc, char *argv[])
         ihh2 = new double[mapData->nloci];
         ihs = new double[hapData->nloci];
 
+        barInit(pbar, mapData->nloci, 78);
+
         cerr << "Starting iHH12 calculations with alt flag ";
         if (!ALT) cerr << "not ";
         cerr << "set.\n";
@@ -1209,6 +1211,7 @@ int main(int argc, char *argv[])
             order->flog = &flog;
             order->bar = &pbar;
             order->params = &params;
+            order->id = i;
 
             pthread_create(&(peer[i]),
                            NULL,
