@@ -57,6 +57,9 @@ To calculate iHS:\n\
 To calculate nSL:\n\
 \n\
 ./selscan --nsl --hap <haps> --map <mapfile> --out <outfile>\n\
+To calculate iHH12:\n\
+\n\
+./selscan --ihh12 --hap <haps> --map <mapfile> --out <outfile>\n\
 \n\
 To calculate XP-EHH:\n\
 \n\
@@ -1108,8 +1111,82 @@ int main(int argc, char *argv[])
     }
     else if (CALC_SOFT)
     {
-        ihs = new double[hapData->nloci];
         freq = new double[hapData->nloci];
+
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        double *newfreq;
+
+        int count = 0;
+        for (int i = 0; i < hapData->nloci; i++)
+        {
+            freq[i] = calcFreq(hapData, i);
+            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        }
+
+        if (SKIP) //prefilter all sites < MAF
+        {
+            cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            flog << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+            newfreq = new double [count];
+            newMapData = initMapData(count);
+            newMapData->chr = mapData->chr;
+            int j = 0;
+            for (int locus = 0; locus < mapData->nloci; locus++)
+            {
+                if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                {
+                    continue;
+                }
+                else
+                {
+                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                    newMapData->locusName[j] = mapData->locusName[locus];
+                    newfreq[j] = freq[locus];
+                    j++;
+                }
+            }
+
+            newHapData = initHaplotypeData(hapData->nhaps, count);
+
+            for (int hap = 0; hap < newHapData->nhaps; hap++)
+            {
+                j = 0;
+                for (int locus = 0; locus < mapData->nloci; locus++)
+                {
+                    if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        newHapData->data[hap][j] = hapData->data[hap][locus];
+                        j++;
+                    }
+                }
+            }
+
+            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+            delete [] freq;
+            freq = newfreq;
+            newfreq = NULL;
+
+            releaseHapData(hapData);
+            hapData = newHapData;
+            newHapData = NULL;
+
+            releaseMapData(mapData);
+            mapData = newMapData;
+            newMapData = NULL;
+        }
+
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+        ihs = new double[hapData->nloci];
+
         cerr << "Starting iHH12 calculations with alt flag ";
         if (!ALT) cerr << "not ";
         cerr << "set.\n";
@@ -1156,7 +1233,7 @@ int main(int argc, char *argv[])
                 fout << mapData->physicalPos[i] << "\t";
                 fout << freq[i] << "\t";
                 //fout << ihh1[i] << "\t"; //ihh1
-                fout << ihs[i] << "\t"; //ihh12
+                fout << ihs[i] << "\n"; //ihh12
                 //fout << ihh2[i] << endl; //ihh2d1
             }
         }
@@ -2584,6 +2661,8 @@ void calc_soft_ihs(void *order)
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
+    bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
 
     int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
