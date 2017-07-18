@@ -23,6 +23,8 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+18JUL2017 - Support for iHH12 calculations. norm has --ihh12 and --nsl flags.
+
 09JAN2017 - Fixed buggy --crit-percent flag in norm binary.
 
 05SEPT2016 - Fixed misleading error messages when --trunc-ok used.
