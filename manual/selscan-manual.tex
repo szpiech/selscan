@@ -17,7 +17,7 @@
 
 \newcommand{\negspace}{\!\!\!\!\!\!\!\!\!\!\!\!}
 
-\title{{\tt selscan} v 1.1.0b User Manual}
+\title{{\tt selscan} v 1.2.0 User Manual}
 \date{\today}
 \author{Zachary A Szpiech}
 
@@ -83,6 +83,11 @@ To calculate EHH:
 \noindent To calculate nSL:
 
 {\tt selscan --nsl --hap <haplotypes> --map <mapfile> --out <outfile>}
+
+\noindent To calculate iHH12:
+
+{\tt selscan --ihh12 --hap <haplotypes> --map <mapfile> --out <outfile>}
+
 
 \section{Statistics implemented}
 
@@ -213,6 +218,45 @@ Note that, for nSL, $g(x_{i-1},x_i) = 1$.
 
 For the nSL option, there is no EHH decay cutoff, but the computation stops when more than $200$ snps are included in building the haplotypes (can be changed with {\tt --max-extend-nsl}).  Scaling of $g(x_{i-1},x_i)$ and handling of gaps is done as for iHS, and these parameters are definable 
 on the {\tt selscan} command line.
+
+\subsection{Integrated Haplotype Homozygosity Pooled (iHH12)}\label{sec:ihh12}
+
+iHH12 is adapted from the H12 statistic \cite[]{GarudEtAl15}, with better power than iHS to detect soft sweeps. For this statistic, we calculate the integrated haplotype homozygosity of the entire sample, but we first collapse the top two most frequent haplotypes into a single class.
+
+To calculate iHH12 at a site, we first calculate the integrated haplotype 
+homozygosity (iHH) for the sample using $EHH12$ via trapezoidal quadrature.
+\begin{align}\label{eq:ihh12}
+iHH =& \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH12(x_{i-1}) + EHH12(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH12(x_{i-1}) + EHH12(x_i)\right)g(x_{i-1},x_i),
+\end{align}
+where $\mathcal{D}$ is the set of markers downstream from the current locus 
+such that $x_i \in \mathcal{D}$ denotes the $i^{th}$ closest downstream 
+marker from the locus of interest ($x_0$). $\mathcal{U}$ and $x_i \in \mathcal{U}$ are defined similarly 
+for upstream markers. $g(x_{i-1},x_i)$ gives the genetic distance between two 
+markers.  $EHH12$ is then defined as
+\begin{equation}\label{eq:ehh12}
+EHH12(x_i) = \frac{{n_{h_1} + n_{h_2} \choose 2}}{{n \choose 2}} + \sum_{h \in \mathcal{C}(x_i)\setminus \{h_1, h_2\}} \frac{{n_h \choose 2}}{{n \choose 2}},
+\end{equation}
+where $h_i$ is the $i^{th}$ most frequent haplotype in the sample and $n_{h_i}$ is the number of observed $h_i$ haplotypes.
+
+Finally, the scores are normalized across the 
+entire genome.
+\begin{equation}
+iHH12 = \frac{iHH12 - E\Big[iHH12\Big]}{SD\Big[iHH12\Big]},
+\end{equation}
+
+In practice, the summations in Equation \ref{eq:ihh12} are truncated once 
+$EHH12_c(x_i) < 0.05$ or the computation extends more than $1$Mbp from the core.  Additionally with low density SNP data, if the physical 
+distance $b$ (in kbp) between two markers is $> 20$, then $g(x_{i-1},x_i)$ is 
+scaled by a factor of $20/b$ in order to reduce possible spurious signals 
+induced by lengthy gaps.  During computation if the start/end of a chromosome 
+arm is reached before $EHH12_c(x_i) < 0.05$ or if a gap of $b > 200$ is 
+encountered, the iHH12 calculation is aborted for that locus.  iHH12 is not 
+reported at core sites with minor allele frequency $< 0.05$.  In {\tt selscan}, the 
+EHH truncation value, gap scaling factor, and core site MAF cutoff value are
+all flexible parameters definable on the command line.
+
 
 \subsection{Mean Pairwise Sequence Difference ($\pi$)}\label{sec:pi}
 
