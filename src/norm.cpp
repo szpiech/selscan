@@ -30,7 +30,7 @@
 
 using namespace std;
 
-const string VERSION = "1.2.0";
+const string VERSION = "1.2.1";
 
 const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
     {
         char str[10];
         sprintf(str, "%d", numBins);
-        if(IHS) outfilename[i] = filename[i] + "." + str + "bins.norm";
+        if(IHS || NSL) outfilename[i] = filename[i] + "." + str + "bins.norm";
         if(XPEHH || SOFT) outfilename[i] = filename[i] + ".norm";
         
         fin.open(filename[i].c_str());
