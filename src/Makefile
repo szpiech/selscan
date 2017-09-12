@@ -7,8 +7,8 @@
 
 #for osx systems
 CC = g++
-G++FLAG = -fast -m64 -mmmx -msse -msse2
-LINK_OPTS2 = -pthread -lz
+G++FLAG = -O3 -m64 -mmmx -msse -msse2
+LINK_OPTS2 = -lpthread -lz
 I_PATH = -I../include
 L_PATH = ../lib/osx
 
