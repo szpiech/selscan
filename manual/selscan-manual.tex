@@ -56,7 +56,7 @@ As genetics data sets grow larger both in number of individuals and number of lo
 there is a need for a fast and efficient publicly available implementation of these statistics. Below we 
 introduce these statistics and provide concise definitions for their calculations.  
 
-When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}.
+When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}, iHH12 \cite[]{GarudEtAl15, TorresEtAl17}.
 
 This introduction has been adapted from \cite{SzpiechAndHernandez14}.
 
@@ -83,7 +83,7 @@ To calculate EHH:
 \noindent To calculate nSL:
 
 {\tt selscan --nsl --hap <haplotypes> --map <mapfile> --out <outfile>}
-
+~\\
 \noindent To calculate iHH12:
 
 {\tt selscan --ihh12 --hap <haplotypes> --map <mapfile> --out <outfile>}
@@ -199,7 +199,7 @@ In practice, the sums in each of $iHH_A$ and $iHH_B$ (Equation \ref{eq:xpihh})
 are truncated at $x_i$---the marker at which the EHH of the haplotypes {\it 
 pooled across populations} is $EHH(x_i) < 0.05$ or if the computation extends more than $1$Mbp from the core.  Scaling of $g(x_{i-1},x_i)$ 
 and handling of gaps is done as for iHS, and these parameters are definable 
-on the {\tt selscan} command line.
+on the {\tt selscan} command line. For XP-EHH computations, data provided with the flags {\tt --hap}, {\tt --tped}, or {\tt --vcf} correspond to population $A$, and data provided with the flags {\tt --ref}, {\tt --tped-ref}, or {\tt --vcf-ref} correspond to population $B$.
 
 \subsection{nSL}\label{sec:nsl}
 
@@ -221,7 +221,7 @@ on the {\tt selscan} command line.
 
 \subsection{Integrated Haplotype Homozygosity Pooled (iHH12)}\label{sec:ihh12}
 
-iHH12 is adapted from the H12 statistic \cite[]{GarudEtAl15}, with better power than iHS to detect soft sweeps. For this statistic, we calculate the integrated haplotype homozygosity of the entire sample, but we first collapse the top two most frequent haplotypes into a single class.
+iHH12 \cite[]{TorresEtAl17} is adapted from the H12 statistic \cite[]{GarudEtAl15}, with better power than iHS to detect soft sweeps. For this statistic, we calculate the integrated haplotype homozygosity of the entire sample, but we first collapse the top two most frequent haplotypes into a single class.
 
 To calculate iHH12 at a site, we first calculate the integrated haplotype 
 homozygosity (iHH) for the sample using $EHH12$ via trapezoidal quadrature.
