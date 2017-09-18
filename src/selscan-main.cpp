@@ -31,7 +31,7 @@
 
 using namespace std;
 
-const string VERSION = "1.2.0";
+const string VERSION = "1.2.0a";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -812,7 +812,7 @@ int main(int argc, char *argv[])
         releaseHapData(hapData2);
         cerr << "\nFinished.\n";
 
-        fout << "pos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
+        fout << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
         for (int i = 0; i < mapData->nloci; i++)
         {
             if (ihh1[i] != MISSING && ihh2[i] != MISSING && ihh1[i] != 0 && ihh2[i] != 0)
@@ -1230,6 +1230,8 @@ int main(int argc, char *argv[])
         releaseHapData(hapData);
         cerr << "\nFinished.\n";
 
+        fout << "id\tpos\tp1\tihh12\n";
+        
         for (int i = 0; i < mapData->nloci; i++)
         {
             if (ihs[i] != MISSING )//&& ihh1[i] != MISSING && ihh2[i] != MISSING)

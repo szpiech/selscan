@@ -30,7 +30,7 @@
 
 using namespace std;
 
-const string VERSION = "1.2.1";
+const string VERSION = "1.2.1a";
 
 const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
@@ -38,26 +38,21 @@ Source code and binaries can be found at\n\
 \n\
 Citations:\n\
 \n\
-ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
-PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
-BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
+selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
+iHH12: R Torres, et al. (2017) bioRxiv, doi: https://doi.org/10.1101/181859.\n\
+       N Garud, et al. (2015) PLoS Genetics, 11: 1–32.\n\
+nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
+xpehh: PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
+iHS: BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
 \n\
-To normalize iHS output across frequency bins:\n\
+To normalize selscan output across frequency bins:\n\
 \n\
-./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out>\n\
+./norm [--ihs|--xpehh|--nsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>\n\
 \n\
-To normalize iHS output and analyze non-overlapping windows of fixed bp for \n\
-extreme iHS scores:\n\
+To normalize selscan output and analyze non-overlapping windows of fixed bp for \n\
+extreme scores:\n\
 \n\
-./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win\n\
-To normalize XP-EHH output across frequency bins:\n\
-\n\
-./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out>\n\
-\n\
-To normalize XP-EHH output and analyze non-overlapping windows of fixed bp for \n\
-extreme XP-EHH scores:\n\
-\n\
-./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out> --bp-win\n";
+./norm [--ihs|--xpehh|--nsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win\n";
 
 const string ARG_FREQ_BINS = "--bins";
 const int DEFAULT_FREQ_BINS = 100;
@@ -67,10 +62,12 @@ const string ARG_FILES = "--files";
 const string DEFAULT_FILES = "infile";
 const string HELP_FILES = "A list of files delimited by whitespace for\n\
 \tjoint normalization.\n\
-\tExpected format for iHS files (no header):\n\
-\t<locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>\n\
+\tExpected format for iHS or nSL files (no header):\n\
+\t<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>\n\
 \tExpected format for XP-EHH files (one line header):\n\
-\t<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>";
+\t<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>\n\
+\tExpected format for iHH12 files (one line header):\n\
+\t<locus name> <physical pos> <freq1> <ihh12>";
 
 const string ARG_LOG = "--log";
 const string DEFAULT_LOG = "logfile";
@@ -1512,7 +1509,7 @@ void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLo
 
     getline(fin, header);
 
-    fout << header + "\tnormxpehh\tcrit\n";
+    fout << header + "\tnormihh12\tcrit\n";
 
     for (int j = 0; j < fileLoci; j++)
     {

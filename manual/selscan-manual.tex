@@ -17,7 +17,7 @@
 
 \newcommand{\negspace}{\!\!\!\!\!\!\!\!\!\!\!\!}
 
-\title{{\tt selscan} v 1.2.0 User Manual}
+\title{{\tt selscan} v1.2.0a User Manual}
 \date{\today}
 \author{Zachary A Szpiech}
 
@@ -378,6 +378,11 @@ For nSL the file will be named {\tt <outfile>.nsl[.alt].out} and formatted as
 <locusID> <physicalPos> <'1' freq> <sl1> <sl0> <unstandardized nSL>
 \end{lstlisting}
 ~\\
+For iHH12 the file will be named {\tt <outfile>.ihh12[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <'1' freq> <unstandardized iHH12>
+\end{lstlisting}
+~\\
 For $\pi$ the file will be named {\tt <outfile>.pi.<winsize>bp.out} and formatted as
 \begin{lstlisting}
 <window start> <window end> <pi> 
@@ -403,7 +408,11 @@ Set {\tt --xpehh} to calculate XP-EHH (see Section \ref{sec:xpehh}).  Associated
 
 \subsubsection{{\tt --nsl}}
 
-Set {\tt --ihs} to calculate iHS (see Section \ref{sec:ihs}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend-nsl}, {\tt --trunc-ok}, {\tt --alt}.
+Set {\tt --nsl} to calculate nSL (see Section \ref{sec:nsl}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend-nsl}, {\tt --trunc-ok}, {\tt --alt}.
+
+\subsubsection{{\tt --ihh12}}
+
+Set {\tt --ihh12} to calculate iHH12 (see Section \ref{sec:ihh12}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}.
 
 \subsubsection{{\tt --pi}}
 
@@ -483,6 +492,21 @@ Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($1$)
 \section{Change Log}
 
 \begin{lstlisting}
+18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
+
+25AUG2017 - norm v1.2.1 released to fix a crash when --nsl flag is used.
+
+18JUL2017 - Support for iHH12 calculations. norm has --ihh12 and --nsl flags.
+
+09JAN2017 - Fixed buggy --crit-percent flag in norm binary.
+
+05SEPT2016 - Fixed misleading error messages when --trunc-ok used.
+
+12FEB2016 - v 1.1.0b - The flag --skip-low-freq is now on by default and no longer has any function.  selscan now filters low frequency variants by default.  A new flag --keep-low-freq is available if you would like to include low frequency variants when building haplotypes (low frequency variants will still be skipped over as core loci), using this option may reduce the power of iHS scans.
+
+28OCT2015 - Updates to norm so that it can handle output from selscan when --ihs-detail is used.
+
+18JUNE2015 - v1.1.0a - When calculating nSL, a mapfile is no longer required for VCF.  Physical distances will be read directly from VCF.  A mapfile specifying physical distances is stille required for .hap files when calculating nSL.  selscan now appropriately reports an error if this is not provided.
 15JUNE2015 - Release of 1.1.0. tomkinsc adds the --ihs-detail parameter which, when provided as an adjunct to --ihs, will cause selscan to write out four additional columns to the output file of iHS calculations (in order): derived_ihh_left, derived_ihh_right, ancestral_ihh_left, and ancestral_ihh_right.
 
 An example file row follows, with header added for clarity.

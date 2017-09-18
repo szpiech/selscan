@@ -14,6 +14,10 @@ Citations:
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
 	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution, 
 	31: 2824-2827.
+R Torres, et al. (2017) Human demographic history has amplified the effects of
+	background selection across the genome. bioRxiv, doi: https://doi.org/10.1101/181859.
+N Garud, et al. (2015) Recent selective sweeps in North American Drosophila
+	melanogaster show signatures of soft sweeps. PLoS Genetics, 11: 1–32.
 A Ferrer-Admetlla, et al. (2014) On detecting incomplete soft or hard selective sweeps
 	using haplotype structure. Molecular Biology and Evolution, 31: 1275-1291.
 PC Sabeti, et al. (2007) Genome-wide detection and characterization of positive 
@@ -22,6 +26,8 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 	genome. PLoS Biology, 4: e72.
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
+
+18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
 25AUG2017 - norm v1.2.1 released to fix a crash when --nsl flag is used.
 
@@ -179,12 +185,25 @@ Format:
 
 <locusID> <physical position> <'1' freq> <sL1> <sL0> <unstandardized nSL>
 
+To calculate iHH12:
+
+./selscan --ihh12 --hap <haplotypes> --map <mapfile> --out <outfile>
+
+Output file: 
+
+<outfile>.ihh12[.alt].out
+
+Format: 
+
+<locusID> <physical position> <'1' freq> <unstandardized ihh12>
+
 EXAMPLES:
 
 selscan --ihs --hap example.hap --map example.map --out example
 selscan --ehh Locus4077 --hap example.hap --map example.map --out example
 selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.map --out example2
 selscan --nsl --hap example.hap --map example.map --out example
+selscan --ihh12 --hap example.hap --map example.map --out example
 
 ----------Command Line Arguments----------
 
