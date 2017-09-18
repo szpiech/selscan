@@ -3,7 +3,7 @@ selscan -- a program to calculate EHH-based scans for positive selection in
 
 Copyright (C) 2014  Zachary A Szpiech
 
-selscan currently implements EHH, iHS, XP-EHH, and nSL, and requires phased data. 
+selscan currently implements EHH, iHS, XP-EHH, nSL, and iHH12 and requires phased data. 
 It should be run separately for each chromosome and population (or population 
 pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
 simply expects haplotype data to be coded 0/1.  Unstandardized iHS scores are 
@@ -136,74 +136,23 @@ USAGE:
 
 To calculate EHH:
 
-./selscan --ehh <locusID> --hap <haplotypes> --map <mapfile> --out <outfile>
-
-Output file: 
-
-<outfile>.ehh.<locusID>[.alt].out
-
-Format: 
-
-<physicalPos> <geneticPos> <'1' EHH> <'0' EHH> <full sample EHH>
-
-The first two columns give the distance from the core locus.  When these values are
-negative, the haplotype extends upstream.
+./selscan --ehh <locusID> --hap <haps> --map <mapfile> --out <outfile>
 
 To calculate iHS:
 
-./selscan --ihs --hap <haplotypes> --map <mapfile> --out <outfile>
-
-Output file: 
-
-<outfile>.ihs[.alt].out
-
-Format: 
-
-<locusID> <physicalPos> <'1' freq> <ihh1> <ihh0> <unstandardized iHS>
-
-To calculate XP-EHH:
-
-./selscan --xpehh --hap <pop1 haplotypes> --ref <pop2 haplotypes> --map <mapfile> --out <outfile>
-
-Output file: 
-
-<outfile>.xpehh[.alt].out
-
-Format: 
-
-<locusID> <physicalPos> <geneticPos> <popA '1' freq> <ihhA> <popB '1' freq> <ihhB> <unstandardized XPEHH>
+./selscan --ihs --hap <haps> --map <mapfile> --out <outfile>
 
 To calculate nSL:
 
-./selscan --nsl --hap <haplotypes> --map <mapfile> --out <outfile>
-
-Output file: 
-
-<outfile>.nsl[.alt].out
-
-Format: 
-
-<locusID> <physical position> <'1' freq> <sL1> <sL0> <unstandardized nSL>
+./selscan --nsl --hap <haps> --map <mapfile> --out <outfile>
 
 To calculate iHH12:
 
-./selscan --ihh12 --hap <haplotypes> --map <mapfile> --out <outfile>
+./selscan --ihh12 --hap <haps> --map <mapfile> --out <outfile>
 
-Output file: 
+To calculate XP-EHH:
 
-<outfile>.ihh12[.alt].out
-
-Format: 
-
-<locusID> <physical position> <'1' freq> <unstandardized ihh12>
-
-EXAMPLES:
-
-selscan --ihs --hap example.hap --map example.map --out example
-selscan --ehh Locus4077 --hap example.hap --map example.map --out example
-selscan --xpehh --hap example2.pop1.hap --ref example2.pop2.hap --map example2.map --out example2
-selscan --nsl --hap example.hap --map example.map --out example
-selscan --ihh12 --hap example.hap --map example.map --out example
+./selscan --xpehh --hap <pop1 haps> --ref <pop2 haps> --map <mapfile> --out <outfile>
 
 ----------Command Line Arguments----------
 
@@ -235,10 +184,16 @@ selscan --ihh12 --hap example.hap --map example.map --out example
 --help <bool>: Prints this help dialog.
 	Default: false
 
+--ihh12 <bool>: Set this flag to calculate iHH12.
+	Default: false
+
 --ihs <bool>: Set this flag to calculate iHS.
 	Default: false
 
 --ihs-detail <bool>: Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.
+	Default: false
+
+--keep-low-freq <bool>: Include low frequency variants in the construction of your haplotypes.
 	Default: false
 
 --maf <double>: If a site has a MAF below this value, the program will not use
@@ -277,7 +232,8 @@ selscan --ihh12 --hap example.hap --map example.map --out example
 	population for XP-EHH calculations.  Ignored otherwise.
 	Default: __hapfile2
 
---skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
+--skip-low-freq <bool>: **This flag is now on by default. If you want to include low frequency variants
+in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: false
 
 --threads <int>: The number of threads to spawn during the calculation.
@@ -316,38 +272,27 @@ selscan --ihh12 --hap example.hap --map example.map --out example
 ################################################################################
 ################################################################################
 
-**NOTE that nSL output files can be normalized with the --ihs flag
-
-norm v1.1.0a -- a program for downstream analysis of selscan output
+norm v1.2.1a -- a program for downstream analysis of selscan output
 Source code and binaries can be found at
 	<https://www.github.com/szpiech/selscan>
 
 Citations:
 
-ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.
-PC Sabeti, et al. (2007) Nature, 449: 913–918.
-BF Voight, et al. (2006) PLoS Biology, 4: e72.
+selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.
+iHH12: R Torres, et al. (2017) bioRxiv, doi: https://doi.org/10.1101/181859.
+       N Garud, et al. (2015) PLoS Genetics, 11: 1–32.
+nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.
+xpehh: PC Sabeti, et al. (2007) Nature, 449: 913–918.
+iHS: BF Voight, et al. (2006) PLoS Biology, 4: e72.
 
-To normalize iHS output across frequency bins:
+To normalize selscan output across frequency bins:
 
-./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out>
+./norm [--ihs|--xpehh|--nsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
 
-To normalize nSL output across frequency bins:
+To normalize selscan output and analyze non-overlapping windows of fixed bp for 
+extreme scores:
 
-./norm --ihs --files <file1.nsl.out> ... <fileN.nsl.out>
-
-To normalize iHS output and analyze non-overlapping windows of fixed bp for 
-extreme iHS scores:
-
-./norm --ihs --files <file1.ihs.out> ... <fileN.ihs.out> --bp-win
-To normalize XP-EHH output across frequency bins:
-
-./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out>
-
-To normalize XP-EHH output and analyze non-overlapping windows of fixed bp for 
-extreme XP-EHH scores:
-
-./norm --xpehh --files <file1.xpehh.out> ... <fileN.xpehh.out> --bp-win
+./norm [--ihs|--xpehh|--nsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
 
 ----------Command Line Arguments----------
 
@@ -367,16 +312,21 @@ extreme XP-EHH scores:
 
 --files <string1> ... <stringN>: A list of files delimited by whitespace for
 	joint normalization.
-	Expected format for iHS files (no header):
-	<locus name> <physical pos> <freq> <ihh1> <ihh2> <ihs>
+	Expected format for iHS or nSL files (no header):
+	<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>
 	Expected format for XP-EHH files (one line header):
 	<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>
+	Expected format for iHH12 files (one line header):
+	<locus name> <physical pos> <freq1> <ihh12>
 	Default: infile
 
 --first <bool>: Output only the first file's normalization.
 	Default: false
 
 --help <bool>: Prints this help dialog.
+	Default: false
+
+--ihh12 <bool>: Do ihh12 normalization.
 	Default: false
 
 --ihs <bool>: Do iHS normalization.
@@ -388,6 +338,9 @@ extreme XP-EHH scores:
 --min-snps <int>: Only consider a bp window if it has at least this many SNPs.
 	Default: 10
 
+--nsl <bool>: Do nSL normalization.
+	Default: false
+
 --qbins <int>: Outlying windows are binned by number of sites within each
 	window.  This is the number of quantile bins to use.
 	Default: 20
@@ -398,4 +351,3 @@ extreme XP-EHH scores:
 
 --xpehh <bool>: Do XP-EHH normalization.
 	Default: false
-
