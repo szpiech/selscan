@@ -5,15 +5,15 @@ plotHaplotypes <- function(filename)
   filename.der <- paste(filename,".der.colormap",sep="")
   filename.anc <- paste(filename,".anc.colormap",sep="")
   data<-as.matrix(read.table(filename.der))
-  raw<-read.table(filename)
+  rawData<-read.table(filename)
 
 
   print("Plotting EHH decay...")
   setEPS()
   postscript(file=paste(filename,".ehh.eps",sep=""))
-  plot(raw$V1/1000000,raw$V2,pch=" ",xlab="Distance from locus (Mb)",ylab="EHH",ylim=c(0,1))
-  lines(raw$V1/1000000,raw$V3,col="red")
-  lines(raw$V1/1000000,raw$V4,col="blue")
+  plot(rawData$V1/1000000,rawData$V2,pch=" ",xlab="Distance from locus (Mb)",ylab="EHH",ylim=c(0,1))
+  lines(rawData$V1/1000000,rawData$V3,col="red")
+  lines(rawData$V1/1000000,rawData$V4,col="blue")
   legend("topright",legend=c("Derived","Ancestral"),col=c("red","blue"),lty=1)
   dev.off()
   
@@ -21,7 +21,7 @@ plotHaplotypes <- function(filename)
   numSites <- dim(data)[2]
   numCols<-range(data)[2]-range(data)[1]
   
-  pos <- raw$V1
+  pos <- rawData$V1
   hap <- seq(1,numHaps)
 
   numSortCols <- min(numCols,5)
@@ -60,7 +60,7 @@ plotHaplotypes <- function(filename)
   numSites2 <- dim(data2)[2]
   numCols2 <- range(data2)[2]-range(data2)[1]
   
-  pos2 <- raw$V1
+  pos2 <- rawData$V1
   hap2 <- seq(1,numHaps2)
 
   numSortCols2 <- min(numCols2,5)
