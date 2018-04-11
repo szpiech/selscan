@@ -1,19 +1,4 @@
 //selscan-main.cpp
-
-// Skip to content
-// Personal Open source Business Explore
-// Sign upSign inPricingBlogSupport
-// This repository
-// Search
-//  Watch 9  Star 22  Fork 8 szpiech/selscan
-//  Code  Issues 5  Pull requests 0  Pulse  Graphs
-// Branch: master Find file Copy pathselscan/src/selscan-main.cpp
-// 24d4ffb  on Feb 12
-// @szpiech szpiech --keep-low-freq added --skip-low-freq on by default
-// 2 contributors @szpiech @tomkinsc
-// RawBlameHistory     3294 lines (2839 sloc)  113 KB
-
-
 /* selscan -- a program to calculate EHH-based scans for positive selection in genomes
    Copyright (C) 2014  Zachary A Szpiech
    This program is free software; you can redistribute it and/or modify
