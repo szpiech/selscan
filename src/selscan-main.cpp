@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
     if(params.getBoolFlag(ARG_SKIP)){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
-    bool TRUNC = params.getBoolFlag(ARG_TRUNC);
+    //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
     int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
     if (SINGLE_EHH)
     {
         queryLoc = queryFound(mapData, query);
-        double queryFreq = calcFreq(hapData, queryLoc);
+        //double queryFreq = calcFreq(hapData, queryLoc);
         if (queryLoc < 0)
         {
             cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
@@ -781,7 +781,7 @@ int main(int argc, char *argv[])
         cerr << "Starting XP-EHH calculations.\n";
         work_order_t *order;
         pthread_t *peer = new pthread_t[numThreads];
-        int prev_index = 0;
+        //int prev_index = 0;
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
@@ -921,7 +921,7 @@ int main(int argc, char *argv[])
 
         work_order_t *order;
         pthread_t *peer = new pthread_t[numThreads];
-        int prev_index = 0;
+        //int prev_index = 0;
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
@@ -985,9 +985,9 @@ int main(int argc, char *argv[])
 
         freq = new double[hapData->nloci];
 
-        MapData *newMapData;
-        HaplotypeData *newHapData;
-        double *newfreq;
+        //MapData *newMapData;
+        //HaplotypeData *newHapData;
+        //double *newfreq;
 
         int count = 0;
         for (int i = 0; i < hapData->nloci; i++)
@@ -1067,7 +1067,7 @@ int main(int argc, char *argv[])
 
         work_order_t *order;
         pthread_t *peer = new pthread_t[numThreads];
-        int prev_index = 0;
+        //int prev_index = 0;
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
@@ -1197,7 +1197,7 @@ int main(int argc, char *argv[])
 
         work_order_t *order;
         pthread_t *peer = new pthread_t[numThreads];
-        int prev_index = 0;
+        //int prev_index = 0;
         for (int i = 0; i < numThreads; i++)
         {
             order = new work_order_t;
@@ -1280,7 +1280,7 @@ void calculatePi(HaplotypeData *hapData, MapData *mapData, int winsize, string o
     }
 
     int start = 1;
-    int end = mapData->physicalPos[mapData->nloci - 1];
+    //int end = mapData->physicalPos[mapData->nloci - 1];
     int startLocus = 0;
     int endLocus = 0;
     //Identify the start and end indicies in the window
@@ -1388,13 +1388,13 @@ void query_locus(void *order)
     int nhaps = p->hapData->nhaps;
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
-    string *locusName = p->mapData->locusName;
-    ofstream *flog = p->flog;
+    //string *locusName = p->mapData->locusName;
+    //ofstream *flog = p->flog;
     ofstream *fout = p->fout;
     string outFilename = p->filename;
-    int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
-    int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
-    double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
+    //int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
+    //int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
+    //double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
@@ -1642,15 +1642,15 @@ void query_locus_soft(void *order)
     int nhaps = p->hapData->nhaps;
     int *physicalPos = p->mapData->physicalPos;
     double *geneticPos = p->mapData->geneticPos;
-    string *locusName = p->mapData->locusName;
+    //string *locusName = p->mapData->locusName;
 
-    ofstream *flog = p->flog;
+    //ofstream *flog = p->flog;
     ofstream *fout = p->fout;
     string outFilename = p->filename;
-    int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
-    int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
-    double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool ALT = p->params->getBoolFlag(ARG_ALT);
+    //int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
+    //int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
+    //double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
+    //bool ALT = p->params->getBoolFlag(ARG_ALT);
 
     int locus = p->queryLoc;
     int queryPad = p->params->getIntFlag(ARG_QWIN);
@@ -1724,8 +1724,8 @@ void query_locus_soft(void *order)
 
     for (int i = locus - 1; i >= stopLeft; i--)
     {
-        int numDerived = 0;
-        int numAncestral = 0;
+        //int numDerived = 0;
+        //int numAncestral = 0;
         map<string, int> hapCount;
 
         for (int hap = 0; hap < nhaps; hap++)
@@ -2658,15 +2658,15 @@ void calc_soft_ihs(void *order)
     double *h1 = p->ihh1;
     double *h2dh1 = p->ihh2;
     double *h12 = p->ihs;
-    double *freq = p->freq;
+    //double *freq = p->freq;
     ofstream *flog = p->flog;
     Bar *pbar = p->bar;
 
     int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
     int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    bool ALT = p->params->getBoolFlag(ARG_ALT);
-    double MAF = p->params->getDoubleFlag(ARG_MAF);
+    //bool ALT = p->params->getBoolFlag(ARG_ALT);
+    //double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
     bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
@@ -2698,7 +2698,7 @@ void calc_soft_ihs(void *order)
         double ihh1 = 0;
         double ihh2d1 = 0;
         double ihh12 = 0;
-        double derivedCount = 0;
+        //double derivedCount = 0;
         //A list of all the haplotypes
         //Starts with just the focal snp and grows outward
         map<string, int> tempHapCount;
@@ -2926,12 +2926,12 @@ void calc_xpihh(void *order)
     char **data1 = p->hapData1->data;
     int nhaps1 = p->hapData1->nhaps;
     double *ihh1 = p->ihh1;
-    double *freq1 = p->freq1;
+    //double *freq1 = p->freq1;
 
     char **data2 = p->hapData2->data;
     int nhaps2 = p->hapData2->nhaps;
     double *ihh2 = p->ihh2;
-    double *freq2 = p->freq2;
+    //double *freq2 = p->freq2;
 
     int nloci = p->mapData->nloci;
     int *physicalPos = p->mapData->physicalPos;
@@ -3376,7 +3376,7 @@ triplet_t calculateSoft(map<string, int> &count, int total)
 
     double first = 0;
     double second = 0;
-    double freq = 0;
+    //double freq = 0;
     double homozygosity = 0;
     map<string, int>::iterator it;
     for (it = count.begin(); it != count.end(); it++)
