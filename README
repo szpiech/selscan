@@ -27,6 +27,12 @@ BF Voight, et al. (2006) A map of recent positive selection in the human
 PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature, 419: 832–837.
 
+
+11APR2018 - lasugden adds the option to calculate XP-EHH with either definition of EHH. By default, uses original denominator (N choose 2). To use denominator defined in Wagh et al. for better performance on incomplete sweeps, use flag --wagh
+
+--wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
+	Default: false
+
 18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
 25AUG2017 - norm v1.2.1 released to fix a crash when --nsl flag is used.
