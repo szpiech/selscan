@@ -3,7 +3,7 @@ selscan -- a program to calculate EHH-based scans for positive selection in
 
 Copyright (C) 2014  Zachary A Szpiech
 
-selscan currently implements EHH, iHS, XP-EHH, nSL, and iHH12 and requires phased data. 
+selscan currently implements EHH, iHS, XP-EHH, nSL, XP-nSL and iHH12 and requires phased data. 
 It should be run separately for each chromosome and population (or population 
 pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
 simply expects haplotype data to be coded 0/1.  Unstandardized iHS scores are 
@@ -12,26 +12,39 @@ thus reported as ln(iHH1/iHH0) based on the coding you have provided.
 Citations:
 
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
-	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution, 
+	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
 	31: 2824-2827.
-R Torres, et al. (2017) Human demographic history has amplified the effects of
-	background selection across the genome. bioRxiv, doi: https://doi.org/10.1101/181859.
-N Garud, et al. (2015) Recent selective sweeps in North American Drosophila
-	melanogaster show signatures of soft sweeps. PLoS Genetics, 11: 1–32.
-A Ferrer-Admetlla, et al. (2014) On detecting incomplete soft or hard selective sweeps
-	using haplotype structure. Molecular Biology and Evolution, 31: 1275-1291.
-PC Sabeti, et al. (2007) Genome-wide detection and characterization of positive 
-	selection in human populations. Nature, 449: 913–918.
-BF Voight, et al. (2006) A map of recent positive selection in the human 
-	genome. PLoS Biology, 4: e72.
-PC Sabeti, et al. (2002) Detecting recent positive selection in the human 
-	genome from haplotype structure. Nature, 419: 832–837.
+R Torres et al. (2018) Human demographic history has amplified the effects of
+	background selection across the genome. PLoS Genetics 15: e1007898.
+N Garud et al. (2015) Recent selective sweeps in North American Drosophila
+	melanogaster show signatures of soft sweeps. PLoS Genetics 11: 1–32.
+A Ferrer-Admetlla et al. (2014) On detecting incomplete soft or hard selective sweeps
+	using haplotype structure. Molecular Biology and Evolution 31: 1275-1291.
+K Wagh et al. (2012) Lactase Persistence and Lipid Pathway Selection in the Maasai. PloS ONE 7: e44751.
+PC Sabeti et al. (2007) Genome-wide detection and characterization of positive 
+	selection in human populations. Nature 449: 913–918.
+BF Voight et al. (2006) A map of recent positive selection in the human 
+	genome. PLoS Biology 4: e72.
+PC Sabeti et al. (2002) Detecting recent positive selection in the human 
+	genome from haplotype structure. Nature 419: 832–837.
 
 
-11APR2018 - lasugden adds the option to calculate XP-EHH with either definition of EHH. By default, uses original denominator (N choose 2). To use denominator defined in Wagh et al. for better performance on incomplete sweeps, use flag --wagh
+XXFEB2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs. New statistics implemented.
+	Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map.
+	XP-EHH:iHS::XP-nSL:nSL
 
---wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
+	--xpnsl <bool>: Set this flag to calculate XP-nSL.
+
+	Normalize XP-nSL with --xpnsl flag in norm.
+
+	lasugden adds the option to calculate XP-EHH with either definition of EHH. By default, uses original denominator (N choose 2). To use denominator defined in Wagh et al. for better performance on incomplete sweeps, use flag --wagh
+
+	--wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
 	Default: false
+
+	Normalize these computations with --xpehh flag in norm.
+
+	norm v1.3.0 - 
 
 18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
@@ -142,23 +155,25 @@ USAGE:
 
 To calculate EHH:
 
-./selscan --ehh <locusID> --hap <haps> --map <mapfile> --out <outfile>
+./selscan --ehh <locusID> --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate iHS:
 
-./selscan --ihs --hap <haps> --map <mapfile> --out <outfile>
+./selscan --ihs --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate nSL:
 
-./selscan --nsl --hap <haps> --map <mapfile> --out <outfile>
+./selscan --nsl --vcf <vcf> --out <outfile>
+To calculate XP-nSL:
 
+./selscan --xpnsl --vcf <vcf> --vcf-ref <vcf> --out <outfile>
 To calculate iHH12:
 
-./selscan --ihh12 --hap <haps> --map <mapfile> --out <outfile>
+./selscan --ihh12 --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate XP-EHH:
 
-./selscan --xpehh --hap <pop1 haps> --ref <pop2 haps> --map <mapfile> --out <outfile>
+./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>
 
 ----------Command Line Arguments----------
 
@@ -271,8 +286,16 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	of loci as the query population. Ignored otherwise.
 	Default: __hapfile2
 
+--wagh <bool>: Set this flag to calculate XP-EHH using definition of EHH which
+	separates core SNP alleles in the denominator.
+	Default: false
+
 --xpehh <bool>: Set this flag to calculate XP-EHH.
 	Default: false
+
+--xpnsl <bool>: Set this flag to calculate XP-nSL.
+	Default: false
+
 
 
 ################################################################################

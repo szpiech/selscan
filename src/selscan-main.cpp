@@ -29,7 +29,7 @@
 
 using namespace std;
 
-const string VERSION = "1.2.0a";
+const string VERSION = "1.3.0";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -38,32 +38,39 @@ selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
 \n\
 Citations:\n\
 \n\
-selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
-iHH12: R Torres, et al. (2017) bioRxiv, doi: https://doi.org/10.1101/181859.\n\
-       N Garud, et al. (2015) PLoS Genetics, 11: 1–32.\n\
-nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
-xpehh: PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
-iHS: BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
-EHH: PC Sabeti, et al. (2002) Nature, 419: 832–837.\n\
+selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
+iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
+       N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
+nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
+XP-nSL: TBD.\n\
+XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.\n\
+        K Wagh et al. (2012) PloS ONE 7: e44751.\n\
+iHS: BF Voight et al. (2006) PLoS Biology 4: e72.\n\
+EHH: PC Sabeti et al. (2002) Nature 419: 832–837.\n\
 \n\
 To calculate EHH:\n\
 \n\
-./selscan --ehh <locusID> --hap <haps> --map <mapfile> --out <outfile>\n\
+./selscan --ehh <locusID> --vcf <vcf> --map <mapfile> --out <outfile>\n\
 \n\
 To calculate iHS:\n\
 \n\
-./selscan --ihs --hap <haps> --map <mapfile> --out <outfile>\n\
+./selscan --ihs --vcf <vcf> --map <mapfile> --out <outfile>\n\
 \n\
 To calculate nSL:\n\
 \n\
-./selscan --nsl --hap <haps> --map <mapfile> --out <outfile>\n\
+./selscan --nsl --vcf <vcf> --out <outfile>\n\
+\n\
+To calculate XP-nSL:\n\
+\n\
+./selscan --xpnsl --vcf <vcf> --vcf-ref <vcf> --out <outfile>\n\
+\n\
 To calculate iHH12:\n\
 \n\
-./selscan --ihh12 --hap <haps> --map <mapfile> --out <outfile>\n\
+./selscan --ihh12 --vcf <vcf> --map <mapfile> --out <outfile>\n\
 \n\
 To calculate XP-EHH:\n\
 \n\
-./selscan --xpehh --hap <pop1 haps> --ref <pop2 haps> --map <mapfile> --out <outfile>\n";
+./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>\n";
 
 const string ARG_THREAD = "--threads";
 const int DEFAULT_THREAD = 1;
@@ -135,6 +142,10 @@ const string HELP_IHS = "Set this flag to calculate iHS.";
 const string ARG_IHS_DETAILED = "--ihs-detail";
 const bool DEFAULT_IHS_DETAILED = false;
 const string HELP_IHS_DETAILED = "Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.";
+
+const string ARG_XPNSL = "--xpnsl";
+const bool DEFAULT_XPNSL = false;
+const string HELP_XPNSL = "Set this flag to calculate XP-nSL.";
 
 const string ARG_NSL = "--nsl";
 const bool DEFAULT_NSL = false;
@@ -303,6 +314,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
     params.addFlag(ARG_GAP_SCALE, DEFAULT_GAP_SCALE, "", HELP_GAP_SCALE);
     params.addFlag(ARG_IHS, DEFAULT_IHS, "", HELP_IHS);
+    params.addFlag(ARG_XPNSL, DEFAULT_XPNSL, "", HELP_XPNSL);
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
     params.addFlag(ARG_IHS_DETAILED, DEFAULT_IHS_DETAILED, "", HELP_IHS_DETAILED);
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
@@ -368,6 +380,7 @@ int main(int argc, char *argv[])
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool WAGH = params.getBoolFlag(ARG_WAGH);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
+    bool CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
     bool CALC_NSL = params.getBoolFlag(ARG_NSL);
     bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
@@ -389,13 +402,14 @@ int main(int argc, char *argv[])
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
 
-    if (CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
+    if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
     {
         cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
              << ")\n\tiHS (" << ARG_IHS
              << ")\n\tXP-EHH (" << ARG_XP
              << ")\n\tPI (" << ARG_PI
              << ")\n\tnSL (" << ARG_NSL
+             << ")\n\tXP-nSL (" << ARG_XPNSL
              << ")\n\tiHH12 (" << ARG_SOFT
              << ")\n";
         return 1;
@@ -417,6 +431,7 @@ int main(int argc, char *argv[])
     if (SINGLE_EHH) outFilename += ".ehh." + query;
     else if (CALC_IHS) outFilename += ".ihs";
     else if (CALC_NSL) outFilename += ".nsl";
+    else if (CALC_XPNSL) outFilename += ".xpnsl";
     else if (CALC_XP) outFilename += ".xpehh";
     else if (CALC_SOFT) outFilename += ".ihh12";
     else if (CALC_PI) outFilename += ".pi." + string(PI_WIN_str) + "bp";
@@ -445,29 +460,29 @@ int main(int argc, char *argv[])
     }
     if (TPED)
     {
-        if ((!CALC_XP) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
+        if ((!CALC_XP && !CALC_XPNSL) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
         {
-            cerr << "ERROR: You are not calculating XP-EHH for, but have given a second data file (" << tpedFilename2 << ").\n";
+            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << tpedFilename2 << ").\n";
             return 1;
         }
     }
     else if (VCF) {
-        if ((!CALC_XP) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
+        if ((!CALC_XP && !CALC_XPNSL) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
         {
-            cerr << "ERROR: You are not calculating XP-EHH for, but have given a second data file (" << vcfFilename2 << ").\n";
+            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << vcfFilename2 << ").\n";
             return 1;
         }
 
-        if ((!CALC_NSL) && mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+        if ((!CALC_NSL && !CALC_XPNSL) && mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
             cerr << "ERROR: Must also provide a mapfile.\n";
             return 1;
         }
     }
     else
     {
-        if ((!CALC_XP) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
+        if ((!CALC_XP && !CALC_XPNSL) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
         {
-            cerr << "ERROR: You are not calculating XP-EHH for, but have given a second data file (" << hapFilename2 << ").\n";
+            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << hapFilename2 << ").\n";
             return 1;
         }
         if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
@@ -496,7 +511,7 @@ int main(int argc, char *argv[])
         if (TPED)
         {
             hapData = readHaplotypeDataTPED(tpedFilename);
-            if (CALC_XP)
+            if (CALC_XP || CALC_XPNSL)
             {
                 hapData2 = readHaplotypeDataTPED(tpedFilename2);
                 if (hapData->nloci != hapData2->nloci)
@@ -509,7 +524,7 @@ int main(int argc, char *argv[])
         }
         else if (VCF) {
             hapData = readHaplotypeDataVCF(vcfFilename);
-            if (CALC_XP)
+            if (CALC_XP || CALC_XPNSL)
             {
                 hapData2 = readHaplotypeDataVCF(vcfFilename2);
                 if (hapData->nloci != hapData2->nloci)
@@ -518,7 +533,7 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            if(!CALC_NSL) {
+            if(!CALC_NSL && !CALC_XPNSL) {
                 mapData = readMapData(mapFilename, hapData->nloci);
             }
             else{//Load physical positions
@@ -528,7 +543,7 @@ int main(int argc, char *argv[])
         else
         {
             hapData = readHaplotypeData(hapFilename);
-            if (CALC_XP)
+            if (CALC_XP || CALC_XPNSL)
             {
                 hapData2 = readHaplotypeData(hapFilename2);
                 if (hapData->nloci != hapData2->nloci)
@@ -549,13 +564,13 @@ int main(int argc, char *argv[])
     for (int i = 1; i < mapData->nloci; i++) {
         if ( mapData->physicalPos[i] <= mapData->physicalPos[i - 1] ) {
             cerr << "ERROR: Variant physical position must be strictly increasing.\n";
-            cerr << "\t" << mapData->locusName[i] << " " << mapData->physicalPos[i] << " comes after";
+            cerr << "\t" << mapData->locusName[i] << " " << mapData->physicalPos[i] << " appears after";
             cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->physicalPos[i - 1] << "\n";
             return 1;
         }
         if ( !CALC_NSL && mapData->geneticPos[i] < mapData->geneticPos[i - 1] ) {
             cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
-            cerr << "\t" << mapData->locusName[i] << " " << mapData->geneticPos[i] << " comes after";
+            cerr << "\t" << mapData->locusName[i] << " " << mapData->geneticPos[i] << " appears after";
             cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->geneticPos[i - 1] << "\n";
             return 1;
         }
@@ -617,7 +632,10 @@ int main(int argc, char *argv[])
     flog << "\nv" + VERSION + "\nCalculating ";
     if (CALC_XP) flog << "XP-EHH.\n";
     else if (CALC_PI) flog << "PI.\n";
-    else flog << " iHS.\n";
+    else if (CALC_IHS) flog << " iHS.\n";
+    else if (CALC_NSL) flog << " nSL.\n";
+    else if (CALC_XPNSL) flog << " XP-nSL.\n";
+    else if (CALC_SOFT) flog << " iHH1K.\n";
 
     if(params.getBoolFlag(ARG_SKIP)){
         flog << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
@@ -626,17 +644,17 @@ int main(int argc, char *argv[])
     if (TPED)
     {
         flog << "Input filename: " << tpedFilename << "\n";
-        if (CALC_XP) flog << "Reference input filename: " << tpedFilename2 << "\n";
+        if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << tpedFilename2 << "\n";
 
     }
     else if (VCF) {
         flog << "Input filename: " << vcfFilename << "\n";
-        if (CALC_XP) flog << "Reference input filename: " << vcfFilename2 << "\n";
+        if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << vcfFilename2 << "\n";
         flog << "Map filename: " << mapFilename << "\n";
     }
     else {
         flog << "Input filename: " << hapFilename << "\n";
-        if (CALC_XP) flog << "Reference input filename: " << hapFilename2 << "\n";
+        if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << hapFilename2 << "\n";
         flog << "Map filename: " << mapFilename << "\n";
     }
     flog << "Output file: " << outFilename << "\n";
@@ -769,7 +787,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if (CALC_XP)
+    if (CALC_XP || CALC_XPNSL)
     {
         ihh1 = new double[mapData->nloci];
         ihh2 = new double[mapData->nloci];
@@ -785,7 +803,14 @@ int main(int argc, char *argv[])
 
         barInit(pbar, mapData->nloci, 78);
 
-        cerr << "Starting XP-EHH calculations.\n";
+        if (CALC_XPNSL){
+            for (int i = 0; i < mapData->nloci; i++){
+                mapData->geneticPos[i] = i;
+            }
+        }
+
+        if (CALC_XP) cerr << "Starting XP-EHH calculations.\n";
+        if (CALC_XPNSL) cerr << "Starting XP-nSL calculations.\n";
         work_order_t *order;
         pthread_t *peer = new pthread_t[numThreads];
         //int prev_index = 0;
@@ -819,7 +844,8 @@ int main(int argc, char *argv[])
         releaseHapData(hapData2);
         cerr << "\nFinished.\n";
 
-        fout << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
+        if (CALC_XP) fout << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
+        if (CALC_XPNSL) fout << "id\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
         for (int i = 0; i < mapData->nloci; i++)
         {
             if (ihh1[i] != MISSING && ihh2[i] != MISSING && ihh1[i] != 0 && ihh2[i] != 0)
@@ -831,7 +857,7 @@ int main(int argc, char *argv[])
                      << ihh1[i] << "\t"
                      << freq2[i] << "\t"
                      << ihh2[i] << "\t";
-                fout << log(ihh1[i] / ihh2[i]) << endl;
+                fout << log10(ihh1[i] / ihh2[i]) << endl;
             }
         }
     }
@@ -2322,7 +2348,7 @@ void calc_ihs(void *order)
         {
             ihh1[locus] = derived_ihh;
             ihh2[locus] = ancestral_ihh;
-            ihs[locus] = log(derived_ihh / ancestral_ihh);
+            ihs[locus] = log10(derived_ihh / ancestral_ihh);
             if (WRITE_DETAILED_IHS) {
                 ihhDerivedLeft[locus]    = derived_ihh_left;
                 ihhDerivedRight[locus]   = derived_ihh_right;
@@ -2638,7 +2664,7 @@ void calc_nsl(void *order)
         {
             ihh1[locus] = derived_ihh;
             ihh2[locus] = ancestral_ihh;
-            ihs[locus] = log(derived_ihh / ancestral_ihh);
+            ihs[locus] = log10(derived_ihh / ancestral_ihh);
             //freq[locus] = double(derivedCount) / double(nhaps);
         }
     }
@@ -2953,9 +2979,15 @@ void calc_xpihh(void *order)
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
+    bool CALC_XPNSL = p->params->getBoolFlag(ARG_XPNSL);
 
-    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
-
+    int MAX_EXTEND;
+    if (!CALC_XPNSL){
+        MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
+    }
+    else{
+        MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? geneticPos[nloci - 1] - geneticPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND_NSL);
+    }
     int step = (nloci / numThreads) / (pbar->totalTicks);
     if (step == 0) step = 1;
 
@@ -3019,7 +3051,7 @@ void calc_xpihh(void *order)
 
         derivedCountPooled = derivedCount1 + derivedCount2;
 
-        //when calculating xp-ehh, ehh does not necessarily start at 1 (LAS: making it so it DOES necessarily start at 1)
+        //when calculating xp-ehh, ehh does not necessarily start at 1
         if (ALT)
         {
             double f = double(derivedCount1) / double(nhaps1);
@@ -3161,8 +3193,9 @@ void calc_xpihh(void *order)
 
             previous_pooled_ehh = current_pooled_ehh;
 
-            //check if currentLocus is beyond 1Mb
-            if (physicalPos[locus] - physicalPos[currentLocus] >= MAX_EXTEND) break;
+            //check if currentLocus is beyond MAX_EXTEND
+            if (!CALC_XPNSL && physicalPos[locus] - physicalPos[currentLocus] >= MAX_EXTEND) break;
+            if (CALC_XPNSL && geneticPos[locus] - geneticPos[currentLocus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList1;
@@ -3389,7 +3422,8 @@ void calc_xpihh(void *order)
             previous_pooled_ehh = current_pooled_ehh;
 
             //check if currentLocus is beyond 1Mb
-            if (physicalPos[currentLocus] - physicalPos[locus] >= MAX_EXTEND) break;
+            if (!CALC_XPNSL && physicalPos[currentLocus] - physicalPos[locus] >= MAX_EXTEND) break;
+            if (CALC_XPNSL && geneticPos[currentLocus] - geneticPos[locus] >= MAX_EXTEND) break;
         }
 
         delete [] haplotypeList1;
