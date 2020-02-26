@@ -1116,16 +1116,16 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             }
 
             double percentile = 100.0;
-            for (int b = 0; b < numQuantiles; b++)
+            for (bTop = 0; bTop < numQuantiles; b++)
             {
-                if (nSNPs[i][j] <= quantileBoundTop[b]) break;
+                if (nSNPs[i][j] <= quantileBoundTop[bTop]) break;
             }
 
-            if (fracCritTop[i][j] >= topWindowBoundaryTop[b]["5.0"] && fracCritTop[i][j] < topWindowBoundaryTop[b]["1.0"])
+            if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["5.0"] && fracCritTop[i][j] < topWindowBoundaryTop[bTop]["1.0"])
             {
                 percentile = 5.0;
             }
-            else if (fracCritTop[i][j] >= topWindowBoundaryTop[b]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
+            else if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
             {
                 percentile = 1.0;
             }
@@ -1133,16 +1133,16 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             fout << percentile << "\t";
 
             percentile = 100.0;
-            for (int b = 0; b < numQuantiles; b++)
+            for (bBot = 0; bBot < numQuantiles; b++)
             {
-                if (nSNPs[i][j] <= quantileBoundBot[b]) break;
+                if (nSNPs[i][j] <= quantileBoundBot[bBot]) break;
             }
 
-            if (fracCritBot[i][j] >= topWindowBoundaryBot[b]["5.0"] && fracCritBot[i][j] < topWindowBoundaryBot[b]["1.0"])
+            if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["5.0"] && fracCritBot[i][j] < topWindowBoundaryBot[bBot]["1.0"])
             {
                 percentile = 5.0;
             }
-            else if (fracCritBot[i][j] >= topWindowBoundaryBot[b]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
+            else if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
             {
                 percentile = 1.0;
             }
