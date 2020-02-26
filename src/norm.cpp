@@ -951,13 +951,13 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             if (nSNPs[i][j] >= minSNPs && fracCritTop[i][j] >= 0)
             {
                 allSNPsPerWindowTop[kTop] = nSNPs[i][j];
-                allFracCritPerWindowTop[kTop] = fracCrit[i][j];
+                allFracCritPerWindowTop[kTop] = fracCritTop[i][j];
                 kTop++;
             }
             if (nSNPs[i][j] >= minSNPs && fracCritBot[i][j] >= 0)
             {
                 allSNPsPerWindowBot[kBot] = nSNPs[i][j];
-                allFracCritPerWindowBot[kBot] = fracCrit[i][j];
+                allFracCritPerWindowBot[kBot] = fracCritBot[i][j];
                 kBot++;
             }
         }
@@ -1116,7 +1116,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             }
 
             double percentile = 100.0;
-            for (b = 0; b < numQuantiles; b++)
+            for (int b = 0; b < numQuantiles; b++)
             {
                 if (nSNPs[i][j] <= quantileBoundTop[b]) break;
             }
@@ -1133,7 +1133,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             fout << percentile << "\t";
 
             percentile = 100.0;
-            for (b = 0; b < numQuantiles; b++)
+            for (int b = 0; b < numQuantiles; b++)
             {
                 if (nSNPs[i][j] <= quantileBoundBot[b]) break;
             }
@@ -1576,7 +1576,7 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
                  << data << "\t"
                  << normedData << "\t";
             if (normedData >= upperCutoff) fout << "1\n";
-            else if (normedData <= lowerCutoff) found << "-1\n";
+            else if (normedData <= lowerCutoff) fout << "-1\n";
             else fout << "0\n";
         }
     }
