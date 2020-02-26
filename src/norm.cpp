@@ -1116,7 +1116,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             }
 
             double percentile = 100.0;
-            for (bTop = 0; bTop < numQuantiles; b++)
+            for (bTop = 0; bTop < numQuantiles; bTop++)
             {
                 if (nSNPs[i][j] <= quantileBoundTop[bTop]) break;
             }
@@ -1133,7 +1133,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             fout << percentile << "\t";
 
             percentile = 100.0;
-            for (bBot = 0; bBot < numQuantiles; b++)
+            for (bBot = 0; bBot < numQuantiles; bBot++)
             {
                 if (nSNPs[i][j] <= quantileBoundBot[bBot]) break;
             }
