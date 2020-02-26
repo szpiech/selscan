@@ -113,6 +113,10 @@ const string ARG_XPEHH = "--xpehh";
 const bool DEFAULT_XPEHH = false;
 const string HELP_XPEHH = "Do XP-EHH normalization.";
 
+const string ARG_XPNSL = "--xpnsl";
+const bool DEFAULT_XPNSL = false;
+const string HELP_XPNSL = "Do XP-nSL normalization.";
+
 const string ARG_SOFT = "--ihh12";
 const bool DEFAULT_SOFT = false;
 const string HELP_SOFT = "Do ihh12 normalization.";
@@ -183,6 +187,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_NSL, DEFAULT_NSL, "", HELP_NSL);
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
     params.addFlag(ARG_XPEHH, DEFAULT_XPEHH, "", HELP_XPEHH);
+    params.addFlag(ARG_XPNSL, DEFAULT_XPNSL, "", HELP_XPNSL);
 
 
     try
@@ -211,6 +216,9 @@ int main(int argc, char *argv[])
     bool NSL = params.getBoolFlag(ARG_NSL);
     bool SOFT = params.getBoolFlag(ARG_SOFT);
     bool XPEHH = params.getBoolFlag(ARG_XPEHH);
+    bool XPNSL = params.getBoolFlag(ARG_XPNSL);
+
+    if(XPNSL) XPEHH = true;
 
     if (numBins <= 0)
     {
@@ -244,7 +252,7 @@ int main(int argc, char *argv[])
 
     
     if(IHS + XPEHH + NSL + SOFT!= 1){
-        cerr << "Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + ".\n";
+        cerr << "Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
         return 1;
     }
     cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
