@@ -789,18 +789,106 @@ int main(int argc, char *argv[])
 
     if (CALC_XP || CALC_XPNSL)
     {
-        ihh1 = new double[mapData->nloci];
-        ihh2 = new double[mapData->nloci];
 
         freq1 = new double[hapData->nloci];
         freq2 = new double[hapData2->nloci];
 
+        MapData *newMapData;
+        HaplotypeData *newHapData;
+        HaplotypeData *newHapData2;
+        double *newfreq1;
+        double *newfreq2;
+
+        int count = 0;
         for (int i = 0; i < hapData->nloci; i++)
         {
             freq1[i] = calcFreq(hapData, i);
             freq2[i] = calcFreq(hapData2, i);
+            if(freq1[i] > MAF && 1 - freq1[i] > MAF && 
+                freq2[i] > MAF && 1 - freq2[i] > MAF){
+                count++;
+            }
         }
 
+        if (SKIP) //prefilter all sites < MAF
+        {
+            cerr << "Removing all variants < " << MAF << " in both pops.\n";
+            flog << "Removing all variants < " << MAF << " in both pops.\n";
+            newfreq1 = new double [count];
+            newfreq2 = new double [count];
+            newMapData = initMapData(count);
+            newMapData->chr = mapData->chr;
+            int j = 0;
+            for (int locus = 0; locus < mapData->nloci; locus++)
+            {
+                if (freq1[i] > MAF && 1 - freq1[i] > MAF && 
+                    freq2[i] > MAF && 1 - freq2[i] > MAF)
+                {
+                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
+                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
+                    newMapData->locusName[j] = mapData->locusName[locus];
+                    newfreq1[j] = freq1[locus];
+                    newfreq2[j] = freq2[locus];
+                    j++;
+                }
+            }
+
+            newHapData = initHaplotypeData(hapData->nhaps, count);
+            newHapData2 = initHaplotypeData(hapData2->nhaps, count);
+
+            for (int hap = 0; hap < newHapData->nhaps; hap++)
+            {
+                j = 0;
+                for (int locus = 0; locus < mapData->nloci; locus++)
+                {
+                    if (freq1[i] > MAF && 1 - freq1[i] > MAF && 
+                        freq2[i] > MAF && 1 - freq2[i] > MAF)
+                    {
+                        newHapData->data[hap][j] = hapData->data[hap][locus];
+                        j++;
+                    }
+                }
+            }
+
+            for (int hap = 0; hap < newHapData2->nhaps; hap++)
+            {
+                j = 0;
+                for (int locus = 0; locus < mapData->nloci; locus++)
+                {
+                    if (freq1[i] > MAF && 1 - freq1[i] > MAF && 
+                        freq2[i] > MAF && 1 - freq2[i] > MAF)
+                    {
+                        newHapData2->data[hap][j] = hapData2->data[hap][locus];
+                        j++;
+                    }
+                }
+            }
+
+            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+
+            delete [] freq1;
+            delete [] freq2;
+            freq1 = newfreq1;
+            freq2 = newfreq2;
+            newfreq1 = NULL;
+            newfreq2 = NULL;
+
+            releaseHapData(hapData);
+            releaseHapData(hapData2);
+            hapData = newHapData;
+            hapData2 = newHapData2;
+            newHapData = NULL;
+            newHapData2 = NULL;
+
+            releaseMapData(mapData);
+            mapData = newMapData;
+            newMapData = NULL;
+        }
+
+        ihh1 = new double[mapData->nloci];
+        ihh2 = new double[mapData->nloci];
+        
         barInit(pbar, mapData->nloci, 78);
 
         if (CALC_XPNSL){
