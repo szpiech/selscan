@@ -31,7 +31,7 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 
 XXFEB2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with selscan computations from versions prior to v1.3.0). New statistics implemented.
 
-Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map. XP-EHH:iHS::XP-nSL:nSL
+Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map. XP-nSL:nSL::XP-EHH:iHS
 
 	--xpnsl <bool>: Set this flag to calculate XP-nSL.
 	Default: false
