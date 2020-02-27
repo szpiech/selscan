@@ -855,8 +855,8 @@ int main(int argc, char *argv[])
                 j = 0;
                 for (int locus = 0; locus < mapData->nloci; locus++)
                 {
-                    if (freq1[i] > MAF && 1 - freq1[i] > MAF && 
-                        freq2[i] > MAF && 1 - freq2[i] > MAF)
+                    if (freq1[locus] > MAF && 1 - freq1[locus] > MAF && 
+                        freq2[locus] > MAF && 1 - freq2[locus] > MAF)
                     {
                         newHapData2->data[hap][j] = hapData2->data[hap][locus];
                         j++;
