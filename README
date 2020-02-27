@@ -29,22 +29,32 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 	genome from haplotype structure. Nature 419: 832–837.
 
 
-XXFEB2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs. New statistics implemented.
+XXFEB2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with selscan computations from versions prior to v1.3.0). New statistics implemented.
+
 	Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map.
 	XP-EHH:iHS::XP-nSL:nSL
 
-	--xpnsl <bool>: Set this flag to calculate XP-nSL.
+		--xpnsl <bool>: Set this flag to calculate XP-nSL.
+		Default: false
 
 	Normalize XP-nSL with --xpnsl flag in norm.
 
 	lasugden adds the option to calculate XP-EHH with either definition of EHH. By default, uses original denominator (N choose 2). To use denominator defined in Wagh et al. for better performance on incomplete sweeps, use flag --wagh
 
-	--wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
-	Default: false
+		--wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
+		Default: false
 
 	Normalize these computations with --xpehh flag in norm.
 
-	norm v1.3.0 - 
+	selscan will now filter variants at the MAF threshold for nSL calculations.
+	selscan will now filter variants for XP-* calculations. A variant must have a MAF > ARG_MAF (dafault 0.05) in BOTH pops to be kept.
+
+	norm v1.3.0 - Now supports --xpnsl flag, which is identical to using --xpehh
+		--qbins now has a default value of 10 instead of 20
+		--bp-win analyses have been changed when analyzing XP-EHH and XP-nSL scores
+			Since positive scores suggest adaptation in the first (non-ref) population and negative scores suggest adaptation in the second (ref) population, we split windows into those enriched for extreme positive scores and those enriched for extreme negative scores.
+			*.windows output files therefore have additional columns:
+			<win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins>
 
 18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
