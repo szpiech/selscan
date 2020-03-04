@@ -562,8 +562,8 @@ int main(int argc, char *argv[])
 
     //Check if map is in order
     for (int i = 1; i < mapData->nloci; i++) {
-        if ( mapData->physicalPos[i] <= mapData->physicalPos[i - 1] ) {
-            cerr << "ERROR: Variant physical position must be strictly increasing.\n";
+        if ( mapData->physicalPos[i] < mapData->physicalPos[i - 1] ) {
+            cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
             cerr << "\t" << mapData->locusName[i] << " " << mapData->physicalPos[i] << " appears after";
             cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->physicalPos[i - 1] << "\n";
             return 1;
