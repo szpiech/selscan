@@ -117,6 +117,10 @@ const string DEFAULT_FILENAME_MAP = "__mapfile";
 const string HELP_FILENAME_MAP = "A mapfile with one row per variant site.\n\
 \tFormatted <chr#> <locusID> <genetic pos> <physical pos>.";
 
+const string ARG_PMAP = "--pmap";
+const bool DEFAULT_PMAP = false;
+const string HELP_PMAP = "Use physical map instead of a genetic map.";
+
 const string ARG_OUTFILE = "--out";
 const string DEFAULT_OUTFILE = "outfile";
 const string HELP_OUTFILE = "The basename for all output files.";
@@ -309,6 +313,7 @@ int main(int argc, char *argv[])
     params.addFlag(ARG_FILENAME_POP1_VCF, DEFAULT_FILENAME_POP1_VCF, "", HELP_FILENAME_POP1_VCF);
     params.addFlag(ARG_FILENAME_POP2_VCF, DEFAULT_FILENAME_POP2_VCF, "", HELP_FILENAME_POP2_VCF);
     params.addFlag(ARG_FILENAME_MAP, DEFAULT_FILENAME_MAP, "", HELP_FILENAME_MAP);
+    params.addFlag(ARG_PMAP, DEFAULT_PMAP, "", HELP_PMAP);
     params.addFlag(ARG_OUTFILE, DEFAULT_OUTFILE, "", HELP_OUTFILE);
     params.addFlag(ARG_CUTOFF, DEFAULT_CUTOFF, "", HELP_CUTOFF);
     params.addFlag(ARG_MAX_GAP, DEFAULT_MAX_GAP, "", HELP_MAX_GAP);
@@ -377,6 +382,7 @@ int main(int argc, char *argv[])
     double EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
     double MAF = params.getDoubleFlag(ARG_MAF);
 
+    bool USE_PMAP = params.getBoolFlag(ARG_PMAP);
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool WAGH = params.getBoolFlag(ARG_WAGH);
     bool CALC_IHS = params.getBoolFlag(ARG_IHS);
@@ -473,7 +479,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if ((!CALC_NSL && !CALC_XPNSL) && mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
+        if ((!CALC_NSL && !CALC_XPNSL) && (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0 && !USE_PMAP)) {
             cerr << "ERROR: Must also provide a mapfile.\n";
             return 1;
         }
@@ -520,7 +526,7 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            mapData = readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps);
+            mapData = readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps, USE_PMAP);
         }
         else if (VCF) {
             hapData = readHaplotypeDataVCF(vcfFilename);
@@ -533,8 +539,8 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            if(!CALC_NSL && !CALC_XPNSL) {
-                mapData = readMapData(mapFilename, hapData->nloci);
+            if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
+                mapData = readMapData(mapFilename, hapData->nloci, USE_PMAP);
             }
             else{//Load physical positions
                 mapData = readMapDataVCF(vcfFilename, hapData->nloci);
@@ -552,7 +558,7 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            mapData = readMapData(mapFilename, hapData->nloci);
+            mapData = readMapData(mapFilename, hapData->nloci, USE_PMAP);
         }
     }
     catch (...)

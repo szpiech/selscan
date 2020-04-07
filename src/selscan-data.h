@@ -51,8 +51,8 @@ void releaseMapData(MapData *data);
 //reads in map data and also does basic checks on integrity of format
 //returns a populated MapData structure if successful
 //throws an exception otherwise
-MapData *readMapData(string filename, int expected_loci);
-MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps);
+MapData *readMapData(string filename, int expected_loci, bool USE_PMAP);
+MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP);
 MapData *readMapDataVCF(string filename, int expected_loci); //Physical positions only
 
 //allocates the 2-d array and populated it with -9

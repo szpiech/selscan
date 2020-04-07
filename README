@@ -29,7 +29,9 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 	genome from haplotype structure. Nature 419: 832–837.
 
 
-XXFEB2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with selscan computations from versions prior to v1.3.0). New statistics implemented.
+XXAPR2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with selscan computations from versions prior to v1.3.0). New statistics implemented.
+
+	--pmap <bool>: Set this flag to use physical distance instead of genetic map
 
 Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map. XP-nSL:nSL::XP-EHH:iHS
 
@@ -173,9 +175,11 @@ To calculate iHS:
 To calculate nSL:
 
 ./selscan --nsl --vcf <vcf> --out <outfile>
+
 To calculate XP-nSL:
 
 ./selscan --xpnsl --vcf <vcf> --vcf-ref <vcf> --out <outfile>
+
 To calculate iHH12:
 
 ./selscan --ihh12 --vcf <vcf> --map <mapfile> --out <outfile>
@@ -257,6 +261,9 @@ To calculate XP-EHH:
 --pi-win <int>: Sliding window size in bp for calculating pi.
 	Default: 100
 
+--pmap <bool>: Use physical map instead of a genetic map.
+	Default: false
+
 --ref <string>: A hapfile with one row per haplotype, and one column per
 	variant. Variants should be coded 0/1. This is the 'reference'
 	population for XP-EHH calculations.  Ignored otherwise.
@@ -307,10 +314,11 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 
 
+
 ################################################################################
 ################################################################################
 
-norm v1.2.1a -- a program for downstream analysis of selscan output
+norm v1.3.0 -- a program for downstream analysis of selscan output
 Source code and binaries can be found at
 	<https://www.github.com/szpiech/selscan>
 
@@ -325,12 +333,12 @@ iHS: BF Voight, et al. (2006) PLoS Biology, 4: e72.
 
 To normalize selscan output across frequency bins:
 
-./norm [--ihs|--xpehh|--nsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
+./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
 
 To normalize selscan output and analyze non-overlapping windows of fixed bp for 
 extreme scores:
 
-./norm [--ihs|--xpehh|--nsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
+./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
 
 ----------Command Line Arguments----------
 
@@ -381,7 +389,7 @@ extreme scores:
 
 --qbins <int>: Outlying windows are binned by number of sites within each
 	window.  This is the number of quantile bins to use.
-	Default: 20
+	Default: 10
 
 --winsize <int>: The non-overlapping window size for calculating the percentage
 	of extreme SNPs.
@@ -389,3 +397,7 @@ extreme scores:
 
 --xpehh <bool>: Do XP-EHH normalization.
 	Default: false
+
+--xpnsl <bool>: Do XP-nSL normalization.
+	Default: false
+

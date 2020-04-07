@@ -20,7 +20,7 @@
 //reads in map data and also does basic checks on integrity of format
 //returns a populated MapData structure if successful
 //throws an exception otherwise
-MapData *readMapData(string filename, int expected_loci)
+MapData *readMapData(string filename, int expected_loci, bool USE_PMAP)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -77,13 +77,14 @@ MapData *readMapData(string filename, int expected_loci)
         fin >> data->locusName[locus];
         fin >> data->geneticPos[locus];
         fin >> data->physicalPos[locus];
+        if (USE_PMAP) data->geneticPos[locus] = data->physicalPos[locus];
     }
 
     fin.close();
     return data;
 }
 
-MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
+MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -140,6 +141,7 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps)
         fin >> data->locusName[locus];
         fin >> data->geneticPos[locus];
         fin >> data->physicalPos[locus];
+        if (USE_PMAP) data->geneticPos[locus] = data->physicalPos[locus];
         getline(fin, line);
     }
 
@@ -203,7 +205,7 @@ MapData *readMapDataVCF(string filename, int expected_loci) {
         fin >> data->physicalPos[locus];
         fin >> data->locusName[locus];
         getline(fin, line);
-        data->geneticPos[locus] = MISSING;
+        data->geneticPos[locus] = data->physicalPos[locus];
     }
 
     fin.close();
