@@ -6,8 +6,8 @@ Copyright (C) 2014  Zachary A Szpiech
 selscan currently implements EHH, iHS, XP-EHH, nSL, XP-nSL and iHH12 and requires phased data. 
 It should be run separately for each chromosome and population (or population 
 pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
-simply expects haplotype data to be coded 0/1.  Unstandardized iHS scores are 
-thus reported as ln(iHH1/iHH0) based on the coding you have provided.
+simply expects haplotype data to be coded 0/1.  Unstandardized iHS/nSL scores are 
+thus reported as log(iHH1/iHH0) based on the coding you have provided.
 
 Citations:
 
@@ -29,7 +29,7 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 	genome from haplotype structure. Nature 419: 832–837.
 
 
-XXAPR2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with selscan computations from versions prior to v1.3.0). New statistics implemented.
+XXMAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
 
 	--pmap <bool>: Set this flag to use physical distance instead of genetic map
 
@@ -46,8 +46,6 @@ lasugden adds the option to calculate XP-EHH with either definition of EHH. By d
 	Default: false
 
 Normalize these computations with --xpehh flag in norm.
-
-selscan will now filter variants at the MAF threshold for nSL calculations. selscan will now filter variants for XP-* calculations. A variant must have a MAF > ARG_MAF (dafault 0.05) in BOTH pops to be kept.
 
 norm v1.3.0 - Now supports --xpnsl flag, which is identical to using --xpehh.
 --qbins now has a default value of 10 instead of 20.
