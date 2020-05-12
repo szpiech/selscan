@@ -798,24 +798,28 @@ int main(int argc, char *argv[])
 
         freq1 = new double[hapData->nloci];
         freq2 = new double[hapData2->nloci];
-
+/*
         MapData *newMapData;
         HaplotypeData *newHapData;
         HaplotypeData *newHapData2;
         double *newfreq1;
         double *newfreq2;
-
-        int count = 0;
+*/
+        //int count = 0;
         for (int i = 0; i < hapData->nloci; i++)
         {
             freq1[i] = calcFreq(hapData, i);
             freq2[i] = calcFreq(hapData2, i);
+            /*
             if(freq1[i] > MAF && 1 - freq1[i] > MAF && 
                 freq2[i] > MAF && 1 - freq2[i] > MAF){
                 count++;
             }
+            */
         }
 
+        //Filtering kills power for XP stats
+/*
         if (SKIP) //prefilter all sites < MAF
         {
             cerr << "Removing all variants < " << MAF << " in both pops.\n";
@@ -891,7 +895,7 @@ int main(int argc, char *argv[])
             mapData = newMapData;
             newMapData = NULL;
         }
-
+*/
         ihh1 = new double[mapData->nloci];
         ihh2 = new double[mapData->nloci];
         
