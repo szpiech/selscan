@@ -853,6 +853,8 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     vector<int> *nSNPs = new vector<int>[nfiles];
     vector<double> *fracCritTop = new vector<double>[nfiles];
     vector<double> *fracCritBot = new vector<double>[nfiles];
+    vector<double> *maxScore = new vector<double>[nfiles];
+    vector<double> *minScore = new vector<double>[nfiles];
 
     ifstream fin;
     ofstream fout;
@@ -891,6 +893,8 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
         int numSNPs = 0;
         int numCritTop = 0;
         int numCritBot = 0;
+        double max = -99999;
+        double min = 99999;
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> name;
@@ -918,7 +922,11 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                     fracCritBot[i].push_back(double(numCritBot) / double(numSNPs));
                     numWindowsBot++;
                 }
-
+                maxScore[i].push_back(max);
+                minScore[i].push_back(min);
+                
+                max = -99999;
+                min = 99999;
                 winStart += winSize;
                 winEnd += winSize;
                 numSNPs = 0;
@@ -926,6 +934,8 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 numCritBot = 0;
             }
 
+            if(normedData > max) max = normedData;
+            if(normedData < min) min = normedData;
             numSNPs++;
             if(crit == 1) numCritTop++;
             else if (crit == -1) numCritBot++;
@@ -1147,7 +1157,20 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 percentile = 1.0;
             }
             
-            fout << percentile << endl;
+            fout << percentile << "\t";
+
+            if(maxScore[i][j] == -99999){
+                fout << "NA\t";
+            }
+            else{
+                fout << maxScore[i][j] << "\t";
+            }
+            if(minScore[i][j] == 99999){
+                fout << "NA\n";
+            }
+            else{
+                fout << minScore[i][j] << endl;
+            }
         }
         fout.close();
     }
