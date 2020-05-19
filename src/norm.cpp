@@ -1121,7 +1121,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
             if (nSNPs[i][j] < minSNPs)
             {
-                fout << "-1\t-1" << endl;
+                fout << "-1\t-1\tNA\tNA" << endl;
                 continue;
             }
 
