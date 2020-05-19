@@ -622,6 +622,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
     vector<int> *winStarts = new vector<int>[nfiles];
     vector<int> *nSNPs = new vector<int>[nfiles];
     vector<double> *fracCrit = new vector<double>[nfiles];
+    vector<double> *maxAbsScore = new vector<double>[nfiles];
 
     ifstream fin;
     ofstream fout;
@@ -656,6 +657,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;
+        int maxAbs = -99999;
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> name;
@@ -675,13 +677,16 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
                 else fracCrit[i].push_back(double(numCrit) / double(numSNPs));
 
                 if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
-
+                maxAbsScore[i].push_back(maxAbs);
+                
+                maxAbs = -99999;
                 winStart += winSize;
                 winEnd += winSize;
                 numSNPs = 0;
                 numCrit = 0;
             }
 
+            if(abs(normedData) > maxAbs) maxAbs = abs(normedData);
             numSNPs++;
             numCrit += crit;
         }
@@ -802,7 +807,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
+                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
                 continue;
             }
             double percentile = 100.0;
@@ -829,7 +834,13 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
                 percentile = 0.1;
             }
             */
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
+            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+            if(maxAbsScore[i][j] == -99999){
+                fout << "NA\n";
+            }
+            else{
+                fout << maxAbsScore[i][j] << endl;
+            }
         }
         fout.close();
     }
