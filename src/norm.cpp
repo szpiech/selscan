@@ -39,11 +39,13 @@ Source code and binaries can be found at\n\
 Citations:\n\
 \n\
 selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
-iHH12: R Torres, et al. (2017) bioRxiv, doi: https://doi.org/10.1101/181859.\n\
-       N Garud, et al. (2015) PLoS Genetics, 11: 1–32.\n\
+iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
+       N Garud et al. (2015) PLoS Genetics, 11: 1–32.\n\
 nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
-xpehh: PC Sabeti, et al. (2007) Nature, 449: 913–918.\n\
-iHS: BF Voight, et al. (2006) PLoS Biology, 4: e72.\n\
+XP-nSL: Szpiech et al. (2020) bioRxiv doi: \n\
+        https://doi.org/10.1101/2020.05.19.104380.\n\
+XP-EHH: PC Sabeti et al. (2007) Nature, 449: 913–918.\n\
+iHS: BF Voight et al. (2006) PLoS Biology, 4: e72.\n\
 \n\
 To normalize selscan output across frequency bins:\n\
 \n\
