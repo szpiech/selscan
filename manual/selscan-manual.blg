@@ -1,0 +1,46 @@
+This is BibTeX, Version 0.99d (TeX Live 2017)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: selscan-manual.aux
+The style file: natbib.bst
+Database file #1: Ref_ZAS.bib
+You've used 11 entries,
+            2378 wiz_defined-function locations,
+            608 strings with 6788 characters,
+and the built_in function-call counts, 6356 in all, are:
+= -- 537
+> -- 506
+< -- 2
++ -- 156
+- -- 154
+* -- 658
+:= -- 1152
+add.period$ -- 53
+call.type$ -- 11
+change.case$ -- 68
+chr.to.int$ -- 11
+cite$ -- 11
+duplicate$ -- 215
+empty$ -- 351
+format.name$ -- 169
+if$ -- 1216
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 11
+newline$ -- 58
+num.names$ -- 44
+pop$ -- 64
+preamble$ -- 1
+purify$ -- 68
+quote$ -- 0
+skip$ -- 138
+stack$ -- 0
+substring$ -- 368
+swap$ -- 42
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 99
+warning$ -- 0
+while$ -- 47
+width$ -- 0
+write$ -- 145

@@ -17,9 +17,9 @@
 
 \newcommand{\negspace}{\!\!\!\!\!\!\!\!\!\!\!\!}
 
-\title{{\tt selscan} v1.2.0a User Manual}
+\title{{\tt selscan} v1.3.0 User Manual}
 \date{\today}
-\author{Zachary A Szpiech}
+\author{Zachary A. Szpiech}
 
 
 \begin{document}
@@ -45,24 +45,24 @@
 
 Extended Haplotype Homozygosity (EHH) \cite[]{SabetiEtAl02}, Integrated Haplotype 
 Score (iHS) \cite[]{VoightEtAl06}, Cross-population Extended Haplotype 
-Homozygosity (XPEHH) \cite[]{SabetiEtAl07}, and nSL \cite[]{FerrerAdmetllaEtAl14} are statistics designed to use phased genotypes to identify putative regions
+Homozygosity (XPEHH) \cite[]{SabetiEtAl07}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, nSL \cite[]{FerrerAdmetllaEtAl14}, and XP-nSL \cite[]{SzpiechEtAl20} are statistics designed to use phased genotypes to identify putative regions
 of recent or ongoing positive selection in genomes.  They are all based on the model of 
-a hard selective sweep, where a {\it de novo} adaptive mutation arises on a haplotype
-that quickly sweeps toward fixation, reducing diversity around the locus.  If selection is strong enough, this occurs
+a selective sweep, where a {\it de novo} adaptive mutation arises on a haplotype
+that quickly sweeps toward fixation, reducing diversity around the locus (a "hard" sweep).  If selection is strong enough, this occurs
 faster than recombination or mutation can act to break up the haplotype, and thus a signal of high 
-haplotype homozygosity can be observed extending from an adaptive locus.  These statistics, nSL in particular, retain some power to detect soft sweeps as well.
+haplotype homozygosity can be observed extending from an adaptive locus.  nSL and XP-nSL in retain power to detect soft sweeps as well.
 
 As genetics data sets grow larger both in number of individuals and number of loci,
 there is a need for a fast and efficient publicly available implementation of these statistics. Below we 
 introduce these statistics and provide concise definitions for their calculations.  
 
-When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}, iHH12 \cite[]{GarudEtAl15, TorresEtAl17}.
+When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, XP-nSL \cite[]{SzpiechEtAl20}.
 
 This introduction has been adapted from \cite{SzpiechAndHernandez14}.
 
 \section{Obtaining {\tt selscan}}
 
-{\tt selscan} pre-built binaries and source code are available at {\tt https://github.com/szpiech/selscan}.  Binaries have been compiled on OSX 10.8.5, Ubuntu 12.04 (LTS), and Windows 7, but they should function across most versions of these operating systems.  To compile from source, change directories to the {\tt src/} directory and type {\tt make}.  Some minor modification (commenting and uncommenting certain lines) to the Makefile may be necessary depending on your target OS.  {\tt selscan} depends on the POSIX standard threading library (pthreads) and the zlib library ({\tt http://www.zlib.net/}). A win32 implementation of pthreads is available at {\tt https://www.sourceware.org/pthreads-win32/}, and a win32 implementation of zlib is available at {\tt http://gnuwin32.sourceforge.net/packages/zlib.htm}.  The windows version of {\tt selscan} was built using a MinGW environment ({\tt http://www.mingw.org/}), although it should only be necessary to set this environment up if you wish to compile from source on Windows.
+{\tt selscan} pre-built binaries and source code are available at {\tt https://github.com/szpiech/selscan}.  Binaries have been compiled on OSX, Linux, and Windows, and they should function across most versions of these operating systems.  To compile from source, change directories to the {\tt src/} directory and type {\tt make}.  Some minor modification (commenting and uncommenting certain lines) to the Makefile may be necessary depending on your target OS.  {\tt selscan} depends on the POSIX standard threading library (pthreads) and the zlib library ({\tt http://www.zlib.net/}). A win32 implementation of pthreads is available at {\tt https://www.sourceware.org/pthreads-win32/}, and a win32 implementation of zlib is available at {\tt http://gnuwin32.sourceforge.net/packages/zlib.htm}.  The windows version of {\tt selscan} was built using a MinGW environment ({\tt http://www.mingw.org/}), although it should only be necessary to set this environment up if you wish to compile from source on Windows.
 
 The companion program {\tt norm} depends on GNU GSL ({\tt http://www.gnu.org/software/gsl/gsl.html}), and precompiled static libraries for each OS are included in the source code.
 
@@ -87,7 +87,10 @@ To calculate EHH:
 \noindent To calculate iHH12:
 
 {\tt selscan --ihh12 --hap <haplotypes> --map <mapfile> --out <outfile>}
+~\\
+\noindent To calculate XP-nSL:
 
+{\tt selscan --xpnsl --hap <pop1 haplotypes> --ref <pop2 haplotypes> --out <outfile>}
 
 \section{Statistics implemented}
 
@@ -219,9 +222,28 @@ Note that, for nSL, $g(x_{i-1},x_i) = 1$.
 For the nSL option, there is no EHH decay cutoff, but the computation stops when more than $200$ snps are included in building the haplotypes (can be changed with {\tt --max-extend-nsl}).  Scaling of $g(x_{i-1},x_i)$ and handling of gaps is done as for iHS, and these parameters are definable 
 on the {\tt selscan} command line.
 
+\subsection{XP-nSL}\label{sec:xpnsl}
+
+XP-nSL is a statistic related to XP-EHH in the same way nSL is related to iHS and was introduced by \cite{SzpiechEtAl20}.  XP-nSL can be reformulated to conform to the notation given above.  XP-nSL is calculated as a log-ratio of the $SL$ statistic calculated for each population's haplotype pools.  The essential difference from XP-EHH is the removal of genetic map information.  Whereas in Equation \ref{eq:ihh} we integrate with respect to a genetic map, for the calculation of nSL $g(x_i,x_j) = |j-i|$.  Thus,
+
+\begin{align}
+SL =& \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH(x_{i-1}) + EHH(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH(x_{i-1}) + EHH(x_i)\right)g(x_{i-1},x_i),
+\end{align}
+and
+\begin{equation}
+XP-nSL = \frac{\ln\left(\frac{SL_A}{SL_B}\right) - E\Big[\ln\left(\frac{SL_A}{SL_B}\right)\Big]}{SD\Big[\ln\left(\frac{SL_A}{SL_B}\right)\Big]}.
+\end{equation}
+Note that, for nSL, $g(x_{i-1},x_i) = 1$.
+
+For the XP-nSL option, there is no EHH decay cutoff, but the computation stops when more than $200$ snps are included in building the haplotypes (can be changed with {\tt --max-extend-nsl}).  Scaling of $g(x_{i-1},x_i)$ and handling of gaps is done as for iHS, and these parameters are definable 
+on the {\tt selscan} command line. For XP-nSL computations, data provided with the flags {\tt --hap}, {\tt --tped}, or {\tt --vcf} correspond to population $A$, and data provided with the flags {\tt --ref}, {\tt --tped-ref}, or {\tt --vcf-ref} correspond to population $B$.
+
+
 \subsection{Integrated Haplotype Homozygosity Pooled (iHH12)}\label{sec:ihh12}
 
-iHH12 \cite[]{TorresEtAl17} is adapted from the H12 statistic \cite[]{GarudEtAl15}, with better power than iHS to detect soft sweeps. For this statistic, we calculate the integrated haplotype homozygosity of the entire sample, but we first collapse the top two most frequent haplotypes into a single class.
+iHH12 \cite[]{TorresEtAl18} is adapted from the H12 statistic \cite[]{GarudEtAl15}, with better power than iHS to detect soft sweeps. For this statistic, we calculate the integrated haplotype homozygosity of the entire sample, but we first collapse the top two most frequent haplotypes into a single class.
 
 To calculate iHH12 at a site, we first calculate the integrated haplotype 
 homozygosity (iHH) for the sample using $EHH12$ via trapezoidal quadrature.
@@ -378,6 +400,11 @@ For nSL the file will be named {\tt <outfile>.nsl[.alt].out} and formatted as
 <locusID> <physicalPos> <'1' freq> <sl1> <sl0> <unstandardized nSL>
 \end{lstlisting}
 ~\\
+For XP-nSL the file will be named {\tt <outfile>.xpnsl[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <geneticPos> <popA '1' freq> <slA> <popB '1' freq> <slB> <unstandardized XPnSL>
+\end{lstlisting}
+~\\
 For iHH12 the file will be named {\tt <outfile>.ihh12[.alt].out} and formatted as
 \begin{lstlisting}
 <locusID> <physicalPos> <'1' freq> <unstandardized iHH12>
@@ -400,15 +427,19 @@ Use {\tt --ehh <Locus ID>} to specify a core locus and calculate EHH curves for 
 
 \subsubsection{{\tt --ihs}}
 
-Set {\tt --ihs} to calculate iHS (see Section \ref{sec:ihs}).  Associated flags: {\tt --cutoff}, {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}, {\tt --skip-low-freq}.
+Set {\tt --ihs} to calculate iHS (see Section \ref{sec:ihs}).  Associated flags: {\tt --pmap}, {\tt --cutoff}, {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}, {\tt --skip-low-freq}.
 
 \subsubsection{{\tt --xpehh}}
 
-Set {\tt --xpehh} to calculate XP-EHH (see Section \ref{sec:xpehh}).  Associated flags: {\tt --cutoff}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}.
+Set {\tt --xpehh} to calculate XP-EHH (see Section \ref{sec:xpehh}).  Associated flags: {\tt --pmap}, {\tt --cutoff}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}.
 
 \subsubsection{{\tt --nsl}}
 
 Set {\tt --nsl} to calculate nSL (see Section \ref{sec:nsl}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend-nsl}, {\tt --trunc-ok}, {\tt --alt}.
+
+\subsubsection{{\tt --xpnsl}}
+
+Set {\tt --xpnsl} to calculate XP-nSL (see Section \ref{sec:xpnsl}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend-nsl}, {\tt --trunc-ok}, {\tt --alt}.
 
 \subsubsection{{\tt --ihh12}}
 
@@ -419,6 +450,10 @@ Set {\tt --ihh12} to calculate iHH12 (see Section \ref{sec:ihh12}).  Associated 
 Set {\tt --pi} to calculate the mean pairwise sequence difference within a sliding window along the genome (see Section \ref{sec:pi}).  Associated flag: {--pi-win}.
 
 \subsection{Controling How a Statistic is Computed}
+
+\subsubsection{{\tt --pmap}}
+
+Set {\tt--pmap} to use physical distances instead of genetic distances for iHS and XP-EHH computations.
 
 \subsubsection{{\tt --cutoff <double>}}
 
@@ -442,7 +477,7 @@ Use {\tt --max-extend <int>} to set an additional stopping condition for iHS and
 
 \subsubsection{{\tt --max-extend-nsl <int>}}
 
-Use {\tt --max-extend-nsl <int>} to set a stopping condition for nSL computations.  If the EHH decay curve has extended $MAX\_EXTEND$ loci away from the core, truncate the curve here and integrate.  Default is $100$ loci; set $\le 0$ for no restriction.
+Use {\tt --max-extend-nsl <int>} to set a stopping condition for nSL and XP-nSL computations.  If the EHH decay curve has extended $MAX\_EXTEND$ loci away from the core, truncate the curve here and integrate.  Default is $100$ loci; set $\le 0$ for no restriction.
 
 \subsubsection{{\tt --trunc-ok}}
 
@@ -479,6 +514,7 @@ Set {\tt --pi-win <int>} to define the size of the non-overlapping windows in ba
 
 \subsection{Other Options}
 
+
 \subsubsection{{\tt --ihs-detail}}
 
 Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($1$) and derived ($0$) in addition to iHS.
@@ -492,6 +528,37 @@ Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($1$)
 \section{Change Log}
 
 \begin{lstlisting}
+20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
+
+	--pmap <bool>: Set this flag to use physical distance instead of genetic map
+
+Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map. XP-nSL:nSL::XP-EHH:iHS
+
+	--xpnsl <bool>: Set this flag to calculate XP-nSL.
+	Default: false
+
+Normalize XP-nSL with --xpnsl flag in norm.
+
+lasugden adds the option to calculate XP-EHH with either definition of EHH. By default, uses original denominator (N choose 2). To use denominator defined in Wagh et al. for better performance on incomplete sweeps, use flag --wagh
+
+	--wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
+	Default: false
+
+Normalize these computations with --xpehh flag in norm.
+
+norm v1.3.0 - Now supports --xpnsl flag, which is identical to using --xpehh.
+--qbins now has a default value of 10 instead of 20.
+--bp-win analyses have been changed when analyzing XP-EHH and XP-nSL scores. Since positive scores suggest adaptation in the first (non-ref) population and negative scores suggest adaptation in the second (ref) population, we split windows into those enriched for extreme positive scores and those enriched for extreme negative scores.
+min and max scores are given for each window for XP statistics, and the max |score| is reported for iHS and nSL stats.
+
+*.windows output files therefore have additional columns:
+
+For XP stats:
+<win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
+
+For iHS and nSL:
+<win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
+
 18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
 25AUG2017 - norm v1.2.1 released to fix a crash when --nsl flag is used.

@@ -14,6 +14,8 @@ Citations:
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
 	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
 	31: 2824-2827.
+ZA Szpiech et al. (2020) High-altitude adaptation in rhesus macaques. bioRxiv 
+	doi: https://doi.org/10.1101/2020.05.19.104380
 R Torres et al. (2018) Human demographic history has amplified the effects of
 	background selection across the genome. PLoS Genetics 15: e1007898.
 N Garud et al. (2015) Recent selective sweeps in North American Drosophila
@@ -29,7 +31,7 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 	genome from haplotype structure. Nature 419: 832–837.
 
 
-XXMAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
+20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
 
 	--pmap <bool>: Set this flag to use physical distance instead of genetic map
 
@@ -50,11 +52,16 @@ Normalize these computations with --xpehh flag in norm.
 norm v1.3.0 - Now supports --xpnsl flag, which is identical to using --xpehh.
 --qbins now has a default value of 10 instead of 20.
 --bp-win analyses have been changed when analyzing XP-EHH and XP-nSL scores. Since positive scores suggest adaptation in the first (non-ref) population and negative scores suggest adaptation in the second (ref) population, we split windows into those enriched for extreme positive scores and those enriched for extreme negative scores.
-min and max scores are given for each window now.
+min and max scores are given for each window for XP statistics, and the max |score| is reported for iHS and nSL stats.
 
 *.windows output files therefore have additional columns:
 
+For XP stats:
 <win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
+
+For iHS and nSL:
+<win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
+
 
 18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
