@@ -42,8 +42,8 @@ selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
 iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
        N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
 nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
-XP-nSL: Szpiech et al. (2020) bioRxiv doi: \n\
-        https://doi.org/10.1101/2020.05.19.104380.\n\
+XP-nSL: Szpiech et al. (2021) Evolution Letters doi: \n\
+        https://doi.org/10.1002/evl3.232\n\
 XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.\n\
         K Wagh et al. (2012) PloS ONE 7: e44751.\n\
 iHS: BF Voight et al. (2006) PLoS Biology 4: e72.\n\
@@ -2181,7 +2181,7 @@ void calc_ihs(void *order)
         {
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Locus " << locusName[locus]
-                    << " has MAF < " << MAF << ". Skipping calculation at " << locusName[locus] << "\n";
+                    << " has MAF < " << MAF << ". Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
             pthread_mutex_unlock(&mutex_log);
             ihs[locus] = MISSING;
             skipLocus = 0;
@@ -2222,7 +2222,7 @@ void calc_ihs(void *order)
                         << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -2232,7 +2232,7 @@ void calc_ihs(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus]
-                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2349,7 +2349,7 @@ void calc_ihs(void *order)
                         << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -2359,7 +2359,7 @@ void calc_ihs(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus]
-                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2509,7 +2509,7 @@ void calc_nsl(void *order)
         {
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Locus " << locusName[locus]
-                    << " has MAF < " << MAF << ". Skipping calculation at " << locusName[locus] << "\n";
+                    << " has MAF < " << MAF << ". Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
             pthread_mutex_unlock(&mutex_log);
             ihs[locus] = MISSING;
             skipLocus = 0;
@@ -2544,7 +2544,7 @@ void calc_nsl(void *order)
                         << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -2554,7 +2554,7 @@ void calc_nsl(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus]
-                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2668,7 +2668,7 @@ void calc_nsl(void *order)
                         << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -2678,7 +2678,7 @@ void calc_nsl(void *order)
             {
                 pthread_mutex_lock(&mutex_log);
                 (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus]
-                        << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                        << "bp > " << MAX_GAP << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2854,11 +2854,10 @@ void calc_soft_ihs(void *order)
             if (nextLocus < 0)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
-                        << ". Skipping calculation at " << locusName[locus] << ". ";
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -2868,7 +2867,8 @@ void calc_soft_ihs(void *order)
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP 
+                << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -2967,11 +2967,10 @@ void calc_soft_ihs(void *order)
             if (nextLocus > nloci - 1)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF
-                        << ". Skipping calculation at " << locusName[locus] << ". ";
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << EHH_CUTOFF << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -2981,7 +2980,7 @@ void calc_soft_ihs(void *order)
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -3205,7 +3204,7 @@ void calc_xpihh(void *order)
                         << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -3214,7 +3213,8 @@ void calc_xpihh(void *order)
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[currentLocus] - physicalPos[nextLocus] << "bp > " << MAX_GAP 
+                << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
@@ -3433,7 +3433,7 @@ void calc_xpihh(void *order)
                         << ". ";
                 if (!TRUNC){
                     skipLocus = 1;
-                    (*flog) << "Skipping calculation at " << locusName[locus];
+                    (*flog) << "Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus];
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
@@ -3442,7 +3442,7 @@ void calc_xpihh(void *order)
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
             {
                 pthread_mutex_lock(&mutex_log);
-                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at " << locusName[locus] << "\n";
+                (*flog) << "WARNING: Reached a gap of " << physicalPos[nextLocus] - physicalPos[currentLocus] << "bp > " << MAX_GAP << "bp. Skipping calculation at position " << physicalPos[locus] << " id: " << locusName[locus] << "\n";
                 pthread_mutex_unlock(&mutex_log);
                 skipLocus = 1;
                 break;
