@@ -45,7 +45,7 @@
 
 Extended Haplotype Homozygosity (EHH) \cite[]{SabetiEtAl02}, Integrated Haplotype 
 Score (iHS) \cite[]{VoightEtAl06}, Cross-population Extended Haplotype 
-Homozygosity (XPEHH) \cite[]{SabetiEtAl07}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, nSL \cite[]{FerrerAdmetllaEtAl14}, and XP-nSL \cite[]{SzpiechEtAl20} are statistics designed to use phased genotypes to identify putative regions
+Homozygosity (XPEHH) \cite[]{SabetiEtAl07}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, nSL \cite[]{FerrerAdmetllaEtAl14}, and XP-nSL \cite[]{SzpiechEtAl21} are statistics designed to use phased genotypes to identify putative regions
 of recent or ongoing positive selection in genomes.  They are all based on the model of 
 a selective sweep, where a {\it de novo} adaptive mutation arises on a haplotype
 that quickly sweeps toward fixation, reducing diversity around the locus (a "hard" sweep).  If selection is strong enough, this occurs
@@ -56,7 +56,7 @@ As genetics data sets grow larger both in number of individuals and number of lo
 there is a need for a fast and efficient publicly available implementation of these statistics. Below we 
 introduce these statistics and provide concise definitions for their calculations.  
 
-When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, XP-nSL \cite[]{SzpiechEtAl20}.
+When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, XP-nSL \cite[]{SzpiechEtAl21}.
 
 This introduction has been adapted from \cite{SzpiechAndHernandez14}.
 
@@ -224,7 +224,7 @@ on the {\tt selscan} command line.
 
 \subsection{XP-nSL}\label{sec:xpnsl}
 
-XP-nSL is a statistic related to XP-EHH in the same way nSL is related to iHS and was introduced by \cite{SzpiechEtAl20}.  XP-nSL can be reformulated to conform to the notation given above.  XP-nSL is calculated as a log-ratio of the $SL$ statistic calculated for each population's haplotype pools.  The essential difference from XP-EHH is the removal of genetic map information.  Whereas in Equation \ref{eq:ihh} we integrate with respect to a genetic map, for the calculation of nSL $g(x_i,x_j) = |j-i|$.  Thus,
+XP-nSL is a statistic related to XP-EHH in the same way nSL is related to iHS and was introduced by \cite{SzpiechEtAl21}.  XP-nSL can be reformulated to conform to the notation given above.  XP-nSL is calculated as a log-ratio of the $SL$ statistic calculated for each population's haplotype pools.  The essential difference from XP-EHH is the removal of genetic map information.  Whereas in Equation \ref{eq:ihh} we integrate with respect to a genetic map, for the calculation of nSL $g(x_i,x_j) = |j-i|$.  Thus,
 
 \begin{align}
 SL =& \notag\\
@@ -517,7 +517,7 @@ Set {\tt --pi-win <int>} to define the size of the non-overlapping windows in ba
 
 \subsubsection{{\tt --ihs-detail}}
 
-Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($1$) and derived ($0$) in addition to iHS.
+Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($0$) and derived ($1$) in addition to iHS.
 
 \subsubsection{{\tt --threads <int>}}
 

@@ -1,11 +1,11 @@
-This is BibTeX, Version 0.99d (TeX Live 2017)
+This is BibTeX, Version 0.99d (TeX Live 2019)
 Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: selscan-manual.aux
 The style file: natbib.bst
 Database file #1: Ref_ZAS.bib
 You've used 11 entries,
             2378 wiz_defined-function locations,
-            608 strings with 6788 characters,
+            608 strings with 6863 characters,
 and the built_in function-call counts, 6356 in all, are:
 = -- 537
 > -- 506
