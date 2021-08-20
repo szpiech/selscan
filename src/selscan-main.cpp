@@ -456,6 +456,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (CALC_PI && UNPHASED){
+        cerr << "ERROR: --pi and --unphased currently incompatible.\n";
+        return 1;
+    }
+
     if (numThreads < 1)
     {
         cerr << "ERROR: Must run with one or more threads.\n";
