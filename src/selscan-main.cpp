@@ -450,6 +450,12 @@ int main(int argc, char *argv[])
 
     if (ALT) outFilename += ".alt";
 
+    if (WAGH && UNPHASED){
+        cerr << "ERROR: --wagh and --unphased currently incompatible.\n\t\
+        Consider --xpehh or --xpnsl with --unphased for two population selection statistics.\n";
+        return 1;
+    }
+
     if (numThreads < 1)
     {
         cerr << "ERROR: Must run with one or more threads.\n";
@@ -2630,7 +2636,7 @@ void calc_ihs(void *order)
                 ihs[locus] = log10(derived_ihh / ancestral_ihh);
             }
             if (WRITE_DETAILED_IHS) {
-                if(unphased){//for the time being this is going to report same as phased
+                if(unphased){//for the time being this is going to report "same" as phased
                     ihhDerivedLeft[locus]    = derived_ihh_left;
                     ihhDerivedRight[locus]   = derived_ihh_right;
                     ihhAncestralLeft[locus]  = ancestral_ihh_left;
@@ -3419,6 +3425,8 @@ void calc_xpihh(void *order)
     int numThreads = p->params->getIntFlag(ARG_THREAD);
     bool CALC_XPNSL = p->params->getBoolFlag(ARG_XPNSL);
 
+    bool unphased = p->params->getBoolFlag(ARG_UNPHASED);
+
     int MAX_EXTEND;
     if (!CALC_XPNSL){
         MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
@@ -3456,6 +3464,14 @@ void calc_xpihh(void *order)
         double ihhPop2 = 0;
         double derivedCount2 = 0;
 
+        //For unphased analyses
+        double ancestralCount1 = 0;
+        double ancestralCount2 = 0;
+        double ancestralCountPooled = 0;
+        double hetCount1 = 0;
+        double hetCount2 = 0;
+        double hetCountPooled = 0;
+
         int currentLocus = locus;
         int nextLocus = locus - 1;
         bool skipLocus = 0;
@@ -3475,7 +3491,15 @@ void calc_xpihh(void *order)
                 //sprintf(digit, "%d", data1[hap][locus]);
                 haplotypeList1[hap] = data1[hap][locus];
                 haplotypeListPooled[hap] = data1[hap][locus];
-                derivedCount1 += ( data1[hap][locus] == '1') ? 1 : 0;
+                if(unphased){
+                    derivedCount1 += ( data1[hap][locus] == '2' ) ? 1 : 0;
+                    ancestralCount1 += ( data1[hap][locus] == '0' ) ? 1 : 0;
+                    hetCount1 += ( data1[hap][locus] == '1' ) ? 1 : 0;
+                }
+                else{
+                    derivedCount1 += ( data1[hap][locus] == '1' ) ? 1 : 0;
+                    ancestralCount1 += ( data1[hap][locus] == '0' ) ? 1 : 0;
+                }
             }
             //Pop2
             else
@@ -3483,25 +3507,42 @@ void calc_xpihh(void *order)
                 //sprintf(digit, "%d", data2[hap - nhaps1][locus]);
                 haplotypeList2[hap - nhaps1] = data2[hap - nhaps1][locus];
                 haplotypeListPooled[hap] = data2[hap - nhaps1][locus];
-                derivedCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
+                if(unphased){
+                    derivedCount2 += ( data2[hap - nhaps1][locus] == '2' ) ? 1 : 0;
+                    ancestralCount2 += ( data2[hap - nhaps1][locus] == '0' ) ? 1 : 0;
+                    hetCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
+                }
+                else{
+                    derivedCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
+                    ancestralCount2 += ( data2[hap - nhaps1][locus] == '0' ) ? 1 : 0;
+                }
             }
         }
 
         derivedCountPooled = derivedCount1 + derivedCount2;
+        ancestralCountPooled = ancestralCount1 + ancestralCount2;
+        hetCountPooled = hetCount1 + hetCount2;
 
         //when calculating xp-ehh, ehh does not necessarily start at 1
         if (ALT)
         {
-            double f = double(derivedCount1) / double(nhaps1);
-            current_pop1_ehh = f * f + (1 - f) * (1 - f);
+            double fD = double(derivedCount1) / double(nhaps1);
+            double fA = double(ancestralCount1) / double(nhaps1);
+            double fH = double(hetCount1) / double(nhaps1);
+
+            current_pop1_ehh = fD * fD + fA * fA + fH * fH;
             previous_pop1_ehh = current_pop1_ehh;
 
-            f = double(derivedCount2) / double(nhaps2);
-            current_pop2_ehh = f * f + (1 - f) * (1 - f);
+            fD = double(derivedCount2) / double(nhaps2);
+            fA = double(ancestralCount2) / double(nhaps2);
+            fH = double(hetCount2) / double(nhaps2);
+            current_pop2_ehh = fD * fD + fA * fA + fH * fH;
             previous_pop2_ehh = current_pop2_ehh;
 
-            f = double(derivedCountPooled) / double(nhaps1 + nhaps2);
-            current_pooled_ehh = f * f + (1 - f) * (1 - f);
+            fD = double(derivedCountPooled) / double(nhaps1 + nhaps2);
+            fA = double(ancestralCountPooled) / double(nhaps1 + nhaps2);
+            fH = double(hetCountPooled) / double(nhaps1 + nhaps2);
+            current_pooled_ehh = fD * fD + fA * fA + fH * fH;
             previous_pooled_ehh = current_pooled_ehh;
         }
         else
@@ -3521,17 +3562,21 @@ void calc_xpihh(void *order)
             else
             {
                 current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-                current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+                current_pop1_ehh += (ancestralCount1 > 1) ? nCk(ancestralCount1, 2) / nCk(nhaps1, 2) : 0;
+                current_pop1_ehh += (hetCount1 > 1) ? nCk(hetCount1, 2) / nCk(nhaps1, 2) : 0;
+
                 previous_pop1_ehh = current_pop1_ehh;
 
                 current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-                current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
+                current_pop2_ehh += (ancestralCount2 > 1) ? nCk(ancestralCount2, 2) / nCk(nhaps2, 2) : 0;
+                current_pop2_ehh += (hetCount2 > 1) ? nCk(hetCount2, 2) / nCk(nhaps2, 2) : 0;
                 previous_pop2_ehh = current_pop2_ehh;        
 
             }
 
             current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
+            current_pooled_ehh += (ancestralCountPooled > 1) ? nCk(ancestralCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
+            current_pooled_ehh += (hetCountPooled > 1) ? nCk(hetCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
             previous_pooled_ehh = current_pooled_ehh;    
         }
 
@@ -3663,6 +3708,14 @@ void calc_xpihh(void *order)
         previous_pop2_ehh = 1;
         derivedCount2 = 0;
 
+        //For unphased analyses
+        ancestralCount1 = 0;
+        ancestralCount2 = 0;
+        ancestralCountPooled = 0;
+        hetCount1 = 0;
+        hetCount2 = 0;
+        hetCountPooled = 0;
+
         currentLocus = locus;
         nextLocus = locus + 1;
         skipLocus = 0;
@@ -3672,95 +3725,102 @@ void calc_xpihh(void *order)
         haplotypeList1 = new string[nhaps1];
         haplotypeList2 = new string[nhaps2];
         haplotypeListPooled = new string[nhaps1 + nhaps2];
-        for (int hap = 0; hap < nhaps1 + nhaps2; hap++)
+for (int hap = 0; hap < nhaps1 + nhaps2; hap++)
         {
+            //char digit[2];
             //Pop1
             if (hap < nhaps1)
             {
                 //sprintf(digit, "%d", data1[hap][locus]);
                 haplotypeList1[hap] = data1[hap][locus];
-                derivedCount1 += ( data1[hap][locus] == '1' ) ? 1 : 0;
-
-                //Pooled
                 haplotypeListPooled[hap] = data1[hap][locus];
+                if(unphased){
+                    derivedCount1 += ( data1[hap][locus] == '2' ) ? 1 : 0;
+                    ancestralCount1 += ( data1[hap][locus] == '0' ) ? 1 : 0;
+                    hetCount1 += ( data1[hap][locus] == '1' ) ? 1 : 0;
+                }
+                else{
+                    derivedCount1 += ( data1[hap][locus] == '1' ) ? 1 : 0;
+                    ancestralCount1 += ( data1[hap][locus] == '0' ) ? 1 : 0;
+                }
             }
             //Pop2
             else
             {
                 //sprintf(digit, "%d", data2[hap - nhaps1][locus]);
                 haplotypeList2[hap - nhaps1] = data2[hap - nhaps1][locus];
-                derivedCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
-
-                //Pooled
                 haplotypeListPooled[hap] = data2[hap - nhaps1][locus];
+                if(unphased){
+                    derivedCount2 += ( data2[hap - nhaps1][locus] == '2' ) ? 1 : 0;
+                    ancestralCount2 += ( data2[hap - nhaps1][locus] == '0' ) ? 1 : 0;
+                    hetCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
+                }
+                else{
+                    derivedCount2 += ( data2[hap - nhaps1][locus] == '1' ) ? 1 : 0;
+                    ancestralCount2 += ( data2[hap - nhaps1][locus] == '0' ) ? 1 : 0;
+                }
             }
         }
 
         derivedCountPooled = derivedCount1 + derivedCount2;
+        ancestralCountPooled = ancestralCount1 + ancestralCount2;
+        hetCountPooled = hetCount1 + hetCount2;
 
         //when calculating xp-ehh, ehh does not necessarily start at 1
         if (ALT)
         {
-            double f = double(derivedCount1) / double(nhaps1);
-            current_pop1_ehh = f * f + (1 - f) * (1 - f);
+            double fD = double(derivedCount1) / double(nhaps1);
+            double fA = double(ancestralCount1) / double(nhaps1);
+            double fH = double(hetCount1) / double(nhaps1);
+
+            current_pop1_ehh = fD * fD + fA * fA + fH * fH;
             previous_pop1_ehh = current_pop1_ehh;
 
-            f = double(derivedCount2) / double(nhaps2);
-            current_pop2_ehh = f * f + (1 - f) * (1 - f);
+            fD = double(derivedCount2) / double(nhaps2);
+            fA = double(ancestralCount2) / double(nhaps2);
+            fH = double(hetCount2) / double(nhaps2);
+            current_pop2_ehh = fD * fD + fA * fA + fH * fH;
             previous_pop2_ehh = current_pop2_ehh;
 
-            f = double(derivedCountPooled) / double(nhaps1 + nhaps2);
-            current_pooled_ehh = f * f + (1 - f) * (1 - f);
+            fD = double(derivedCountPooled) / double(nhaps1 + nhaps2);
+            fA = double(ancestralCountPooled) / double(nhaps1 + nhaps2);
+            fH = double(hetCountPooled) / double(nhaps1 + nhaps2);
+            current_pooled_ehh = fD * fD + fA * fA + fH * fH;
             previous_pooled_ehh = current_pooled_ehh;
         }
         else
         {
-
             if (WAGH)
             {
+
                 current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
                 current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
                 previous_pop1_ehh = current_pop1_ehh;
 
                 current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
                 current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-                previous_pop2_ehh = current_pop2_ehh;                  
+                previous_pop2_ehh = current_pop2_ehh;
+
             }
             else
             {
                 current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-                current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
+                current_pop1_ehh += (ancestralCount1 > 1) ? nCk(ancestralCount1, 2) / nCk(nhaps1, 2) : 0;
+                current_pop1_ehh += (hetCount1 > 1) ? nCk(hetCount1, 2) / nCk(nhaps1, 2) : 0;
+
                 previous_pop1_ehh = current_pop1_ehh;
 
                 current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-                current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0; 
-                previous_pop2_ehh = current_pop2_ehh;                
+                current_pop2_ehh += (ancestralCount2 > 1) ? nCk(ancestralCount2, 2) / nCk(nhaps2, 2) : 0;
+                current_pop2_ehh += (hetCount2 > 1) ? nCk(hetCount2, 2) / nCk(nhaps2, 2) : 0;
+                previous_pop2_ehh = current_pop2_ehh;        
+
             }
-            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            // previous_pop1_ehh = current_pop1_ehh;
-
-            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            // previous_pop2_ehh = current_pop2_ehh;
-
-            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1 - derivedCount1, 2) / nCk(nhaps1, 2) : 0;
-            // current_pop1_ehh = (derivedCount1 > 1) ? nCk(derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
-            // current_pop1_ehh += (nhaps1 - derivedCount1 > 1) ? nCk(nhaps1-derivedCount1,2) / (nCk(derivedCount1,2)+nCk(nhaps1-derivedCount1,2)) : 0;
-            // previous_pop1_ehh = current_pop1_ehh;
-
-     
-
-            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / nCk(nhaps2, 2) : 0;
-            // current_pop2_ehh = (derivedCount2 > 1) ? nCk(derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-            // current_pop2_ehh += (nhaps2 - derivedCount2 > 1) ? nCk(nhaps2 - derivedCount2, 2) / (nCk(derivedCount2,2)+nCk(nhaps2-derivedCount2,2)) : 0;
-            // previous_pop2_ehh = current_pop2_ehh;            
 
             current_pooled_ehh = (derivedCountPooled > 1) ? nCk(derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            current_pooled_ehh += (nhaps1 + nhaps2 - derivedCountPooled > 1) ? nCk(nhaps1 + nhaps2 - derivedCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
-            previous_pooled_ehh = current_pooled_ehh;
+            current_pooled_ehh += (ancestralCountPooled > 1) ? nCk(ancestralCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
+            current_pooled_ehh += (hetCountPooled > 1) ? nCk(hetCountPooled, 2) / nCk(nhaps1 + nhaps2, 2) : 0;
+            previous_pooled_ehh = current_pooled_ehh;    
         }
 
 
