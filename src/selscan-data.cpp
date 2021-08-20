@@ -252,7 +252,7 @@ void releaseMapData(MapData *data)
 //reads in haplotype data and also does basic checks on integrity of format
 //returns a populated HaplotypeData structure if successful
 //throws an exception otherwise
-HaplotypeData *readHaplotypeData(string filename)
+HaplotypeData *readHaplotypeData(string filename, bool unphased)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -304,19 +304,47 @@ HaplotypeData *readHaplotypeData(string filename)
     }
 
     cerr << "Loading " << nhaps << " haplotypes and " << current_nloci << " loci...\n";
+    
+    HaplotypeData *data;
+    if (unphased){
+        data = initHaplotypeData(nhaps/2, current_nloci);
+    }
+    else{
+        data = initHaplotypeData(nhaps, current_nloci);
+    }
 
-    HaplotypeData *data = initHaplotypeData(nhaps, current_nloci);
-
-
-    for (int hap = 0; hap < data->nhaps; hap++)
+    char allele1;
+    for (int hap = 0; hap < nhaps; hap++)
     {
         for (int locus = 0; locus < data->nloci; locus++)
         {
-            fin >> data->data[hap][locus];
-            if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
-            {
-                cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
-                throw 0;
+            if(unphased){
+                fin >> allele1;
+                if (allele1 != '0' && allele1 != '1'){
+                    cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                    cerr << allele1 << endl;
+                    throw 0;
+                }
+
+                if (hap % 2 == 1){
+                    if (allele1 == '1' && data->data[(hap-1)/2][locus] == '1'){
+                        data->data[(hap-1)/2][locus] = '2';
+                    }
+                    else if (allele1 == '1' && data->data[(hap-1)/2][locus] == '0') {
+                        data->data[(hap-1)/2][locus] = '1';
+                    }
+                }
+                else{
+                    data->data[hap/2][locus] = allele1;
+                }
+            }
+            else{
+                fin >> data->data[hap][locus];
+                if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
+                {
+                    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                    throw 0;
+                }
             }
         }
     }
@@ -326,7 +354,7 @@ HaplotypeData *readHaplotypeData(string filename)
     return data;
 }
 
-HaplotypeData *readHaplotypeDataTPED(string filename)
+HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -379,10 +407,17 @@ HaplotypeData *readHaplotypeDataTPED(string filename)
     }
 
     cerr << "Loading " << current_nhaps - numMapCols << " haplotypes and " << nloci << " loci...\n";
-
-    HaplotypeData *data = initHaplotypeData(current_nhaps - numMapCols, nloci);
+    
+    HaplotypeData *data;
+    if (unphased){
+        data = initHaplotypeData((current_nhaps - numMapCols)/2, nloci);
+    }
+    else{
+        data = initHaplotypeData(current_nhaps - numMapCols, nloci);
+    }
 
     string junk;
+    char allele1, allele2;
 
     for (int locus = 0; locus < data->nloci; locus++)
     {
@@ -392,11 +427,31 @@ HaplotypeData *readHaplotypeDataTPED(string filename)
         }
         for (int hap = 0; hap < data->nhaps; hap++)
         {
-            fin >> data->data[hap][locus];
-            if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
-            {
-                cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
-                throw 0;
+            if(unphased){
+                fin >> allele1;
+                fin >> allele2;
+                if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') ){
+                    cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                    cerr << allele1 << " " << allele2 << endl;
+                    throw 0;
+                }
+
+                char allele = '0';
+                if (allele1 == '1' && allele2 == '1'){
+                    allele = '2';
+                }
+                else if (allele1 == '1' || allele2 == '1'){
+                    allele = '1';
+                }
+                data->data[hap][locus] = allele;
+            }
+            else{
+                fin >> data->data[hap][locus];
+                if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
+                {
+                    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                    throw 0;
+                }
             }
         }
     }
@@ -406,7 +461,7 @@ HaplotypeData *readHaplotypeDataTPED(string filename)
     return data;
 }
 
-HaplotypeData *readHaplotypeDataVCF(string filename)
+HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -461,7 +516,7 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
         throw 0;
     }
 
-    int nhaps = (current_nhaps - numMapCols) * 2;
+    int nhaps = unphased ? (current_nhaps - numMapCols) : (current_nhaps - numMapCols) * 2;
     int nfields = (current_nhaps - numMapCols);
     cerr << "Loading " << nhaps << " haplotypes and " << nloci << " loci...\n";
 
@@ -502,8 +557,20 @@ HaplotypeData *readHaplotypeDataVCF(string filename)
             //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
             //    throw 0;
             //}
-            data->data[2 * field][locus] = allele1;
-            data->data[2 * field + 1][locus] = allele2;
+            if(unphased){
+                char allele = '0';
+                if (allele1 == '1' && allele2 == '1'){
+                    allele = '2';
+                }
+                else if (allele1 == '1' || allele2 == '1'){
+                    allele = '1';
+                }
+                data->data[field][locus] = allele;
+            }
+            else{
+                data->data[2 * field][locus] = allele1;
+                data->data[2 * field + 1][locus] = allele2;
+            }
         }
     }
 

@@ -62,9 +62,9 @@ void releaseHapData(HaplotypeData *data);
 //reads in haplotype data and also does basic checks on integrity of format
 //returns a populated HaplotypeData structure if successful
 //throws an exception otherwise
-HaplotypeData *readHaplotypeData(string filename);
-HaplotypeData *readHaplotypeDataTPED(string filename);
-HaplotypeData *readHaplotypeDataVCF(string filename);
+HaplotypeData *readHaplotypeData(string filename, bool unphased);
+HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased);
+HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased);
 
 //counts the number of "fields" in a string
 //where a field is defined as a contiguous set of non whitespace
