@@ -465,6 +465,10 @@ int main(int argc, char *argv[])
         cerr << "ERROR: --ihh12 and --unphased currently incompatible.\n";
         return 1;
     }
+    if (SINGLE_EHH && UNPHASED){
+        cerr << "ERROR: --ehh and --unphased currently incompatible.\n";
+        return 1;
+    }
     if (numThreads < 1)
     {
         cerr << "ERROR: Must run with one or more threads.\n";
@@ -1549,7 +1553,7 @@ void query_locus(void *order)
     //int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
     //double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
     bool ALT = p->params->getBoolFlag(ARG_ALT);
-    bool WAGH = p->params->getBoolFlag(ARG_WAGH);
+    //bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
 
     int locus = p->queryLoc;
