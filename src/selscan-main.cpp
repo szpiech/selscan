@@ -1512,7 +1512,7 @@ int queryFound(MapData *mapData, string query)
     for (int locus = 0; locus < mapData->nloci; locus++)
     {
         if (mapData->locusName[locus].compare(query) == 0) return locus;
-        if (mapData->physicalPos[locus].compare(query) == 0) return locus;
+        if (to_string(mapData->physicalPos[locus]).compare(query) == 0) return locus;
     }
 
     return -1;
