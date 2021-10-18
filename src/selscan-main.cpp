@@ -461,6 +461,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (CALC_SOFT && UNPHASED){
+        cerr << "ERROR: --ihh12 and --unphased currently incompatible.\n";
+        return 1;
+    }
     if (numThreads < 1)
     {
         cerr << "ERROR: Must run with one or more threads.\n";
@@ -1504,6 +1508,7 @@ int queryFound(MapData *mapData, string query)
     for (int locus = 0; locus < mapData->nloci; locus++)
     {
         if (mapData->locusName[locus].compare(query) == 0) return locus;
+        if (mapData->physicalPos[locus].compare(query) == 0) return locus;
     }
 
     return -1;
