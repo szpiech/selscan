@@ -29,7 +29,7 @@
 
 using namespace std;
 
-const string VERSION = "1.4.0";
+const string VERSION = "2.0.0";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -2431,13 +2431,13 @@ void calc_ihs(void *order)
             notDerived_ihh_left    = notDerived_ihh;    
             notAncestral_ihh_left  = notAncestral_ihh;
         }
-
+/*
         if(unphased){
                 ihh1[locus] = log10(derived_ihh / notDerived_ihh);
                 ihh2[locus] = log10(ancestral_ihh / notAncestral_ihh);
                 ihs[locus] = (ihh1[locus] > ihh2[locus]) ? ihh1[locus] : 0-ihh2[locus];
             }
-
+*/
         //calculate EHH to the right
         current_derived_ehh = 1;
         current_ancestral_ehh = 1;
@@ -2452,9 +2452,7 @@ void calc_ihs(void *order)
         current_notAncestral_ehh = 1;
         previous_notDerived_ehh = 1;
         previous_notAncestral_ehh = 1;
-        notDerived_ihh = 0;
-        notAncestral_ihh = 0;
-
+        
         //A list of all the haplotypes
         //Starts with just the focal snp and grows outward
         haplotypeList = new string[nhaps];
@@ -2934,9 +2932,7 @@ void calc_nsl(void *order)
         current_notAncestral_ehh = 1;
         previous_notDerived_ehh = 1;
         previous_notAncestral_ehh = 1;
-        notDerived_ihh = 0;
-        notAncestral_ihh = 0;
-
+        
         //A list of all the haplotypes
         //Starts with just the focal snp and grows outward
         haplotypeList = new string[nhaps];
