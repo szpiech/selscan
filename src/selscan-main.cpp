@@ -39,6 +39,7 @@ selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
 Citations:\n\
 \n\
 selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
+         ZA Szpiech (2021) biorxiv: doi:10.1101/2021.10.22.465497.\n\
 iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
        N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
 nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
