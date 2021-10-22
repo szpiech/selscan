@@ -11,6 +11,8 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 
 Citations:
 
+ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. biorxiv doi: 
+	doi:10.1101/2021.10.22.465497.
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
 	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
 	31: 2824-2827.
@@ -31,7 +33,9 @@ BF Voight et al. (2006) A map of recent positive selection in the human
 PC Sabeti et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature 419: 832–837.
 
-
+22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2021) Biorxiv for details. Normalize as you would with the unphased 
+	statistics.
+	
 20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
 
 	--pmap <bool>: Set this flag to use physical distance instead of genetic map
@@ -169,7 +173,25 @@ Exactly one of these must be specified when running norm (e.g. ./norm --ihs --fi
 
 USAGE:
 
-**Data must be phased and have no missing genotypes.**
+**Data must have no missing genotypes.**
+
+selscan v2.0.0 -- a program to calculate EHH-based scans for positive selection in genomes.
+Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.
+
+selscan currently implements EHH, iHS, XP-EHH, and nSL.
+
+Citations:
+
+selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.
+         ZA Szpiech (2021) biorxiv: doi:10.1101/2021.10.22.465497.
+iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.
+       N Garud et al. (2015) PLoS Genetics 11: 1–32.
+nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.
+XP-nSL: Szpiech et al. (2021) Evol Lett 5: 408-421.
+XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.
+        K Wagh et al. (2012) PloS ONE 7: e44751.
+iHS: BF Voight et al. (2006) PLoS Biology 4: e72.
+EHH: PC Sabeti et al. (2002) Nature 419: 832–837.
 
 To calculate EHH:
 
@@ -299,6 +321,9 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Normal function is to disregard the score for that core.
 	Default: false
 
+--unphased <bool>: Set this flag to use multilocus genotypes.
+	Default: false
+
 --vcf <string>: A VCF file containing haplotype data.
 	A map file must be specified with --map.
 	Default: __hapfile1
@@ -317,94 +342,5 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: false
 
 --xpnsl <bool>: Set this flag to calculate XP-nSL.
-	Default: false
-
-
-
-
-################################################################################
-################################################################################
-
-norm v1.3.0 -- a program for downstream analysis of selscan output
-Source code and binaries can be found at
-	<https://www.github.com/szpiech/selscan>
-
-Citations:
-
-selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.
-iHH12: R Torres, et al. (2017) bioRxiv, doi: https://doi.org/10.1101/181859.
-       N Garud, et al. (2015) PLoS Genetics, 11: 1–32.
-nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.
-xpehh: PC Sabeti, et al. (2007) Nature, 449: 913–918.
-iHS: BF Voight, et al. (2006) PLoS Biology, 4: e72.
-
-To normalize selscan output across frequency bins:
-
-./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
-
-To normalize selscan output and analyze non-overlapping windows of fixed bp for 
-extreme scores:
-
-./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
-
-----------Command Line Arguments----------
-
---bins <int>: The number of frequency bins in [0,1] for score normalization.
-	Default: 100
-
---bp-win <bool>: If set, will use windows of a constant bp size with varying
-	number of SNPs.
-	Default: false
-
---crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.
-	Not used by default.
-	Default: -1.00
-
---crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
-	Default: 2.00
-
---files <string1> ... <stringN>: A list of files delimited by whitespace for
-	joint normalization.
-	Expected format for iHS or nSL files (no header):
-	<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>
-	Expected format for XP-EHH files (one line header):
-	<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>
-	Expected format for iHH12 files (one line header):
-	<locus name> <physical pos> <freq1> <ihh12>
-	Default: infile
-
---first <bool>: Output only the first file's normalization.
-	Default: false
-
---help <bool>: Prints this help dialog.
-	Default: false
-
---ihh12 <bool>: Do ihh12 normalization.
-	Default: false
-
---ihs <bool>: Do iHS normalization.
-	Default: false
-
---log <string>: The log file name.
-	Default: logfile
-
---min-snps <int>: Only consider a bp window if it has at least this many SNPs.
-	Default: 10
-
---nsl <bool>: Do nSL normalization.
-	Default: false
-
---qbins <int>: Outlying windows are binned by number of sites within each
-	window.  This is the number of quantile bins to use.
-	Default: 10
-
---winsize <int>: The non-overlapping window size for calculating the percentage
-	of extreme SNPs.
-	Default: 100000
-
---xpehh <bool>: Do XP-EHH normalization.
-	Default: false
-
---xpnsl <bool>: Do XP-nSL normalization.
 	Default: false
 
