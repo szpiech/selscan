@@ -3,7 +3,7 @@ selscan -- a program to calculate EHH-based scans for positive selection in
 
 Copyright (C) 2014  Zachary A Szpiech
 
-selscan currently implements EHH, iHS, XP-EHH, nSL, XP-nSL and iHH12 and requires phased data. 
+selscan currently implements EHH, iHS, XP-EHH, nSL, XP-nSL and iHH12. 
 It should be run separately for each chromosome and population (or population 
 pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
 simply expects haplotype data to be coded 0/1.  Unstandardized iHS/nSL scores are 
