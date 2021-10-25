@@ -3,44 +3,44 @@ Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: selscan-manual.aux
 The style file: natbib.bst
 Database file #1: Ref_ZAS.bib
-You've used 11 entries,
+You've used 12 entries,
             2378 wiz_defined-function locations,
-            608 strings with 6863 characters,
-and the built_in function-call counts, 6356 in all, are:
-= -- 537
-> -- 506
-< -- 2
-+ -- 156
-- -- 154
-* -- 658
-:= -- 1152
-add.period$ -- 53
-call.type$ -- 11
-change.case$ -- 68
-chr.to.int$ -- 11
-cite$ -- 11
-duplicate$ -- 215
-empty$ -- 351
-format.name$ -- 169
-if$ -- 1216
+            615 strings with 6967 characters,
+and the built_in function-call counts, 6775 in all, are:
+= -- 583
+> -- 517
+< -- 3
++ -- 159
+- -- 157
+* -- 691
+:= -- 1224
+add.period$ -- 57
+call.type$ -- 12
+change.case$ -- 74
+chr.to.int$ -- 12
+cite$ -- 12
+duplicate$ -- 233
+empty$ -- 383
+format.name$ -- 173
+if$ -- 1299
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 11
-newline$ -- 58
-num.names$ -- 44
-pop$ -- 64
+missing$ -- 12
+newline$ -- 63
+num.names$ -- 48
+pop$ -- 68
 preamble$ -- 1
-purify$ -- 68
+purify$ -- 74
 quote$ -- 0
-skip$ -- 138
+skip$ -- 150
 stack$ -- 0
-substring$ -- 368
-swap$ -- 42
+substring$ -- 406
+swap$ -- 45
 text.length$ -- 0
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 99
+type$ -- 108
 warning$ -- 0
-while$ -- 47
+while$ -- 52
 width$ -- 0
-write$ -- 145
+write$ -- 158

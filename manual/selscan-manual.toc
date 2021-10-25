@@ -26,20 +26,21 @@
 \contentsline {subsubsection}{\numberline {5.3.6}{\tt --ihh12}}{12}% 
 \contentsline {subsubsection}{\numberline {5.3.7}{\tt --pi}}{13}% 
 \contentsline {subsection}{\numberline {5.4}Controling How a Statistic is Computed}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.1}{\tt --pmap}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.2}{\tt --cutoff <double>}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.3}{\tt --maf <double>}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.4}{\tt --gap-scale <int>}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.5}{\tt --max-gap <int>}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.6}{\tt --max-extend <int>}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.7}{\tt --max-extend-nsl <int>}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.8}{\tt --trunc-ok}}{13}% 
-\contentsline {subsubsection}{\numberline {5.4.9}{\tt --alt}}{14}% 
-\contentsline {subsubsection}{\numberline {5.4.10}{\tt --skip-low-freq}}{14}% 
-\contentsline {subsubsection}{\numberline {5.4.11}{\tt --keep-low-freq}}{14}% 
-\contentsline {subsubsection}{\numberline {5.4.12}{\tt --ehh-win <int>}}{14}% 
-\contentsline {subsubsection}{\numberline {5.4.13}{\tt --pi-win <int>}}{14}% 
+\contentsline {subsubsection}{\numberline {5.4.1}{\tt --unphased}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.2}{\tt --pmap}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.3}{\tt --cutoff <double>}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.4}{\tt --maf <double>}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.5}{\tt --gap-scale <int>}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.6}{\tt --max-gap <int>}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.7}{\tt --max-extend <int>}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.8}{\tt --max-extend-nsl <int>}}{13}% 
+\contentsline {subsubsection}{\numberline {5.4.9}{\tt --trunc-ok}}{14}% 
+\contentsline {subsubsection}{\numberline {5.4.10}{\tt --alt}}{14}% 
+\contentsline {subsubsection}{\numberline {5.4.11}{\tt --skip-low-freq}}{14}% 
+\contentsline {subsubsection}{\numberline {5.4.12}{\tt --keep-low-freq}}{14}% 
+\contentsline {subsubsection}{\numberline {5.4.13}{\tt --ehh-win <int>}}{14}% 
+\contentsline {subsubsection}{\numberline {5.4.14}{\tt --pi-win <int>}}{14}% 
 \contentsline {subsection}{\numberline {5.5}Other Options}{14}% 
 \contentsline {subsubsection}{\numberline {5.5.1}{\tt --ihs-detail}}{14}% 
-\contentsline {subsubsection}{\numberline {5.5.2}{\tt --threads <int>}}{14}% 
+\contentsline {subsubsection}{\numberline {5.5.2}{\tt --threads <int>}}{15}% 
 \contentsline {section}{\numberline {6}Change Log}{15}% 

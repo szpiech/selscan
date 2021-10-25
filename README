@@ -33,7 +33,7 @@ BF Voight et al. (2006) A map of recent positive selection in the human
 PC Sabeti et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature 419: 832–837.
 
-22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2021) Biorxiv for details. Normalize as you would with the unphased 
+22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2021) Biorxiv for details. Normalize as you would with the phased 
 	statistics.
 	
 20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.

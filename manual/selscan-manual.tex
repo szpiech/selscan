@@ -17,7 +17,7 @@
 
 \newcommand{\negspace}{\!\!\!\!\!\!\!\!\!\!\!\!}
 
-\title{{\tt selscan} v1.3.0 User Manual}
+\title{{\tt selscan} v2.0.0 User Manual}
 \date{\today}
 \author{Zachary A. Szpiech}
 
@@ -46,7 +46,7 @@
 Extended Haplotype Homozygosity (EHH) \cite[]{SabetiEtAl02}, Integrated Haplotype 
 Score (iHS) \cite[]{VoightEtAl06}, Cross-population Extended Haplotype 
 Homozygosity (XPEHH) \cite[]{SabetiEtAl07}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, nSL \cite[]{FerrerAdmetllaEtAl14}, and XP-nSL \cite[]{SzpiechEtAl21} are statistics designed to use phased genotypes to identify putative regions
-of recent or ongoing positive selection in genomes.  They are all based on the model of 
+of recent or ongoing positive selection in genomes. (Starting with selscan v2.0.0, the --unphased flag can be used to compute iHS, nSL, XP-EHH, and XP-nSL with unphased data. \cite[]{Szpiech21}) They are all based on the model of 
 a selective sweep, where a {\it de novo} adaptive mutation arises on a haplotype
 that quickly sweeps toward fixation, reducing diversity around the locus (a "hard" sweep).  If selection is strong enough, this occurs
 faster than recombination or mutation can act to break up the haplotype, and thus a signal of high 
@@ -423,7 +423,7 @@ Use {\tt --out} to provide a base name for an output file.  This will be used in
 
 \subsubsection{{\tt --ehh <string>}}
 
-Use {\tt --ehh <Locus ID>} to specify a core locus and calculate EHH curves for the ancestral and derived haploytpes extending out to a fixed distance.  Associated flags: {\tt --ehh-win}.
+Use {\tt --ehh <Locus ID>} to specify a core locus and calculate EHH curves for the ancestral and derived haploytpes extending out to a fixed distance. Can use locus ID or physical position. Associated flags: {\tt --ehh-win}.
 
 \subsubsection{{\tt --ihs}}
 
@@ -450,6 +450,10 @@ Set {\tt --ihh12} to calculate iHH12 (see Section \ref{sec:ihh12}).  Associated 
 Set {\tt --pi} to calculate the mean pairwise sequence difference within a sliding window along the genome (see Section \ref{sec:pi}).  Associated flag: {--pi-win}.
 
 \subsection{Controling How a Statistic is Computed}
+
+\subsubsection{{\tt --unphased}}
+
+Set {\tt--unphased} to use unphased implementations of iHS, nSL, XP-EHH, and XP-nSL computations.
 
 \subsubsection{{\tt --pmap}}
 
@@ -528,6 +532,9 @@ Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($0$)
 \section{Change Log}
 
 \begin{lstlisting}
+22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2021) Biorxiv for details. Normalize as you would with the phased 
+	statistics.
+	
 20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
 
 	--pmap <bool>: Set this flag to use physical distance instead of genetic map
@@ -559,6 +566,7 @@ For XP stats:
 For iHS and nSL:
 <win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
 
+
 18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
 
 25AUG2017 - norm v1.2.1 released to fix a crash when --nsl flag is used.
@@ -574,6 +582,7 @@ For iHS and nSL:
 28OCT2015 - Updates to norm so that it can handle output from selscan when --ihs-detail is used.
 
 18JUNE2015 - v1.1.0a - When calculating nSL, a mapfile is no longer required for VCF.  Physical distances will be read directly from VCF.  A mapfile specifying physical distances is stille required for .hap files when calculating nSL.  selscan now appropriately reports an error if this is not provided.
+
 15JUNE2015 - Release of 1.1.0. tomkinsc adds the --ihs-detail parameter which, when provided as an adjunct to --ihs, will cause selscan to write out four additional columns to the output file of iHS calculations (in order): derived_ihh_left, derived_ihh_right, ancestral_ihh_left, and ancestral_ihh_right.
 
 An example file row follows, with header added for clarity.
@@ -596,6 +605,14 @@ selscan can now calculate the nSL statistic described in A Ferrer-Admetlla, et a
 --ihs-detail <bool> : Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.
 
 06MAY2015 - Release of 1.0.5. Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
+
+13MAY2015 - norm v1.0.5 is released.  norm will now normalize ihs or xpehh scores.  Two new command line options.
+
+--ihs <bool>: Do iHS normalization.
+
+--xpehh <bool>: Do XP-EHH normalization.
+
+Exactly one of these must be specified when running norm (e.g. ./norm --ihs --files *.ihs.out or ./norm --xpehh --files *.xpehh.out).
 
 --vcf <string>: A VCF file containing haplotype data.
 	A map file must be specified with --map.
@@ -652,6 +669,7 @@ selscan can now calculate the nSL statistic described in A Ferrer-Admetlla, et a
 10APR2014 - Release of 1.0.1.  Minor bug fixes. XP-EHH output header is now separated by tabs instead of spaces.  Removed references to missing data (which is not accepted), and introduced error checking in the event of non-0/1 data being provided.
 
 26MAR2014 - Initial release of selscan 1.0.0.
+
 \end{lstlisting}
 
 \bibliographystyle{natbib}%%%%natbib.sty
