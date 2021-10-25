@@ -1513,7 +1513,15 @@ int queryFound(MapData *mapData, string query)
     for (int locus = 0; locus < mapData->nloci; locus++)
     {
         if (mapData->locusName[locus].compare(query) == 0) return locus;
+        //This is only set when compiling windows binaries
+        //And I needed to use itoa for some reason under windows
+        #ifdef PTW32_STATIC_LIB
+        char buffer[100];
+        itoa(mapData->physicalPos[locus], buffer, 10);
+        if (string(buffer).compare(query) == 0) return locus;
+        #else
         if (to_string(mapData->physicalPos[locus]).compare(query) == 0) return locus;
+        #endif
     }
 
     return -1;
