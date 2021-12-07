@@ -1575,8 +1575,11 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
     int numInBin = 0;
 
     getline(fin, header);
-
-    fout << header + "\tnormxpehh\tcrit\n";
+    if (XPNSL){
+        fout << header + "\tnormxpnsl\tcrit\n"; 
+    } else{
+        fout << header + "\tnormxpehh\tcrit\n";  
+    } 
 
     for (int j = 0; j < fileLoci; j++)
     {
