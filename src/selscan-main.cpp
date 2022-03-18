@@ -614,28 +614,6 @@ int main(int argc, char *argv[])
 
     }
 
-    if (SINGLE_EHH)
-    {
-        queryLoc = queryFound(mapData, query);
-        //double queryFreq = calcFreq(hapData, queryLoc);
-        if (queryLoc < 0)
-        {
-            cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-            return 1;
-        }
-        /*
-        else if (queryFreq < MAF || 1 - queryFreq < MAF)
-        {
-            cerr << "ERROR: EHH for '1' and '0' haplotypes not calculated for " << query << ". MAF < " << MAF << ".\n";
-            return 1;
-        }
-        */
-        else
-        {
-            cerr << "Found " << query << " in data.\n";
-        }
-    }
-
     //Open stream for log file
     ofstream flog;
     string logFilename = outFilename + ".log";
@@ -730,6 +708,29 @@ int main(int argc, char *argv[])
             if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
         }
 
+
+        queryLoc = queryFound(mapData, query);
+        double queryFreq = calcFreq(hapData, queryLoc, UNPHASED);
+        if (queryLoc < 0)
+        {
+            cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
+            return 1;
+        }
+        else if (SKIP && (queryFreq < MAF || 1 - queryFreq < MAF))
+        {
+            cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << MAF << ".\n";
+            cerr << "\tIf you wish to calculate EHH at this locus either change --maf or set --keep-low-freq.\n";
+            return 1;
+        }
+        else if (!SKIP && (queryFreq == 0 || queryFreq == 1)){
+            cerr << "ERROR: EHH not calculated for " << query << ". Frequency = " << queryFreq << ".\n";
+            return 1;
+        }
+        else
+        {
+            cerr << "Found " << query << " in data.\n";
+        }
+
         if (SKIP) //prefilter all sites < MAF
         {
             cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
@@ -788,6 +789,8 @@ int main(int argc, char *argv[])
             mapData = newMapData;
             newMapData = NULL;
         }
+
+        queryLoc = queryFound(mapData, query);
 
         work_order_t *order = new work_order_t;
         pthread_t *peer = new pthread_t;
@@ -1578,6 +1581,9 @@ void query_locus(void *order)
         if (physicalPos[i] - physicalPos[locus] <= queryPad) stopRight = i;
     }
 
+
+    cerr << stopLeft << " " << physicalPos[stopLeft] << " " << stopRight << " " << physicalPos[stopRight] << endl;
+
     //EHH to the left of the core snp
     double current_derived_ehh = 1;
     double current_ancestral_ehh = 1;
@@ -1606,7 +1612,7 @@ void query_locus(void *order)
         }
     */
     //cerr << "numHaps: " << nhaps << "\nderivedCounts: " << derivedCount << endl;
-
+    /*
     int **ancestralHapColor = new int *[int(nhaps - derivedCount)];
     for (int i = 0; i < nhaps - derivedCount; i++)
     {
@@ -1619,7 +1625,7 @@ void query_locus(void *order)
         derivedHapColor[i] = new int[stopRight - stopLeft + 1];
         derivedHapColor[i][locus - stopLeft] = 0;
     }
-
+    */
     //cerr << "allocated hap color arrays.\n";
 
     string *tempResults = new string[locus - stopLeft];
@@ -1664,8 +1670,8 @@ void query_locus(void *order)
 
         }
         //Write functions to fill in haplotype colors here
-        fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, tempIndex, derivedCurrentColor, true);
-        fillColors(ancestralHapColor, ancestralHapCount, haplotypeList, nhaps, tempIndex, ancestralCurrentColor, true);
+        //fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, tempIndex, derivedCurrentColor, true);
+        //fillColors(ancestralHapColor, ancestralHapCount, haplotypeList, nhaps, tempIndex, ancestralCurrentColor, true);
 
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
@@ -1706,8 +1712,8 @@ void query_locus(void *order)
         haplotypeList[hap] = data[hap][locus];
     }
 
-    derivedCurrentColor = 0;
-    ancestralCurrentColor = 0;
+    //derivedCurrentColor = 0;
+    //ancestralCurrentColor = 0;
 
     //while(current_ancestral_ehh > EHH_CUTOFF || current_derived_ehh > EHH_CUTOFF)
     for (int i = locus + 1; i <= stopRight; i++)
@@ -1746,8 +1752,8 @@ void query_locus(void *order)
         }
 
         //Write functions to fill in haplotype colors here
-        fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, i - stopLeft, derivedCurrentColor, false);
-        fillColors(ancestralHapColor, ancestralHapCount, haplotypeList, nhaps, i - stopLeft, ancestralCurrentColor, false);
+        //fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, i - stopLeft, derivedCurrentColor, false);
+        //fillColors(ancestralHapColor, ancestralHapCount, haplotypeList, nhaps, i - stopLeft, ancestralCurrentColor, false);
 
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
@@ -1761,7 +1767,7 @@ void query_locus(void *order)
     }
 
     delete [] haplotypeList;
-
+    /*
     ofstream fout2;
     string outFilenameDer = outFilename + ".der.colormap";
     fout2.open(outFilenameDer.c_str());
@@ -1798,6 +1804,7 @@ void query_locus(void *order)
         fout2 << endl;
     }
     fout2.close();
+    */
     return;
 }
 
