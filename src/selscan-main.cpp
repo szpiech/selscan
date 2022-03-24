@@ -1582,7 +1582,7 @@ void query_locus(void *order)
     }
 
 
-    cerr << stopLeft << " " << physicalPos[stopLeft] << " " << stopRight << " " << physicalPos[stopRight] << endl;
+    //cerr << stopLeft << " " << physicalPos[stopLeft] << " " << stopRight << " " << physicalPos[stopRight] << endl;
 
     //EHH to the left of the core snp
     double current_derived_ehh = 1;
@@ -1601,7 +1601,7 @@ void query_locus(void *order)
         haplotypeList[hap] = data[hap][locus];
     }
 
-    current_ehh = (derivedCount > 1) ? nCk(derivedCount, 2) / nCk(nhaps, 2) : 0;
+    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2))+(nCk(nhaps-derivedCount, 2) / nCk(nhaps, 2)) : 1;
 
     /*
         if (derivedCount == 0 || derivedCount == nhaps)
@@ -1693,7 +1693,7 @@ void query_locus(void *order)
     //calculate EHH to the right
     current_derived_ehh = 1;
     current_ancestral_ehh = 1;
-    current_ehh = (derivedCount > 1) ? nCk(derivedCount, 2) / nCk(nhaps, 2) : 0;
+    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2))+(nCk(nhaps-derivedCount, 2) / nCk(nhaps, 2)) : 1;
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
