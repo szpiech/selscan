@@ -466,10 +466,6 @@ int main(int argc, char *argv[])
         cerr << "ERROR: --ihh12 and --unphased currently incompatible.\n";
         return 1;
     }
-    if (SINGLE_EHH && UNPHASED){
-        cerr << "ERROR: --ehh and --unphased currently incompatible.\n";
-        return 1;
-    }
     if (numThreads < 1)
     {
         cerr << "ERROR: Must run with one or more threads.\n";
@@ -1567,6 +1563,7 @@ void query_locus(void *order)
     bool ALT = p->params->getBoolFlag(ARG_ALT);
     //bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
+    bool unphased = p->params->getBoolFlag(ARG_UNPHASED);
 
     int locus = p->queryLoc;
     int queryPad = p->params->getIntFlag(ARG_QWIN);
@@ -1590,18 +1587,32 @@ void query_locus(void *order)
     double current_ehh = 1;
     double derivedCount = 0;
 
+    //used for unphased analyses
+    double hetCount = 0;
+    double ancestralCount = 0;
+    double current_notDerived_ehh = 1;
+    double current_notAncestral_ehh = 1;
+    
     //A list of all the haplotypes
     //Starts with just the focal snp and grows outward
     string *haplotypeList = new string[nhaps];
     for (int hap = 0; hap < nhaps; hap++)
     {
-        derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
-        //char digit[2];
-        //sprintf(digit, "%d", data[hap][locus]);
         haplotypeList[hap] = data[hap][locus];
+        if (unphased){
+            derivedCount += ( data[hap][locus] == '2' ) ? 1 : 0;
+            ancestralCount += ( data[hap][locus] == '0' ) ? 1 : 0;
+            hetCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+        }
+        else{
+            derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+        }
+        
     }
 
-    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2))+(nCk(nhaps-derivedCount, 2) / nCk(nhaps, 2)) : 1;
+    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
+    current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
+    current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
 
     /*
         if (derivedCount == 0 || derivedCount == nhaps)
@@ -1628,10 +1639,12 @@ void query_locus(void *order)
     */
     //cerr << "allocated hap color arrays.\n";
 
+    bool isDerived;
+    string hapStr;
     string *tempResults = new string[locus - stopLeft];
     int tempIndex = locus - stopLeft - 1;
-    int derivedCurrentColor = 0;
-    int ancestralCurrentColor = 0;
+    //int derivedCurrentColor = 0;
+    //int ancestralCurrentColor = 0;
 
     for (int i = locus - 1; i >= stopLeft; i--)
     {
@@ -1640,34 +1653,72 @@ void query_locus(void *order)
         map<string, int> ancestralHapCount;
         map<string, int> derivedHapCount;
         map<string, int> hapCount;
+        
+        //for unphased
+        int numHet = 0;
+        map<string, int> notAncestralHapCount;
+        map<string, int> notDerivedHapCount;
 
         for (int hap = 0; hap < nhaps; hap++)
         {
-            bool isDerived = ( data[hap][locus] == '1') ? 1 : 0;
-            //build haplotype string
-            //char digit[2];
-            //sprintf(digit, "%d", data[hap][i]);
-            haplotypeList[hap] += data[hap][i];
-            string hapStr = haplotypeList[hap];
+            if(unphased){
+                haplotypeList[hap] += data[hap][i];
+                hapStr = haplotypeList[hap];
 
-            if (isDerived)
-            {
-                //count derived hapoltype
-                if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
-                else derivedHapCount[hapStr]++;
-                numDerived++;
+                if (data[hap][locus] == '0'){
+                    //count ancestral haplotype
+                    if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
+                    else ancestralHapCount[hapStr]++;
+                    numAncestral++;
+                    //count non-derived hapoltype
+                    if (notDerivedHapCount.count(hapStr) == 0) notDerivedHapCount[hapStr] = 1;
+                    else notDerivedHapCount[hapStr]++;
+                }
+                else if (data[hap][locus] == '1'){
+                    //count non-derived hapoltype
+                    if (notDerivedHapCount.count(hapStr) == 0) notDerivedHapCount[hapStr] = 1;
+                    else notDerivedHapCount[hapStr]++;
+                    //count non-ancestral haplotype
+                    if (notAncestralHapCount.count(hapStr) == 0) notAncestralHapCount[hapStr] = 1;
+                    else notAncestralHapCount[hapStr]++;
+                    numHet++;
+                }
+                else{//data[hap][locus] == '2'
+                    //count derived hapoltype
+                    if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
+                    else derivedHapCount[hapStr]++;
+                    numDerived++;
+                    //count non-ancestral haplotype
+                    if (notAncestralHapCount.count(hapStr) == 0) notAncestralHapCount[hapStr] = 1;
+                    else notAncestralHapCount[hapStr]++;
+                }
             }
-            else
-            {
-                //count ancestral haplotype
-                if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
-                else ancestralHapCount[hapStr]++;
-                numAncestral++;
+            else{
+                isDerived = ( data[hap][locus] == '1') ? 1 : 0;
+                //build haplotype string
+                //char digit[2];
+                //sprintf(digit, "%d", data[hap][i]);
+                haplotypeList[hap] += data[hap][i];
+                hapStr = haplotypeList[hap];
+
+                if (isDerived)
+                {
+                    //count derived hapoltype
+                    if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
+                    else derivedHapCount[hapStr]++;
+                    numDerived++;
+                }
+                else
+                {
+                    //count ancestral haplotype
+                    if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
+                    else ancestralHapCount[hapStr]++;
+                    numAncestral++;
+                }
+
+                if (hapCount.count(hapStr) == 0) hapCount[hapStr] = 1;
+                else hapCount[hapStr]++;
             }
-
-            if (hapCount.count(hapStr) == 0) hapCount[hapStr] = 1;
-            else hapCount[hapStr]++;
-
         }
         //Write functions to fill in haplotype colors here
         //fillColors(derivedHapColor, derivedHapCount, haplotypeList, nhaps, tempIndex, derivedCurrentColor, true);
@@ -1675,14 +1726,33 @@ void query_locus(void *order)
 
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
-        current_ehh = (*calc)(hapCount, numAncestral + numDerived, ALT);
-        char tempStr[100];
-        sprintf(tempStr, "%d\t%f\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_derived_ehh, current_ancestral_ehh, current_ehh);
+        current_ehh = (*calc)(hapCount, numAncestral + numDerived + numHet, ALT);
+
+        if(unphased){
+            current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
+            current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+        }
+
+    // use stringstreams  
+        char tempStr[200];
+        if(unphased){
+            sprintf(tempStr, "%d\t%f\t%f\t%f\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_derived_ehh, current_ancestral_ehh, current_notDerived_ehh, current_notAncestral_ehh, current_ehh);
+        }
+        else{
+            sprintf(tempStr, "%d\t%f\t%f\t%f\t%f", physicalPos[i] - physicalPos[locus], geneticPos[i] - geneticPos[locus], current_derived_ehh, current_ancestral_ehh, current_ehh);
+        }
         tempResults[tempIndex] = string(tempStr);
         tempIndex--;
     }
 
     delete [] haplotypeList;
+
+    (*fout) << "pdist\tgdist\tderEHH\tancEHH\t";
+    if(unphased){
+        (*fout) << "notAncEHH\t"
+                << "notDerEHH\t";
+    }
+    (*fout) << "EHH" << endl;
 
     for (int i = 0; i < locus - stopLeft; i++)
     {
@@ -1693,14 +1763,21 @@ void query_locus(void *order)
     //calculate EHH to the right
     current_derived_ehh = 1;
     current_ancestral_ehh = 1;
-    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2))+(nCk(nhaps-derivedCount, 2) / nCk(nhaps, 2)) : 1;
+
+    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
+    current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
+    current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
             << geneticPos[locus] - geneticPos[locus] << "\t"
             << current_derived_ehh << "\t"
-            << current_ancestral_ehh << "\t"
-            << current_ehh << endl;
+            << current_ancestral_ehh << "\t";
+    if(unphased){
+        (*fout) << current_notAncestral_ehh << "\t"
+                << current_notDerived_ehh << "\t";
+    }
+    (*fout) << current_ehh << endl;
 
     //A list of all the haplotypes
     //Starts with just the focal snp and grows outward
@@ -1723,32 +1800,71 @@ void query_locus(void *order)
         map<string, int> ancestralHapCount;
         map<string, int> derivedHapCount;
         map<string, int> hapCount;
+        
+        //for unphased
+        int numHet = 0;
+        map<string, int> notAncestralHapCount;
+        map<string, int> notDerivedHapCount;
 
         for (int hap = 0; hap < nhaps; hap++)
         {
-            bool isDerived = ( data[hap][locus] == '1' ) ? 1 : 0;
-            //build haplotype string
-            //char digit[2];
-            //sprintf(digit, "%d", data[hap][i]);
-            haplotypeList[hap] += data[hap][i];
-            string hapStr = haplotypeList[hap];
+            if(unphased){
+                haplotypeList[hap] += data[hap][i];
+                hapStr = haplotypeList[hap];
 
-            if (isDerived)
-            {
-                //count hapoltypes
-                if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
-                else derivedHapCount[hapStr]++;
-                numDerived++;
+                if (data[hap][locus] == '0'){
+                    //count ancestral haplotype
+                    if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
+                    else ancestralHapCount[hapStr]++;
+                    numAncestral++;
+                    //count non-derived hapoltype
+                    if (notDerivedHapCount.count(hapStr) == 0) notDerivedHapCount[hapStr] = 1;
+                    else notDerivedHapCount[hapStr]++;
+                }
+                else if (data[hap][locus] == '1'){
+                    //count non-derived hapoltype
+                    if (notDerivedHapCount.count(hapStr) == 0) notDerivedHapCount[hapStr] = 1;
+                    else notDerivedHapCount[hapStr]++;
+                    //count non-ancestral haplotype
+                    if (notAncestralHapCount.count(hapStr) == 0) notAncestralHapCount[hapStr] = 1;
+                    else notAncestralHapCount[hapStr]++;
+                    numHet++;
+                }
+                else{//data[hap][locus] == '2'
+                    //count derived hapoltype
+                    if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
+                    else derivedHapCount[hapStr]++;
+                    numDerived++;
+                    //count non-ancestral haplotype
+                    if (notAncestralHapCount.count(hapStr) == 0) notAncestralHapCount[hapStr] = 1;
+                    else notAncestralHapCount[hapStr]++;
+                }
             }
-            else //ancestral
-            {
-                if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
-                else ancestralHapCount[hapStr]++;
-                numAncestral++;
-            }
+            else{
+                isDerived = ( data[hap][locus] == '1' ) ? 1 : 0;
+                //build haplotype string
+                //char digit[2];
+                //sprintf(digit, "%d", data[hap][i]);
+                haplotypeList[hap] += data[hap][i];
+                hapStr = haplotypeList[hap];
 
-            if (hapCount.count(hapStr) == 0) hapCount[hapStr] = 1;
-            else hapCount[hapStr]++;
+                if (isDerived)
+                {
+                    //count hapoltypes
+                    if (derivedHapCount.count(hapStr) == 0) derivedHapCount[hapStr] = 1;
+                    else derivedHapCount[hapStr]++;
+                    numDerived++;
+                }
+                else //ancestral
+                {
+                    if (ancestralHapCount.count(hapStr) == 0) ancestralHapCount[hapStr] = 1;
+                    else ancestralHapCount[hapStr]++;
+                    numAncestral++;
+                }
+
+                if (hapCount.count(hapStr) == 0) hapCount[hapStr] = 1;
+                else hapCount[hapStr]++;
+            }
         }
 
         //Write functions to fill in haplotype colors here
@@ -1757,13 +1873,22 @@ void query_locus(void *order)
 
         current_derived_ehh = (*calc)(derivedHapCount, numDerived, ALT);
         current_ancestral_ehh = (*calc)(ancestralHapCount, numAncestral, ALT);
-        current_ehh = (*calc)(hapCount, numAncestral + numDerived, ALT);
+        current_ehh = (*calc)(hapCount, numAncestral + numDerived + numHet, ALT);
 
-        (*fout) << physicalPos[i] - physicalPos[locus] << "\t"
-                << geneticPos[i] - geneticPos[locus] << "\t"
-                << current_derived_ehh << "\t"
-                << current_ancestral_ehh << "\t"
-                << current_ehh << endl;
+        if(unphased){
+            current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
+            current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+        }
+
+        (*fout) << std::fixed <<  physicalPos[i] - physicalPos[locus]  << "\t"
+            << geneticPos[i] - geneticPos[locus] << "\t"
+            << current_derived_ehh << "\t"
+            << current_ancestral_ehh << "\t";
+        if(unphased){
+            (*fout) << current_notAncestral_ehh << "\t"
+                    << current_notDerived_ehh << "\t";
+        }
+        (*fout) << current_ehh << endl;
     }
 
     delete [] haplotypeList;
