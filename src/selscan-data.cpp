@@ -70,6 +70,8 @@ MapData *readMapData(string filename, int expected_loci, bool USE_PMAP)
 
     MapData *data = initMapData(nloci);
 
+    double Mb = 1000000.0;
+
     string chr;
     for (int locus = 0; locus < data->nloci; locus++)
     {
@@ -77,7 +79,7 @@ MapData *readMapData(string filename, int expected_loci, bool USE_PMAP)
         fin >> data->locusName[locus];
         fin >> data->geneticPos[locus];
         fin >> data->physicalPos[locus];
-        if (USE_PMAP) data->geneticPos[locus] = data->physicalPos[locus];
+        if (USE_PMAP) data->geneticPos[locus] = double(data->physicalPos[locus])/Mb;
     }
 
     fin.close();
@@ -133,7 +135,9 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, 
     cerr << "Loading map data for " << nloci << " loci\n";
 
     MapData *data = initMapData(nloci);
-
+    
+    double Mb = 1000000.0;
+    
     string chr;
     for (int locus = 0; locus < data->nloci; locus++)
     {
@@ -141,7 +145,7 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, 
         fin >> data->locusName[locus];
         fin >> data->geneticPos[locus];
         fin >> data->physicalPos[locus];
-        if (USE_PMAP) data->geneticPos[locus] = data->physicalPos[locus];
+        if (USE_PMAP) data->geneticPos[locus] = double(data->physicalPos[locus])/Mb;
         getline(fin, line);
     }
 
@@ -196,8 +200,10 @@ MapData *readMapDataVCF(string filename, int expected_loci) {
         getline(fin, line);
     }
 
-    MapData *data = initMapData(nloci);
-
+    MapData *data = initMapData(nloci); 
+    
+    double Mb = 1000000.0;
+    
     string chr;
     for (int locus = 0; locus < data->nloci; locus++)
     {
@@ -205,7 +211,7 @@ MapData *readMapDataVCF(string filename, int expected_loci) {
         fin >> data->physicalPos[locus];
         fin >> data->locusName[locus];
         getline(fin, line);
-        data->geneticPos[locus] = data->physicalPos[locus];
+        data->geneticPos[locus] = double(data->physicalPos[locus])/Mb;
     }
 
     fin.close();

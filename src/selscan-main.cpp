@@ -29,7 +29,7 @@
 
 using namespace std;
 
-const string VERSION = "2.0.1";
+const string VERSION = "2.0.2";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -87,7 +87,7 @@ const string ARG_FILENAME_POP2_TPED = "--tped-ref";
 const string DEFAULT_FILENAME_POP2_TPED = "__hapfile2";
 const string HELP_FILENAME_POP2_TPED = "A TPED file containing haplotype and map data.\n\
 \tVariants should be coded 0/1. This is the 'reference'\n\
-\tpopulation for XP-EHH calculations and should contain the same number\n\
+\tpopulation for XP calculations and should contain the same number\n\
 \tof loci as the query population. Ignored otherwise.";
 
 const string ARG_FILENAME_POP1_VCF = "--vcf";
@@ -99,7 +99,7 @@ const string ARG_FILENAME_POP2_VCF = "--vcf-ref";
 const string DEFAULT_FILENAME_POP2_VCF = "__hapfile2";
 const string HELP_FILENAME_POP2_VCF = "A VCF file containing haplotype and map data.\n\
 \tVariants should be coded 0/1. This is the 'reference'\n\
-\tpopulation for XP-EHH calculations and should contain the same number\n\
+\tpopulation for XP calculations and should contain the same number\n\
 \tof loci as the query population. Ignored otherwise.";
 
 const string ARG_FILENAME_POP1 = "--hap";
@@ -111,7 +111,7 @@ const string ARG_FILENAME_POP2 = "--ref";
 const string DEFAULT_FILENAME_POP2 = "__hapfile2";
 const string HELP_FILENAME_POP2 = "A hapfile with one row per haplotype, and one column per\n\
 \tvariant. Variants should be coded 0/1. This is the 'reference'\n\
-\tpopulation for XP-EHH calculations.  Ignored otherwise.";
+\tpopulation for XP calculations.  Ignored otherwise.";
 
 const string ARG_FILENAME_MAP = "--map";
 const string DEFAULT_FILENAME_MAP = "__mapfile";
@@ -220,7 +220,7 @@ const string HELP_KEEP = "Include low frequency variants in the construction of 
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;
 const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before reaching the cutoff,\n\
-\tintegrate the curve anyway (iHS and XPEHH only).\n\
+\tintegrate the curve anyway.\n\
 \tNormal function is to disregard the score for that core.";
 
 const string ARG_PI = "--pi";
