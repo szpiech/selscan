@@ -5,12 +5,13 @@
 #For dynamic linking
 #LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
 
-#for osx systems
+#for osx/macos-arm systems
 CC = g++
 G++FLAG = -O3 -m64 -mmmx -msse -msse2
 LINK_OPTS2 = -lpthread -lz
 I_PATH = -I../include
-L_PATH = ../lib/osx
+L_PATH = ../lib/macos-arm
+#L_PATH = ../lib/osx
 
 #for linux systems
 #CC = g++
