@@ -43,6 +43,10 @@ int main(int argc, char *argv[])
 
     if (ERROR) return 1;
 
+    ERROR = checkParameters(params,argc,argv);
+
+    if (ERROR) return 1;
+
     string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
     string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
@@ -50,22 +54,12 @@ int main(int argc, char *argv[])
     string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
     string vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
     string vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
-
+    
     bool TPED = false;
     if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
 
     bool VCF = false;
     if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
-
-    if (VCF && TPED) {
-        cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
-        return 1;
-    }
-
-    if ( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ) {
-        cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
-        return 1;
-    }
 
     string outFilename = params.getStringFlag(ARG_OUTFILE);
     string query = params.getStringFlag(ARG_EHH);
@@ -89,6 +83,7 @@ int main(int argc, char *argv[])
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
+    
     bool SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
     if(params.getBoolFlag(ARG_SKIP)){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
@@ -99,37 +94,12 @@ int main(int argc, char *argv[])
 
     bool CALC_PI = params.getBoolFlag(ARG_PI);
     int PI_WIN = params.getIntFlag(ARG_PI_WIN);
+
     char PI_WIN_str[50];
     snprintf(PI_WIN_str,50, "%d", PI_WIN);
 
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
-
-    if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
-    {
-        cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
-             << ")\n\tiHS (" << ARG_IHS
-             << ")\n\tXP-EHH (" << ARG_XP
-             << ")\n\tPI (" << ARG_PI
-             << ")\n\tnSL (" << ARG_NSL
-             << ")\n\tXP-nSL (" << ARG_XPNSL
-             << ")\n\tiHH12 (" << ARG_SOFT
-             << ")\n";
-        return 1;
-    }
-
-    if (WRITE_DETAILED_IHS && !CALC_IHS) {
-        cerr << "ERROR: The flag " << ARG_IHS_DETAILED << " must be used with " << ARG_IHS << " \n";
-        return 1;
-    }
-
-    /*
-        if (SINGLE_EHH && CALC_XP)
-        {
-            cerr << "Single query with XP-EHH is not yet available.\n";
-            return 1;
-        }
-    */
 
     if (SINGLE_EHH) outFilename += ".ehh." + query;
     else if (CALC_IHS) outFilename += ".ihs";
@@ -141,164 +111,12 @@ int main(int argc, char *argv[])
 
     if (ALT) outFilename += ".alt";
 
-    if (WAGH && UNPHASED){
-        cerr << "ERROR: --wagh and --unphased currently incompatible.\n\t\
-        Consider --xpehh or --xpnsl with --unphased for two population selection statistics.\n";
-        return 1;
-    }
-
-    if (CALC_PI && UNPHASED){
-        cerr << "ERROR: --pi and --unphased currently incompatible.\n";
-        return 1;
-    }
-
-    if (CALC_SOFT && UNPHASED){
-        cerr << "ERROR: --ihh12 and --unphased currently incompatible.\n";
-        return 1;
-    }
-    if (numThreads < 1)
-    {
-        cerr << "ERROR: Must run with one or more threads.\n";
-        return 1;
-    }
-    if (SCALE_PARAMETER < 1)
-    {
-        cerr << "ERROR: Scale parameter must be positive.\n";
-        return 1;
-    }
-    if (MAX_GAP < 1)
-    {
-        cerr << "ERROR: Max gap parameter must be positive.\n";
-        return 1;
-    }
-    if (EHH_CUTOFF <= 0 || EHH_CUTOFF >= 1)
-    {
-        cerr << "ERROR: EHH cut off must be > 0 and < 1.\n";
-        return 1;
-    }
-    if (TPED)
-    {
-        if ((!CALC_XP && !CALC_XPNSL) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
-        {
-            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << tpedFilename2 << ").\n";
-            return 1;
-        }
-    }
-    else if (VCF) {
-        if ((!CALC_XP && !CALC_XPNSL) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
-        {
-            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << vcfFilename2 << ").\n";
-            return 1;
-        }
-
-        if ((!CALC_NSL && !CALC_XPNSL) && (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0 && !USE_PMAP)) {
-            cerr << "ERROR: Must also provide a mapfile.\n";
-            return 1;
-        }
-    }
-    else
-    {
-        if ((!CALC_XP && !CALC_XPNSL) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
-        {
-            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << hapFilename2 << ").\n";
-            return 1;
-        }
-        if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
-            cerr << "ERROR: Must also provide a mapfile.\n";
-            return 1;
-        }
-
-    }
-    if (EHH1K < 1)
-    {
-        cerr << "ERROR: EHH1K must be > 0.\n";
-        return 1;
-    }
-
-    if (PI_WIN < 1)
-    {
-        cerr << "ERROR: pi window must be > 0.\n";
-        return 1;
-    }
-
     HaplotypeData *hapData, *hapData2;
     MapData *mapData;
 
-    try
-    {
-        if (TPED)
-        {
-            hapData = readHaplotypeDataTPED(tpedFilename,UNPHASED);
-            if (CALC_XP || CALC_XPNSL)
-            {
-                hapData2 = readHaplotypeDataTPED(tpedFilename2,UNPHASED);
-                if (hapData->nloci != hapData2->nloci)
-                {
-                    cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
-                    return 1;
-                }
-            }
-            mapData = readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps, USE_PMAP);
-        }
-        else if (VCF) {
-            hapData = readHaplotypeDataVCF(vcfFilename,UNPHASED);
-            if (CALC_XP || CALC_XPNSL)
-            {
-                hapData2 = readHaplotypeDataVCF(vcfFilename2,UNPHASED);
-                if (hapData->nloci != hapData2->nloci)
-                {
-                    cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
-                    return 1;
-                }
-            }
-            if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
-                mapData = readMapData(mapFilename, hapData->nloci, USE_PMAP);
-            }
-            else{//Load physical positions
-                mapData = readMapDataVCF(vcfFilename, hapData->nloci);
-            }
-        }
-        else
-        {
-            hapData = readHaplotypeData(hapFilename,UNPHASED);
-            if (CALC_XP || CALC_XPNSL)
-            {
-                hapData2 = readHaplotypeData(hapFilename2,UNPHASED);
-                if (hapData->nloci != hapData2->nloci)
-                {
-                    cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
-                    return 1;
-                }
-            }
-            mapData = readMapData(mapFilename, hapData->nloci, USE_PMAP);
-        }
-    }
-    catch (...)
-    {
-        return 1;
-    }
+    ERROR = loadHapMapData(&hapData,&hapData2,&mapData,params,argc,argv);
 
-    //Check if map is in order
-    for (int i = 1; i < mapData->nloci; i++) {
-        if ( mapData->physicalPos[i] < mapData->physicalPos[i - 1] ) {
-            cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
-            cerr << "\t" << mapData->locusName[i] << " " << mapData->physicalPos[i] << " appears after";
-            cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->physicalPos[i - 1] << "\n";
-            return 1;
-        }
-        if ( !CALC_NSL && mapData->geneticPos[i] < mapData->geneticPos[i - 1] ) {
-            cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
-            cerr << "\t" << mapData->locusName[i] << " " << mapData->geneticPos[i] << " appears after";
-            cerr << "\t" << mapData->locusName[i - 1] << " " << mapData->geneticPos[i - 1] << "\n";
-            return 1;
-        }
-    }
-
-
-    if (EHH1K >= hapData->nhaps)
-    {
-
-    }
+    if (ERROR) return 1;
 
     //Open stream for log file
     ofstream flog;
@@ -516,104 +334,14 @@ int main(int argc, char *argv[])
 
         freq1 = new double[hapData->nloci];
         freq2 = new double[hapData2->nloci];
-/*
-        MapData *newMapData;
-        HaplotypeData *newHapData;
-        HaplotypeData *newHapData2;
-        double *newfreq1;
-        double *newfreq2;
-*/
-        //int count = 0;
+
         for (int i = 0; i < hapData->nloci; i++)
         {
             freq1[i] = calcFreq(hapData, i, UNPHASED);
             freq2[i] = calcFreq(hapData2, i, UNPHASED);
-            /*
-            if(freq1[i] > MAF && 1 - freq1[i] > MAF && 
-                freq2[i] > MAF && 1 - freq2[i] > MAF){
-                count++;
-            }
-            */
         }
 
-        //Filtering kills power for XP stats
-/*
-        if (SKIP) //prefilter all sites < MAF
-        {
-            cerr << "Removing all variants < " << MAF << " in both pops.\n";
-            flog << "Removing all variants < " << MAF << " in both pops.\n";
-            newfreq1 = new double [count];
-            newfreq2 = new double [count];
-            newMapData = initMapData(count);
-            newMapData->chr = mapData->chr;
-            int j = 0;
-            for (int locus = 0; locus < mapData->nloci; locus++)
-            {
-                if (freq1[locus] > MAF && 1 - freq1[locus] > MAF && 
-                    freq2[locus] > MAF && 1 - freq2[locus] > MAF)
-                {
-                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
-                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
-                    newMapData->locusName[j] = mapData->locusName[locus];
-                    newfreq1[j] = freq1[locus];
-                    newfreq2[j] = freq2[locus];
-                    j++;
-                }
-            }
 
-            newHapData = initHaplotypeData(hapData->nhaps, count);
-            newHapData2 = initHaplotypeData(hapData2->nhaps, count);
-
-            for (int hap = 0; hap < newHapData->nhaps; hap++)
-            {
-                j = 0;
-                for (int locus = 0; locus < mapData->nloci; locus++)
-                {
-                    if (freq1[locus] > MAF && 1 - freq1[locus] > MAF && 
-                        freq2[locus] > MAF && 1 - freq2[locus] > MAF)
-                    {
-                        newHapData->data[hap][j] = hapData->data[hap][locus];
-                        j++;
-                    }
-                }
-            }
-
-            for (int hap = 0; hap < newHapData2->nhaps; hap++)
-            {
-                j = 0;
-                for (int locus = 0; locus < mapData->nloci; locus++)
-                {
-                    if (freq1[locus] > MAF && 1 - freq1[locus] > MAF && 
-                        freq2[locus] > MAF && 1 - freq2[locus] > MAF)
-                    {
-                        newHapData2->data[hap][j] = hapData2->data[hap][locus];
-                        j++;
-                    }
-                }
-            }
-
-            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-
-            delete [] freq1;
-            delete [] freq2;
-            freq1 = newfreq1;
-            freq2 = newfreq2;
-            newfreq1 = NULL;
-            newfreq2 = NULL;
-
-            releaseHapData(hapData);
-            releaseHapData(hapData2);
-            hapData = newHapData;
-            hapData2 = newHapData2;
-            newHapData = NULL;
-            newHapData2 = NULL;
-
-            releaseMapData(mapData);
-            mapData = newMapData;
-            newMapData = NULL;
-        }
-*/
         ihh1 = new double[mapData->nloci];
         ihh2 = new double[mapData->nloci];
         

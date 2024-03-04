@@ -22,6 +22,7 @@
 #include <iostream>
 #include <fstream>
 #include "gzstream.h"
+#include "param_t.h"
 
 using namespace std;
 
@@ -65,6 +66,8 @@ void releaseHapData(HaplotypeData *data);
 HaplotypeData *readHaplotypeData(string filename, bool unphased);
 HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased);
 HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased);
+
+bool loadHapMapData(HaplotypeData **hapData, HaplotypeData **hapData2, MapData **mapData, param_t &params, int argc, char *argv[]);
 
 //counts the number of "fields" in a string
 //where a field is defined as a contiguous set of non whitespace

@@ -223,5 +223,6 @@ const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
+bool checkParameters(param_t &params,int argc, char *argv[]);
 
 #endif

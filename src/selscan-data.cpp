@@ -16,6 +16,109 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 #include "selscan-data.h"
+#include "selscan-cli.h"
+
+//Returns 1 on error
+bool loadHapMapData(HaplotypeData **hapData, HaplotypeData **hapData2, MapData **mapData, param_t &params, int argc, char *argv[]){
+    string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
+    string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
+    string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
+    string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
+    string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
+    string vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
+    string vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
+    
+    bool TPED = false;
+    if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+
+    bool VCF = false;
+    if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
+
+    bool UNPHASED = params.getBoolFlag(ARG_UNPHASED);
+    bool USE_PMAP = params.getBoolFlag(ARG_PMAP);
+    bool ALT = params.getBoolFlag(ARG_ALT);
+    bool WAGH = params.getBoolFlag(ARG_WAGH);
+    bool CALC_IHS = params.getBoolFlag(ARG_IHS);
+    bool CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
+    bool CALC_NSL = params.getBoolFlag(ARG_NSL);
+    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+    bool CALC_XP = params.getBoolFlag(ARG_XP);
+    bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
+    bool SINGLE_EHH = false;
+
+    try
+    {
+        if (TPED)
+        {
+            *hapData = readHaplotypeDataTPED(tpedFilename,UNPHASED);
+            if (CALC_XP || CALC_XPNSL)
+            {
+                *hapData2 = readHaplotypeDataTPED(tpedFilename2,UNPHASED);
+                if ((*hapData)->nloci != (*hapData2)->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
+            }
+            *mapData = readMapDataTPED(tpedFilename, (*hapData)->nloci, (*hapData)->nhaps, USE_PMAP);
+        }
+        else if (VCF) {
+            *hapData = readHaplotypeDataVCF(vcfFilename,UNPHASED);
+            if (CALC_XP || CALC_XPNSL)
+            {
+                *hapData2 = readHaplotypeDataVCF(vcfFilename2,UNPHASED);
+                if ((*hapData)->nloci != (*hapData2)->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
+            }
+            if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
+                *mapData = readMapData(mapFilename, (*hapData)->nloci, USE_PMAP);
+            }
+            else{//Load physical positions
+                *mapData = readMapDataVCF(vcfFilename, (*hapData)->nloci);
+            }
+        }
+        else
+        {
+            (*hapData) = readHaplotypeData(hapFilename,UNPHASED);
+            if (CALC_XP || CALC_XPNSL)
+            {
+                (*hapData2) = readHaplotypeData(hapFilename2,UNPHASED);
+                if ((*hapData)->nloci != (*hapData2)->nloci)
+                {
+                    cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                    return 1;
+                }
+            }
+            *mapData = readMapData(mapFilename, (*hapData)->nloci, USE_PMAP);
+        }
+    }
+    catch (...)
+    {
+        return 1;
+    }
+
+    //Check if map is in order
+    for (int i = 1; i < (*mapData)->nloci; i++) {
+        if ( (*mapData)->physicalPos[i] < (*mapData)->physicalPos[i - 1] ) {
+            cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
+            cerr << "\t" << (*mapData)->locusName[i] << " " << (*mapData)->physicalPos[i] << " appears after";
+            cerr << "\t" << (*mapData)->locusName[i - 1] << " " << (*mapData)->physicalPos[i - 1] << "\n";
+            return 1;
+        }
+        if ( !CALC_NSL && (*mapData)->geneticPos[i] < (*mapData)->geneticPos[i - 1] ) {
+            cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
+            cerr << "\t" << (*mapData)->locusName[i] << " " << (*mapData)->geneticPos[i] << " appears after";
+            cerr << "\t" << (*mapData)->locusName[i - 1] << " " << (*mapData)->geneticPos[i - 1] << "\n";
+            return 1;
+        }
+    }
+
+
+    return 0;
+}
 
 //reads in map data and also does basic checks on integrity of format
 //returns a populated MapData structure if successful
