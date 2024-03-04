@@ -7,7 +7,8 @@
 
 #for osx/macos-arm systems
 CC = g++
-G++FLAG = -O3 -m64 -mmmx -msse -msse2
+G++FLAG = -O3 -m64 
+#-mmmx -msse -msse2
 LINK_OPTS2 = -lpthread -lz
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm
@@ -32,14 +33,20 @@ LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 
 all : selscan norm
 
-selscan : selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-data.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
+selscan : selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
+	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
 
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
+selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h
+	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
+
 selscan-data.o : selscan-data.cpp selscan-data.h
 	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
+
+selscan-cli.o : selscan-cli.cpp selscan-cli.h
+	$(CC) $(G++FLAG) -c selscan-cli.cpp $(I_PATH)
 
 selscan-pbar.o : selscan-pbar.cpp selscan-pbar.h
 	$(CC) $(G++FLAG) -c selscan-pbar.cpp $(I_PATH)
