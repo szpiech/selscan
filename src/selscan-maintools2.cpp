@@ -16,421 +16,92 @@
 #include "selscan-maintools.h"
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
-class IHHFinder{
-    public:
-        HapMap* hm;
-        int numHaps;
-        int numSnps;
-        double* iHH0;
-        double* iHH1;
-    
-    private:
-        int SCALE_PARAMETER, MAX_GAP;
-        double EHH_CUTOFF;
-        bool ALT,WAGH,TRUNC;
-        double MAF;
-        int numThreads, MAX_EXTEND;
-        bool SKIP, WRITE_DETAILED_IHS, unphased;
-        
-        //double (*calc)(map<string, int> &, int, bool) = p->calc;
-
-    IHHFinder(HapMap& hm, param_t* params){
-        this->hm = &hm;
-        this->numHaps = hm.hapData.nhaps;
-        this->numSnps = hm.mapData.nloci;
-        SCALE_PARAMETER = params->getIntFlag(ARG_GAP_SCALE);
-        MAX_GAP = params->getIntFlag(ARG_MAX_GAP);
-        EHH_CUTOFF = params->getDoubleFlag(ARG_CUTOFF);
-        ALT = params->getBoolFlag(ARG_ALT);
-        WAGH = params->getBoolFlag(ARG_WAGH);
-        TRUNC = params->getBoolFlag(ARG_TRUNC);
-        MAF = params->getDoubleFlag(ARG_MAF);
-        numThreads = params->getIntFlag(ARG_THREAD);
-        MAX_EXTEND = ( params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? hm.mapData.mapEntries[numSnps-1].physicalPos - hm.mapData.mapEntries[0].physicalPos : params->getIntFlag(ARG_MAX_EXTEND);
-        SKIP = params->getBoolFlag(ARG_SKIP);
-        WRITE_DETAILED_IHS = params->getBoolFlag(ARG_IHS_DETAILED);
-        unphased = params->getBoolFlag(ARG_UNPHASED);
-        //double (*calc)(map<string, int> &, int, bool) = p->calc;
-    }
-    ~IHHFinder(){
-        // delete[] iHH0;
-        // delete[] iHH1;
+void calculatePi(HaplotypeData *hapData, MapData *mapData, int winsize, string outFilename)
+{
+    ofstream fout;
+    fout.open(outFilename.c_str());
+    if (fout.fail())
+    {
+        cerr << "ERROR: Failed to open " << outFilename << " for writing.\n";
+        throw 1;
     }
 
-    inline unsigned int twice_num_pair(int n){
-        return n*n - n;
-    }
+    int start = 1;
+    //int end = mapData->physicalPos[mapData->nloci - 1];
+    int startLocus = 0;
+    int endLocus = 0;
+    //Identify the start and end indicies in the window
+    int winStart = start;
+    int winEnd = winStart + winsize - 1;
+    int pos;
+    int length = 0;
+    double pi = 0;
+    double denominator = (hapData->nhaps) * (hapData->nhaps - 1) * 0.5;
+    int locus;
+    for (locus = 0; locus < mapData->nloci; locus++)
+    {
+        pos = mapData->physicalPos[locus];
+        while (pos > winEnd)
+        {
+            endLocus = locus - 1;
+            length = endLocus - startLocus + 1;
+            fout << winStart << " " << winEnd << " ";
+            //do stuff
 
-    inline unsigned int num_pair(int n){
-        return (n*n - n)/2;
-    }
-
-    /**
-     * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
-    */
-    void calc_EHH_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
-        int total_iteration_of_m = 0;
-        uint64_t ehh0_before_norm = 0;
-        uint64_t ehh1_before_norm = 0;
-
-        bool gap_skip = false;
-
-        uint64_t curr_ehh0_before_norm = 0;
-        uint64_t curr_ehh1_before_norm = 0;
-
-        uint64_t n_c0=0;
-        uint64_t n_c1=0;
-
-        uint64_t core_n_c0=0;
-        uint64_t core_n_c1=0;
-
-        int group_count[numHaps];
-        int group_id[numHaps];
-        bool isDerived[numHaps];
-        bool isAncestral[numHaps];
-
-        //will be vectorized with compile time flags
-        for(int i = 0; i<numHaps; i++){
-            group_count[i] = 0;
-            group_id[i] = 0;
-            isDerived[i] = false;
-            isAncestral[i] = false;
-        }
-
-        int totgc=0;
-        vector<unsigned int> v = hm->hapData.hapEntries[locus].positions;
-        
-        //unordered_set<unsigned int> v = hm.all_positions[locus];
-        if(v.size()==0){
-            n_c0 = numHaps;
-            group_count[0] = numHaps;
-            totgc+=1;
-            ehh0_before_norm = twice_num_pair(n_c0);
-        }else if (v.size()==numHaps){ // all set
-            group_count[0] = numHaps;
-            totgc+=1;
-            n_c1 = numHaps;
-            
-            for (int set_bit_pos : v){
-                isDerived[set_bit_pos] = true;
-            }
-            ehh1_before_norm = twice_num_pair(n_c1);
-        }else{
-            if(hm->hapData.hapEntries[locus].flipped){
-                group_count[1] = v.size();
-                group_count[0] = numHaps - v.size();
-                n_c0 = v.size();
-                n_c1 = numHaps - v.size();
-
-                for (int set_bit_pos : v){
-                    isAncestral[set_bit_pos] = true;
-                    group_id[set_bit_pos] = 1;
-                }
-            }else{
-                group_count[1] = v.size();
-                group_count[0] = numHaps - v.size();
-                n_c1 = v.size();
-                n_c0 = numHaps - v.size();
-
-                for (int set_bit_pos : v){
-                    isDerived[set_bit_pos] = true;
-                    group_id[set_bit_pos] = 1;
-                }
-            }        
-            
-            totgc+=2;
-            ehh0_before_norm = twice_num_pair(n_c0);
-            ehh1_before_norm = twice_num_pair(n_c1);
-        }
-
-        if(downstream){
-            // if(!calc_all)
-            //     out_ehh<<"Iter "<<0<<": EHH1["<<locus<<","<<locus<<"]="<<1<<" "<<1<<endl;
-
-            if(twice_num_pair(n_c1)!=0){
-                iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * 0.5 / twice_num_pair(n_c1);
-                //cout<<"Summing "<<1.0*curr_ehh1_before_norm/n_c1_squared_minus<<" "<<1.0*ehh1_before_norm/n_c1_squared_minus<<endl;
-            }
-            if(twice_num_pair(n_c0)!=0){
-                iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * 0.5 / twice_num_pair(n_c0);
-            }
-        }
-        
-        curr_ehh1_before_norm = ehh1_before_norm;
-        curr_ehh0_before_norm = ehh0_before_norm;
-
-        int i = locus;  
-        while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
-            if(downstream){
-                if (--i < 0) break;
-                //if (hm.mentries[locus].phyPos - hm.mentries[i].phyPos > max_extend) break;
-            }else{
-                if (++i >= numSnps) break;
-                //if (hm.mentries[i].phyPos -hm.mentries[locus].phyPos > max_extend) break;
-            }
-            
-            
-            //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
-            if(curr_ehh1_before_norm*1.0/twice_num_pair(n_c1) < p.cutoff or curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)  < cutoff){   // or cutoff, change for benchmarking against hapbin
-                //std::cout<<"breaking"<<endl;
-                break;
-            }
-            double distance;
-            
-            if(downstream){
-                distance = hm->mapData.mapEntries[i+1].physicalPos - hm->mapData.mapEntries[i].physicalPos;
-            }else{
-                distance = hm->mapData.mapEntries[i].physicalPos - hm->mapData.mapEntries[i-1].physicalPos;
-            }
-
-            // this should not happen as we already did integrity check previously
-            if (distance < 0)
+            if (length == 0)
             {
-                cerr << "ERROR: physical position not in ascending order.\n"; 
-                throw 0;
+                pi = 0;
             }
-
-
-            // if(distance> max_gap){
-            //     gap_skip = true;
-            //     break;
-            // }
-            if(distance > SCALE_PARAMETER){
-                distance /= SCALE_PARAMETER;
-            }
-            //distance = 1; // for testing
-            
-            if(downstream){
-                v = hm->hapData.hapEntries[i+1].xors;
-            }else{
-                v = hm->hapData.hapEntries[i].xors;
-            }
-
-            // ensure that in boundary we don't do any calculation
-            if(hm->hapData.hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ 
-                v = hm->hapData.hapEntries[i].positions;
-                if(v.size()==0 or v.size()==numHaps){ // integrity check
-                    cerr<<"ERROR: Monomorphic site should not exist."<<endl;
-                    throw 0;
-                   
-                    if(twice_num_pair(n_c1)!=0){    // all 1s 
-                        iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1) ;
-                    }
-                    if(twice_num_pair(n_c0)!=0){   // all 0s 
-                        iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0)  ;
-                    }
-                    continue;
-                }
-            }
-            
-            for (const unsigned int& set_bit_pos : v){
-                int old_group_id = group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);
-            }
-
-            for (const auto &ele : m) {
-                
-                int old_group_id = ele.first;
-                int newgroup_size = ele.second.size() ;
-                                
-                total_iteration_of_m += newgroup_size;
-                                
-                if(group_count[old_group_id] == newgroup_size || newgroup_size == 0){
-                    continue;
-                }
-
-                for(int v: ele.second){
-                    group_id[v] = totgc;
-                }
-                
-                int del_update = -twice_num_pair(group_count[old_group_id]) + twice_num_pair(newgroup_size) + twice_num_pair(group_count[old_group_id] - newgroup_size);
-                group_count[old_group_id] -= newgroup_size;
-                group_count[totgc] += newgroup_size;
-                
-                totgc+=1;
-                
-                bool isDerivedGroup =  (!hm->hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm->hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
-                    
-                if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
+            else
+            {
+                for (int i = 0; i < hapData->nhaps; i++)
                 {
-                    ehh1_before_norm += del_update;
-                }else{
-                    ehh0_before_norm += del_update;
+                    for (int j = i + 1; j < hapData->nhaps; j++)
+                    {
+                        pi += hamming_dist_ptr(hapData->data[i] + startLocus, hapData->data[j] + startLocus, length);
+                    }
                 }
             }
 
-            if(twice_num_pair(n_c1)!=0){
-                iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1);
-                //cout<<"Summing "<<1.0*curr_ehh1_before_norm/n_c1_squared_minus<<" "<<1.0*ehh1_before_norm/n_c1_squared_minus<<endl;
-            }
+            fout << pi / denominator << endl;
 
-            if(twice_num_pair(n_c0)!=0){
-                iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0);
-            }
+            winStart += winsize;
+            winEnd += winsize;
 
-            curr_ehh1_before_norm = ehh1_before_norm;
-            curr_ehh0_before_norm = ehh0_before_norm;
+            startLocus = locus;
+            pi = 0;
+        }
+    }
+    //final window
+    endLocus = locus - 1;
+    length = endLocus - startLocus + 1;
+    fout << winStart << " " << winEnd << " ";
+    //do stuff
 
-            // ehh1[locus] = 1.0*ehh1_before_norm/n_c1_squared_minus;
-            // ehh0[locus] = 1.0*ehh0_before_norm/n_c0_squared_minus;
-
-            //this shouldn't execute
-            if(twice_num_pair(n_c1)==0){
-                curr_ehh1_before_norm = 0;
+    if (length == 0)
+    {
+        pi = 0;
+    }
+    else
+    {
+        for (int i = 0; i < hapData->nhaps; i++)
+        {
+            for (int j = i + 1; j < hapData->nhaps; j++)
+            {
+                pi += hamming_dist_ptr(hapData->data[i] + startLocus, hapData->data[j] + startLocus, length);
             }
-            if(twice_num_pair(n_c0)==0){
-                curr_ehh0_before_norm = 0;
-            }
-
-            if(!calc_all){
-                out_ehh<<"Iter "<<i-locus<<": EHH1["<<locus<<","<<i<<"]="<<curr_ehh1_before_norm*1.0/twice_num_pair(n_c1)<<","<<curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)<<" ";
-                
-                for (int x = 0 ; x < totgc;  x++){
-                    out_ehh<<group_count[x]<<"("<<x<<")";
-                }
-                
-                out_ehh<<endl;
-            }
-            
-            m.clear();
         }
     }
 
-    /**
-     * @brief Calculate the EHH for a single locus
-     * @param query The query locus name
-    */
-    void calcSingleEHH(string query){
-        int numSnps = hm->mapData.nloci;
-        int numHaps = hm->hapData.nhaps;
-        iHH0 = new double[numSnps];
-        iHH1 = new double[numSnps];
-
-        //TODO
-        int locus = queryFound(hm->mapData, query);
-        
-        unordered_map<unsigned int, vector<unsigned int> > m;
-        iHH0[locus] = 0;
-        iHH1[locus] = 0;
-
-        calc_EHH_unidirection(locus, m, false); // upstream
-        calc_EHH_unidirection(locus, m, true); // downstream
-        
-        //handle all corner cases
-        if(hm->hapData.hapEntries[locus].positions.size()==0){
-            iHH1[locus] = 1;
-        }
-        if(hm->hapData.hapEntries[locus].positions.size()==numHaps){ //iHH0[locus]==0
-            iHH0[locus] = 1;
-        }
-        if(hm->hapData.hapEntries[locus].positions.size()==1){
-            if(locus == 0 or locus == numSnps-1){
-                iHH1[locus] = 0.5;
-            }else{
-                iHH1[locus] = 1;
-            }
-        }
-        if(hm->hapData.hapEntries[locus].positions.size()==numHaps-1){
-            if(locus == 0 or locus == numSnps-1){
-                iHH0[locus] = 0.5;
-            }else{
-                iHH0[locus] = 1;
-            }
-        }
-        delete[] iHH0;
-        delete[] iHH1;
-    }
-};
-
-
-// void calculatePi(HaplotypeData *hapData, MapData *mapData, int winsize, string outFilename)
-// {
-//     ofstream fout;
-//     fout.open(outFilename.c_str());
-//     if (fout.fail())
-//     {
-//         cerr << "ERROR: Failed to open " << outFilename << " for writing.\n";
-//         throw 1;
-//     }
-
-//     int start = 1;
-//     //int end = mapData->physicalPos[mapData->nloci - 1];
-//     int startLocus = 0;
-//     int endLocus = 0;
-//     //Identify the start and end indicies in the window
-//     int winStart = start;
-//     int winEnd = winStart + winsize - 1;
-//     int pos;
-//     int length = 0;
-//     double pi = 0;
-//     double denominator = (hapData->nhaps) * (hapData->nhaps - 1) * 0.5;
-//     int locus;
-//     for (locus = 0; locus < mapData->nloci; locus++)
-//     {
-//         pos = mapData->physicalPos[locus];
-//         while (pos > winEnd)
-//         {
-//             endLocus = locus - 1;
-//             length = endLocus - startLocus + 1;
-//             fout << winStart << " " << winEnd << " ";
-//             //do stuff
-
-//             if (length == 0)
-//             {
-//                 pi = 0;
-//             }
-//             else
-//             {
-//                 for (int i = 0; i < hapData->nhaps; i++)
-//                 {
-//                     for (int j = i + 1; j < hapData->nhaps; j++)
-//                     {
-//                         pi += hamming_dist_ptr(hapData->data[i] + startLocus, hapData->data[j] + startLocus, length);
-//                     }
-//                 }
-//             }
-
-//             fout << pi / denominator << endl;
-
-//             winStart += winsize;
-//             winEnd += winsize;
-
-//             startLocus = locus;
-//             pi = 0;
-//         }
-//     }
-//     //final window
-//     endLocus = locus - 1;
-//     length = endLocus - startLocus + 1;
-//     fout << winStart << " " << winEnd << " ";
-//     //do stuff
-
-//     if (length == 0)
-//     {
-//         pi = 0;
-//     }
-//     else
-//     {
-//         for (int i = 0; i < hapData->nhaps; i++)
-//         {
-//             for (int j = i + 1; j < hapData->nhaps; j++)
-//             {
-//                 pi += hamming_dist_ptr(hapData->data[i] + startLocus, hapData->data[j] + startLocus, length);
-//             }
-//         }
-//     }
-
-//     fout << pi / denominator << endl;
+    fout << pi / denominator << endl;
 
 
 
-//     fout.close();
-//     return;
-// }
+    fout.close();
+    return;
+}
 
-
-
-int queryFound(MapData& mapData, string query)
+int queryFound(MapData *mapData, string query)
 {
     for (int locus = 0; locus < mapData->nloci; locus++)
     {
@@ -449,24 +120,24 @@ int queryFound(MapData& mapData, string query)
     return -1;
 }
 
-// double calcFreq(HapData &hapData, int locus, bool unphased)
-// {
-//     double total = 0;
-//     double freq = 0;
+double calcFreq(HaplotypeData *hapData, int locus, bool unphased)
+{
+    double total = 0;
+    double freq = 0;
 
-//     for (int hap = 0; hap < hapData.nhaps; hap++)
-//     {
-//         if (hapData->data[hap][locus] != MISSING_CHAR)
-//         {
-//             if (hapData->data[hap][locus] == '1') freq += 1;
-//             else if (hapData->data[hap][locus] == '2') freq += 2;
+    for (int hap = 0; hap < hapData->nhaps; hap++)
+    {
+        if (hapData->data[hap][locus] != MISSING_CHAR)
+        {
+            if (hapData->data[hap][locus] == '1') freq += 1;
+            else if (hapData->data[hap][locus] == '2') freq += 2;
             
-//             if (unphased) total+=2;
-//             else total++;
-//         }
-//     }
-//     return (freq / total);
-// }
+            if (unphased) total+=2;
+            else total++;
+        }
+    }
+    return (freq / total);
+}
 
 void query_locus(void *order)
 {
@@ -856,9 +527,6 @@ void query_locus(void *order)
     return;
 }
 
-/**
- * need to figure out what soft query is
-*/
 void query_locus_soft(void *order)
 {
     work_order_t *p = (work_order_t *)order;
@@ -1218,25 +886,23 @@ bool familyDidSplit(const string &hapStr, const int hapCount, int **hapColor, co
     else return true;
 }
 
-void calc_ihs(HapMap &hm)
+void calc_ihs(void *order)
 {
-    // work_order_t *p = (work_order_t *)order;
-    // char **data = p->hapData->data;
-    int nloci = hm.hapData.nloci;
-    MapData &mapData = hm.mapData;
-    // int nhaps = p->hapData->nhaps;
-    // int *physicalPos = p->mapData->physicalPos;
-    
-    // double *geneticPos = p->mapData->geneticPos;
-    // string *locusName = p->mapData->locusName;
-    // int id = p->id;
-    // double *ihs = p->ihs;
-    // double *ihh1 = p->ihh1;
-    // double *ihh2 = p->ihh2;
-    // double *ihhDerivedLeft    = p->ihhDerivedLeft;
-    // double *ihhDerivedRight   = p->ihhDerivedRight;
-    // double *ihhAncestralLeft  = p->ihhAncestralLeft;
-    // double *ihhAncestralRight = p->ihhAncestralRight;
+    work_order_t *p = (work_order_t *)order;
+    char **data = p->hapData->data;
+    int nloci = p->hapData->nloci;
+    int nhaps = p->hapData->nhaps;
+    int *physicalPos = p->mapData->physicalPos;
+    double *geneticPos = p->mapData->geneticPos;
+    string *locusName = p->mapData->locusName;
+    int id = p->id;
+    double *ihs = p->ihs;
+    double *ihh1 = p->ihh1;
+    double *ihh2 = p->ihh2;
+    double *ihhDerivedLeft    = p->ihhDerivedLeft;
+    double *ihhDerivedRight   = p->ihhDerivedRight;
+    double *ihhAncestralLeft  = p->ihhAncestralLeft;
+    double *ihhAncestralRight = p->ihhAncestralRight;
     double *freq = p->freq;
     ofstream *flog = p->flog;
     Bar *pbar = p->bar;
@@ -1249,7 +915,7 @@ void calc_ihs(HapMap &hm)
     bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     double MAF = p->params->getDoubleFlag(ARG_MAF);
     int numThreads = p->params->getIntFlag(ARG_THREAD);
-    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? mapData.mapEntries[nloci-1].physicalPos - mapData.mapEntries[0].physicalPos : p->params->getIntFlag(ARG_MAX_EXTEND);
+    int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
     //bool SKIP = p->params->getBoolFlag(ARG_SKIP);
     bool WRITE_DETAILED_IHS = p->params->getBoolFlag(ARG_IHS_DETAILED);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
@@ -3113,6 +2779,3 @@ triplet_t calculateSoft(map<string, int> &count, int total)
 
     return res;
 }
-
-
-

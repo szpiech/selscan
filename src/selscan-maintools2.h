@@ -26,45 +26,44 @@
 #include "hamming_t.h"
 #include "selscan-cli.h"
 
-
 using namespace std;
 
 
-// struct work_order_t
-// {
-//     int queryLoc;
-//     int id;
+struct work_order_t
+{
+    int queryLoc;
+    int id;
 
-//     string filename;
+    string filename;
 
-//     HaplotypeData *hapData;
+    HaplotypeData *hapData;
 
-//     HaplotypeData *hapData1;
-//     HaplotypeData *hapData2;
+    HaplotypeData *hapData1;
+    HaplotypeData *hapData2;
 
-//     MapData *mapData;
+    MapData *mapData;
 
-//     double (*calc)(map<string, int> &, int, bool);
+    double (*calc)(map<string, int> &, int, bool);
 
-//     double *ihs;
-//     double *ihhDerivedLeft;
-//     double *ihhDerivedRight;
-//     double *ihhAncestralLeft;
-//     double *ihhAncestralRight;
-//     double *freq;
+    double *ihs;
+    double *ihhDerivedLeft;
+    double *ihhDerivedRight;
+    double *ihhAncestralLeft;
+    double *ihhAncestralRight;
+    double *freq;
 
-//     double *ihh1;
-//     double *freq1;
+    double *ihh1;
+    double *freq1;
 
-//     double *ihh2;
-//     double *freq2;
+    double *ihh2;
+    double *freq2;
 
-//     ofstream *flog;
-//     ofstream *fout;
-//     Bar *bar;
+    ofstream *flog;
+    ofstream *fout;
+    Bar *bar;
 
-//     param_t *params;
-// };
+    param_t *params;
+};
 
 struct triplet_t
 {
@@ -73,19 +72,19 @@ struct triplet_t
     double h2dh1;
 };
 
-void calculatePi(HapMap &hm, int winsize, string outFilename);
+void calculatePi(HaplotypeData *hapData, MapData *mapData, int winsize, string outFilename);
 
 triplet_t calculateSoft(map<string, int> &count, int total);
 
 void query_locus(void *work_order);
 void query_locus_soft(void *order);
 
-void calc_ihs(HapMap &hm);
-void calc_nsl(HapMap &hm);
-void calc_xpihh(HapMap &hm);
-void calc_soft_ihs(HapMap &hm);
+void calc_ihs(void *work_order);
+void calc_nsl(void *work_order);
+void calc_xpihh(void *work_order);
+void calc_soft_ihs(void *order);
 
-//double calcFreq(int locus, bool unphased);
+double calcFreq(HaplotypeData *hapData, int locus, bool unphased);
 int queryFound(MapData *mapData, string query);
 void fillColors(int **hapColor, map<string, int> &hapCount,
                 string *haplotypeList, int hapListLength,
@@ -95,8 +94,7 @@ bool familyDidSplit(const string &hapStr, const int hapCount,
                     const int previousLoc, string &mostCommonHap);
 
 double calculateHomozygosity_Wagh(map<string, int> &count, int total, int derivedCount);
+
 double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
-
-
 
 #endif

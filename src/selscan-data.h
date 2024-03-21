@@ -29,49 +29,97 @@ using namespace std;
 const int MISSING = -9999;
 const char MISSING_CHAR = '9';
 
-struct HaplotypeData
+/**
+ * counts the number of "fields" in a string
+ * where a field is defined as a contiguous set of non whitespace
+ * characters and fields are delimited by whitespace
+ *  @param str the string to count fields in
+*/
+int countFields(const string &str);
+
+
+struct HapEntry
 {
-    char **data;
-    int nhaps;
-    int nloci;
+    //char **data;
+    //data -> allpositions
+    bool flipped;
+    vector <unsigned int> xors;
+    vector <unsigned int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
+    vector <unsigned int> positions2; // 0-based indexing of allele "2"
+
+    // int nhaps;
+    // int nloci;
 };
 
-struct MapData
+struct MapEntry
 {
-    int *physicalPos;
-    double *geneticPos;
-    string *locusName;
-    int nloci;
+    int physicalPos;
+    double geneticPos;
+    string locusName;
     string chr;
 };
 
-//allocates the arrays and populates them with -9 or "--" depending on type
-MapData *initMapData(int nloci);
-void releaseMapData(MapData *data);
 
-//reads in map data and also does basic checks on integrity of format
-//returns a populated MapData structure if successful
-//throws an exception otherwise
-MapData *readMapData(string filename, int expected_loci, bool USE_PMAP);
-MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP);
-MapData *readMapDataVCF(string filename, int expected_loci); //Physical positions only
+class HapData
+{
+public:
+    struct HapEntry* hapEntries = NULL; //vector of haplotype entries
+    unsigned int nloci;
+    unsigned int nhaps;
+    bool unphased;
 
-//allocates the 2-d array and populated it with -9
-HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci);
-void releaseHapData(HaplotypeData *data);
+    //allocates the 2-d array and populated it with -9
+    void initHapData(unsigned int nhaps, unsigned int nloci);
+    void releaseHapData();
+    /**
+     * reads in haplotype data and also does basic checks on integrity of format
+     * returns a populated HaplotypeData structure if successful
+     * throws an exception otherwise
+     */ 
+    void readHapData(string filename, bool unphased);
+    void readHapDataTPED(string filename, bool unphased);
+    void readHapDataVCF(string filename, bool unphased);
+};
 
-//reads in haplotype data and also does basic checks on integrity of format
-//returns a populated HaplotypeData structure if successful
-//throws an exception otherwise
-HaplotypeData *readHaplotypeData(string filename, bool unphased);
-HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased);
-HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased);
+class MapData
+{
+public:
+    struct MapEntry* mapEntries = NULL; //vector of map entries
+    unsigned int nloci;
 
-bool loadHapMapData(HaplotypeData **hapData, HaplotypeData **hapData2, MapData **mapData, param_t &params, int argc, char *argv[]);
+    map<string, int> locus_query_map;
 
-//counts the number of "fields" in a string
-//where a field is defined as a contiguous set of non whitespace
-//characters and fields are delimited by whitespace
-int countFields(const string &str);
+    //allocates the arrays and populates them with -9 or "--" depending on type
+    void initMapData(int nloci);
+    void releaseMapData();
+
+    
+    //reads in map data and also does basic checks on integrity of format
+    //returns a populated MapData structure if successful
+    //throws an exception otherwise
+    void readMapData(string filename, int expected_loci, bool USE_PMAP);
+    void readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP);
+    void readMapDataVCF(string filename, int expected_loci); //Physical positions only
+
+};
+
+
+class HapMap{
+public:
+    //int nloci;
+    //int nhaps;
+    
+
+    HapData hapData;
+    HapData hapData2;
+    MapData mapData;
+
+    bool loadHapMapData(param_t &params, int argc, char *argv[]);
+    double calcFreq(int locus);
+    double calcFreq(string query);
+
+
+};
+
 
 #endif

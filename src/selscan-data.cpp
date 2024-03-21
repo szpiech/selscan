@@ -18,8 +18,9 @@
 #include "selscan-data.h"
 #include "selscan-cli.h"
 
+
 //Returns 1 on error
-bool loadHapMapData(HaplotypeData **hapData, HaplotypeData **hapData2, MapData **mapData, param_t &params, int argc, char *argv[]){
+bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[]){
     string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
     string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
@@ -50,49 +51,49 @@ bool loadHapMapData(HaplotypeData **hapData, HaplotypeData **hapData2, MapData *
     {
         if (TPED)
         {
-            *hapData = readHaplotypeDataTPED(tpedFilename,UNPHASED);
+            hapData.readHapDataTPED(tpedFilename,UNPHASED);
             if (CALC_XP || CALC_XPNSL)
             {
-                *hapData2 = readHaplotypeDataTPED(tpedFilename2,UNPHASED);
-                if ((*hapData)->nloci != (*hapData2)->nloci)
+                hapData2.readHapDataTPED(tpedFilename2,UNPHASED);
+                if (hapData.nloci != hapData2.nloci)
                 {
                     cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
                     return 1;
                 }
             }
-            *mapData = readMapDataTPED(tpedFilename, (*hapData)->nloci, (*hapData)->nhaps, USE_PMAP);
+            mapData.readMapDataTPED(tpedFilename, hapData.nloci, hapData.nhaps, USE_PMAP);
         }
         else if (VCF) {
-            *hapData = readHaplotypeDataVCF(vcfFilename,UNPHASED);
+            hapData.readHapDataVCF(vcfFilename,UNPHASED);
             if (CALC_XP || CALC_XPNSL)
             {
-                *hapData2 = readHaplotypeDataVCF(vcfFilename2,UNPHASED);
-                if ((*hapData)->nloci != (*hapData2)->nloci)
+                hapData2.readHapDataVCF(vcfFilename2,UNPHASED);
+                if (hapData.nloci != hapData2.nloci)
                 {
                     cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
                     return 1;
                 }
             }
             if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
-                *mapData = readMapData(mapFilename, (*hapData)->nloci, USE_PMAP);
+                mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP);
             }
             else{//Load physical positions
-                *mapData = readMapDataVCF(vcfFilename, (*hapData)->nloci);
+                mapData.readMapDataVCF(vcfFilename, hapData.nloci);
             }
         }
         else
         {
-            (*hapData) = readHaplotypeData(hapFilename,UNPHASED);
+            hapData.readHapData(hapFilename,UNPHASED);
             if (CALC_XP || CALC_XPNSL)
             {
-                (*hapData2) = readHaplotypeData(hapFilename2,UNPHASED);
-                if ((*hapData)->nloci != (*hapData2)->nloci)
+                hapData2.readHapData(hapFilename2,UNPHASED);
+                if (hapData.nloci != hapData2.nloci)
                 {
                     cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
                     return 1;
                 }
             }
-            *mapData = readMapData(mapFilename, (*hapData)->nloci, USE_PMAP);
+            mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP);
         }
     }
     catch (...)
@@ -100,30 +101,31 @@ bool loadHapMapData(HaplotypeData **hapData, HaplotypeData **hapData2, MapData *
         return 1;
     }
 
-    //Check if map is in order
-    for (int i = 1; i < (*mapData)->nloci; i++) {
-        if ( (*mapData)->physicalPos[i] < (*mapData)->physicalPos[i - 1] ) {
+    // Check if map is in order
+    for (int i = 1; i < mapData.nloci; i++) {
+        if ( mapData.mapEntries[i].physicalPos <  mapData.mapEntries[i-1].physicalPos ) {
             cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
-            cerr << "\t" << (*mapData)->locusName[i] << " " << (*mapData)->physicalPos[i] << " appears after";
-            cerr << "\t" << (*mapData)->locusName[i - 1] << " " << (*mapData)->physicalPos[i - 1] << "\n";
+            cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].physicalPos << " appears after";
+            cerr << "\t" <<  mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].physicalPos << "\n";
             return 1;
         }
-        if ( !CALC_NSL && (*mapData)->geneticPos[i] < (*mapData)->geneticPos[i - 1] ) {
+        if ( !CALC_NSL && mapData.mapEntries[i].geneticPos  < mapData.mapEntries[i-1].geneticPos  ) {
             cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
-            cerr << "\t" << (*mapData)->locusName[i] << " " << (*mapData)->geneticPos[i] << " appears after";
-            cerr << "\t" << (*mapData)->locusName[i - 1] << " " << (*mapData)->geneticPos[i - 1] << "\n";
+            cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].geneticPos << " appears after";
+            cerr << "\t" << mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].geneticPos << "\n";
             return 1;
         }
     }
 
-
     return 0;
 }
 
-//reads in map data and also does basic checks on integrity of format
-//returns a populated MapData structure if successful
-//throws an exception otherwise
-MapData *readMapData(string filename, int expected_loci, bool USE_PMAP)
+/**
+ * reads in map data and also does basic checks on integrity of format
+ * @returns a populated MapData structure if successful
+ * @throws an exception if not successful
+ */
+void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -171,25 +173,24 @@ MapData *readMapData(string filename, int expected_loci, bool USE_PMAP)
 
     cerr << "Loading map data for " << nloci << " loci\n";
 
-    MapData *data = initMapData(nloci);
+    initMapData(nloci);
 
     double Mb = 1000000.0;
 
     string chr;
-    for (int locus = 0; locus < data->nloci; locus++)
+    for (unsigned int locus = 0; locus < this->nloci; locus++)
     {
-        fin >> data->chr;
-        fin >> data->locusName[locus];
-        fin >> data->geneticPos[locus];
-        fin >> data->physicalPos[locus];
-        if (USE_PMAP) data->geneticPos[locus] = double(data->physicalPos[locus])/Mb;
+        fin >> mapEntries[locus].chr;
+        fin >> mapEntries[locus].locusName;
+        fin >> mapEntries[locus].geneticPos;
+        fin >> mapEntries[locus].physicalPos;
+        if (USE_PMAP) mapEntries[locus].geneticPos = double(mapEntries[locus].physicalPos)/Mb;
     }
 
     fin.close();
-    return data;
 }
 
-MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP)
+void MapData::readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -237,26 +238,25 @@ MapData *readMapDataTPED(string filename, int expected_loci, int expected_haps, 
 
     cerr << "Loading map data for " << nloci << " loci\n";
 
-    MapData *data = initMapData(nloci);
+    initMapData(nloci);
     
     double Mb = 1000000.0;
     
     string chr;
-    for (int locus = 0; locus < data->nloci; locus++)
+    for (int locus = 0; locus < this->nloci; locus++)
     {
-        fin >> data->chr;
-        fin >> data->locusName[locus];
-        fin >> data->geneticPos[locus];
-        fin >> data->physicalPos[locus];
-        if (USE_PMAP) data->geneticPos[locus] = double(data->physicalPos[locus])/Mb;
+        fin >> mapEntries[locus].chr;
+        fin >> mapEntries[locus].locusName;
+        fin >> mapEntries[locus].geneticPos;
+        fin >> mapEntries[locus].physicalPos;
+        if (USE_PMAP) mapEntries[locus].geneticPos = double(mapEntries[locus].physicalPos)/Mb;
         getline(fin, line);
     }
 
     fin.close();
-    return data;
 }
 
-MapData *readMapDataVCF(string filename, int expected_loci) {
+void MapData::readMapDataVCF(string filename, int expected_loci) {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
@@ -303,26 +303,25 @@ MapData *readMapDataVCF(string filename, int expected_loci) {
         getline(fin, line);
     }
 
-    MapData *data = initMapData(nloci); 
+    this->initMapData(nloci); 
     
     double Mb = 1000000.0;
     
     string chr;
-    for (int locus = 0; locus < data->nloci; locus++)
+    for (int locus = 0; locus < this->nloci; locus++)
     {
-        fin >> data->chr;
-        fin >> data->physicalPos[locus];
-        fin >> data->locusName[locus];
+        fin >> mapEntries[locus].chr;
+        fin >> mapEntries[locus].physicalPos;
+        fin >> mapEntries[locus].locusName;
         getline(fin, line);
-        data->geneticPos[locus] = double(data->physicalPos[locus])/Mb;
+        mapEntries[locus].geneticPos = double(mapEntries[locus].physicalPos)/Mb;
     }
 
     fin.close();
-    return data;
 }
 
 //allocates the arrays and populates them with MISSING or "--" depending on type
-MapData *initMapData(int nloci)
+void MapData::initMapData(int nloci)
 {
     if (nloci < 1)
     {
@@ -330,38 +329,46 @@ MapData *initMapData(int nloci)
         throw 0;
     }
 
-    MapData *data = new MapData;
-    data->nloci = nloci;
-    data->locusName = new string[nloci];
-    data->physicalPos = new int[nloci];
-    data->geneticPos = new double[nloci];
+    //MapData *data = new MapData;
+    //
 
-    for (int locus = 0; locus < nloci; locus++)
-    {
-        data->locusName[locus] = "--";
-        data->physicalPos[locus] = MISSING;
-        data->geneticPos[locus] = MISSING;
-    }
+    mapEntries = new struct MapEntry[nloci];
+    this->nloci = nloci;
 
-    return data;
+
+    // data->nloci = nloci;
+    // data->locusName = new string[nloci];
+    // data->physicalPos = new int[nloci];
+    // data->geneticPos = new double[nloci];
+
+    // for (int locus = 0; locus < nloci; locus++)
+    // {
+    //     data->locusName[locus] = "--";
+    //     data->physicalPos[locus] = MISSING;
+    //     data->geneticPos[locus] = MISSING;
+    // }
 }
 
-void releaseMapData(MapData *data)
+void MapData::releaseMapData()
 {
-    if (data == NULL) return;
-    data->nloci = -9;
-    delete [] data->locusName;
-    delete [] data->physicalPos;
-    delete [] data->geneticPos;
-    delete data;
-    data = NULL;
+    if (mapEntries == NULL) return;
+    this->nloci = -9;
+    // delete [] data->locusName;
+    // delete [] data->physicalPos;
+    // delete [] data->geneticPos;
+    // delete data;
+    // data = NULL;
+    
+    delete [] mapEntries;
+    mapEntries = NULL;
     return;
 }
 
 //reads in haplotype data and also does basic checks on integrity of format
 //returns a populated HaplotypeData structure if successful
 //throws an exception otherwise
-HaplotypeData *readHaplotypeData(string filename, bool unphased)
+/*
+void HapData::readHapData(string filename, bool unphased)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -414,18 +421,18 @@ HaplotypeData *readHaplotypeData(string filename, bool unphased)
 
     cerr << "Loading " << nhaps << " haplotypes and " << current_nloci << " loci...\n";
     
-    HaplotypeData *data;
+
     if (unphased){
-        data = initHaplotypeData(nhaps/2, current_nloci);
+        initHapData(nhaps/2, current_nloci);
     }
     else{
-        data = initHaplotypeData(nhaps, current_nloci);
+        initHapData(nhaps, current_nloci);
     }
 
     char allele1;
     for (int hap = 0; hap < nhaps; hap++)
     {
-        for (int locus = 0; locus < data->nloci; locus++)
+        for (int locus = 0; locus < this->nloci; locus++)
         {
             if(unphased){
                 fin >> allele1;
@@ -459,11 +466,10 @@ HaplotypeData *readHaplotypeData(string filename, bool unphased)
     }
 
     fin.close();
-
-    return data;
 }
+*/
 
-HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased)
+void HapData::readHapDataTPED(string filename, bool unphased)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -517,24 +523,24 @@ HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased)
 
     cerr << "Loading " << current_nhaps - numMapCols << " haplotypes and " << nloci << " loci...\n";
     
-    HaplotypeData *data;
+
     if (unphased){
-        data = initHaplotypeData((current_nhaps - numMapCols)/2, nloci);
+        initHapData((current_nhaps - numMapCols)/2, nloci);
     }
     else{
-        data = initHaplotypeData(current_nhaps - numMapCols, nloci);
+        initHapData(current_nhaps - numMapCols, nloci);
     }
 
     string junk;
     char allele1, allele2;
 
-    for (int locus = 0; locus < data->nloci; locus++)
+    for (int locus = 0; locus < this->nloci; locus++)
     {
         for (int i = 0; i < numMapCols; i++)
         {
             fin >> junk;
         }
-        for (int hap = 0; hap < data->nhaps; hap++)
+        for (int hap = 0; hap < this->nhaps; hap++)
         {
             if(unphased){
                 fin >> allele1;
@@ -548,29 +554,38 @@ HaplotypeData *readHaplotypeDataTPED(string filename, bool unphased)
                 char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
                     allele = '2';
+                    hapEntries[locus].positions2.push_back(hap);
                 }
                 else if (allele1 == '1' || allele2 == '1'){
                     allele = '1';
+                    hapEntries[locus].positions.push_back(hap);
                 }
-                data->data[hap][locus] = allele;
+                //else{
+                //allele = '0' implied;
+                //}
+                //data->data[hap][locus] = allele;
+                
             }
             else{
-                fin >> data->data[hap][locus];
-                if (data->data[hap][locus] != '0' && data->data[hap][locus] != '1')
+                char allele;
+                fin >> allele;
+                //fin >> data->data[hap][locus];
+                if (allele!= '0' && allele!= '1')
                 {
                     cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
                     throw 0;
+                }
+                if(allele=='1'){
+                    hapEntries[locus].positions.push_back(hap);
                 }
             }
         }
     }
 
     fin.close();
-
-    return data;
 }
 
-HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased)
+void HapData::readHapDataVCF(string filename, bool unphased)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -629,12 +644,12 @@ HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased)
     int nfields = (current_nhaps - numMapCols);
     cerr << "Loading " << nhaps << " haplotypes and " << nloci << " loci...\n";
 
-    HaplotypeData *data = initHaplotypeData(nhaps, nloci);
+    initHapData(nhaps, nloci);
 
     string junk;
     char allele1, allele2, separator;
     bool skipLine = false;
-    for (int locus = 0; locus < data->nloci; locus++)
+    for (int locus = 0; locus < this->nloci; locus++)
     {
         for (int i = 0; i < numMapCols; i++) {
             fin >> junk;
@@ -684,12 +699,10 @@ HaplotypeData *readHaplotypeDataVCF(string filename, bool unphased)
     }
 
     fin.close();
-
-    return data;
 }
 
 
-HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci)
+void HapData::initHapData(unsigned int nhaps, unsigned int nloci)
 {
     if (nhaps < 1 || nloci < 1)
     {
@@ -697,37 +710,45 @@ HaplotypeData *initHaplotypeData(unsigned int nhaps, unsigned int nloci)
         throw 0;
     }
 
-    HaplotypeData *data = new HaplotypeData;
-    data->nhaps = nhaps;
-    data->nloci = nloci;
+    this->hapEntries = new struct HapEntry[nhaps];
 
-    data->data = new char *[nhaps];
-    for (unsigned int i = 0; i < nhaps; i++)
+    
+    this->nhaps = nhaps;
+    this->nloci = nloci;
+
+    //this->data = new char *[nhaps];
+    // for (unsigned int i = 0; i < nhaps; i++)
+    // {
+    //     data->data[i] = new char[nloci];
+    //     for (unsigned int j = 0; j < nloci; j++)
+    //     {
+    //         data->data[i][j] = MISSING_CHAR;
+    //     }
+    // }
+    for (unsigned int j = 0; j < nloci; j++)
     {
-        data->data[i] = new char[nloci];
-        for (unsigned int j = 0; j < nloci; j++)
-        {
-            data->data[i][j] = MISSING_CHAR;
-        }
+        hapEntries[j].xors.reserve(nhaps);
+        hapEntries[j].positions.reserve(nhaps);
     }
-
-    return data;
 }
 
-void releaseHapData(HaplotypeData *data)
+void HapData::releaseHapData()
 {
-    if (data == NULL) return;
-    for (int i = 0; i < data->nhaps; i++)
+    if (hapEntries == NULL) return;
+    for (int i = 0; i < this->nhaps; i++)
     {
-        delete [] data->data[i];
+        //delete [] hapEntries[i];
+        //delete hapEntries[i];
+        hapEntries[i].xors.clear();
+        hapEntries[i].positions.clear();    
     }
 
-    delete [] data->data;
+    delete [] hapEntries;
 
-    data->data = NULL;
-    data->nhaps = -9;
-    data->nloci = -9;
-    data = NULL;
+    hapEntries = NULL;
+    this->nhaps = -9;
+    this->nloci = -9;
+    //data = NULL;
     return;
 }
 

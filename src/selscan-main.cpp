@@ -111,11 +111,9 @@ int main(int argc, char *argv[])
 
     if (ALT) outFilename += ".alt";
 
-    HaplotypeData *hapData, *hapData2;
-    MapData *mapData;
-
-    ERROR = loadHapMapData(&hapData,&hapData2,&mapData,params,argc,argv);
-
+    // input data is loaded into HapMap object
+    HapMap hm;
+    ERROR = hm.loadHapMapData(params,argc,argv);
     if (ERROR) return 1;
 
     //Open stream for log file
@@ -138,7 +136,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-
     for (int i = 0; i < argc; i++)
     {
         flog << argv[i] << " ";
@@ -159,7 +156,6 @@ int main(int argc, char *argv[])
     {
         flog << "Input filename: " << tpedFilename << "\n";
         if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << tpedFilename2 << "\n";
-
     }
     else if (VCF) {
         flog << "Input filename: " << vcfFilename << "\n";
@@ -186,40 +182,47 @@ int main(int argc, char *argv[])
 
     Bar pbar;
 
-    double *ihs, *ihh1, *ihh2;
-    double *ihhDerivedLeft, *ihhDerivedRight, *ihhAncestralLeft, *ihhAncestralRight;
-    double *freq, *freq1, *freq2;
+    // double *ihs, *ihh1, *ihh2;
+    // double *ihhDerivedLeft, *ihhDerivedRight, *ihhAncestralLeft, *ihhAncestralRight;
+    // double *freq, *freq1, *freq2;
 
-    if (mapData->nloci < numThreads)
+    if (hm.mapData.nloci < numThreads)
     {
         numThreads = 1;
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
     }
 
+    // changes by amatur
+
+
     if (SINGLE_EHH)
     {
+        singleEHH(hm, params, query);
 
-        freq = new double[hapData->nloci];
+        // freq = new double[hapData->nloci];
 
-        MapData *newMapData;
-        HaplotypeData *newHapData;
-        double *newfreq;
+        // MapData *newMapData;
+        // HaplotypeData *newHapData;
+        // double *newfreq;
 
-        int count = 0;
-        for (int i = 0; i < hapData->nloci; i++)
-        {
-            freq[i] = calcFreq(hapData, i, UNPHASED);
-            if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
-        }
+        // int count = 0;
+        // for (int i = 0; i < hapData->nloci; i++)
+        // {
+        //     freq[i] = calcFreq(hapData, i, UNPHASED);
+        //     if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
+        // }
 
 
         queryLoc = queryFound(mapData, query);
         double queryFreq = calcFreq(hapData, queryLoc, UNPHASED);
+        
+        
         if (queryLoc < 0)
         {
             cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
             return 1;
         }
+        
         else if (SKIP && (queryFreq < MAF || 1 - queryFreq < MAF))
         {
             cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << MAF << ".\n";
@@ -296,16 +299,16 @@ int main(int argc, char *argv[])
 
         queryLoc = queryFound(mapData, query);
 
-        work_order_t *order = new work_order_t;
-        pthread_t *peer = new pthread_t;
-        order->hapData = hapData;
-        order->mapData = mapData;
-        order->flog = &flog;
-        order->fout = &fout;
-        order->filename = outFilename;
-        order->params = &params;
-        order->queryLoc = queryLoc;
-        order->calc = &calculateHomozygosity;
+        // work_order_t *order = new work_order_t;
+        // pthread_t *peer = new pthread_t;
+        // order->hapData = hapData;
+        // order->mapData = mapData;
+        // order->flog = &flog;
+        // order->fout = &fout;
+        // order->filename = outFilename;
+        // order->params = &params;
+        // order->queryLoc = queryLoc;
+        // order->calc = &calculateHomozygosity;
 
         if (CALC_SOFT)
         {
@@ -324,8 +327,8 @@ int main(int argc, char *argv[])
             pthread_join(*peer, NULL);
         }
 
-        delete peer;
-        delete order;
+        //delete peer;
+        //delete order;
         return 0;
     }
 
