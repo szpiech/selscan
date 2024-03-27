@@ -192,146 +192,25 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
     }
 
+
+    IHHFinder ihhfinder(hm, params, &flog, &fout);
     // changes by amatur
-
-
     if (SINGLE_EHH)
     {
-        singleEHH(hm, params, query);
-
-        // freq = new double[hapData->nloci];
-
-        // MapData *newMapData;
-        // HaplotypeData *newHapData;
-        // double *newfreq;
-
-        // int count = 0;
-        // for (int i = 0; i < hapData->nloci; i++)
-        // {
-        //     freq[i] = calcFreq(hapData, i, UNPHASED);
-        //     if (freq[i] > MAF && 1 - freq[i] > MAF) count++;
-        // }
-
-
-        queryLoc = queryFound(mapData, query);
-        double queryFreq = calcFreq(hapData, queryLoc, UNPHASED);
-        
-        
-        if (queryLoc < 0)
-        {
-            cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-            return 1;
-        }
-        
-        else if (SKIP && (queryFreq < MAF || 1 - queryFreq < MAF))
-        {
-            cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << MAF << ".\n";
-            cerr << "\tIf you wish to calculate EHH at this locus either change --maf or set --keep-low-freq.\n";
-            return 1;
-        }
-        else if (!SKIP && (queryFreq == 0 || queryFreq == 1)){
-            cerr << "ERROR: EHH not calculated for " << query << ". Frequency = " << queryFreq << ".\n";
-            return 1;
-        }
-        else
-        {
-            cerr << "Found " << query << " in data.\n";
-        }
-
-        if (SKIP) //prefilter all sites < MAF
-        {
-            cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-            flog << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-            newfreq = new double [count];
-            newMapData = initMapData(count);
-            newMapData->chr = mapData->chr;
-            int j = 0;
-            for (int locus = 0; locus < mapData->nloci; locus++)
-            {
-                if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
-                {
-                    continue;
-                }
-                else
-                {
-                    newMapData->physicalPos[j] = mapData->physicalPos[locus];
-                    newMapData->geneticPos[j] = mapData->geneticPos[locus];
-                    newMapData->locusName[j] = mapData->locusName[locus];
-                    newfreq[j] = freq[locus];
-                    j++;
-                }
-            }
-
-            newHapData = initHaplotypeData(hapData->nhaps, count);
-
-            for (int hap = 0; hap < newHapData->nhaps; hap++)
-            {
-                j = 0;
-                for (int locus = 0; locus < mapData->nloci; locus++)
-                {
-                    if (freq[locus] <= MAF || 1 - freq[locus] <= MAF)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        newHapData->data[hap][j] = hapData->data[hap][locus];
-                        j++;
-                    }
-                }
-            }
-
-            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-            flog << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-
-            delete [] freq;
-            freq = newfreq;
-            newfreq = NULL;
-
-            releaseHapData(hapData);
-            hapData = newHapData;
-            newHapData = NULL;
-
-            releaseMapData(mapData);
-            mapData = newMapData;
-            newMapData = NULL;
-        }
-
-        queryLoc = queryFound(mapData, query);
-
-        // work_order_t *order = new work_order_t;
-        // pthread_t *peer = new pthread_t;
-        // order->hapData = hapData;
-        // order->mapData = mapData;
-        // order->flog = &flog;
-        // order->fout = &fout;
-        // order->filename = outFilename;
-        // order->params = &params;
-        // order->queryLoc = queryLoc;
-        // order->calc = &calculateHomozygosity;
-
+        ihhfinder.calcSingleEHH(query);
         if (CALC_SOFT)
         {
-            pthread_create(peer,
-                           NULL,
-                           (void *(*)(void *))query_locus_soft,
-                           (void *)order);
-            pthread_join(*peer, NULL);
+            //query_locus_soft
         }
         else
         {
-            pthread_create(peer,
-                           NULL,
-                           (void *(*)(void *))query_locus,
-                           (void *)order);
-            pthread_join(*peer, NULL);
+            //query_locus
         }
 
-        //delete peer;
-        //delete order;
-        return 0;
     }
 
+    /*
+    
     if (CALC_XP || CALC_XPNSL)
     {
 
@@ -832,6 +711,7 @@ int main(int argc, char *argv[])
         cerr << "\nFinished.\n";
 
     }
+    */
 
     flog.close();
     fout.close();

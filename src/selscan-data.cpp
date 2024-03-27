@@ -18,9 +18,15 @@
 #include "selscan-data.h"
 #include "selscan-cli.h"
 
+using namespace std;
 
 //Returns 1 on error
-bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[]){
+bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[], ofstream* flog){
+    this->flog = flog;
+    hapData.flog = flog;
+
+    //this->fout = fout;
+
     string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
     string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
     string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
@@ -36,6 +42,10 @@ bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[]){
     if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
     bool UNPHASED = params.getBoolFlag(ARG_UNPHASED);
+    hapData.unphased = UNPHASED;
+    hapData2.unphased = UNPHASED;
+     
+
     bool USE_PMAP = params.getBoolFlag(ARG_PMAP);
     bool ALT = params.getBoolFlag(ARG_ALT);
     bool WAGH = params.getBoolFlag(ARG_WAGH);
@@ -47,30 +57,33 @@ bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[]){
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     bool SINGLE_EHH = false;
 
+    this->MAF = params.getDoubleFlag(ARG_MAF);
+    this->SKIP = params.getBoolFlag(ARG_SKIP);
+
     try
     {
         if (TPED)
         {
-            hapData.readHapDataTPED(tpedFilename,UNPHASED);
+            hapData.readHapDataTPED(tpedFilename);
             if (CALC_XP || CALC_XPNSL)
             {
-                hapData2.readHapDataTPED(tpedFilename2,UNPHASED);
+                hapData2.readHapDataTPED(tpedFilename2);
                 if (hapData.nloci != hapData2.nloci)
                 {
-                    cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
+                    std::cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
                     return 1;
                 }
             }
             mapData.readMapDataTPED(tpedFilename, hapData.nloci, hapData.nhaps, USE_PMAP);
         }
         else if (VCF) {
-            hapData.readHapDataVCF(vcfFilename,UNPHASED);
+            hapData.readHapDataVCF(vcfFilename);
             if (CALC_XP || CALC_XPNSL)
             {
-                hapData2.readHapDataVCF(vcfFilename2,UNPHASED);
+                hapData2.readHapDataVCF(vcfFilename2);
                 if (hapData.nloci != hapData2.nloci)
                 {
-                    cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                    std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
                     return 1;
                 }
             }
@@ -83,13 +96,13 @@ bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[]){
         }
         else
         {
-            hapData.readHapData(hapFilename,UNPHASED);
+            hapData.readHapData(hapFilename);
             if (CALC_XP || CALC_XPNSL)
             {
-                hapData2.readHapData(hapFilename2,UNPHASED);
+                hapData2.readHapData(hapFilename2);
                 if (hapData.nloci != hapData2.nloci)
                 {
-                    cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                    std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
                     return 1;
                 }
             }
@@ -104,15 +117,15 @@ bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[]){
     // Check if map is in order
     for (int i = 1; i < mapData.nloci; i++) {
         if ( mapData.mapEntries[i].physicalPos <  mapData.mapEntries[i-1].physicalPos ) {
-            cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
-            cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].physicalPos << " appears after";
-            cerr << "\t" <<  mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].physicalPos << "\n";
+            std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
+            std::cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].physicalPos << " appears after";
+            std::cerr << "\t" <<  mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].physicalPos << "\n";
             return 1;
         }
         if ( !CALC_NSL && mapData.mapEntries[i].geneticPos  < mapData.mapEntries[i-1].geneticPos  ) {
-            cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
-            cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].geneticPos << " appears after";
-            cerr << "\t" << mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].geneticPos << "\n";
+            std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
+            std::cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].geneticPos << " appears after";
+            std::cerr << "\t" << mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].geneticPos << "\n";
             return 1;
         }
     }
@@ -184,6 +197,10 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP)
         fin >> mapEntries[locus].locusName;
         fin >> mapEntries[locus].geneticPos;
         fin >> mapEntries[locus].physicalPos;
+
+        locus_query_map[mapEntries[locus].locusName] = locus;
+
+
         if (USE_PMAP) mapEntries[locus].geneticPos = double(mapEntries[locus].physicalPos)/Mb;
     }
 
@@ -249,6 +266,9 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
         fin >> mapEntries[locus].locusName;
         fin >> mapEntries[locus].geneticPos;
         fin >> mapEntries[locus].physicalPos;
+
+        locus_query_map[mapEntries[locus].locusName] = locus;
+
         if (USE_PMAP) mapEntries[locus].geneticPos = double(mapEntries[locus].physicalPos)/Mb;
         getline(fin, line);
     }
@@ -313,6 +333,9 @@ void MapData::readMapDataVCF(string filename, int expected_loci) {
         fin >> mapEntries[locus].chr;
         fin >> mapEntries[locus].physicalPos;
         fin >> mapEntries[locus].locusName;
+
+        locus_query_map[mapEntries[locus].locusName] = locus;
+
         getline(fin, line);
         mapEntries[locus].geneticPos = double(mapEntries[locus].physicalPos)/Mb;
     }
@@ -585,7 +608,7 @@ void HapData::readHapDataTPED(string filename, bool unphased)
     fin.close();
 }
 
-void HapData::readHapDataVCF(string filename, bool unphased)
+void HapData::readHapDataVCF(string filename)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -642,6 +665,14 @@ void HapData::readHapDataVCF(string filename, bool unphased)
 
     int nhaps = unphased ? (current_nhaps - numMapCols) : (current_nhaps - numMapCols) * 2;
     int nfields = (current_nhaps - numMapCols);
+    
+    
+    if(SKIP){
+        cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+        (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+    
+    }
+
     cerr << "Loading " << nhaps << " haplotypes and " << nloci << " loci...\n";
 
     initHapData(nhaps, nloci);
@@ -697,6 +728,12 @@ void HapData::readHapDataVCF(string filename, bool unphased)
             }
         }
     }
+ 
+    if(SKIP){
+         cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+        (*flog) << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+    }
+   
 
     fin.close();
 }

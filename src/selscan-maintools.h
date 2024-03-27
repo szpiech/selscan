@@ -26,8 +26,90 @@
 #include "hamming_t.h"
 #include "selscan-cli.h"
 
+#include <ctime>
+#include <cmath>
+
 
 using namespace std;
+
+
+
+class IHHFinder{
+    public:
+        HapMap hm;
+        int numHaps;
+        int numSnps;
+        double* iHH0;
+        double* iHH1;
+        ofstream* flog;
+        ofstream* fout;
+        Bar *bar;
+        
+    IHHFinder(HapMap& hm, param_t& params,  ofstream* flog,  ofstream* fout){
+        this->flog = flog;
+        this->fout = fout; 
+        this->hm = hm;
+        this->numHaps = hm.hapData.nhaps;
+        this->numSnps = hm.mapData.nloci;
+        this->SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
+        this->MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
+        this->EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
+        this->ALT = params.getBoolFlag(ARG_ALT);
+        this->WAGH = params.getBoolFlag(ARG_WAGH);
+        this->TRUNC = params.getBoolFlag(ARG_TRUNC);
+        this->MAF = params.getDoubleFlag(ARG_MAF);
+        this->numThreads = params.getIntFlag(ARG_THREAD);
+        this->MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? hm.mapData.mapEntries[numSnps-1].physicalPos - hm.mapData.mapEntries[0].physicalPos : params.getIntFlag(ARG_MAX_EXTEND);
+        this->SKIP = params.getBoolFlag(ARG_SKIP);
+        this->WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+        this->unphased = params.getBoolFlag(ARG_UNPHASED);
+        //double (*calc)(map<string, int> &, int, bool) = p->calc;
+        this->CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
+        //int MAX_EXTEND;
+        if (!CALC_XPNSL){
+           // MAX_EXTEND = ( ARG_MAX_EXTEND <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
+        }
+        else{
+            MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.mapEntries[numSnps-1].geneticPos - hm.mapData.mapEntries[0].geneticPos : params.getIntFlag(ARG_MAX_EXTEND_NSL);
+        }
+    }
+    ~IHHFinder(){
+        // delete[] iHH0;
+        // delete[] iHH1;
+    }
+
+    void calcSingleEHH(string query);
+    void calc_xpihh(int id);
+    void calc_ihs();
+
+    private:
+        int SCALE_PARAMETER, MAX_GAP;
+        double EHH_CUTOFF;
+        bool ALT,WAGH,TRUNC;
+        double MAF;
+        int numThreads, MAX_EXTEND;
+        bool SKIP, WRITE_DETAILED_IHS, unphased;
+        bool CALC_XPNSL;
+        
+        //double (*calc)(map<string, int> &, int, bool) = p->calc;
+
+        void calc_EHH_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
+        
+
+    inline unsigned int twice_num_pair(int n){
+        return n*n - n;
+    }
+
+    inline unsigned int num_pair(int n){
+        return (n*n - n)/2;
+    }
+
+    double static readTimer() {
+        return clock() / (double) CLOCKS_PER_SEC;
+    }
+
+    
+};
 
 
 // struct work_order_t
