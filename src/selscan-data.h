@@ -24,6 +24,8 @@
 #include "gzstream.h"
 #include "param_t.h"
 
+#include "selscan-pbar.h"
+
 using namespace std;
 
 const int MISSING = -9999;
@@ -37,18 +39,12 @@ const char MISSING_CHAR = '9';
 */
 int countFields(const string &str);
 
-
 struct HapEntry
 {
-    //char **data;
-    //data -> allpositions
     bool flipped;
     vector <unsigned int> xors;
     vector <unsigned int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
     vector <unsigned int> positions2; // 0-based indexing of allele "2"
-
-    // int nhaps;
-    // int nloci;
 };
 
 struct MapEntry
@@ -79,7 +75,7 @@ public:
      */ 
     void readHapData(string filename);
     void readHapDataTPED(string filename);
-    void readHapDataVCF(string filename);
+    void readHapDataVCF(string filename, bool SKIP, double MAF);
 
     //double calcFreq(int locus, bool unphased)
     double calcFreq(int locus)

@@ -78,10 +78,10 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
             mapData.readMapDataTPED(tpedFilename, hapData.nloci, hapData.nhaps, USE_PMAP);
         }
         else if (VCF) {
-            hapData.readHapDataVCF(vcfFilename);
+            hapData.readHapDataVCF(vcfFilename, p.SKIP, p.MAF);
             if (CALC_XP || CALC_XPNSL)
             {
-                hapData2.readHapDataVCF(vcfFilename2);
+                hapData2.readHapDataVCF(vcfFilename2, p.SKIP, p.MAF);
                 if (hapData.nloci != hapData2.nloci)
                 {
                     std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
@@ -609,7 +609,7 @@ void HapData::readHapDataTPED(string filename, bool unphased)
     fin.close();
 }
 
-void HapData::readHapDataVCF(string filename)
+void HapData::readHapDataVCF(string filename, bool SKIP, double MAF)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -668,13 +668,14 @@ void HapData::readHapDataVCF(string filename)
     int nfields = (current_nhaps - numMapCols);
     
     
+    
+
+    cerr << "Loading " << nhaps << " haplotypes and " << nloci << " loci...\n";
     if(SKIP){
         cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
         (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     
     }
-
-    cerr << "Loading " << nhaps << " haplotypes and " << nloci << " loci...\n";
 
     initHapData(nhaps, nloci);
 

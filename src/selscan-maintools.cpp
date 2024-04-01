@@ -130,7 +130,7 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         
         
         //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
-        if(curr_ehh1_before_norm*1.0/twice_num_pair(n_c1) < p.EHH_CUTOFF or curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)  < p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+        if(ehh1_before_norm*1.0/twice_num_pair(n_c1) < p.EHH_CUTOFF or ehh0_before_norm*1.0/twice_num_pair(n_c0)  < p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
             //std::cout<<"breaking"<<endl;
             break;
         }
@@ -208,13 +208,13 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         double current_ehh;
         
         if(p.ALT){
-            current_ehh = curr_ehh_before_norm*1.0/twice_num_pair(n_c1+n_c0);
-            current_derived_ehh = curr_ehh1_before_norm*1.0/twice_num_pair(n_c1);
-            current_ancestral_ehh  = curr_ehh0_before_norm*1.0/twice_num_pair(n_c0);
+            current_ehh = ehh_before_norm*1.0/twice_num_pair(n_c1+n_c0);
+            current_derived_ehh = ehh1_before_norm*1.0/twice_num_pair(n_c1);
+            current_ancestral_ehh  = ehh0_before_norm*1.0/twice_num_pair(n_c0);
         }else{
-            current_ehh = curr_ehh_before_norm*1.0/square_alt(n_c1+n_c0);
-            current_derived_ehh = curr_ehh1_before_norm*1.0/square_alt(n_c1);
-            current_ancestral_ehh  = curr_ehh0_before_norm*1.0/square_alt(n_c0);
+            current_ehh = ehh_before_norm*1.0/square_alt(n_c1+n_c0);
+            current_derived_ehh = ehh1_before_norm*1.0/square_alt(n_c1);
+            current_ancestral_ehh  = ehh0_before_norm*1.0/square_alt(n_c0);
         }
 
         (*fout) << std::fixed <<   hm.mapData.mapEntries[i].physicalPos -  hm.mapData.mapEntries[locus].physicalPos  << "\t"
@@ -234,6 +234,9 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
 void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
+    int numSnps = hm.hapData.nloci;
+    int numHaps = hm.hapData.nhaps;
+
     int total_iteration_of_m = 0;
     uint64_t ehh0_before_norm = 0;
     uint64_t ehh1_before_norm = 0;
@@ -457,74 +460,23 @@ void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vecto
             curr_ehh0_before_norm = 0;
         }
 
-
-        //string *tempResults = new string[locus - stopLeft];
-        bool calc_all = true;
-        if(!calc_all){
-            //out_ehh<<"Iter "<<i-locus<<": EHH1["<<locus<<","<<i<<"]="<<curr_ehh1_before_norm*1.0/twice_num_pair(n_c1)<<","<<curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)<<" ";
-            
-            char tempStr[200];
-            if(p.UNPHASED){
-                //snprintf(tempStr,200, "%d\t%f\t%f\t%f\t%f\t%f\t%f", hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[locus].physicalPos, hm.mapData.mapEntries[i].geneticPos - hm.mapData.mapEntries[locus].geneticPos, current_derived_ehh, current_ancestral_ehh, current_notDerived_ehh, current_notAncestral_ehh, current_ehh);
-            }
-            else{
-                snprintf(tempStr,200, "%d\t%f\t%f\t%f\t%f", hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[locus].physicalPos, hm.mapData.mapEntries[i].geneticPos - hm.mapData.mapEntries[locus].geneticPos, current_derived_ehh, current_ancestral_ehh, current_ehh);
-            }
-            //tempResults[tempIndex] = string(tempStr);
-            //tempIndex--;
-
-            double current_derived_ehh; 
-            double current_ancestral_ehh;
-            double current_ehh = 1;
-
-            if(p.ALT){
-               current_derived_ehh = curr_ehh1_before_norm*1.0/twice_num_pair(n_c1);
-               current_ancestral_ehh  = curr_ehh0_before_norm*1.0/twice_num_pair(n_c0);
-            }else{
-                current_derived_ehh = curr_ehh1_before_norm*1.0/square_alt(n_c1);
-                current_ancestral_ehh  = curr_ehh0_before_norm*1.0/square_alt(n_c0);
-            }
-            
-
-
-            (*fout) << std::fixed <<   hm.mapData.mapEntries[i].physicalPos -  hm.mapData.mapEntries[locus].physicalPos  << "\t"
-                <<  hm.mapData.mapEntries[i].geneticPos -  hm.mapData.mapEntries[locus].geneticPos<< "\t"
-                << current_derived_ehh << "\t"
-                << current_ancestral_ehh << "\t";
-            if(unphased){
-                //(*fout) << current_notAncestral_ehh << "\t"
-                //        << current_notDerived_ehh << "\t";
-            }
-            (*fout) << current_ehh << endl;
-
-            bool DEDEBUG=false;
-            if(DEDEBUG){
-                for (int x = 0 ; x < totgc;  x++){
-                    out_ehh<<group_count[x]<<"("<<x<<")";
-                }
-            }
-            
-            
-            out_ehh<<endl;
-        }
-        
         m.clear();
     }
 }
 
 
 
-void MainTools::thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, MainTools* ehh_obj){
-    int elem_per_block = floor(ehh_obj->numSnps/ehh_obj->numThreads);
+void IHS::thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, IHS* ehh_obj){
+    int elem_per_block = floor(ehh_obj->hm.hapData.nloci/ehh_obj->numThreads);
     int start = tid*elem_per_block ;
     int end = start + elem_per_block  ;
     if(tid == ehh_obj->numThreads-1 ){
-        end = ehh_obj->numSnps;
+        end = ehh_obj->hm.hapData.nloci;
     }
 
     //#pragma omp parallel 
     for(int locus = start; locus< end; locus++){
-        ehh_obj->calc_ehh(locus);
+        ehh_obj->calc_ihh(locus);
     }
     
     //ehh_obj->log_string_per_thread[tid]+="finishing thread #"+to_string(tid)+"\n"; 
@@ -540,7 +492,7 @@ void MainTools::thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned 
 
 
 
-void MainTools::ihs_main(){
+void IHS::ihs_main(){
     std::unordered_map<unsigned int, std::vector<unsigned int> > map_per_thread[numThreads];
     std::unordered_map<unsigned int, std::vector<unsigned int> > mapd_per_thread[numThreads];
 
@@ -549,7 +501,7 @@ void MainTools::ihs_main(){
     // two different ways to parallelize: first block does pthread, second block does openmp
     if (!openmp_enabled)
     {
-        int total_calc_to_be_done = numSnps;
+        int total_calc_to_be_done = hm.hapData.nloci;
         std::thread *myThreads = new std::thread[numThreads];
         for (int i = 0; i < numThreads; i++)
         {
@@ -672,8 +624,8 @@ void XPIHH::xpihh_main()
         }
     }
 
-    if (p.CALC_XP) cerr << "Starting XP-EHH calculations.\n";
-    if (p.CALC_XPNSL) cerr << "Starting XP-nSL calculations.\n";
+    if (p.CALC_XP) std::cerr << "Starting XP-EHH calculations.\n";
+    if (p.CALC_XPNSL) std::cerr << "Starting XP-nSL calculations.\n";
         
 
     std::unordered_map<unsigned int, std::vector<unsigned int> > map_per_thread[numThreads];
@@ -682,7 +634,7 @@ void XPIHH::xpihh_main()
     // two different ways to parallelize: first block does pthread, second block does openmp
     if (!openmp_enabled)
     {
-        int total_calc_to_be_done = numSnps;
+        //int total_calc_to_be_done = numSnps;
         std::thread *myThreads = new std::thread[numThreads];
         for (int i = 0; i < numThreads; i++)
         {
@@ -702,7 +654,7 @@ void XPIHH::xpihh_main()
     hm.hapData.releaseHapData();
     hm.hapData2.releaseHapData();
     
-    cerr << "\nFinished.\n";
+    std::cerr << "\nFinished.\n";
 
     if (p.CALC_XP) (*fout) << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
     if (p.CALC_XPNSL) (*fout) << "id\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
@@ -738,20 +690,21 @@ void XPIHH::calc_xpihh(int locus)
 }
 
 void XPIHH::thread_xpihh(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, XPIHH* obj){
-    int elem_per_block = floor(obj->numSnps/obj->numThreads);
+    int numSnps = obj->hm.hapData.nhaps;
+    int elem_per_block = floor(numSnps/obj->numThreads);
     int start = tid*elem_per_block ;
     int end = start + elem_per_block  ;
     if(tid == obj->numThreads-1 ){
-        end = obj->numSnps;
+        end = numSnps;
     }
 
-    int step = (obj->numSnps / obj->numThreads) / (bar->totalTicks);
+    int step = (numSnps  / obj->numThreads) / (obj->bar->totalTicks);
     if (step == 0) step = 1;
     //if total 20 tasks: and 4 threads: t0: 0, 4, 8, 12, 16: t1: 1, 5, 9, 13, 17  
     //for (int locus = tid; locus < hm.mapData.nloci; locus += numThreads)
     //#pragma omp parallel 
     for(int locus = start; locus< end; locus++){
-        if (locus % step == 0) advanceBar(*bar, double(step));
+        if (locus % step == 0) advanceBar(*(obj->bar), double(step));
         obj->calc_xpihh(locus);
     }
 
