@@ -26,158 +26,106 @@
 #include "hamming_t.h"
 #include "selscan-cli.h"
 
+#include <thread>
+
 #include <ctime>
 #include <cmath>
 
-
 using namespace std;
 
-
-
-class IHHFinder{
+class MainTools{
+    protected:
+        param_main p;
+        
     public:
         HapMap hm;
-        int numHaps;
-        int numSnps;
-        double* iHH0;
-        double* iHH1;
         ofstream* flog;
         ofstream* fout;
         Bar *bar;
+        int numThreads;
         
-    IHHFinder(HapMap& hm, param_t& params,  ofstream* flog,  ofstream* fout){
-        this->flog = flog;
-        this->fout = fout; 
-        this->hm = hm;
-        this->numHaps = hm.hapData.nhaps;
-        this->numSnps = hm.mapData.nloci;
-        this->SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
-        this->MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
-        this->EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
-        this->ALT = params.getBoolFlag(ARG_ALT);
-        this->WAGH = params.getBoolFlag(ARG_WAGH);
-        this->TRUNC = params.getBoolFlag(ARG_TRUNC);
-        this->MAF = params.getDoubleFlag(ARG_MAF);
-        this->numThreads = params.getIntFlag(ARG_THREAD);
-        this->MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? hm.mapData.mapEntries[numSnps-1].physicalPos - hm.mapData.mapEntries[0].physicalPos : params.getIntFlag(ARG_MAX_EXTEND);
-        this->SKIP = params.getBoolFlag(ARG_SKIP);
-        this->WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
-        this->unphased = params.getBoolFlag(ARG_UNPHASED);
-        //double (*calc)(map<string, int> &, int, bool) = p->calc;
-        this->CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
-        //int MAX_EXTEND;
-        if (!CALC_XPNSL){
-           // MAX_EXTEND = ( ARG_MAX_EXTEND <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
+        double static readTimer() {
+            return clock() / (double) CLOCKS_PER_SEC;
         }
-        else{
-            MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.mapEntries[numSnps-1].geneticPos - hm.mapData.mapEntries[0].geneticPos : params.getIntFlag(ARG_MAX_EXTEND_NSL);
+        inline unsigned int square_alt(int n){
+            return n*n;
         }
-    }
-    ~IHHFinder(){
-        // delete[] iHH0;
-        // delete[] iHH1;
-    }
+        inline unsigned int twice_num_pair(int n){
+            return n*n - n;
+        }
+        inline unsigned int num_pair(int n){
+            return (n*n - n)/2;
+        }
 
-    void calcSingleEHH(string query);
-    void calc_xpihh(int id);
-    void calc_ihs();
+        int physicalDistance(int currentLocus, bool downstream){
+            int distance;
+            if(downstream){
+                distance =  hm.mapData.mapEntries[currentLocus+1].physicalPos - hm.mapData.mapEntries[currentLocus].physicalPos;
+            }else{
+                distance = hm.mapData.mapEntries[currentLocus].physicalPos - hm.mapData.mapEntries[currentLocus-1].physicalPos;
+            }
+
+            // this should not happen as we already did integrity check previously
+            if (distance < 0)
+            {
+                std::cerr << "ERROR: physical position not in ascending order.\n"; 
+                throw 0;
+            }
+            return distance;
+        }
+        double geneticDistance(int currentLocus, bool downstream){
+            double distance;
+            if(downstream){
+                distance =  hm.mapData.mapEntries[currentLocus+1].geneticPos - hm.mapData.mapEntries[currentLocus].geneticPos;
+            }else{
+                distance = hm.mapData.mapEntries[currentLocus].geneticPos - hm.mapData.mapEntries[currentLocus-1].geneticPos;
+            }
+
+            // this should not happen as we already did integrity check previously
+            if (distance < 0)
+            {
+                std::cerr << "ERROR: genetic position not in ascending order.\n"; 
+                throw 0;
+            }
+            return distance;
+        }
+    
+    MainTools(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout);
+};
+
+
+
+class XPIHH : public MainTools{
+    public:
+        void xpihh_main();
+    
+    private:
+        double* ihh_p1;
+        double* ihh_p2;
+        void calc_xpihh(int locus);
+        void calc_ehh_unidirection_xpihh(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
+        void thread_xpihh(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, XPIHH* obj);
+
+};
+
+class IHS : public MainTools{
+    public:
+        void ihs_main(); //thread_ihs
 
     private:
-        int SCALE_PARAMETER, MAX_GAP;
-        double EHH_CUTOFF;
-        bool ALT,WAGH,TRUNC;
-        double MAF;
-        int numThreads, MAX_EXTEND;
-        bool SKIP, WRITE_DETAILED_IHS, unphased;
-        bool CALC_XPNSL;
-        
-        //double (*calc)(map<string, int> &, int, bool) = p->calc;
-
-        void calc_EHH_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
-        
-
-    inline unsigned int twice_num_pair(int n){
-        return n*n - n;
-    }
-
-    inline unsigned int num_pair(int n){
-        return (n*n - n)/2;
-    }
-
-    double static readTimer() {
-        return clock() / (double) CLOCKS_PER_SEC;
-    }
-
-    
+        double* iHH0;
+        double* iHH1;
+        void static thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, MainTools* ehh_obj);
+        void calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
+        void calc_ihh(int locus);     
 };
 
-
-// struct work_order_t
-// {
-//     int queryLoc;
-//     int id;
-
-//     string filename;
-
-//     HaplotypeData *hapData;
-
-//     HaplotypeData *hapData1;
-//     HaplotypeData *hapData2;
-
-//     MapData *mapData;
-
-//     double (*calc)(map<string, int> &, int, bool);
-
-//     double *ihs;
-//     double *ihhDerivedLeft;
-//     double *ihhDerivedRight;
-//     double *ihhAncestralLeft;
-//     double *ihhAncestralRight;
-//     double *freq;
-
-//     double *ihh1;
-//     double *freq1;
-
-//     double *ihh2;
-//     double *freq2;
-
-//     ofstream *flog;
-//     ofstream *fout;
-//     Bar *bar;
-
-//     param_t *params;
-// };
-
-struct triplet_t
-{
-    double h1;
-    double h12;
-    double h2dh1;
+class EHH : public MainTools{
+    public:
+        void calc_single_ehh(string query);
+    private:
+        void calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
 };
-
-void calculatePi(HapMap &hm, int winsize, string outFilename);
-
-triplet_t calculateSoft(map<string, int> &count, int total);
-
-void query_locus(void *work_order);
-void query_locus_soft(void *order);
-
-void calc_ihs(HapMap &hm);
-void calc_nsl(HapMap &hm);
-void calc_xpihh(HapMap &hm);
-void calc_soft_ihs(HapMap &hm);
-
-//double calcFreq(int locus, bool unphased);
-int queryFound(MapData *mapData, string query);
-void fillColors(int **hapColor, map<string, int> &hapCount,
-                string *haplotypeList, int hapListLength,
-                int currentLoc, int &currentColor, bool left);
-bool familyDidSplit(const string &hapStr, const int hapCount,
-                    int **hapColor, const int nhaps, const int colorIndex,
-                    const int previousLoc, string &mostCommonHap);
-
-double calculateHomozygosity_Wagh(map<string, int> &count, int total, int derivedCount);
-double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 
 
 

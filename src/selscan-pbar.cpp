@@ -52,10 +52,3 @@ void barInit(Bar &bar, double total, int totalTicks)
     return;
 }
 
-#include <iostream>
-#include <ctime>
-#include <cmath>
-
-double static readTimer() {
-    return clock() / (double) CLOCKS_PER_SEC;
-}

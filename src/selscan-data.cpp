@@ -20,20 +20,21 @@
 
 using namespace std;
 
+
 //Returns 1 on error
-bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[], ofstream* flog){
+bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flog, ofstream* fout){
     this->flog = flog;
     hapData.flog = flog;
 
-    //this->fout = fout;
+    this->fout = fout;
 
-    string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
-    string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
-    string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
-    string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
-    string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
-    string vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
-    string vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
+    string hapFilename = p.hapFilename;
+    string hapFilename2 =  p.hapFilename2;
+    string mapFilename = p.mapFilename;
+    string tpedFilename = p.tpedFilename;
+    string tpedFilename2 = p.tpedFilename2;
+    string vcfFilename = p.vcfFilename;
+    string vcfFilename2 = p.vcfFilename2;
     
     bool TPED = false;
     if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
@@ -41,24 +42,24 @@ bool HapMap::loadHapMapData(param_t &params, int argc, char *argv[], ofstream* f
     bool VCF = false;
     if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
-    bool UNPHASED = params.getBoolFlag(ARG_UNPHASED);
+    bool UNPHASED = p.UNPHASED;
     hapData.unphased = UNPHASED;
     hapData2.unphased = UNPHASED;
      
 
-    bool USE_PMAP = params.getBoolFlag(ARG_PMAP);
-    bool ALT = params.getBoolFlag(ARG_ALT);
-    bool WAGH = params.getBoolFlag(ARG_WAGH);
-    bool CALC_IHS = params.getBoolFlag(ARG_IHS);
-    bool CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
-    bool CALC_NSL = params.getBoolFlag(ARG_NSL);
-    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
-    bool CALC_XP = params.getBoolFlag(ARG_XP);
-    bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
-    bool SINGLE_EHH = false;
+    bool USE_PMAP = p.USE_PMAP;
+    bool ALT = p.ALT;
+    bool WAGH = p.WAGH;
+    bool CALC_IHS = p.CALC_IHS;
+    bool CALC_XPNSL = p.CALC_XPNSL;
+    bool CALC_NSL = p.CALC_NSL;
+    bool WRITE_DETAILED_IHS = p.WRITE_DETAILED_IHS;
+    bool CALC_XP = p.CALC_XP;
+    bool CALC_SOFT = p.CALC_SOFT;
+    bool SINGLE_EHH = p.SINGLE_EHH;
 
-    this->MAF = params.getDoubleFlag(ARG_MAF);
-    this->SKIP = params.getBoolFlag(ARG_SKIP);
+    this->MAF = p.MAF;
+    this->SKIP = p.SKIP;
 
     try
     {

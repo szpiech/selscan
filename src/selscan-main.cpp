@@ -38,7 +38,8 @@ int main(int argc, char *argv[])
 #endif
 
     param_t params;
-    
+    param_main p;
+
     bool ERROR = initalizeParameters(params,argc,argv);
 
     if (ERROR) return 1;
@@ -47,136 +48,137 @@ int main(int argc, char *argv[])
 
     if (ERROR) return 1;
 
-    string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
-    string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
-    string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
-    string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
-    string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
-    string vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
-    string vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
+    p.hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
+    p.hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
+    p.mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
+    p.tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
+    p.tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
+    p.vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
+    p.vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
     
-    bool TPED = false;
-    if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+    p.TPED = false;
+    if (p.tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) p.TPED = true;
 
-    bool VCF = false;
-    if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
+    p.VCF = false;
+    if (p.vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) p.VCF = true;
 
-    string outFilename = params.getStringFlag(ARG_OUTFILE);
-    string query = params.getStringFlag(ARG_EHH);
+    p.outFilename = params.getStringFlag(ARG_OUTFILE);
+    p.query = params.getStringFlag(ARG_EHH);
 
-    int queryLoc = -1;
-    int numThreads = params.getIntFlag(ARG_THREAD);
-    int SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
-    int MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
+    p.numThreads = params.getIntFlag(ARG_THREAD);
+    p.SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
+    p.MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
 
-    double EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
-    double MAF = params.getDoubleFlag(ARG_MAF);
+    p.EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
+    p.MAF = params.getDoubleFlag(ARG_MAF);
 
-    bool UNPHASED = params.getBoolFlag(ARG_UNPHASED);
-    bool USE_PMAP = params.getBoolFlag(ARG_PMAP);
-    bool ALT = params.getBoolFlag(ARG_ALT);
-    bool WAGH = params.getBoolFlag(ARG_WAGH);
-    bool CALC_IHS = params.getBoolFlag(ARG_IHS);
-    bool CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
-    bool CALC_NSL = params.getBoolFlag(ARG_NSL);
-    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
-    bool CALC_XP = params.getBoolFlag(ARG_XP);
-    bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
-    bool SINGLE_EHH = false;
+    p.UNPHASED = params.getBoolFlag(ARG_UNPHASED);
+    p.USE_PMAP = params.getBoolFlag(ARG_PMAP);
+    p.ALT = params.getBoolFlag(ARG_ALT);
+    p.WAGH = params.getBoolFlag(ARG_WAGH);
+    p.CALC_IHS = params.getBoolFlag(ARG_IHS);
+    p.CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
+    p.CALC_NSL = params.getBoolFlag(ARG_NSL);
+    p.WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+    p.CALC_XP = params.getBoolFlag(ARG_XP);
+    p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
+    p.SINGLE_EHH = false;
     
-    bool SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
+    p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
     if(params.getBoolFlag(ARG_SKIP)){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
     //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
-    int EHH1K = params.getIntFlag(ARG_SOFT_K);
+    p.EHH1K = params.getIntFlag(ARG_SOFT_K);
 
-    bool CALC_PI = params.getBoolFlag(ARG_PI);
-    int PI_WIN = params.getIntFlag(ARG_PI_WIN);
+    p.CALC_PI = params.getBoolFlag(ARG_PI);
+    p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
     char PI_WIN_str[50];
-    snprintf(PI_WIN_str,50, "%d", PI_WIN);
+    snprintf(PI_WIN_str,50, "%d", p.PI_WIN);
 
-    if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
+    if (p.query.compare(DEFAULT_EHH) != 0) p.SINGLE_EHH = true;
 
+    if (p.SINGLE_EHH) p.outFilename += ".ehh." + p.query;
+    else if (p.CALC_IHS) p.outFilename += ".ihs";
+    else if (p.CALC_NSL) p.outFilename += ".nsl";
+    else if (p.CALC_XPNSL) p.outFilename += ".xpnsl";
+    else if (p.CALC_XP) p.outFilename += ".xpehh";
+    else if (p.CALC_SOFT) p.outFilename += ".ihh12";
+    else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
 
-    if (SINGLE_EHH) outFilename += ".ehh." + query;
-    else if (CALC_IHS) outFilename += ".ihs";
-    else if (CALC_NSL) outFilename += ".nsl";
-    else if (CALC_XPNSL) outFilename += ".xpnsl";
-    else if (CALC_XP) outFilename += ".xpehh";
-    else if (CALC_SOFT) outFilename += ".ihh12";
-    else if (CALC_PI) outFilename += ".pi." + string(PI_WIN_str) + "bp";
+    if (p.ALT) p.outFilename += ".alt";
 
-    if (ALT) outFilename += ".alt";
-
-    // input data is loaded into HapMap object
-    HapMap hm;
-    ERROR = hm.loadHapMapData(params,argc,argv);
-    if (ERROR) return 1;
 
     //Open stream for log file
     ofstream flog;
-    string logFilename = outFilename + ".log";
+    string logFilename = p.outFilename + ".log";
     flog.open(logFilename.c_str());
     if (flog.fail())
     {
         cerr << "ERROR: could not open " << logFilename << " for writing.\n";
         return 1;
     }
+    
 
     //Open stream for output file
     ofstream fout;
-    outFilename += ".out";
-    fout.open(outFilename.c_str());
+    p.outFilename += ".out";
+    fout.open(p.outFilename.c_str());
     if (fout.fail())
     {
-        cerr << "ERROR: could not open " << outFilename << " for writing.\n";
+        cerr << "ERROR: could not open " << p.outFilename << " for writing.\n";
         return 1;
     }
+
+    // input data is loaded into HapMap object
+    HapMap hm;
+    ERROR = hm.loadHapMapData(p,argc,argv, &flog, &fout);
+    if (ERROR) return 1;
+
 
     for (int i = 0; i < argc; i++)
     {
         flog << argv[i] << " ";
     }
     flog << "\nv" + VERSION + "\nCalculating ";
-    if (CALC_XP) flog << "XP-EHH.\n";
-    else if (CALC_PI) flog << "PI.\n";
-    else if (CALC_IHS) flog << " iHS.\n";
-    else if (CALC_NSL) flog << " nSL.\n";
-    else if (CALC_XPNSL) flog << " XP-nSL.\n";
-    else if (CALC_SOFT) flog << " iHH1K.\n";
+    if (p.CALC_XP) flog << "XP-EHH.\n";
+    else if (p.CALC_PI) flog << "PI.\n";
+    else if (p.CALC_IHS) flog << " iHS.\n";
+    else if (p.CALC_NSL) flog << " nSL.\n";
+    else if (p.CALC_XPNSL) flog << " XP-nSL.\n";
+    else if (p.CALC_SOFT) flog << " iHH1K.\n";
 
     if(params.getBoolFlag(ARG_SKIP)){
         flog << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
 
-    if (TPED)
+    if (p.TPED)
     {
-        flog << "Input filename: " << tpedFilename << "\n";
-        if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << tpedFilename2 << "\n";
+        flog << "Input filename: " << p.tpedFilename << "\n";
+        if (p.CALC_XP || p.CALC_XPNSL) flog << "Reference input filename: " << p.tpedFilename2 << "\n";
     }
-    else if (VCF) {
-        flog << "Input filename: " << vcfFilename << "\n";
-        if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << vcfFilename2 << "\n";
-        flog << "Map filename: " << mapFilename << "\n";
+    else if (p.VCF) {
+        flog << "Input filename: " << p.vcfFilename << "\n";
+        if (p.CALC_XP || p.CALC_XPNSL) flog << "Reference input filename: " << p.vcfFilename2 << "\n";
+        flog << "Map filename: " << p.mapFilename << "\n";
     }
     else {
-        flog << "Input filename: " << hapFilename << "\n";
-        if (CALC_XP || CALC_XPNSL) flog << "Reference input filename: " << hapFilename2 << "\n";
-        flog << "Map filename: " << mapFilename << "\n";
+        flog << "Input filename: " << p.hapFilename << "\n";
+        if (p.CALC_XP || p.CALC_XPNSL) flog << "Reference input filename: " << p.hapFilename2 << "\n";
+        flog << "Map filename: " << p.mapFilename << "\n";
     }
-    flog << "Output file: " << outFilename << "\n";
-    flog << "Threads: " << numThreads << "\n";
-    flog << "Scale parameter: " << SCALE_PARAMETER << "\n";
-    flog << "Max gap parameter: " << MAX_GAP << "\n";
-    flog << "EHH cutoff value: " << EHH_CUTOFF << "\n";
+    flog << "Output file: " << p.outFilename << "\n";
+    flog << "Threads: " << p.numThreads << "\n";
+    flog << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
+    flog << "Max gap parameter: " << p.MAX_GAP << "\n";
+    flog << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
     flog << "Phased: ";
-    if(UNPHASED) flog << "no\n";
+    if(p.UNPHASED) flog << "no\n";
     else flog << "yes\n";
     flog << "Alt flag set: ";
-    if (ALT) flog << "yes\n";
+    if (p.ALT) flog << "yes\n";
     else flog << "no\n";
     flog.flush();
 
@@ -186,26 +188,37 @@ int main(int argc, char *argv[])
     // double *ihhDerivedLeft, *ihhDerivedRight, *ihhAncestralLeft, *ihhAncestralRight;
     // double *freq, *freq1, *freq2;
 
-    if (hm.mapData.nloci < numThreads)
+    if (hm.mapData.nloci < p.numThreads)
     {
-        numThreads = 1;
-        cerr << "WARNING: there are fewer loci than threads requested.  Running with " << numThreads << " thread instead.\n";
+        p.numThreads = 1;
+        cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
     }
 
-
-    IHHFinder ihhfinder(hm, params, &flog, &fout);
-    // changes by amatur
-    if (SINGLE_EHH)
+    MainTools ihhfinder(hm, params, &flog, &fout);
+    if (p.SINGLE_EHH)
     {
-        ihhfinder.calcSingleEHH(query);
-        if (CALC_SOFT)
+        if (p.CALC_SOFT)
         {
+            //TODO
             //query_locus_soft
         }
         else
         {
+            ihhfinder.calc_single_ehh(p.query);
             //query_locus
         }
+
+    }
+
+    if(p.CALC_IHS){
+        ihhfinder.ihs_main();
+    }
+
+
+    if (p.CALC_XP || p.CALC_XPNSL)
+    {
+
+
 
     }
 

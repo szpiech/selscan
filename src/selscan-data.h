@@ -177,13 +177,14 @@ public:
     bool MAF;
 
     ofstream *flog;
-    //ofstream *fout;
+    ofstream *fout;
     Bar *bar;
 
-    bool loadHapMapData(param_t &params, int argc, char *argv[], ofstream *flog);
+    bool loadHapMapData(param_main &params, int argc, char *argv[], ofstream *flog, ofstream *fout);
     //double calcFreq(string query);
 
 
+    /*
     void doSkip(){
         if (SKIP) //prefilter all sites < MAF
         {
@@ -207,6 +208,7 @@ public:
             // newMapData = NULL;
         }
     }
+    */
 
     /***
      * @param query: Locus name
