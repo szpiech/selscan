@@ -493,7 +493,7 @@ void HapData::readHapData(string filename, bool unphased)
 }
 */
 
-void HapData::readHapDataTPED(string filename, bool unphased)
+void HapData::readHapDataTPED(string filename)
 {
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -627,6 +627,8 @@ void HapData::readHapDataVCF(string filename, bool SKIP, double MAF)
     int nloci = 0;
     int previous_nhaps = -1;
     int current_nhaps = 0;
+
+    int skipcount = 0;
     //Counts number of haps (cols) and number of loci (rows)
     //if any lines differ, send an error message and throw an exception
     while (getline(fin, line))
@@ -676,13 +678,16 @@ void HapData::readHapDataVCF(string filename, bool SKIP, double MAF)
         (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     
     }
+    int nloci_before_filtering = nloci;
+    nloci = 0;
 
-    initHapData(nhaps, nloci);
+    vector<vector<unsigned int> > all_positions(nloci_before_filtering);
+    vector<vector<unsigned int> > all_positions2(nloci_before_filtering);
 
     string junk;
     char allele1, allele2, separator;
     bool skipLine = false;
-    for (int locus = 0; locus < this->nloci; locus++)
+    for (int locus = 0; locus < nloci_before_filtering; locus++)
     {
         for (int i = 0; i < numMapCols; i++) {
             fin >> junk;
@@ -717,25 +722,77 @@ void HapData::readHapDataVCF(string filename, bool SKIP, double MAF)
             if(unphased){
                 char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
-                    allele = '2';
+                    //allele = '2';
+                    all_positions[locus].push_back(field);
                 }
                 else if (allele1 == '1' || allele2 == '1'){
-                    allele = '1';
+                    //allele = '1';
+                    all_positions[locus].push_back(field);
+
+                }else{
+                    // allele = '0' implied;
                 }
-                data->data[field][locus] = allele;
+                //data->data[field][locus] = allele;
             }
             else{
-                data->data[2 * field][locus] = allele1;
-                data->data[2 * field + 1][locus] = allele2;
+                if(allele1 == '1'){
+                    all_positions[locus].push_back(2 * field);
+                }
+                if(allele2 == '1'){
+                    all_positions[locus].push_back(2 * field + 1);
+                }
+                // data->data[2 * field][locus] = allele1;
+                // data->data[2 * field + 1][locus] = allele2;
             }
+        }
+        if(min(all_positions[locus].size(), 1-all_positions[locus].size())*1.0/nhaps > MAF){
+            nloci++;
+        }else{
+            skipcount++;
         }
     }
  
     if(SKIP){
-         cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-        (*flog) << "Removed " << mapData->nloci - count << " low frequency variants.\n";
+        nloci = nloci_before_filtering - skipcount;
+        initHapData(nhaps, nloci);
+        //iterate over all_positions vector
+        int newlocus = 0;
+        for (int locus = 0; locus < nloci_before_filtering; locus++)
+        {
+            hapEntries[locus].positions.reserve(all_positions[locus].size());
+            hapEntries[locus].xors.reserve(all_positions[locus].size());
+
+            double AF1 = all_positions[locus].size()*1.0/nhaps;
+            if(unphased){
+                AF1 = (all_positions[locus].size() + all_positions2[locus].size()*2.0)/nhaps;
+            }
+
+            if(min(AF1, 1-AF1) >= MAF){
+                for (unsigned int pos: all_positions[locus])
+                {
+                    hapEntries[newlocus].positions.push_back(pos);
+                    hapEntries[newlocus].xors.push_back(pos);
+                    ++newlocus;
+                }
+                if(unphased){
+                    for (unsigned int pos: all_positions2[locus])
+                    {
+                        hapEntries[newlocus].positions2.push_back(pos);
+                    }
+                }
+            }
+
+
+            if(nloci!=newlocus){
+                cerr << "DEBUG ERROR: nloci != newlocus\n";
+                throw 0;
+            }
+            
+        }
+
+        cerr << "Removed " << skipcount << " low frequency variants.\n";
+        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
     }
-   
 
     fin.close();
 }
@@ -764,11 +821,14 @@ void HapData::initHapData(unsigned int nhaps, unsigned int nloci)
     //         data->data[i][j] = MISSING_CHAR;
     //     }
     // }
+
+    /*
     for (unsigned int j = 0; j < nloci; j++)
     {
         hapEntries[j].xors.reserve(nhaps);
         hapEntries[j].positions.reserve(nhaps);
     }
+    */
 }
 
 void HapData::releaseHapData()
