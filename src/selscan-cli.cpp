@@ -112,7 +112,9 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
     bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
-    bool SINGLE_EHH = false;
+    bool SINGLE_EHH =  false;
+    if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
+
     bool SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
     if(params.getBoolFlag(ARG_SKIP)){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
@@ -124,6 +126,8 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
     bool CALC_PI = params.getBoolFlag(ARG_PI);
     int PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
+
+    cout<<  CALC_XPNSL << " " << CALC_IHS << " " << CALC_XP << " " << SINGLE_EHH << " " << CALC_PI << " " << CALC_NSL << " " << CALC_SOFT << endl;
         if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
     {
         cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH

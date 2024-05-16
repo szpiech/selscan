@@ -26,6 +26,7 @@
 #include "hamming_t.h"
 #include "selscan-cli.h"
 
+# include <unordered_map>
 #include <thread>
 
 #include <ctime>
@@ -51,8 +52,9 @@ class MainTools{
         inline unsigned int square_alt(int n){
             return n*n;
         }
-        inline unsigned int twice_num_pair(int n){
-            return n*n - n;
+        inline double twice_num_pair(int n){
+            return 2*nCk(n, 2);
+            //return n*n - n;
         }
         inline unsigned int num_pair(int n){
             return (n*n - n)/2;

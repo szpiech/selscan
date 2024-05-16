@@ -22,23 +22,21 @@ struct param_main{
 
     bool TPED, VCF;
 
-        int SCALE_PARAMETER, MAX_GAP;
-        double EHH_CUTOFF;
-        bool ALT,WAGH,TRUNC;
-        double MAF;
-        int MAX_EXTEND;
-        bool SKIP, WRITE_DETAILED_IHS;
-        bool CALC_XPNSL, CALC_XP;
-        bool SINGLE_EHH;
+    int SCALE_PARAMETER, MAX_GAP;
+    double EHH_CUTOFF;
+    bool ALT,WAGH,TRUNC;
+    double MAF;
+    int MAX_EXTEND;
+    bool SKIP, WRITE_DETAILED_IHS;
+    bool CALC_XPNSL, CALC_XP;
+    bool SINGLE_EHH;
 
-        bool CALC_NSL, CALC_IHS, CALC_SOFT;
+    bool CALC_NSL, CALC_IHS, CALC_SOFT;
 
-        int numThreads;
+    int numThreads;
 
     bool UNPHASED;
     bool USE_PMAP;
-    bool ALT;
-    bool WAGH;
 
     int EHH1K;
 

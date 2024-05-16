@@ -189,6 +189,11 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
     }
 
+
+    //hm.hapData.print();
+    //exit(1);
+    
+
     if (p.SINGLE_EHH)
     {
         EHH ehhfinder(hm, p, &flog, &fout);
@@ -203,6 +208,7 @@ int main(int argc, char *argv[])
             //query_locus
         }
     }else if(p.CALC_IHS || p.CALC_NSL){
+        cout<<"IHS or NSL\n";
         IHS ihsfinder(hm, p, &flog, &fout);
         ihsfinder.ihs_main();
     }else if (p.CALC_XP || p.CALC_XPNSL)

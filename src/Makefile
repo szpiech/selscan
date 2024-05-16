@@ -6,7 +6,8 @@
 #LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
 
 #for osx/macos-arm systems
-CC = g++
+#CC = g++
+CC = g++-13 -g
 G++FLAG = -O3 -m64 
 #-mmmx -msse -msse2
 LINK_OPTS2 = -lpthread -lz
