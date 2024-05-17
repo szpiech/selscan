@@ -53,6 +53,9 @@ class MainTools{
             return n*n;
         }
         inline double twice_num_pair(int n){
+            if(n < 2){
+                return 0;
+            }
             return 2*nCk(n, 2);
             //return n*n - n;
         }
@@ -120,8 +123,17 @@ class IHS : public MainTools{
     private:
         double* iHH0;
         double* iHH1;
+        double* iHH2;
+
+        double* ciHH0;
+        double* ciHH1;
+        double* ciHH2;
+
         void static thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, IHS* ehh_obj);
         void calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
+        void calc_ehh_unidirection_ihs_unphased(int locus, bool downstream);
+        void updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t ehh_before_norm[], bool is1[], bool is2[]);
+
         void calc_ihh(int locus);     
 };
 

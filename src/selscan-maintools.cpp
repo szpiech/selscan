@@ -132,7 +132,7 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
         
         ///*
-        if(ehh1_before_norm*1.0/twice_num_pair(n_c1) < p.EHH_CUTOFF or ehh0_before_norm*1.0/twice_num_pair(n_c0)  < p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+        if(ehh1_before_norm*1.0/twice_num_pair(n_c1) <= p.EHH_CUTOFF or ehh0_before_norm*1.0/twice_num_pair(n_c0)  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
             //std::cout<<"breaking"<<endl;
             break;
         }
@@ -263,6 +263,329 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
 }
 
 
+
+string getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0){
+    string order_str;
+    if(n_c2 >= n_c1 and n_c1 >= n_c0){
+        order_str = "210";
+    }else if(n_c1 >= n_c2 and n_c2 >= n_c0){
+        order_str = "120";
+    }else if(n_c2 >= n_c0 and n_c0 >= n_c1){
+        order_str = "201";
+    }else if(n_c1 >= n_c0 and n_c0 >= n_c2){
+        order_str = "102";
+    }else if(n_c0 >= n_c2 and n_c2 >= n_c1){
+        order_str = "021";
+    }else if(n_c0 >= n_c1 and n_c1 >= n_c2){
+        order_str = "012";
+    }
+    return order_str;
+}
+
+
+void IHS::updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t ehh_before_norm[], bool is1[], bool is2[]){
+    for (const auto &ele : m) {
+        int old_group_id = ele.first;
+        int newgroup_size = ele.second.size() ;
+        if(group_count[old_group_id] == newgroup_size || newgroup_size == 0){
+            continue;
+        }
+        for(int v: ele.second){
+            group_id[v] = totgc;
+        }
+        
+        double del_update = -twice_num_pair(group_count[old_group_id]) + twice_num_pair(newgroup_size) + twice_num_pair(group_count[old_group_id] - newgroup_size);
+        if(p.ALT){
+            del_update = -square_alt(group_count[old_group_id]) +   square_alt(newgroup_size) + square_alt(group_count[old_group_id] - newgroup_size);
+        }
+        
+        group_count[old_group_id] -= newgroup_size;
+        group_count[totgc] += newgroup_size;
+        
+        totgc+=1;
+        
+        //TODO
+        if(is1[ele.second[0]]) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
+        {
+            ehh_before_norm[1] += del_update;
+
+            cehh_before_norm[2] += del_update;
+            cehh_before_norm[0] += del_update;
+
+
+        }else if(is2[ele.second[0]]) {
+            ehh_before_norm[2] += del_update;
+
+            cehh_before_norm[1] += del_update;
+            cehh_before_norm[0] += del_update;
+        }else{
+            ehh_before_norm[0] += del_update;
+
+            cehh_before_norm[2] += del_update;
+            cehh_before_norm[1] += del_update;
+        }
+    }
+}
+
+
+void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
+    map<int, vector<int> > m1;
+    map<int, vector<int> > m2;
+
+    int numSnps = hm.hapData.nloci;
+    int numHaps = hm.hapData.nhaps;
+
+    uint64_t ehh_before_norm[3] = {0,0,0};
+    uint64_t curr_ehh_before_norm[3] = {0,0,0};
+
+    uint64_t cehh_before_norm[3] = {0,0,0};
+    uint64_t curr_cehh_before_norm[3] = {0,0,0};
+
+
+    uint64_t n_c[3] = {0,0,0};
+
+    bool gap_skip = false;
+
+    int group_count[numHaps];
+    int group_id[numHaps];
+    bool is0[numHaps];
+    bool is1[numHaps];
+    bool is2[numHaps];
+
+    double* iHH[3] = {iHH0, iHH1, iHH2};
+
+    //will be vectorized with compile time flags
+    for(int i = 0; i<numHaps; i++){
+        group_count[i] = 0;
+        group_id[i] = 0;
+        is0[i] = false;
+        is1[i] = false;
+        is2[i] = false;
+    }
+
+    int totgc=0;
+    vector<unsigned int> v1 = hm.hapData.hapEntries[locus].positions;
+    vector<unsigned int> v2 = hm.hapData.hapEntries[locus].positions2;
+
+    
+    n_c[2] = v2.size();
+    n_c[1] = v1.size();
+    n_c[0] = numHaps - n_c[1] - n_c[2];
+    string orderStr = getOrder(n_c[2], n_c[1], n_c[0]);
+    
+    
+
+    for(int i = 0; i<3; i++){
+        ehh_before_norm[i] = twice_num_pair(n_c[i]);
+        group_count[i] = n_c[orderStr[i]-'0'];
+    }
+    
+    //TODO
+    if(group_count[0] == numHaps){ //monomorphic site
+        totgc+=1;
+    }else if(group_count[2] == 0 ){ //second clause is redundant
+        if(group_count[1] + group_count[2] != numHaps){
+            cerr<<"ERROR: gc2==0"<<endl;
+            exit(1);
+        }
+        totgc+=2;
+    }else{
+        totgc+=3;
+    }
+
+    //group_count
+    //[0] = most occurring
+    //[1] = second most occurring
+    //[2] = least occurring
+
+    for (int set_bit_pos : v1){
+        is1[set_bit_pos] = true;
+        group_id[set_bit_pos] = 1;
+    }
+
+    for (int set_bit_pos : v2){
+        is2[set_bit_pos] = true;
+        group_id[set_bit_pos] = 2;
+    }
+
+
+    if(downstream){
+        for(int i=0; i<3; i++){
+            if(twice_num_pair(n_c[1])!=0){
+                iHH[i][locus] += (curr_ehh_before_norm[i] + ehh_before_norm[i]) * 0.5 / twice_num_pair(n_c[i]);
+            }
+        }
+    }
+    
+    for(int i=0; i<3; i++){
+        curr_ehh_before_norm[i] = ehh_before_norm[i];
+    }
+    
+
+    int i = locus;  
+    while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
+        if(downstream){
+            if (--i < 0) break;
+            //if (hm.mentries[locus].phyPos - hm.mentries[i].phyPos > max_extend) break;
+        }else{
+            if (++i >= numSnps) break;
+            //if (hm.mentries[i].phyPos -hm.mentries[locus].phyPos > max_extend) break;
+        }
+        
+        
+        //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
+        if(curr_ehh_before_norm[1]*1.0/twice_num_pair(n_c[1]) <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/twice_num_pair(n_c[0])  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+            //std::cout<<"breaking"<<endl;
+            break;
+        }
+        //TODO
+        // if (current_derived_ehh <=  EHH_CUTOFF) dont add to ihh calculation, only do EHH ancestral 
+        //     {
+        //     }
+
+
+        double distance;
+        
+        if(downstream){
+            distance = hm.mapData.mapEntries[i+1].physicalPos - hm.mapData.mapEntries[i].physicalPos;
+        }else{
+            distance = hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[i-1].physicalPos;
+        }
+
+        // this should not happen as we already did integrity check previously
+        if (distance < 0)
+        {
+            std::cerr << "ERROR: physical position not in ascending order.\n"; 
+            throw 0;
+        }
+        
+        
+
+
+        // if(distance> max_gap){
+        //     gap_skip = true;
+        //     break;
+        // }
+        if(distance > p.SCALE_PARAMETER){
+            distance /= p.SCALE_PARAMETER;
+        }
+        //distance = 1; // for testing
+        
+
+        if(n_c[0] == numHaps or n_c[1] == numHaps or n_c[2] == numHaps){
+            cerr<<"WARNING: Monomorphic site."<<endl;
+        
+            for(int i=0; i<3; i++){
+                if(twice_num_pair(n_c[i])!=0){
+                    iHH[i][locus] += (curr_ehh_before_norm[i] + ehh_before_norm[i]) * distance * 0.5 / twice_num_pair(n_c[i]);
+                }
+            }
+            continue;
+        }
+
+
+        // ensure that in boundary we don't do any calculation
+        // if(hm.hapData.hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ 
+        //     v = hm.hapData.hapEntries[i].positions;
+        //     if(v.size()==0 or v.size()==numHaps){ // integrity check
+        //         std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
+        //         throw 0;
+                
+        //         if(twice_num_pair(n_c1)!=0){    // all 1s 
+        //             iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1) ;
+        //         }
+        //         if(twice_num_pair(n_c0)!=0){   // all 0s 
+        //             iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0)  ;
+        //         }
+        //         continue;
+        //     }
+        // }
+
+        
+        for (const unsigned int& set_bit_pos : v1){
+            int old_group_id = group_id[set_bit_pos];
+            m1[old_group_id].push_back(set_bit_pos);
+        }
+
+        for (const unsigned int& set_bit_pos : v2){
+            int old_group_id = group_id[set_bit_pos];
+            m2[old_group_id].push_back(set_bit_pos);
+        }
+
+        if(m1.size()==0 && m2.size()==0){
+            //DO NOTHING
+        }else if(m1.size()==0 || m2.size()==0){
+            map<int, vector<int> >& m = (m1.size()==0) ? m2: m1;
+            updateEHH_from_split(m, group_count, group_id, totgc, ehh_before_norm, is1, is2);
+        }else{ // both non-empty
+            updateEHH_from_split(m1, group_count, group_id, totgc, ehh_before_norm, is1, is2);
+            updateEHH_from_split(m2, group_count, group_id, totgc, ehh_before_norm, is1, is2);
+        }
+
+        for(int i=0; i<3; i++){
+            if(twice_num_pair(n_c[i])!=0){
+                if(ehh_before_norm[i]*1.0/twice_num_pair(n_c[i]) > p.EHH_CUTOFF){
+                    iHH[i][locus] += (curr_ehh_before_norm[i] + ehh_before_norm[i]) * distance * 0.5 / twice_num_pair(n_c[i]);
+                }
+            }
+
+
+            if(twice_num_pair(numHaps - n_c[i])!=0){
+                if(cehh_before_norm[i]*1.0/twice_num_pair(numHaps - n_c[i]) > p.EHH_CUTOFF){
+                    ciHH[i][locus] += (curr_cehh_before_norm[i] + cehh_before_norm[i]) * distance * 0.5 / twice_num_pair(numHaps - n_c[i]);
+                }
+            }
+
+            curr_ehh_before_norm[i] = ehh_before_norm[i];
+            curr_cehh_before_norm[i] = cehh_before_norm[i];
+
+
+            //this shouldn't execute
+            if(twice_num_pair(n_c[i])==0){
+                curr_ehh_before_norm[i] = 0;
+            }
+
+            if(twice_num_pair(numHaps - n_c[i])==0){
+                curr_cehh_before_norm[i] = 0;
+            }
+        }
+
+        // ehh1[locus] = 1.0*ehh1_before_norm/n_c1_squared_minus;
+        // ehh0[locus] = 1.0*ehh0_before_norm/n_c0_squared_minus;
+
+        
+        m1.clear();
+        m2.clear();
+
+
+
+        // if (nextLocus < 0 || nextLocus >= hm.mapData.nloci)
+        // {
+        //     pthread_mutex_lock(&mutex_log);
+        //     (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
+        //             << ". ";
+        //     if (!p.TRUNC){
+        //         skipLocus = true;
+        //         (*flog) << "Skipping calculation at position " << hm.mapData.mapEntries[locus].physicalPos << " id: " << hm.mapData.mapEntries[locus].locusName;
+        //     }
+        //     (*flog) << "\n";
+        //     pthread_mutex_unlock(&mutex_log);
+        //     break;
+        // }
+        // else if ( physicalDistance(nextLocus, downstream) > p.MAX_GAP )  
+        // {
+        //     pthread_mutex_lock(&mutex_log);
+        //     (*flog) << "WARNING: Reached a gap of " << physicalDistance(nextLocus, downstream) << "bp > " << p.MAX_GAP 
+        //     << "bp. Skipping calculation at position " <<  hm.mapData.mapEntries[locus].physicalPos << " id: " <<  hm.mapData.mapEntries[locus].locusName << "\n";
+        //     pthread_mutex_unlock(&mutex_log);
+        //     skipLocus = true;
+        //     break;
+        // }
+    }
+
+    
+}
+
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
@@ -376,10 +699,16 @@ void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vecto
         
         
         //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
-        if(curr_ehh1_before_norm*1.0/twice_num_pair(n_c1) < p.EHH_CUTOFF or curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)  < p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+        if(curr_ehh1_before_norm*1.0/twice_num_pair(n_c1) <= p.EHH_CUTOFF and curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
             //std::cout<<"breaking"<<endl;
             break;
         }
+        //TODO
+        // if (current_derived_ehh <=  EHH_CUTOFF) dont add to ihh calculation, only do EHH ancestral 
+        //     {
+        //     }
+
+
         double distance;
         
         if(downstream){
@@ -473,12 +802,20 @@ void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vecto
         }
 
         if(twice_num_pair(n_c1)!=0){
-            iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1);
+
+            if(ehh1_before_norm*1.0/twice_num_pair(n_c1) > p.EHH_CUTOFF){
+               
+                iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1);
+            }
+            
             //cout<<"Summing "<<1.0*curr_ehh1_before_norm/n_c1_squared_minus<<" "<<1.0*ehh1_before_norm/n_c1_squared_minus<<endl;
         }
 
         if(twice_num_pair(n_c0)!=0){
-            iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0);
+            if(ehh0_before_norm*1.0/twice_num_pair(n_c0) > p.EHH_CUTOFF){
+                iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0);
+
+            }
         }
 
         curr_ehh1_before_norm = ehh1_before_norm;
@@ -496,6 +833,31 @@ void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vecto
         }
 
         m.clear();
+
+
+
+        // if (nextLocus < 0 || nextLocus >= hm.mapData.nloci)
+        // {
+        //     pthread_mutex_lock(&mutex_log);
+        //     (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
+        //             << ". ";
+        //     if (!p.TRUNC){
+        //         skipLocus = true;
+        //         (*flog) << "Skipping calculation at position " << hm.mapData.mapEntries[locus].physicalPos << " id: " << hm.mapData.mapEntries[locus].locusName;
+        //     }
+        //     (*flog) << "\n";
+        //     pthread_mutex_unlock(&mutex_log);
+        //     break;
+        // }
+        // else if ( physicalDistance(nextLocus, downstream) > p.MAX_GAP )  
+        // {
+        //     pthread_mutex_lock(&mutex_log);
+        //     (*flog) << "WARNING: Reached a gap of " << physicalDistance(nextLocus, downstream) << "bp > " << p.MAX_GAP 
+        //     << "bp. Skipping calculation at position " <<  hm.mapData.mapEntries[locus].physicalPos << " id: " <<  hm.mapData.mapEntries[locus].locusName << "\n";
+        //     pthread_mutex_unlock(&mutex_log);
+        //     skipLocus = true;
+        //     break;
+        // }
     }
 
     
@@ -525,13 +887,16 @@ void IHS::thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >
 
 }
 
-
-
-
-
 void IHS::ihs_main(){
     iHH0 = new double[hm.hapData.nloci];
     iHH1 = new double[hm.hapData.nloci];
+
+    if(hm.hapData.unphased){
+        iHH2 = new double[hm.hapData.nloci];
+        ciHH0 = new double[hm.hapData.nloci];
+        ciHH1 = new double[hm.hapData.nloci];
+        ciHH2 = new double[hm.hapData.nloci];
+    }
     
     std::unordered_map<unsigned int, std::vector<unsigned int> > map_per_thread[numThreads];
     std::unordered_map<unsigned int, std::vector<unsigned int> > mapd_per_thread[numThreads];
@@ -587,7 +952,14 @@ void IHS::ihs_main(){
     }
     */
     delete[] iHH0;
-    delete[] iHH1;
+    delete[] iHH1; 
+    if(hm.hapData.unphased){
+        delete[] iHH2;
+        delete[] ciHH0;
+        delete[] ciHH1;
+        delete[] ciHH2;
+    }
+
     return;
 }
 
@@ -605,8 +977,14 @@ void IHS::calc_ihh(int locus){
     iHH0[locus] = 0;
     iHH1[locus] = 0;
 
-    calc_ehh_unidirection_ihs(locus, m, false); // upstream
-    calc_ehh_unidirection_ihs(locus, m, true); // downstream
+    if(hm.hapData.unphased){
+        calc_ehh_unidirection_ihs_unphased(locus, m, false); // upstream
+        calc_ehh_unidirection_ihs_unphased(locus, m, true); // downstream
+    }else{
+        calc_ehh_unidirection_ihs(locus, m, false); // upstream
+        calc_ehh_unidirection_ihs(locus, m, true); // downstream
+    }
+    
     
     //handle all corner cases
     if(hm.hapData.hapEntries[locus].positions.size()==0){
