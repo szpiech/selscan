@@ -28,6 +28,9 @@
 #include "selscan-pbar.h"
 #include "param_t.h"
 
+#define IS_TRUE(x) { if (!(x)) std::cout << __FUNCTION__ << " failed on line " << __LINE__ << std::endl; }
+
+
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -68,6 +71,7 @@ int main(int argc, char *argv[])
     p.numThreads = params.getIntFlag(ARG_THREAD);
     p.SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
     p.MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
+    
 
     p.EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
     p.MAF = params.getDoubleFlag(ARG_MAF);
@@ -135,6 +139,9 @@ int main(int argc, char *argv[])
     // input data is loaded into HapMap object
     HapMap hm;
     ERROR = hm.loadHapMapData(p,argc,argv, &flog, &fout);
+
+
+
     if (ERROR) return 1;
 
 
@@ -189,10 +196,8 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
     }
 
+    p.MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
 
-    //hm.hapData.print();
-    //exit(1);
-    
 
     if (p.SINGLE_EHH)
     {

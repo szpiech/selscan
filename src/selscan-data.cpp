@@ -19,6 +19,7 @@
 #include "selscan-cli.h"
 #include <sstream>
 #include <queue> 
+#include<algorithm>
 using namespace std;
 
 //Returns 1 on error
@@ -524,10 +525,13 @@ void HapData::readHapData(string filename)
                     if (current_haps[hap]  && current_haps[hap*2]){
                         //data->data[(hap-1)/2][locus] = '2';
                         this->hapEntries[locus].positions2.push_back(hap);
+                        //this->hapEntries[locus].positions.push_back(2*hap);
                     }
                     else if ( (current_haps[hap] && !current_haps[hap*2]) || (!current_haps[hap] && current_haps[hap*2]) ){
                         //data->data[(hap-1)/2][locus] = '1';
                         this->hapEntries[locus].positions.push_back(hap);
+                        //this->hapEntries[locus].positions.push_back(2*hap+1);
+
                     }
                 }
                 // else{
@@ -627,10 +631,13 @@ void HapData::readHapDataTPED(string filename)
                 if (allele1 == '1' && allele2 == '1'){
                     allele = '2';
                     hapEntries[locus].positions2.push_back(hap);
+                    //hapEntries[locus].positions.push_back(2*hap);
                 }
                 else if (allele1 == '1' || allele2 == '1'){
                     allele = '1';
                     hapEntries[locus].positions.push_back(hap);
+                    //hapEntries[locus].positions.push_back(2*hap+1);
+
                 }
                 //else{
                 //allele = '0' implied;
@@ -728,12 +735,9 @@ void HapData::readHapDataVCF(string filename)
                 if (allele1 == '1' && allele2 == '1'){
                     //allele = '2';
                     number_of_2s++;
-                    //all_positions2[locus].push_back(field);
                 }
                 else if (allele1 == '1' || allele2 == '1'){
                     number_of_1s++;
-                    //allele = '1';
-                    //all_positions[locus].push_back(field);
 
                 }else{
                     // allele = '0' implied;
@@ -743,11 +747,9 @@ void HapData::readHapDataVCF(string filename)
             else{
                 if(allele1 == '1'){
                     number_of_1s++;
-                    //all_positions[locus].push_back(2 * field);
                 }
                 if(allele2 == '1'){
                     number_of_1s++;
-                    //all_positions[locus].push_back(2 * field + 1);
                 }
                 // data->data[2 * field][locus] = allele1;
                 // data->data[2 * field + 1][locus] = allele2;
@@ -810,8 +812,12 @@ void HapData::readHapDataVCF(string filename)
 
     skipQueue = skiplist; 
     unsigned int nloci_after_filtering = 0;
+
+    string prev_loc_str = "";
+    string curr_loc_str = "";
     for (unsigned int locus = 0; locus < nloci_before_filtering+num_meta_data_lines; locus++)
     {
+        curr_loc_str = "";
         for (int i = 0; i < numMapCols; i++) {
             fin >> junk;
             if (i == 0 && junk[0] == '#') { // to skip metadata lines
@@ -835,13 +841,38 @@ void HapData::readHapDataVCF(string filename)
             }
         }
         
+        if(unphased){
+            if(benchmark_flag == "XOR"){
+                hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]+number_of_2s_per_loci[nloci_after_filtering]);
+            }
+            //hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]+number_of_2s_per_loci[nloci_after_filtering]);
 
-        hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            if(benchmark_flag != "BITSET"){
+                hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+                hapEntries[nloci_after_filtering].positions2.reserve(number_of_2s_per_loci[nloci_after_filtering]);
+            }
+        }else{
+            if(benchmark_flag == "XOR"){
+                hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            }
 
-        if(unphased)
-            hapEntries[nloci_after_filtering].positions2.reserve(number_of_2s_per_loci[nloci_after_filtering]);
-        else
-            hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            if(benchmark_flag != "BITSET"){
+                hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            }
+            if(benchmark_flag == "BITSET"){
+                hapEntries[nloci_after_filtering].hapbitset->num_1s = number_of_1s_per_loci[nloci_after_filtering];
+            }
+            // if(number_of_1s_per_loci[nloci_after_filtering] > nhaps/2){
+            //     hapEntries[nloci_after_filtering].flipped = true;
+            //     hapEntries[nloci_after_filtering].positions.reserve(nhaps - number_of_1s_per_loci[nloci_after_filtering]);
+
+            // }else{
+            //     hapEntries[nloci_after_filtering].flipped = false;
+            //     hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            // }
+            
+            
+        }
 
         for (int field = 0; field <  current_nhaps ; field++)
         {
@@ -863,46 +894,159 @@ void HapData::readHapDataVCF(string filename)
             if(unphased){
                 char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
-                    //allele = '2';
                     hapEntries[nloci_after_filtering].positions2.push_back(field);
+                    //hapEntries[nloci_after_filtering].positions.push_back(2*field); //10
+                    hapEntries[nloci_after_filtering].count2++;
+                    curr_loc_str += "2";
+
+
                 }
                 else if (allele1 == '1' || allele2 == '1'){
-                    //allele = '1';
                      hapEntries[nloci_after_filtering].positions.push_back(field);
+                     //hapEntries[nloci_after_filtering].positions.push_back(2*field);
+                    hapEntries[nloci_after_filtering].count1++;
+                    //hapEntries[nloci_after_filtering].positions.push_back(2*field+1); //01
+                    curr_loc_str += "1";
 
                 }else{
                     // allele = '0' implied;
+                    curr_loc_str += "0";
                 }
                 //data->data[field][locus] = allele;
             }
             else{
-                if(allele1 == '1'){
-                    hapEntries[nloci_after_filtering].positions.push_back(2 * field);
+                if(benchmark_flag == "BITSET"){
+                    if(allele1 == '1'){
+                        (hapEntries[nloci_after_filtering].hapbitset)->set_bit(2 * field);
+                    }
+                    if(allele2 == '1'){
+                        (hapEntries[nloci_after_filtering].hapbitset)->set_bit(2 * field + 1);;
+                    }
                 }
-                if(allele2 == '1'){
-                    hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
+
+                if(benchmark_flag != "BITSET"){
+                    if (hapEntries[nloci_after_filtering].flipped){
+                        if(allele1 == '0'){
+                            hapEntries[nloci_after_filtering].positions.push_back(2 * field);
+                        }
+                        if(allele2 == '0'){
+                            hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
+                        }
+                    }else{
+                        if(allele1 == '1'){
+                        hapEntries[nloci_after_filtering].positions.push_back(2 * field);
+                        }
+                        if(allele2 == '1'){
+                            hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
+                        }
+                    }
                 }
+                
+                
                 // data->data[2 * field][locus] = allele1;
                 // data->data[2 * field + 1][locus] = allele2;
             }
         }
-        nloci_after_filtering++;
 
-        /*
-        if(min(all_positions[locus].size(), 1-all_positions[locus].size())*1.0/nhaps >= MAF){
-            nloci++;
+
+        if(nloci_after_filtering==0){
+            if(benchmark_flag == "XOR"){
+                vector<unsigned int>& source = hapEntries[nloci_after_filtering].positions;
+                vector<unsigned int>& destination = hapEntries[nloci_after_filtering].xors;
+                std::copy(source.begin(), source.end(), destination.begin());
+
+                //std::copy(hapEntries[nloci_after_filtering].positions.begin(), hapEntries[nloci_after_filtering].positions.end(), hapEntries[nloci_after_filtering].xors1.begin());
+                //std::copy(hapEntries[nloci_after_filtering].positions2.begin(), hapEntries[nloci_after_filtering].positions2.end(), hapEntries[nloci_after_filtering].xors2.begin());
+
+                hapEntries[nloci_after_filtering].xors1 = hapEntries[nloci_after_filtering].positions;
+                hapEntries[nloci_after_filtering].xors2 = hapEntries[nloci_after_filtering].positions2;
+
+
+            }
+
+            if(benchmark_flag == "BITSET"){
+                MyBitset* b1 =(hapEntries[nloci_after_filtering].hapbitset);
+                int sum = 0;
+                for (int k = 0; k < b1->nwords; k++) {
+                    hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ;
+                }
+                hapEntries[nloci_after_filtering].xorbitset->num_1s = b1->num_1s;
+            }
+           
+           
         }else{
-            skipcount++;
+            if(benchmark_flag == "BITSET"){
+                MyBitset* b1 =(hapEntries[nloci_after_filtering].hapbitset);
+                MyBitset* b2 = (hapEntries[nloci_after_filtering-1].hapbitset);
+
+                int sum = 0;
+                for (int k = 0; k < b1->nwords; k++) {
+                    hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
+                    sum += __builtin_popcountll(hapEntries[nloci_after_filtering].xorbitset->bits[k]);
+                }
+                hapEntries[nloci_after_filtering].xorbitset->num_1s = sum;
+            }
+            if(benchmark_flag == "XOR"){
+                vector<unsigned int>& curr_xor = hapEntries[nloci_after_filtering].xors;
+                vector<unsigned int>& curr_positions = hapEntries[nloci_after_filtering].positions;
+                vector<unsigned int>& prev_positions = hapEntries[nloci_after_filtering-1].positions;
+                std::set_symmetric_difference(curr_positions.begin(), curr_positions.end(),prev_positions.begin(), prev_positions.end(),
+                                std::back_inserter(curr_xor));
+            
+
+                            
+                //unphased
+                for(int i=0; i<curr_loc_str.length(); i++){
+                    int sub = curr_loc_str[i]-prev_loc_str[i];
+                    if(sub<0){
+                        sub = 3+sub;
+                    }
+                    if(sub==1){
+                        hapEntries[nloci_after_filtering].xors1.push_back(i);
+                    }else if(sub==2){
+                        hapEntries[nloci_after_filtering].xors2.push_back(i);
+                    }
+                }
+
+            }
         }
-        */
-       
-       
+        prev_loc_str = curr_loc_str;
+        nloci_after_filtering++;
     }
- 
+
+    if(benchmark_flag!="BITSET"){
+        for (int locus = 0; locus < nloci_before_filtering; locus++){
+            if(hapEntries[locus].flipped){
+                vector<unsigned int> zero_positions(nhaps - hapEntries[locus].positions.size());
+
+                int j = 0;
+                unsigned int front_one = hapEntries[locus].positions[j++];
+                for(int i=0; i<nhaps; i++){
+                    if(i==front_one){
+                        front_one = hapEntries[locus].positions[j++];
+                    }else{
+                        zero_positions.push_back(i);
+                    }   
+                }
+                hapEntries[locus].positions = zero_positions;
+            }
+        }
+    }
+    
     
     //nloci = nloci_before_filtering - skipcount*int(SKIP);
    // nloci = nloci_after_filtering;
-    
+
+   /*
+     for (int locus = 0; locus < 1; locus++){
+        hapEntries[locus].hapbitset->print_pos();
+        // for (int j = 0; j < 10; j++){
+        //     cout<<hapEntries[locus].positions[j]<<" ";
+        // }
+        // cout<<endl;
+     }
+    exit(1);
+    */
 
 
     /*
@@ -941,6 +1085,13 @@ void HapData::readHapDataVCF(string filename)
         
     }
     */
+
+
+
+   //BEGIN TESTING CODES
+
+   //END TESTING CODES
+
     if(SKIP){
         cerr << "Removed " << skipcount << " low frequency variants.\n";
         (*flog) << "Removed " << skipcount << " low frequency variants.\n";
@@ -961,9 +1112,17 @@ void HapData::initHapData(unsigned int nhaps, unsigned int nloci)
         throw 0;
     }
 
-    this->hapEntries = new struct HapEntry[nhaps];
+    this->hapEntries = new struct HapEntry[nloci];
     this->nhaps = nhaps;
     this->nloci = nloci;
+
+    if(benchmark_flag == "BITSET"){
+        for (unsigned int j = 0; j < nloci; j++){
+            hapEntries[j].hapbitset = new MyBitset(nhaps);
+            hapEntries[j].xorbitset = new MyBitset(nhaps);
+
+        }
+    }
 
     //this->data = new char *[nhaps];
     // for (unsigned int i = 0; i < nhaps; i++)

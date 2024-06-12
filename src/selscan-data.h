@@ -27,7 +27,7 @@
 #include "selscan-pbar.h"
 
 #include<queue>
-
+#include <cmath>
 using namespace std;
 
 const int MISSING = -9999;
@@ -41,12 +41,113 @@ const char MISSING_CHAR = '9';
 */
 int countFields(const string &str);
 
+class MyBitset{
+    public:
+    uint64_t* bits;
+    int nbits;
+    int nwords;
+    int WORDSZ = 64;
+    int num_1s = 0;
+
+    MyBitset(int nbits){
+        this->nbits = nbits;
+        this->nwords = (nbits/WORDSZ) + 1; //idea: do ceil
+        bits = new uint64_t[nwords];
+        for (int i = 0; i < nwords; i++)
+        {
+            bits[i] = 0;
+        }
+    }
+
+    int count_1s(){
+        int sum = 0;
+        for (int k = 0; k < nwords; k++) {
+            sum += __builtin_popcountll ((uint64_t)bits[k]);
+        }
+        return sum;
+    }
+
+    vector<int> get_bits(){
+        uint64_t bitset;
+        vector<int> bitvec;
+        for (int k = 0; k < nwords; k++) {
+            bitset = bits[k];
+            std::cout<<"B"<<bitset<<std::endl;
+            while (bitset != 0) {
+            uint64_t t = bitset & -bitset;
+            int r = __builtin_ctzl(bitset);
+            std::cout<<(k * WORDSZ + r) << std::endl;
+            bitvec.push_back(k * WORDSZ + r); //idea: reserve 1 counts
+            //callback(k * WORDSZ + r);
+            bitset ^= t;
+            }
+        }
+        // for (int i = 0; i < nbits; i++)
+        // {
+        //     bitvec.push_back(get_bit(i));
+        // }
+        return bitvec;
+    }
+
+    void set_bit(int bit){
+        bits[bit/WORDSZ] |= (uint64_t) 1 << (bit % WORDSZ);
+    }
+
+    void clear_bit(int bit){
+        bits[bit/WORDSZ] &= ~((uint64_t) 1 << (bit % WORDSZ));
+    }
+
+    bool get_bit(int bit){
+        return (bits[bit/WORDSZ] & ((uint64_t) 1 << (bit % WORDSZ))) != 0;
+    }
+
+    void print(){
+        for (int i = 0; i < nbits; i++)
+        {
+            cout << get_bit(i);
+        }
+        cout << endl;
+    }
+
+    void print_pos(){
+        for (int i = 0; i < nbits; i++)
+        {
+            if(get_bit(i)==1)
+                cout << i << " ";
+        }
+        cout << endl;
+    }
+
+    MyBitset operator^(const MyBitset& b) {
+        MyBitset xor_bitset(this->nbits);
+        for (int k = 0; k < this->nwords; k++) {
+            xor_bitset.bits[k] = this->bits[k] ^ b.bits[k];
+        }
+        return xor_bitset;
+    }
+
+    ~MyBitset(){
+        delete [] bits;
+    }
+
+};
+
 struct HapEntry
 {
-    bool flipped;
+    bool flipped = false;
     vector <unsigned int> xors;
+
+    vector <unsigned int> xors1; //unphased
+    vector <unsigned int> xors2; //unphased
+
     vector <unsigned int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
+    int count1 = 0;
+    int count2 = 0;
     vector <unsigned int> positions2; // 0-based indexing of allele "2"
+
+    MyBitset* hapbitset;
+    MyBitset* xorbitset;
+
 };
 
 struct MapEntry
@@ -66,12 +167,17 @@ public:
     unsigned int nloci;
     unsigned int nhaps;
 
+
+    string benchmark_flag = "XOR";
+    //string benchmark_flag = "BITSET";
+
     bool unphased;
     double MAF;
     bool SKIP;
     
     queue<int> skipQueue;
 
+    
     ofstream* flog;
 
     //allocates the 2-d array and populated it with -9
@@ -112,14 +218,14 @@ public:
             }
             cout << endl;
 
-            if(hapEntries[i].positions2.size()>0){
-                cout << "Positions2: ";
-                for (int j = 0; j < hapEntries[i].positions2.size(); j++)
-                {
-                    cout << hapEntries[i].positions2[j] << " ";
-                }
-                cout << endl;
-            }
+            // if(hapEntries[i].positions2.size()>0){
+            //     cout << "Positions2: ";
+            //     for (int j = 0; j < hapEntries[i].positions2.size(); j++)
+            //     {
+            //         cout << hapEntries[i].positions2[j] << " ";
+            //     }
+            //     cout << endl;
+            // }
             
         }
     }
@@ -132,10 +238,15 @@ public:
         //assuming no missing data in hapmap structure
         
         if(this->unphased){
-            freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
+            freq = hapEntries[locus].count1 + hapEntries[locus].count2*2;
+            //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
             total = this->nhaps*2;
         }else{
             freq = hapEntries[locus].positions.size();
+            if(benchmark_flag=="BITSET")
+                //freq = hapEntries[locus].hapbitset->count_1s();
+                freq = hapEntries[locus].hapbitset->num_1s;
+
             total = this->nhaps;
         }
         
@@ -214,6 +325,8 @@ public:
         // return -1;
     }
 };
+
+
 
 
 

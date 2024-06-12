@@ -9,6 +9,8 @@
 
 using namespace std;
 
+
+
 const string ARG_HELP = "--help";
 
 struct param_main{
@@ -42,6 +44,7 @@ struct param_main{
 
     bool CALC_PI;
     int PI_WIN;
+
 };
 
 
