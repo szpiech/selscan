@@ -168,8 +168,8 @@ public:
     unsigned int nhaps;
 
 
-    string benchmark_flag = "XOR";
-    //string benchmark_flag = "BITSET";
+    //string benchmark_flag = "XOR";
+    string benchmark_flag = "BITSET";
 
     bool unphased;
     double MAF;

@@ -1017,7 +1017,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
     int totgc=0;
     
     //unordered_set<unsigned int> v = hm.all_positions[locus];
-    n_c1 = hm.hapData.hapEntries[locus].hapbitset->num_1s;
+    n_c1 = (hm.hapData.hapEntries[locus].flipped? numHaps - hm.hapData.hapEntries[locus].hapbitset->num_1s: hm.hapData.hapEntries[locus].hapbitset->num_1s);
     n_c0 = numHaps - n_c1;
 
 
@@ -1041,45 +1041,43 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
         }
         ehh1_before_norm = twice_num_pair(n_c1);
     }else{
-        group_count[1] = n_c1;
-        group_count[0] = n_c0;
-
-        //if(locus<5) cout<<"Locus: "<<locus<<" "<<"n_c1"<<" "<<n_c1<<" ";
-        for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
-            uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
-            while (bitset != 0) {
-                uint64_t t = bitset & -bitset;
-                int r = __builtin_ctzl(bitset);
-                int set_bit_pos = (k * 64 + r);
-                //if(locus<5) cout<<set_bit_pos<< " ";
-                bitset ^= t;
-
-                isDerived[set_bit_pos] = true;
-                group_id[set_bit_pos] = 1;
-            }
-        }
-        //if(locus<5) cout<<endl;
-
-
-        // if(hm.hapData.hapEntries[locus].flipped){
-        //     group_count[1] = n_c1;
-        //     group_count[0] = n_c0;
-        //     for (int set_bit_pos : v){
-        //         isAncestral[set_bit_pos] = true;
-        //         group_id[set_bit_pos] = 1;
-        //     }
-        // }else{
-        //     group_count[1] = v.size();
-        //     group_count[0] = numHaps - v.size();
-        //     n_c1 = v.size();
-        //     n_c0 = numHaps - v.size();
-
-        //     for (int set_bit_pos : v){
-        //         isDerived[set_bit_pos] = true;
-        //         group_id[set_bit_pos] = 1;
-        //     }
-        // }        
         
+        if(hm.hapData.hapEntries[locus].flipped){
+            group_count[1] = n_c0;
+            group_count[0] = n_c1;
+            for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
+                uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
+                while (bitset != 0) {
+                    uint64_t t = bitset & -bitset;
+                    int r = __builtin_ctzl(bitset);
+                    int set_bit_pos = (k * 64 + r);
+                    //if(locus<5) cout<<set_bit_pos<< " ";
+                    bitset ^= t;
+
+                    isAncestral[set_bit_pos] = true;
+                    group_id[set_bit_pos] = 1;
+                }
+            }
+        }else{
+            group_count[1] = n_c1;
+            group_count[0] = n_c0;
+
+
+            //if(locus<5) cout<<"Locus: "<<locus<<" "<<"n_c1"<<" "<<n_c1<<" ";
+            for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
+                uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
+                while (bitset != 0) {
+                    uint64_t t = bitset & -bitset;
+                    int r = __builtin_ctzl(bitset);
+                    int set_bit_pos = (k * 64 + r);
+                    //if(locus<5) cout<<set_bit_pos<< " ";
+                    bitset ^= t;
+
+                    isDerived[set_bit_pos] = true;
+                    group_id[set_bit_pos] = 1;
+                }
+            }   
+        }
         totgc+=2;
         ehh0_before_norm = twice_num_pair(n_c0);
         ehh1_before_norm = twice_num_pair(n_c1);
@@ -1229,8 +1227,8 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
             
             totgc+=1;
             
-            //bool isDerivedGroup =  (!hm.hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm.hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
-            bool isDerivedGroup =  isDerived[ele.second[0]];
+            bool isDerivedGroup =  (!hm.hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm.hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
+            //bool isDerivedGroup =  isDerived[ele.second[0]];
             if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
             {
                 ehh1_before_norm += del_update;

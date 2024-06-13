@@ -861,6 +861,11 @@ void HapData::readHapDataVCF(string filename)
             }
             if(benchmark_flag == "BITSET"){
                 hapEntries[nloci_after_filtering].hapbitset->num_1s = number_of_1s_per_loci[nloci_after_filtering];
+                if(number_of_1s_per_loci[nloci_after_filtering] > nhaps/2){
+                    hapEntries[nloci_after_filtering].flipped = true;
+                }else{
+                    hapEntries[nloci_after_filtering].flipped = false;
+                }
             }
             // if(number_of_1s_per_loci[nloci_after_filtering] > nhaps/2){
             //     hapEntries[nloci_after_filtering].flipped = true;
@@ -1029,6 +1034,21 @@ void HapData::readHapDataVCF(string filename)
                     }   
                 }
                 hapEntries[locus].positions = zero_positions;
+            }
+        }
+    }
+
+    if(benchmark_flag=="BITSET"){
+        for (int locus = 0; locus < nloci_before_filtering; locus++){
+            if(hapEntries[locus].flipped){
+                MyBitset* b1 = hapEntries[locus].hapbitset;
+                for(int k = 0; k<b1->nwords; k++){
+                     b1->bits[k] = ~(b1->bits[k]);
+                }
+                for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
+                    b1->clear_bit(i);
+                }
+               
             }
         }
     }
