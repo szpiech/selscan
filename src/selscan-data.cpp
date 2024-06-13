@@ -433,7 +433,7 @@ void HapData::readHapData(string filename)
 
     //int fileStart = fin.tellg();
     string line;
-    int nloci = 0;
+    unsigned int nloci = 0;
     int previous_nhaps = -1;
     int current_nhaps = 0;
     //Counts number of haps (rows) and number of loci (cols)
@@ -560,7 +560,7 @@ void HapData::readHapDataTPED(string filename)
     int numMapCols = 4;
     //int fileStart = fin.tellg();
     string line;
-    int nloci = 0;
+    unsigned int nloci = 0;
     int previous_nhaps = -1;
     int current_nhaps = 0;
     //Counts number of haps (cols) and number of loci (rows)
@@ -759,7 +759,7 @@ void HapData::readHapDataVCF(string filename)
         int derived_allele_count = (unphased? (number_of_1s + number_of_2s*2) : number_of_1s);
 
         if ( SKIP && (derived_allele_count*1.0/(current_nhaps*2) < MAF || 1-(derived_allele_count*1.0/(current_nhaps*2)) < MAF ) ) {
-            skiplist.push(nloci);
+            skiplist.push(nloci_before_filtering-1);
             skipcount++;
         } else {
             number_of_1s_per_loci.push_back(number_of_1s);
@@ -1124,7 +1124,7 @@ void HapData::readHapDataVCF(string filename)
 /** Sets up structure according to nhaps and nloci
  * 
 */
-void HapData::initHapData(unsigned int nhaps, unsigned int nloci)
+void HapData::initHapData(int nhaps, unsigned int nloci)
 {
     if (nhaps < 1 || nloci < 1)
     {

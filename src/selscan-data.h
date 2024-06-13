@@ -181,7 +181,7 @@ public:
     ofstream* flog;
 
     //allocates the 2-d array and populated it with -9
-    void initHapData(unsigned int nhaps, unsigned int nloci);
+    void initHapData(int nhaps, unsigned int nloci);
     void releaseHapData();
     /**
      * reads in haplotype data and also does basic checks on integrity of format
