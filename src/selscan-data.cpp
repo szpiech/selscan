@@ -294,7 +294,7 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
     }
 
     string line;
-    int nloci = 0;
+    int nloci_before_filtering = 0;
     int numCommentedLines = 0;
     while (getline(fin, line))
     {
@@ -302,11 +302,11 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
             numCommentedLines++;
         }
         else {
-            nloci++;
+            nloci_before_filtering++;
         }
     }
 
-    if (nloci-skipQueue.size() != expected_loci)
+    if (nloci_before_filtering-skipQueue.size() != expected_loci)
     {
         cerr << "ERROR: Expected " << expected_loci << " loci in file but found " << nloci-skipQueue.size() << ".\n";
         throw 0;
@@ -323,13 +323,13 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
         throw 0;
     }
 
-    cerr << "Loading map data for " << nloci-skipQueue.size() << " loci\n";
+    cerr << "Loading map data for " << nloci_before_filtering-skipQueue.size() << " loci\n";
 
     for (int i = 0; i < numCommentedLines; i++) {
         getline(fin, line);
     }
 
-    this->initMapData(nloci-skipQueue.size()); 
+    this->initMapData(nloci_before_filtering-skipQueue.size()); 
     
     double Mb = 1000000.0;
     
@@ -337,7 +337,7 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
 
     int locus = 0;
 
-    for (int i = 0; i < nloci; i++)
+    for (int i = 0; i < this->nloci; i++)
     {
         if(!skipQueue.empty()){
             if(skipQueue.front()==locus){
