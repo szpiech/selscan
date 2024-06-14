@@ -197,6 +197,8 @@ public:
     void readHapData(string filename);
     void readHapDataTPED(string filename);
     void readHapDataVCF(string filename);
+    void readHapDataVCF_no_bitset(string filename);
+
 
 
     void initParams(bool UNPHASED, bool SKIP, double MAF){
@@ -288,7 +290,7 @@ public:
     //reads in map data and also does basic checks on integrity of format
     //returns a populated MapData structure if successful
     //throws an exception otherwise
-    void readMapData(string filename, int expected_loci, bool USE_PMAP);
+    void readMapData(string filename, int expected_loci, bool USE_PMAP, queue<int>& skip_queue);
     void readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP);
     void readMapDataVCF(string filename, int expected_loci, queue<int>& skipQueue); //Physical positions only
 

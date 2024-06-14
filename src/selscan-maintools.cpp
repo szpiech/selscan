@@ -978,7 +978,9 @@ void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vecto
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
+void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
+
+    unordered_map<unsigned int, vector<unsigned int> > m;
 
     int numSnps = hm.hapData.nloci;
     int numHaps = hm.hapData.nhaps;
@@ -995,12 +997,6 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
     uint64_t n_c0=0;
     uint64_t n_c1=0;
 
-    uint64_t &ancestralCount = n_c0;
-    uint64_t &derivedCount = n_c1;
-
-    uint64_t core_n_c0=0;
-    uint64_t core_n_c1=0;
-
     int group_count[numHaps];
     int group_id[numHaps];
     bool isDerived[numHaps];
@@ -1015,11 +1011,8 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
     }
 
     int totgc=0;
-    
-    //unordered_set<unsigned int> v = hm.all_positions[locus];
     n_c1 = (hm.hapData.hapEntries[locus].flipped? numHaps - hm.hapData.hapEntries[locus].hapbitset->num_1s: hm.hapData.hapEntries[locus].hapbitset->num_1s);
     n_c0 = numHaps - n_c1;
-
 
     if(n_c0==numHaps){
         group_count[0] = numHaps;
@@ -1035,13 +1028,11 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
                 int r = __builtin_ctzl(bitset);
                 int set_bit_pos = (k * 64 + r);
                 bitset ^= t;
-
                 isDerived[set_bit_pos] = true;
             }
         }
         ehh1_before_norm = twice_num_pair(n_c1);
     }else{
-        
         if(hm.hapData.hapEntries[locus].flipped){
             group_count[1] = n_c0;
             group_count[0] = n_c1;
@@ -1051,9 +1042,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
                     uint64_t t = bitset & -bitset;
                     int r = __builtin_ctzl(bitset);
                     int set_bit_pos = (k * 64 + r);
-                    //if(locus<5) cout<<set_bit_pos<< " ";
                     bitset ^= t;
-
                     isAncestral[set_bit_pos] = true;
                     group_id[set_bit_pos] = 1;
                 }
@@ -1062,15 +1051,12 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
             group_count[1] = n_c1;
             group_count[0] = n_c0;
 
-
-            //if(locus<5) cout<<"Locus: "<<locus<<" "<<"n_c1"<<" "<<n_c1<<" ";
             for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
                 uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
                 while (bitset != 0) {
                     uint64_t t = bitset & -bitset;
                     int r = __builtin_ctzl(bitset);
                     int set_bit_pos = (k * 64 + r);
-                    //if(locus<5) cout<<set_bit_pos<< " ";
                     bitset ^= t;
 
                     isDerived[set_bit_pos] = true;
@@ -1084,12 +1070,8 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
     }
 
     if(downstream){
-        // if(!calc_all)
-        //     out_ehh<<"Iter "<<0<<": EHH1["<<locus<<","<<locus<<"]="<<1<<" "<<1<<endl;
-
         if(twice_num_pair(n_c1)!=0){
             iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * 0.5 / twice_num_pair(n_c1);
-            //cout<<"Summing "<<1.0*curr_ehh1_before_norm/n_c1_squared_minus<<" "<<1.0*ehh1_before_norm/n_c1_squared_minus<<endl;
         }
         if(twice_num_pair(n_c0)!=0){
             iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * 0.5 / twice_num_pair(n_c0);
@@ -1101,18 +1083,34 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
 
     int i = locus;  
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
-        if(downstream){
-            if (--i < 0) break;
-            //if (hm.mentries[locus].phyPos - hm.mentries[i].phyPos > max_extend) break;
-        }else{
-            if (++i >= numSnps) break;
-            //if (hm.mentries[i].phyPos -hm.mentries[locus].phyPos > max_extend) break;
+        if ((downstream && --i < 0) || (!downstream && ++i >= numSnps)) {
+            pthread_mutex_lock(&mutex_log);
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
+                    << ". ";
+            if (!p.TRUNC){
+                //TODO
+                bool skipLocus = true;
+                (*flog) << "Skipping calculation at position " << hm.mapData.mapEntries[locus].physicalPos << " id: " << hm.mapData.mapEntries[locus].locusName;
+            }
+            (*flog) << "\n";
+            pthread_mutex_unlock(&mutex_log);
+            break;
         }
-        
-        
-        //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
+
+        if ( physicalDistance(i, downstream) > p.MAX_GAP )  
+        {
+            pthread_mutex_lock(&mutex_log);
+            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i, downstream) << "bp > " << p.MAX_GAP 
+            << "bp. Skipping calculation at position " <<  hm.mapData.mapEntries[locus].physicalPos << " id: " <<  hm.mapData.mapEntries[locus].locusName << "\n";
+            pthread_mutex_unlock(&mutex_log);
+            bool skipLocus = true;
+            break;
+        }
+            
+        //if (down hm.mentries[locus].phyPos - hm.mentries[i].phyPos > max_extend) break;
+        //if (up hm.mentries[i].phyPos -hm.mentries[locus].phyPos > max_extend) break;
+    
         if(curr_ehh1_before_norm*1.0/twice_num_pair(n_c1) <= p.EHH_CUTOFF and curr_ehh0_before_norm*1.0/twice_num_pair(n_c0)  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
-            //std::cout<<"breaking"<<endl;
             break;
         }
         //TODO
@@ -1120,9 +1118,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
         //     {
         //     }
 
-
         double distance;
-        
         if(downstream){
             distance = hm.mapData.mapEntries[i+1].physicalPos - hm.mapData.mapEntries[i].physicalPos;
         }else{
@@ -1135,26 +1131,12 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
             throw 0;
         }
-        
-        
 
-
-        // if(distance> max_gap){
-        //     gap_skip = true;
-        //     break;
-        // }
         if(distance > p.SCALE_PARAMETER){
             distance /= p.SCALE_PARAMETER;
         }
         //distance = 1; // for testing
         
-        // if(downstream){
-        //     v = hm.hapData.hapEntries[i+1].xors;
-        // }else{
-        //     v = hm.hapData.hapEntries[i].xors;
-        // }
-
-
         MyBitset* v;
         if(downstream){
             v =  hm.hapData.hapEntries[i+1].xorbitset; 
@@ -1166,29 +1148,6 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
             v = hm.hapData.hapEntries[i].hapbitset;
         }
 
-        // ensure that in boundary we don't do any calculation
-        // if(hm.hapData.hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ 
-        //     v = hm.hapData.hapEntries[i].positions;
-        //     if(v.size()==0 or v.size()==numHaps){ // integrity check
-        //         std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
-        //         throw 0;
-                
-        //         if(twice_num_pair(n_c1)!=0){    // all 1s 
-        //             iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1) ;
-        //         }
-        //         if(twice_num_pair(n_c0)!=0){   // all 0s 
-        //             iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0)  ;
-        //         }
-        //         continue;
-        //     }
-        // }
-
-        //v = hm.hapData.hapEntries[i].positions;
-        
-        // for (const unsigned int& set_bit_pos : v){
-        //     int old_group_id = group_id[set_bit_pos];
-        //     m[old_group_id].push_back(set_bit_pos);
-        // }
         for (int k = 0; k < v->nwords; k++) {
             uint64_t bitset = v->bits[k];
             while (bitset != 0) {
@@ -1228,7 +1187,6 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
             totgc+=1;
             
             bool isDerivedGroup =  (!hm.hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm.hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
-            //bool isDerivedGroup =  isDerived[ele.second[0]];
             if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
             {
                 ehh1_before_norm += del_update;
@@ -1238,19 +1196,14 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, unordered_map<unsigned int
         }
 
         if(twice_num_pair(n_c1)!=0){
-
             if(ehh1_before_norm*1.0/twice_num_pair(n_c1) > p.EHH_CUTOFF){
-               
                 iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1);
             }
-            
-            //cout<<"Summing "<<1.0*curr_ehh1_before_norm/n_c1_squared_minus<<" "<<1.0*ehh1_before_norm/n_c1_squared_minus<<endl;
         }
 
         if(twice_num_pair(n_c0)!=0){
             if(ehh0_before_norm*1.0/twice_num_pair(n_c0) > p.EHH_CUTOFF){
                 iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0);
-
             }
         }
 
@@ -1449,8 +1402,8 @@ void IHS::calc_ihh(int locus){
         calc_ehh_unidirection_ihs_unphased(locus, true); // downstream
     }else{
         if(hm.hapData.benchmark_flag == "BITSET"){
-            calc_ehh_unidirection_ihs_bitset(locus, m, false); // upstream
-            calc_ehh_unidirection_ihs_bitset(locus, m, true); // downstream
+            calc_ehh_unidirection_ihs_bitset(locus, false); // upstream
+            calc_ehh_unidirection_ihs_bitset(locus, true); // downstream
         }else{
             calc_ehh_unidirection_ihs(locus, m, false); // upstream
             calc_ehh_unidirection_ihs(locus, m, true); // downstream

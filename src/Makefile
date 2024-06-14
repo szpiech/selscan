@@ -71,4 +71,4 @@ hamming_t.o : hamming_t.cpp hamming_t.h
 	$(CC) $(G++FLAG) -c hamming_t.cpp $(I_PATH)
 
 clean :
-	rm *.o
+	rm *.o; rm selscan; rm norm; rm outfile*
