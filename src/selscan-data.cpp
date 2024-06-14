@@ -815,7 +815,7 @@ void HapData::readHapDataVCF(string filename)
 
     string prev_loc_str = "";
     string curr_loc_str = "";
-    for (unsigned int locus = 0; locus < nloci_before_filtering+num_meta_data_lines; locus++)
+    for (unsigned int locus = 0; locus < nloci_before_filtering; locus++)
     {
         curr_loc_str = "";
         for (int i = 0; i < numMapCols; i++) {
@@ -829,7 +829,7 @@ void HapData::readHapDataVCF(string filename)
         if (skipLine) { // to skip metadata lines
             getline(fin, junk);
             skipLine = false;
-            //locus--;
+            locus--;
             continue;
         }
 
