@@ -337,10 +337,10 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
 
     int locus = 0;
 
-    for (int i = 0; i < this->nloci; i++)
+    for (int i = 0; i < nloci_before_filtering; i++)
     {
         if(!skipQueue.empty()){
-            if(skipQueue.front()==locus){
+            if(skipQueue.front()==i){
                 skipQueue.pop();
                 string junk;
                 fin >> junk;
@@ -351,11 +351,9 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
             }
         }
         
-        
         fin >> mapEntries[locus].chr;
         fin >> mapEntries[locus].physicalPos;
         fin >> mapEntries[locus].locusName;
-
         //locus_query_map[mapEntries[locus].locusName] = locus;
         locus_query_map[to_string(mapEntries[locus].physicalPos)] = locus;
         mapEntries[locus].locId = i;
