@@ -1020,7 +1020,7 @@ void HapData::readHapDataVCF(string filename)
     }
 
     if(benchmark_flag!="BITSET"){
-        for (int locus = 0; locus < nloci_before_filtering; locus++){
+        for (int locus = 0; locus < nloci_after_filtering; locus++){
             if(hapEntries[locus].flipped){
                 vector<unsigned int> zero_positions(nhaps - hapEntries[locus].positions.size());
 
@@ -1039,16 +1039,16 @@ void HapData::readHapDataVCF(string filename)
     }
 
     if(benchmark_flag=="BITSET"){
-        for (int locus = 0; locus < nloci_before_filtering; locus++){
+        for (int locus = 0; locus < nloci_after_filtering; locus++){
             if(hapEntries[locus].flipped){
-                MyBitset* b1 = hapEntries[locus].hapbitset;
+                MyBitset* b1;
+                b1 = hapEntries[locus].hapbitset;
                 for(int k = 0; k<b1->nwords; k++){
                      b1->bits[k] = ~(b1->bits[k]);
                 }
                 for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
                     b1->clear_bit(i);
                 }
-               
             }
         }
     }

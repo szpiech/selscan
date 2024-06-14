@@ -59,6 +59,12 @@ class MyBitset{
         }
     }
 
+    // MyBitset(const MyBitset &source) {
+    //     bits = new uint64_t;
+    //     *bits = *source.bits;
+    //     cout << "Copy constructor called" << endl;
+    // }
+
     int count_1s(){
         int sum = 0;
         for (int k = 0; k < nwords; k++) {
