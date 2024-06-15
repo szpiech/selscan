@@ -697,7 +697,8 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHS::calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
+void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
+    unordered_map<unsigned int, vector<unsigned int> > m;
     int numSnps = hm.hapData.nloci;
     int numHaps = hm.hapData.nhaps;
 
@@ -1405,8 +1406,8 @@ void IHS::calc_ihh(int locus){
             calc_ehh_unidirection_ihs_bitset(locus, false); // upstream
             calc_ehh_unidirection_ihs_bitset(locus, true); // downstream
         }else{
-            calc_ehh_unidirection_ihs(locus, m, false); // upstream
-            calc_ehh_unidirection_ihs(locus, m, true); // downstream
+            calc_ehh_unidirection_ihs(locus, false); // upstream
+            calc_ehh_unidirection_ihs(locus,  true); // downstream
         }
     }
     

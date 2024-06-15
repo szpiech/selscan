@@ -23,8 +23,6 @@
 using namespace std;
 
 
-
-
 int countFields(const string &str)
 {
     string::const_iterator it;
@@ -111,6 +109,55 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
     
     hapData.initParams(UNPHASED, p.SKIP, p.MAF);
     hapData2.initParams(UNPHASED, p.SKIP, p.MAF);
+
+
+    if(false){
+        try
+        {
+            if (VCF) {
+                hapData.readHapDataVCF_bitset(vcfFilename);
+                if (CALC_XP || CALC_XPNSL)
+                {
+                    hapData2.readHapDataVCF_bitset(vcfFilename2);
+                    if (hapData.nloci != hapData2.nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                        return 1;
+                    }
+                }
+                if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
+                    mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                }
+                else{//Load physical positions
+                    mapData.readMapDataVCF(vcfFilename, hapData.nloci, hapData.skipQueue);
+                }
+            }
+            else
+            {
+                if (CALC_XP || CALC_XPNSL)
+                {
+                    hapData.initParams(UNPHASED, false, p.MAF);
+                    hapData2.initParams(UNPHASED, false, p.MAF);
+
+                    hapData.readHapData_bitset(hapFilename);
+                    hapData2.readHapData_bitset(hapFilename2);
+                    if (hapData.nloci != hapData2.nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                        return 1;
+                    }
+                }else{
+                    hapData.readHapData_bitset(hapFilename);
+                }
+                mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                
+            }
+        }
+        catch (...)
+        {
+            return 1;
+        }
+    }
 
     try
     {
@@ -796,272 +843,9 @@ void HapData::readHapDataTPED(string filename)
     fin.close();
 }
 
+
+
 void HapData::readHapDataVCF(string filename)
-{
-    igzstream fin;
-
-    vector<int> number_of_1s_per_loci;
-    vector<int> number_of_2s_per_loci;
-    queue<int> skiplist;
-
-    // Pass 1: Counting so that inititalization is smooth
-    cerr << "Opening " << filename << "...\n";
-    fin.open(filename.c_str());
-
-    if (fin.fail())
-    {
-        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
-    }
-
-    int numMapCols = 9;
-    string line;
-    unsigned int nloci_before_filtering = 0;
-    int previous_nhaps = -1;
-    int current_nhaps = 0;
-
-    int skipcount = 0;
-
-    //Counts number of haps (cols) and number of loci (rows)
-    //if any lines differ, send an error message and throw an exception
-    int num_meta_data_lines = 0;
-    while (getline(fin, line))
-    {
-        if (line[0] == '#') {
-            num_meta_data_lines++;
-            continue;
-        }
-        nloci_before_filtering++;
-        current_nhaps = countFields(line) - numMapCols;
-
-        /********/
-        string junk;
-        char allele1, allele2, separator;
-        std::stringstream ss(line);
-        int number_of_1s = 0;
-        int number_of_2s = 0;
-
-        for (int i = 0; i < numMapCols; i++) {
-            ss >> junk;
-        }
-        for (int field = 0; field < current_nhaps; field++)
-        {
-            ss >> junk;
-            allele1 = junk[0];
-            separator = junk[1];
-            allele2 = junk[2];
-            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-            {
-                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
-                cerr << allele1 << " " << allele2 << endl;
-                throw 0;
-            }
-
-            //if(separator != '|'){
-            //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
-            //    throw 0;
-            //}
-
-            if(unphased){
-                char allele = '0';
-                if (allele1 == '1' && allele2 == '1'){
-                    //allele = '2';
-                    number_of_2s++;
-                }
-                else if (allele1 == '1' || allele2 == '1'){
-                    number_of_1s++;
-
-                }else{
-                    // allele = '0' implied;
-                }
-                //data->data[field][locus] = allele;
-            }
-            else{
-                if(allele1 == '1'){
-                    number_of_1s++;
-                }
-                if(allele2 == '1'){
-                    number_of_1s++;
-                }
-                // data->data[2 * field][locus] = allele1;
-                // data->data[2 * field + 1][locus] = allele2;
-            }
-        }
-
-        int derived_allele_count = (unphased? (number_of_1s + number_of_2s*2) : number_of_1s);
-
-        if ( SKIP && (derived_allele_count*1.0/(current_nhaps*2) < MAF || 1-(derived_allele_count*1.0/(current_nhaps*2)) < MAF ) ) {
-            skiplist.push(nloci_before_filtering-1);
-            skipcount++;
-        } else {
-            number_of_1s_per_loci.push_back(number_of_1s);
-            number_of_2s_per_loci.push_back(number_of_2s);
-        }
-
-        /*********/
-
-        if (previous_nhaps < 0)
-        {
-            previous_nhaps = current_nhaps;
-            continue;
-        }
-        else if (previous_nhaps != current_nhaps)
-        {
-            cerr << "ERROR: line " << nloci_before_filtering << " of " << filename << " has " << current_nhaps
-                 << " fields, but the previous line has " << previous_nhaps << " fields.\n";
-            throw 0;
-        }
-        previous_nhaps = current_nhaps;
-    }
-
-    fin.clear(); // clear error flags
-    //fin.seekg(fileStart);
-    fin.close();
-
-    //Pass 2: Load according to first pass information
-    fin.open(filename.c_str());
-
-    if (fin.fail())
-    {
-        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
-    }
-
-    int nhaps = unphased ? (current_nhaps ) : (current_nhaps ) * 2;
-
-    cerr << "Loading " << nhaps << " haplotypes and " << nloci_before_filtering << " loci...\n";
-    if(SKIP){
-        cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-        (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-    }
-
-    string junk;
-    char allele1, allele2, separator;
-    bool skipLine = false; // to skip metadata lines
-
-    initHapData(nhaps, nloci_before_filtering-skipcount);
-
-    skipQueue = skiplist; 
-    unsigned int nloci_after_filtering = 0;
-
-    for (unsigned int locus = 0; locus < nloci_before_filtering; locus++)
-    {
-        for (int i = 0; i < numMapCols; i++) {
-            fin >> junk;
-            if (i == 0 && junk[0] == '#') { // to skip metadata lines
-                skipLine = true;
-                break;
-            }
-        }
-
-        if (skipLine) { // to skip metadata lines
-            getline(fin, junk);
-            skipLine = false;
-            locus--;
-            continue;
-        }
-
-        if(!skiplist.empty()){
-            if(skiplist.front() == locus){
-                skiplist.pop();    
-                getline(fin, junk);
-                continue;
-            }
-        }
-        
-        if(unphased){
-            //TODO
-        }else{
-            hapEntries[nloci_after_filtering].hapbitset->num_1s = number_of_1s_per_loci[nloci_after_filtering];
-            if(number_of_1s_per_loci[nloci_after_filtering] > nhaps/2){
-                hapEntries[nloci_after_filtering].flipped = true;
-            }else{
-                hapEntries[nloci_after_filtering].flipped = false;
-            }
-        }
-
-        for (int field = 0; field <  current_nhaps ; field++)
-        {
-            fin >> junk;
-            allele1 = junk[0];
-            separator = junk[1];
-            allele2 = junk[2];
-            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-            {
-                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
-                cerr << allele1 << " " << allele2 << endl;
-                throw 0;
-            }
-
-            //if(separator != '|'){
-            //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
-            //    throw 0;
-            //}
-            if(unphased){
-                //TODO
-            }
-            else{
-                if(allele1 == '1'){
-                    (hapEntries[nloci_after_filtering].hapbitset)->set_bit(2 * field);
-                }
-                if(allele2 == '1'){
-                    (hapEntries[nloci_after_filtering].hapbitset)->set_bit(2 * field + 1);;
-                }
-            }
-        }
-
-        if(nloci_after_filtering==0){
-            MyBitset* b1 =(hapEntries[nloci_after_filtering].hapbitset);
-            int sum = 0;
-            for (int k = 0; k < b1->nwords; k++) {
-                hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ;
-            }
-            hapEntries[nloci_after_filtering].xorbitset->num_1s = b1->num_1s;
-        }else{
-            MyBitset* b1 =(hapEntries[nloci_after_filtering].hapbitset);
-            MyBitset* b2 = (hapEntries[nloci_after_filtering-1].hapbitset);
-
-            int sum = 0;
-            for (int k = 0; k < b1->nwords; k++) {
-                hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
-                sum += __builtin_popcountll(hapEntries[nloci_after_filtering].xorbitset->bits[k]);
-            }
-            hapEntries[nloci_after_filtering].xorbitset->num_1s = sum;
-            
-        }
-        nloci_after_filtering++;
-    }
-
-
-    //handle fliiped
-    for (int locus = 0; locus < nloci_after_filtering; locus++){
-        if(hapEntries[locus].flipped){
-            MyBitset* b1;
-            b1 = hapEntries[locus].hapbitset;
-            for(int k = 0; k<b1->nwords; k++){
-                    b1->bits[k] = ~(b1->bits[k]);
-            }
-            for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
-                b1->clear_bit(i);
-            }
-        }
-    }
-    
-    
-   //BEGIN TESTING CODES
-
-   //END TESTING CODES
-
-    if(SKIP){
-        cerr << "Removed " << skipcount << " low frequency variants.\n";
-        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
-    }
-
-    fin.close();
-}
-
-
-void HapData::readHapDataVCF_no_bitset(string filename)
 {
     igzstream fin;
 

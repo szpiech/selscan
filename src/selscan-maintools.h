@@ -133,7 +133,7 @@ class IHS : public MainTools{
         double* ciHH2;
 
         void static thread_ihs(int tid, IHS* ehh_obj);
-        void calc_ehh_unidirection_ihs(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
+        void calc_ehh_unidirection_ihs(int locus, bool downstream);
         void calc_ehh_unidirection_ihs_bitset(int locus, bool downstream);
 
         void calc_ehh_unidirection_ihs_unphased(int locus, bool downstream);

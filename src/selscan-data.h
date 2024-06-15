@@ -40,6 +40,7 @@ const char MISSING_CHAR = '9';
  *  @param str the string to count fields in
 */
 int countFields(const string &str);
+pair<int, int> countFieldsAndOnes(const string &str);
 
 class MyBitset{
     public:
@@ -174,8 +175,8 @@ public:
     unsigned int nhaps;
 
 
-    //string benchmark_flag = "XOR";
-    string benchmark_flag = "BITSET";
+    string benchmark_flag = "XOR";
+    //string benchmark_flag = "BITSET";
 
     bool unphased;
     double MAF;
@@ -195,10 +196,17 @@ public:
      * throws an exception otherwise
      */ 
     void readHapData(string filename);
+
+
     void readHapDataTPED(string filename);
     void readHapDataVCF(string filename);
-    void readHapDataVCF_no_bitset(string filename);
+    
 
+
+    void initHapData_bitset(int nhaps, unsigned int nloci);
+    void releaseHapData_bitset();
+    void readHapDataVCF_bitset(string filename);
+    void readHapData_bitset(string filename);
 
 
     void initParams(bool UNPHASED, bool SKIP, double MAF){
