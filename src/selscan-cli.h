@@ -222,6 +222,11 @@ const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
+
+const string ARG_LOW_MEM = "--low-mem";
+const bool DEFAULT_LOW_MEM  = false;
+const string HELP_LOW_MEM = "Switch to low memory bitset version.";
+
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
 bool checkParameters(param_t &params,int argc, char *argv[]);
 

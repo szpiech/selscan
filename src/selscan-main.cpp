@@ -99,6 +99,8 @@ int main(int argc, char *argv[])
     p.CALC_PI = params.getBoolFlag(ARG_PI);
     p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
+    p.LOW_MEM = params.getBoolFlag(ARG_LOW_MEM);
+
     char PI_WIN_str[50];
     snprintf(PI_WIN_str,50, "%d", p.PI_WIN);
 

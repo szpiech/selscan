@@ -1402,7 +1402,7 @@ void IHS::calc_ihh(int locus){
         calc_ehh_unidirection_ihs_unphased(locus, false); // upstream
         calc_ehh_unidirection_ihs_unphased(locus, true); // downstream
     }else{
-        if(hm.hapData.benchmark_flag == "BITSET"){
+        if(p.LOW_MEM){
             calc_ehh_unidirection_ihs_bitset(locus, false); // upstream
             calc_ehh_unidirection_ihs_bitset(locus, true); // downstream
         }else{

@@ -49,6 +49,10 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_KEEP, DEFAULT_KEEP, "", HELP_KEEP);
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
+
+    params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
+
+
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
 
