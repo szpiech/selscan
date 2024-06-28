@@ -1022,6 +1022,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
     }else if (n_c1==numHaps){ // all set
         group_count[0] = numHaps;
         totgc+=1;
+        #pragma omp simd
         for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
             uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
             while (bitset != 0) {
@@ -1037,6 +1038,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
         if(hm.hapData.hapEntries[locus].flipped){
             group_count[1] = n_c0;
             group_count[0] = n_c1;
+            #pragma omp simd
             for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
                 uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
                 while (bitset != 0) {
@@ -1052,6 +1054,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
             group_count[1] = n_c1;
             group_count[0] = n_c0;
 
+            #pragma omp simd
             for (int k = 0; k < hm.hapData.hapEntries[locus].hapbitset->nwords; k++) {
                 uint64_t bitset = hm.hapData.hapEntries[locus].hapbitset->bits[k];
                 while (bitset != 0) {
@@ -1149,6 +1152,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
             v = hm.hapData.hapEntries[i].hapbitset;
         }
 
+        #pragma omp simd
         for (int k = 0; k < v->nwords; k++) {
             uint64_t bitset = v->bits[k];
             while (bitset != 0) {

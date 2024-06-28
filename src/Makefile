@@ -6,11 +6,11 @@
 #LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
 
 #for osx/macos-arm systems
-#CC = g++
-CC = g++-13 -g
-G++FLAG = -O3 -m64 
+CC = g++-14 -g -std=c++17 -fopenmp
+#CC = g++-13 -g
+G++FLAG = -O3 -m64  
 #-mmmx -msse -msse2
-LINK_OPTS2 = -lpthread -lz
+LINK_OPTS2 = -lpthread -lz -fopenmp 
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm
 #L_PATH = ../lib/osx

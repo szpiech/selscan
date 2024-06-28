@@ -21,6 +21,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <omp.h>
 #include "gzstream.h"
 #include "param_t.h"
 // # include <unordered_map>
@@ -68,6 +69,9 @@ class MyBitset{
 
     int count_1s(){
         int sum = 0;
+        omp_set_num_threads(4);
+
+        #pragma `omp parallel for reduction(+:sum)
         for (int k = 0; k < nwords; k++) {
             sum += __builtin_popcountll ((uint64_t)bits[k]);
         }
@@ -79,11 +83,15 @@ class MyBitset{
         vector<int> bitvec;
         for (int k = 0; k < nwords; k++) {
             bitset = bits[k];
-            std::cout<<"B"<<bitset<<std::endl;
+            //std::cout<<"B"<<bitset<<std::endl;
+            
             while (bitset != 0) {
             uint64_t t = bitset & -bitset;
             int r = __builtin_ctzl(bitset);
-            std::cout<<(k * WORDSZ + r) << std::endl;
+            
+            //std::cout<<(k * WORDSZ + r) << std::endl;
+            
+            
             bitvec.push_back(k * WORDSZ + r); //idea: reserve 1 counts
             //callback(k * WORDSZ + r);
             bitset ^= t;
@@ -127,6 +135,8 @@ class MyBitset{
 
     MyBitset operator^(const MyBitset& b) {
         MyBitset xor_bitset(this->nbits);
+
+        #pragma `omp parallel for
         for (int k = 0; k < this->nwords; k++) {
             xor_bitset.bits[k] = this->bits[k] ^ b.bits[k];
         }
