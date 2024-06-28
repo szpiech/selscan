@@ -912,6 +912,7 @@ void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
                 ehh0_before_norm += del_update;
             }
         }
+        m.clear();
 
         if(twice_num_pair(n_c1)!=0){
 
@@ -944,7 +945,7 @@ void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
             curr_ehh0_before_norm = 0;
         }
 
-        m.clear();
+        
 
 
 
@@ -979,9 +980,7 @@ void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
-
-    unordered_map<unsigned int, vector<unsigned int> > m;
+void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m){
 
     int numSnps = hm.hapData.nloci;
     int numHaps = hm.hapData.nhaps;
@@ -1200,6 +1199,8 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
             }
         }
 
+        m.clear();
+
         if(twice_num_pair(n_c1)!=0){
             if(ehh1_before_norm*1.0/twice_num_pair(n_c1) > p.EHH_CUTOFF){
                 iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1);
@@ -1226,7 +1227,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream){
             curr_ehh0_before_norm = 0;
         }
 
-        m.clear();
+        
 
 
 
@@ -1407,8 +1408,8 @@ void IHS::calc_ihh(int locus){
         calc_ehh_unidirection_ihs_unphased(locus, true); // downstream
     }else{
         if(p.LOW_MEM){
-            calc_ehh_unidirection_ihs_bitset(locus, false); // upstream
-            calc_ehh_unidirection_ihs_bitset(locus, true); // downstream
+            calc_ehh_unidirection_ihs_bitset(locus, false, m); // upstream
+            calc_ehh_unidirection_ihs_bitset(locus, true, m); // downstream
         }else{
             calc_ehh_unidirection_ihs(locus, false); // upstream
             calc_ehh_unidirection_ihs(locus,  true); // downstream
