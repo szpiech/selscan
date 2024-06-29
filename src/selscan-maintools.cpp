@@ -421,11 +421,23 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
     }
 
     //TODO
+    // if(group_count[0] == numHaps){ //monomorphic site
+    //     totgc+=1;
+    // }else if(group_count[2] == 0 ){ //second clause is redundant
+    //     if(group_count[1] + group_count[2] != numHaps){
+    //         cerr<<"ERROR: gc2==0"<<endl;
+    //         exit(1);
+    //     }
+    //     totgc+=2;
+    // }else{
+    //     totgc+=3;
+    // }
+
     if(group_count[0] == numHaps){ //monomorphic site
         totgc+=1;
     }else if(group_count[2] == 0 ){ //second clause is redundant
-        if(group_count[1] + group_count[2] != numHaps){
-            cerr<<"ERROR: gc2==0"<<endl;
+        if(group_count[0] + group_count[1] != numHaps){
+            cerr<<"ERROR: gc2==0 locus"<<locus<<endl;
             exit(1);
         }
         totgc+=2;
