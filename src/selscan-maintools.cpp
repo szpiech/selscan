@@ -1467,8 +1467,16 @@ void XPIHH::xpihh_main()
         (*flog)<<("all threads finished. now printing xpihh...\n");
     }
     
-    hm.hapData.releaseHapData();
-    hm.hapData2.releaseHapData();
+    
+    
+    if(p.LOW_MEM){
+        hm.hapData.releaseHapData_bitset();
+        hm.hapData2.releaseHapData_bitset();
+    }else{
+        hm.hapData.releaseHapData();
+        hm.hapData2.releaseHapData();
+    }
+    
     
     std::cerr << "\nFinished.\n";
 
