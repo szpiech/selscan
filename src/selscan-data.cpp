@@ -1565,12 +1565,12 @@ void HapData::readHapData_bitset(string filename)
             MyBitset* b1;
             b1 = hapEntries[locus_after_filter].hapbitset;
 
-            #pragma omp simd
+            //#pragma omp simd
             for(int k = 0; k<b1->nwords; k++){
                 b1->bits[k] = ~(b1->bits[k]);   // negate all bits
             }
 
-            #pragma omp simd
+            //#pragma omp simd
             for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
                 b1->clear_bit(i);       // clear the trailing bits
             }
@@ -1798,7 +1798,7 @@ void HapData::readHapDataVCF_bitset(string filename)
         if(nloci_after_filtering==0){
             MyBitset* b1 =(hapEntries[nloci_after_filtering].hapbitset);
             int sum = 0;
-            #pragma omp simd
+            //#pragma omp simd
             for (int k = 0; k < b1->nwords; k++) {
                 hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ;
             }
@@ -1808,7 +1808,7 @@ void HapData::readHapDataVCF_bitset(string filename)
             MyBitset* b2 = (hapEntries[nloci_after_filtering-1].hapbitset);
 
             int sum = 0;
-            #pragma omp simd
+            //#pragma omp simd
             for (int k = 0; k < b1->nwords; k++) {
                 hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
                 sum += __builtin_popcountll(hapEntries[nloci_after_filtering].xorbitset->bits[k]);
@@ -1825,12 +1825,12 @@ void HapData::readHapDataVCF_bitset(string filename)
             MyBitset* b1;
             b1 = hapEntries[locus].hapbitset;
 
-            #pragma omp simd
+            //#pragma omp simd
             for(int k = 0; k<b1->nwords; k++){
                     b1->bits[k] = ~(b1->bits[k]);
             }
 
-            #pragma omp simd
+            //#pragma omp simd
             for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
                 b1->clear_bit(i);
             }

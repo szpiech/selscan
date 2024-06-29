@@ -227,6 +227,10 @@ const string ARG_LOW_MEM = "--low-mem";
 const bool DEFAULT_LOW_MEM  = false;
 const string HELP_LOW_MEM = "Switch to low memory bitset version.";
 
+const string ARG_BENCHMARK_FLAG = "--benchmark";
+const int DEFAULT_BENCHMARK_FLAG = 0;
+const string HELP_BENCHMARK_FLAG = "Phased 3 mode: 0=xor, 1=flip, 2=basic";
+
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
 bool checkParameters(param_t &params,int argc, char *argv[]);
 

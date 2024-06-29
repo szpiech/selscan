@@ -87,6 +87,8 @@ int main(int argc, char *argv[])
     p.CALC_XP = params.getBoolFlag(ARG_XP);
     p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     p.SINGLE_EHH = false;
+
+
     
     p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
     if(params.getBoolFlag(ARG_SKIP)){
@@ -100,6 +102,7 @@ int main(int argc, char *argv[])
     p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
     p.LOW_MEM = params.getBoolFlag(ARG_LOW_MEM);
+    p.BENCHMARK_FLAG = params.getIntFlag(ARG_BENCHMARK_FLAG);
 
     char PI_WIN_str[50];
     snprintf(PI_WIN_str,50, "%d", p.PI_WIN);
@@ -142,7 +145,12 @@ int main(int argc, char *argv[])
     HapMap hm;
     ERROR = hm.loadHapMapData(p,argc,argv, &flog, &fout);
 
-
+    if(p.BENCHMARK_FLAG==1){
+        hm.hapData.benchmark_flag = "FLIP_ONLY";
+    }else if(p.BENCHMARK_FLAG==2){
+        hm.hapData.benchmark_flag = "BASIC";
+    }//default is xor
+     
 
     if (ERROR) return 1;
 
@@ -183,6 +191,8 @@ int main(int argc, char *argv[])
     flog << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
     flog << "Max gap parameter: " << p.MAX_GAP << "\n";
     flog << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
+    flog << "Benchmark value: " << p.BENCHMARK_FLAG << "\n";
+
     flog << "Phased: ";
     if(p.UNPHASED) flog << "no\n";
     else flog << "yes\n";
