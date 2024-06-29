@@ -154,8 +154,11 @@ struct HapEntry
     bool flipped = false;
     vector <unsigned int> xors;
 
+
     vector <unsigned int> xors1; //unphased
     vector <unsigned int> xors2; //unphased
+
+    std::vector<unsigned int> g[3];
 
     vector <unsigned int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
     int count1 = 0;
@@ -187,6 +190,10 @@ public:
 
     string benchmark_flag = "XOR";
     //string benchmark_flag = "BITSET";
+    //string benchmark_flag = "FLIP_ONLY";
+    //string benchmark_flag = "BASIC";
+
+
 
     bool unphased;
     double MAF;
