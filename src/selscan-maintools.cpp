@@ -1200,6 +1200,19 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered
 }
 
 
+
+void IHS::thread_ihs(int tid,  IHS* ehh_obj){
+    // another way to parallelize
+    int thread_id = tid;
+    for (int i = thread_id ; i < ehh_obj->hm.hapData.nloci; i += ehh_obj->numThreads) {
+        ehh_obj->calc_ihh(i);
+    }
+    pthread_mutex_lock(&mutex_log);
+    (*(ehh_obj->flog))<<("Finishing thread # "+to_string(tid)+" at "+to_string(MainTools::readTimer())+"\n");
+    pthread_mutex_unlock(&mutex_log);
+}
+
+/*
 void IHS::thread_ihs(int tid,  IHS* ehh_obj){
     int elem_per_block = floor(ehh_obj->hm.hapData.nloci/ehh_obj->numThreads);
     int start = tid*elem_per_block ;
@@ -1217,6 +1230,8 @@ void IHS::thread_ihs(int tid,  IHS* ehh_obj){
     (*(ehh_obj->flog))<<("Finishing thread # "+to_string(tid)+" at "+to_string(MainTools::readTimer())+"\n");
     pthread_mutex_unlock(&mutex_log);
 }
+*/
+
 
 void IHS::ihs_main(){
     iHH0 = new double[hm.hapData.nloci];
@@ -1396,9 +1411,6 @@ void IHS::calc_ihh(int locus){
         
         }
     }
-
-    
-    
 }
 
 
@@ -1417,8 +1429,6 @@ void EHH::calc_single_ehh(string query){
     
     //calc_ehh_unidirection(locus, m, true); // downstream
     calc_ehh_unidirection(locus, m, false); // upstream
-    
-    
 }
 
 // /**
