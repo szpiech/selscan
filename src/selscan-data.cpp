@@ -244,6 +244,8 @@ pair<int, int> countFieldsAndOnes(const string &str)
 bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flog, ofstream* fout){
     this->flog = flog;
     hapData.flog = flog;
+    hapData2.flog = flog;
+
 
     this->fout = fout;
 

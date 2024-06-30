@@ -28,7 +28,13 @@
 #include "selscan-pbar.h"
 #include "param_t.h"
 
+#include "stats/ihs.h"
+#include "stats/ehh.h"
+#include "stats/xpihh.h"
+
+
 #define IS_TRUE(x) { if (!(x)) std::cout << __FUNCTION__ << " failed on line " << __LINE__ << std::endl; }
+
 
 
 using namespace std;
@@ -39,6 +45,7 @@ int main(int argc, char *argv[])
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
 #endif
+
 
     param_t params;
     param_main p;
@@ -211,6 +218,8 @@ int main(int argc, char *argv[])
     p.MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
 
 
+    
+
     if (p.SINGLE_EHH)
     {
         EHH ehhfinder(hm, p, &flog, &fout);
@@ -235,6 +244,7 @@ int main(int argc, char *argv[])
     }
     flog.close();
     fout.close();
+
 
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_detach_np();

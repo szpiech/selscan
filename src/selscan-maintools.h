@@ -26,6 +26,9 @@
 #include "hamming_t.h"
 #include "selscan-cli.h"
 
+
+// #include "stats/ihs.h"
+
 # include <unordered_map>
 #include <thread>
 
@@ -33,9 +36,6 @@
 #include <cmath>
 
 using namespace std;
-
-
-
 
 class MainTools{
     protected:
@@ -47,6 +47,7 @@ class MainTools{
         ofstream* fout;
         Bar *bar;
         int numThreads;
+
         MainTools(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout);
 
         double static readTimer() {
@@ -98,63 +99,9 @@ class MainTools{
             }
             return distance;
         }
-    
-    
 };
 
 
-
-class XPIHH : public MainTools{
-    public:
-        XPIHH(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){        }
-        void xpihh_main();
-    
-    private:
-        double* ihh_p1;
-        double* ihh_p2;
-        void calc_xpihh(int locus);
-        void calc_ehh_unidirection_xpihh(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
-        void static thread_xpihh(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, unordered_map<unsigned int, vector<unsigned int> >& md, XPIHH* obj);
-
-};
-
-class IHS : public MainTools{
-    public:
-        IHS(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){        }
-        void ihs_main(); //thread_ihs
-
-    private:
-        double* iHH0;
-        double* iHH1;
-        double* iHH2;
-
-        double* ciHH0;
-        double* ciHH1;
-        double* ciHH2;
-
-        //void static thread_ihs(int tid, IHS* ehh_obj);
-        void static thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);
-
-        
-        void calc_ehh_unidirection_ihs(int locus, bool downstream);
-        void calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m);
-
-        void calc_ehh_unidirection_ihs_unphased(int locus, bool downstream);
-        double calc_ihs_unphased(int locus);
-        
-        void updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t* ehh_before_norm, uint64_t* cehh_before_norm, bool* is1, bool* is2);
-
-        void calc_ihh(int locus, unordered_map<unsigned int, vector<unsigned int> >& m);     
-};
-
-class EHH : public MainTools{
-    public:
-        EHH(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){        }
-        void calc_single_ehh(string query);
-       
-    private:
-        void calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
-};
 
 
 

@@ -31,17 +31,30 @@ L_PATH = ../lib/macos-arm
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+OBJ_STATS = xpihh.o ehh.o ihs.o
 
 all : selscan norm
 
-selscan : selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
+selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  
+	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
 
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
-selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h
+selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
 	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
+
+# xpihh.o : stats/xpihh.cpp stats/xpihh.h
+# 	$(CC) $(G++FLAG) -c stats/xpihh.cpp -o $@ $(I_PATH)
+
+# ehh.o : stats/ehh.cpp stats/ehh.h
+# 	$(CC) $(G++FLAG) -c stats/ehh.cpp  -o $@ $(I_PATH)
+
+# ihs.o : stats/ihs.cpp stats/ihs.h
+# 	$(CC) $(G++FLAG) -c stats/ihs.cpp -o $@ $(I_PATH)
+
+%.o: stats/%.cpp stats/%.h 
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
 
 selscan-data.o : selscan-data.cpp selscan-data.h
 	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
@@ -70,5 +83,10 @@ gzstream.o : gzstream.cpp gzstream.h
 hamming_t.o : hamming_t.cpp hamming_t.h
 	$(CC) $(G++FLAG) -c hamming_t.cpp $(I_PATH)
 
+
+# $(BIN_DIR): # Create the binary directory if it does not exist
+# 	mkdir -p $(BIN_DIR)
+
+
 clean :
-	rm *.o; rm selscan; rm norm; rm outfile*
+	rm *.o; rm obj/*.o ;  rm selscan; rm norm; rm outfile*
