@@ -828,39 +828,39 @@ void HapData::readHapData(string filename)
     }
 
     // //PHASE 4: FLIP
-    for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
-        if(hapEntries[locus_after_filter].positions.size() > this->nhaps/2){
-            hapEntries[locus_after_filter].flipped = true;
+    // for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+    //     if(hapEntries[locus_after_filter].positions.size() > this->nhaps/2){
+    //         hapEntries[locus_after_filter].flipped = true;
 
-            vector<unsigned int> copy_pos;
-            copy_pos.reserve(this->nhaps - hapEntries[locus_after_filter].positions.size());
-            int cnt = 0;
-            for(int i = 0; i< this->nhaps; i++){
-                unsigned int curr =  hapEntries[locus_after_filter].positions[cnt];
-                if(i==curr){
-                    cnt++;
-                }else{
-                    copy_pos.push_back(i);
-                }
-            }
+    //         vector<unsigned int> copy_pos;
+    //         copy_pos.reserve(this->nhaps - hapEntries[locus_after_filter].positions.size());
+    //         int cnt = 0;
+    //         for(int i = 0; i< this->nhaps; i++){
+    //             unsigned int curr =  hapEntries[locus_after_filter].positions[cnt];
+    //             if(i==curr){
+    //                 cnt++;
+    //             }else{
+    //                 copy_pos.push_back(i);
+    //             }
+    //         }
             
-            this->hapEntries[locus_after_filter].positions = copy_pos;
-            copy_pos.clear();
-            // vector<unsigned int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
-            // int j = 0;
-            // unsigned int front_one = this->hapEntries[locus_after_filter].positions[j++];
-            // for(int i=0; i<nhaps; i++){
-            //     if(i==front_one){
-            //         front_one = this->hapEntries[locus_after_filter].positions[j++];
-            //     }else{
-            //         zero_positions.push_back(i);
-            //     }   
-            // }
-            // this->hapEntries[locus_after_filter].positions = zero_positions;
-        }else{
-            this->hapEntries[locus_after_filter].flipped = false;
-        }
-    }
+    //         this->hapEntries[locus_after_filter].positions = copy_pos;
+    //         copy_pos.clear();
+    //         // vector<unsigned int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
+    //         // int j = 0;
+    //         // unsigned int front_one = this->hapEntries[locus_after_filter].positions[j++];
+    //         // for(int i=0; i<nhaps; i++){
+    //         //     if(i==front_one){
+    //         //         front_one = this->hapEntries[locus_after_filter].positions[j++];
+    //         //     }else{
+    //         //         zero_positions.push_back(i);
+    //         //     }   
+    //         // }
+    //         // this->hapEntries[locus_after_filter].positions = zero_positions;
+    //     }else{
+    //         this->hapEntries[locus_after_filter].flipped = false;
+    //     }
+    // }
 
 }
 

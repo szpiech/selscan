@@ -132,7 +132,10 @@ class IHS : public MainTools{
         double* ciHH1;
         double* ciHH2;
 
-        void static thread_ihs(int tid, IHS* ehh_obj);
+        //void static thread_ihs(int tid, IHS* ehh_obj);
+        void static thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);
+
+        
         void calc_ehh_unidirection_ihs(int locus, bool downstream);
         void calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m);
 
@@ -141,7 +144,7 @@ class IHS : public MainTools{
         
         void updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t* ehh_before_norm, uint64_t* cehh_before_norm, bool* is1, bool* is2);
 
-        void calc_ihh(int locus);     
+        void calc_ihh(int locus, unordered_map<unsigned int, vector<unsigned int> >& m);     
 };
 
 class EHH : public MainTools{

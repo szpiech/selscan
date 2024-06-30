@@ -1213,7 +1213,7 @@ void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered
 // }
 
 
-void IHS::thread_ihs(int tid,  IHS* ehh_obj){
+void IHS::thread_ihs(int tid,  unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj){
     int elem_per_block = floor(ehh_obj->hm.hapData.nloci/ehh_obj->numThreads);
     int start = tid*elem_per_block ;
     int end = start + elem_per_block  ;
@@ -1223,7 +1223,7 @@ void IHS::thread_ihs(int tid,  IHS* ehh_obj){
 
     //#pragma omp parallel 
     for(int locus = start; locus< end; locus++){
-        ehh_obj->calc_ihh(locus);
+        ehh_obj->calc_ihh(locus, m);
     }
     
     pthread_mutex_lock(&mutex_log);
@@ -1244,6 +1244,7 @@ void IHS::ihs_main(){
         ciHH2 = new double[hm.hapData.nloci];
     }
 
+    std::unordered_map<unsigned int, std::vector<unsigned int> > map_per_thread[numThreads];
     bool openmp_enabled = false;
     // two different ways to parallelize: first block does pthread, second block does openmp
     if (!openmp_enabled)
@@ -1253,7 +1254,8 @@ void IHS::ihs_main(){
         std::thread *myThreads = new std::thread[numThreads];
         for (int i = 0; i < numThreads; i++)
         {
-            myThreads[i] = std::thread(thread_ihs, i,  this);
+            //myThreads[i] = std::thread(thread_ihs, i,  this);
+            myThreads[i] = std::thread(thread_ihs, i, std::ref(map_per_thread[i]), this);
         }
         for (int i = 0; i < numThreads; i++)
         {
@@ -1349,11 +1351,11 @@ double IHS::calc_ihs_unphased(int locus){
  * @brief Calculate the EHH for a single locus as part of IHH routine
  * @param locus The locus 
 */
-void IHS::calc_ihh(int locus){
+void IHS::calc_ihh(int locus, unordered_map<unsigned int, vector<unsigned int> >& m){
     int numSnps = hm.mapData.nloci;
     int numHaps = hm.hapData.nhaps;
     
-    unordered_map<unsigned int, vector<unsigned int> > m;
+    //unordered_map<unsigned int, vector<unsigned int> > m;
     iHH0[locus] = 0;
     iHH1[locus] = 0;
 
