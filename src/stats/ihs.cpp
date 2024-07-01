@@ -4,7 +4,7 @@
 
 
 pthread_mutex_t IHS::mutex_log = PTHREAD_MUTEX_INITIALIZER;
-void IHS::updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t* ehh_before_norm, uint64_t* cehh_before_norm, bool* is1, bool* is2){
+void IHS::updateEHH_from_split_unphased( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t* ehh_before_norm, uint64_t* cehh_before_norm, bool* is1, bool* is2){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
         int newgroup_size = ele.second.size() ;
@@ -47,9 +47,7 @@ void IHS::updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int
     }
 }
 
-
-void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
-
+void IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
     int numSnps = hm.hapData.nloci;
     int numHaps = hm.hapData.nhaps;
 
@@ -70,7 +68,6 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
 
     double* iHH[3] = {iHH0, iHH1, iHH2};
     double* ciHH[3] = {ciHH0, ciHH1, ciHH2};
-
 
     //will be vectorized with compile time flags
     for(int i = 0; i<numHaps; i++){
@@ -226,14 +223,42 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
         //     }
 
 
-        double distance;
+        // double distance;
         
-        if(downstream){
-            distance = hm.mapData.mapEntries[i+1].physicalPos - hm.mapData.mapEntries[i].physicalPos;
-        }else{
-            distance = hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[i-1].physicalPos;
-        }
+        // if(downstream){
+        //     distance = hm.mapData.mapEntries[i+1].physicalPos - hm.mapData.mapEntries[i].physicalPos;
+            
+        // }else{
+        //     distance = hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[i-1].physicalPos;
+        // }
+        // double scale = double(p.SCALE_PARAMETER) / distance;
+        // if (scale > 1) scale = 1;
+        // //distance = 1; // for testing
+        
+        // if(p.CALC_NSL){
+        //     distance = 1;
+        //     scale = 1;
+        // }
 
+
+
+        double scale, distance;
+        if(p.CALC_NSL){
+            scale = double(p.SCALE_PARAMETER) / geneticDistance(i, downstream);  
+            distance = geneticDistance(i, downstream);
+            distance = 1;
+
+        }else{
+            scale = double(p.SCALE_PARAMETER) / physicalDistance(i, downstream);   
+            distance = physicalDistance(i, downstream);  
+        }
+        if(distance > p.SCALE_PARAMETER){
+            distance /= p.SCALE_PARAMETER;
+        }
+        
+        if(scale > 1) scale = 1;
+
+        
         // this should not happen as we already did integrity check previously
         if (distance < 0)
         {
@@ -263,21 +288,17 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
         //     distance /= p.SCALE_PARAMETER;
         // }
 
-        double scale = double(p.SCALE_PARAMETER) / distance;
-        if (scale > 1) scale = 1;
-        //distance = 1; // for testing
         
-
         if(n_c[0] == numHaps or n_c[1] == numHaps or n_c[2] == numHaps){
             cerr<<"WARNING: Monomorphic site."<<endl;
         
             for(int i=0; i<3; i++){
                 if(twice_num_pair(n_c[i])!=0){
-                    iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i]) * scale * distance * 0.5 / twice_num_pair(n_c[i]);
+                    iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i])  * distance * 0.5 / twice_num_pair(n_c[i]);
                 }
                 if(twice_num_pair(numHaps - n_c[i])!=0){
                     //if(cehh_before_norm[i]*1.0/twice_num_pair(numHaps - n_c[i]) > p.EHH_CUTOFF){
-                        ciHH[i][locus] += (curr_cehh_before_norm[i] + prev_cehh_before_norm[i]) * scale * 0.5 / twice_num_pair(numHaps - n_c[i]);
+                        ciHH[i][locus] += (curr_cehh_before_norm[i] + prev_cehh_before_norm[i])  * distance * 0.5 / twice_num_pair(numHaps - n_c[i]);
                     //}
                 }
             }
@@ -293,14 +314,14 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);         
         }
-        updateEHH_from_split(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2);
         m.clear();
 
         for (const unsigned int& set_bit_pos : g1){
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);         
         }
-        updateEHH_from_split(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2);
         m.clear();
 
 
@@ -308,21 +329,40 @@ void IHS::calc_ehh_unidirection_ihs_unphased(int locus, bool downstream){
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);         
         }
-        updateEHH_from_split(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2);
         m.clear();
         
+
+        // if(twice_num_pair(n_c1)!=0){
+
+        //     if(ehh1_before_norm*1.0/twice_num_pair(n_c1) > p.EHH_CUTOFF){
+               
+        //         iHH1[locus] += (curr_ehh1_before_norm + ehh1_before_norm) * distance * 0.5 / twice_num_pair(n_c1);
+        //     }
+            
+        //     //cout<<"Summing "<<1.0*curr_ehh1_before_norm/n_c1_squared_minus<<" "<<1.0*ehh1_before_norm/n_c1_squared_minus<<endl;
+        // }
+
+        // if(twice_num_pair(n_c0)!=0){
+        //     if(ehh0_before_norm*1.0/twice_num_pair(n_c0) > p.EHH_CUTOFF){
+        //         iHH0[locus] += (curr_ehh0_before_norm + ehh0_before_norm) * distance * 0.5 / twice_num_pair(n_c0);
+
+        //     }
+        // }
 
         for(int i=0; i<3; i++){
             if(twice_num_pair(n_c[i])!=0){
                 //if(ehh_before_norm[i]*1.0/twice_num_pair(n_c[i]) > p.EHH_CUTOFF){
-                    iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i]) * scale * distance* 0.5 / twice_num_pair(n_c[i]);
+                    // this was working iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i]) * scale * distance* 0.5 / twice_num_pair(n_c[i]);
+                    iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i])  * distance * 0.5 / twice_num_pair(n_c[i]);
+
                 //}
             }
 
 
             if(twice_num_pair(numHaps - n_c[i])!=0){
                 //if(cehh_before_norm[i]*1.0/twice_num_pair(numHaps - n_c[i]) > p.EHH_CUTOFF){
-                    ciHH[i][locus] += (curr_cehh_before_norm[i] + prev_cehh_before_norm[i]) * scale * 0.5 / twice_num_pair(numHaps - n_c[i]);
+                    ciHH[i][locus] += (curr_cehh_before_norm[i] + prev_cehh_before_norm[i])  * distance * 0.5 / twice_num_pair(numHaps - n_c[i]);
                 //}
             }
 
@@ -396,7 +436,7 @@ string IHS::getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0){
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
+void IHS::calc_ehh_unidirection(int locus, bool downstream){
     unordered_map<unsigned int, vector<unsigned int> > m;
     int numSnps = hm.hapData.nloci;
     int numHaps = hm.hapData.nhaps;
@@ -545,6 +585,9 @@ void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
         if(distance > p.SCALE_PARAMETER){
             distance /= p.SCALE_PARAMETER;
         }
+        if(p.CALC_NSL){
+            distance = 1;
+        }
         //distance = 1; // for testing
         
         if(downstream){
@@ -649,6 +692,8 @@ void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
         }
 
         
+        if(!p.CALC_NSL && physicalDistance_from_core(i,locus, downstream) >= p.MAX_EXTEND) break;
+        if(p.CALC_NSL && abs(i-locus) >= p.MAX_EXTEND_NSL) break; //g(xi−1, xi) = 1.
 
 
 
@@ -683,7 +728,7 @@ void IHS::calc_ehh_unidirection_ihs(int locus, bool downstream){
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHS::calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m){
+void IHS::calc_ehh_unidirection_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m){
 
     int numSnps = hm.hapData.nloci;
     int numHaps = hm.hapData.nhaps;
@@ -1059,8 +1104,8 @@ void IHS::ihs_main(){
         for (int locus = 0; locus < hm.hapData.nloci; locus++){
             (*fout) << std::fixed <<   hm.mapData.mapEntries[locus].locusName << " " <<   hm.mapData.mapEntries[locus].physicalPos << " "
                     <<  hm.mapData.mapEntries[locus].locId << " " << hm.hapData.calcFreq(locus) << " "
-                    << iHH2[locus] << " " << iHH0[locus] <<" "<< calc_ihs_unphased(locus) <<endl;
-                    //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< calc_ihs_unphased(locus) <<endl;
+                    << iHH2[locus] << " " << iHH0[locus] <<" "<< get_ihs_unphased(locus) <<endl;
+                    //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< get_ihs_unphased(locus) <<endl;
         }
         delete[] iHH2;
         delete[] ciHH0;
@@ -1071,7 +1116,7 @@ void IHS::ihs_main(){
             (*fout) << std::fixed <<   hm.mapData.mapEntries[locus].locusName << " " <<   hm.mapData.mapEntries[locus].physicalPos << " "
                     <<  hm.mapData.mapEntries[locus].locId << " " << hm.hapData.calcFreq(locus) << " "
                     << iHH1[locus] << " " << iHH0[locus] <<" "<< log10(iHH1[locus]/iHH0[locus]) <<endl;
-                    //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< calc_ihs_unphased(locus) <<endl;
+                    //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< get_ihs_unphased(locus) <<endl;
         }
     }
     delete[] iHH0;
@@ -1081,7 +1126,7 @@ void IHS::ihs_main(){
     // if(hm.hapData.unphased){
     //     (*fout) << std::fixed <<   hm.mapData.mapEntries[locus].locusName << " " <<   hm.mapData.mapEntries[locus].physicalPos << " "
     //             <<  hm.mapData.mapEntries[locus].locId << " " << hm.hapData.calcFreq(locus) << " "
-    //             << iHH1[locus] << " " << iHH0[locus] <<" "<< calc_ihs_unphased(locus) <<endl;
+    //             << iHH1[locus] << " " << iHH0[locus] <<" "<< get_ihs_unphased(locus) <<endl;
     // }
 
     return;
@@ -1092,7 +1137,7 @@ void IHS::ihs_main(){
  * @brief Calculate unphased IHS
  * @param locus The locus 
 */
-double IHS::calc_ihs_unphased(int locus){
+double IHS::get_ihs_unphased(int locus){
                 //  ihh1[locus] = log10(derived_ihh / notDerived_ihh);
                 // ihh2[locus] = log10(ancestral_ihh / notAncestral_ihh);
                 // ihs[locus] = (ihh1[locus] > ihh2[locus]) ? ihh1[locus] : 0-ihh2[locus];
@@ -1124,23 +1169,21 @@ void IHS::calc_ihh(int locus, unordered_map<unsigned int, vector<unsigned int> >
         ciHH0[locus] = 0;
         ciHH1[locus] = 0;
         ciHH2[locus] = 0;
-        calc_ehh_unidirection_ihs_unphased(locus, false); // upstream
-        calc_ehh_unidirection_ihs_unphased(locus, true); // downstream
+        calc_ehh_unidirection_unphased(locus, false); // upstream
+        calc_ehh_unidirection_unphased(locus, true); // downstream
     }else{
         if(p.LOW_MEM){
-            calc_ehh_unidirection_ihs_bitset(locus, false, m); // upstream
-            calc_ehh_unidirection_ihs_bitset(locus, true, m); // downstream
+            calc_ehh_unidirection_bitset(locus, false, m); // upstream
+            calc_ehh_unidirection_bitset(locus, true, m); // downstream
         }else{
-            calc_ehh_unidirection_ihs(locus, false); // upstream
-            calc_ehh_unidirection_ihs(locus,  true); // downstream
+            calc_ehh_unidirection(locus, false); // upstream
+            calc_ehh_unidirection(locus,  true); // downstream
         }
     }
     
     if(!hm.hapData.unphased){
         //handle all corner cases
         if(hm.hapData.benchmark_flag!="BITSET"){
-
-        
             if(hm.hapData.hapEntries[locus].positions.size()==0){
                 iHH1[locus] = 1;
             }

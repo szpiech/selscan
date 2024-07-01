@@ -1,57 +1,33 @@
 # Makefile for selscan
 
-#debugging
-#G++FLAG = -g -Wall -Werror
-#For dynamic linking
-#LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
+#G++FLAG = -g -Wall -Werror   #debugging
 
 #for osx/macos-arm systems
-CC = g++-14 -g -std=c++17 -fopenmp
+CC = g++-14 -g -std=c++17
 #CC = g++-13 -g
-G++FLAG = -O3 -m64  
-#-mmmx -msse -msse2
+G++FLAG = -O3 -m64  #-mmmx -msse -msse2
+LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
+#LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
 LINK_OPTS2 = -lpthread -lz -fopenmp 
 I_PATH = -I../include
-L_PATH = ../lib/macos-arm
-#L_PATH = ../lib/osx
+L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
-#for linux systems
-#CC = g++
-#G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/linux
-
-#for windows, using MinGW build environment
-#CC = g++.exe
-#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-#LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
-#I_PATH = -I../include -I../include/win32 
-#L_PATH = ../lib/win32
-
-#For static linking of norm program to gsl libs
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 OBJ_STATS = xpihh.o ehh.o ihs.o
 
 all : selscan norm
+# build_and_cleanup
+
+# build_and_cleanup: selscan norm
+# 	rm -rf *.o	
 
 selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
-
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
+	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
 selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
 	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
-
-# xpihh.o : stats/xpihh.cpp stats/xpihh.h
-# 	$(CC) $(G++FLAG) -c stats/xpihh.cpp -o $@ $(I_PATH)
-
-# ehh.o : stats/ehh.cpp stats/ehh.h
-# 	$(CC) $(G++FLAG) -c stats/ehh.cpp  -o $@ $(I_PATH)
-
-# ihs.o : stats/ihs.cpp stats/ihs.h
-# 	$(CC) $(G++FLAG) -c stats/ihs.cpp -o $@ $(I_PATH)
 
 %.o: stats/%.cpp stats/%.h 
 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
@@ -83,10 +59,11 @@ gzstream.o : gzstream.cpp gzstream.h
 hamming_t.o : hamming_t.cpp hamming_t.h
 	$(CC) $(G++FLAG) -c hamming_t.cpp $(I_PATH)
 
-
 # $(BIN_DIR): # Create the binary directory if it does not exist
 # 	mkdir -p $(BIN_DIR)
 
+.PHONY: cleanup
+.PHONY: clean
 
 clean :
-	rm *.o; rm obj/*.o ;  rm selscan; rm norm; rm outfile*
+	rm -rf *.o;  rm -rf selscan; rm -rf  norm; rm -rf outfile*

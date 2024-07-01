@@ -215,7 +215,8 @@ int main(int argc, char *argv[])
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
     }
 
-    p.MAX_EXTEND = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
+    p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
+    p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
 
 
     

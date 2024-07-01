@@ -219,8 +219,6 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
 }
 
 
-
-
 /**
  * @brief Calculate the EHH for a single locus
  * @param query The query locus name

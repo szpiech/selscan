@@ -30,14 +30,14 @@ class IHS : public MainTools{
         void static thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);
 
         
-        void calc_ehh_unidirection_ihs(int locus, bool downstream);
-        void calc_ehh_unidirection_ihs_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m);
+        void calc_ehh_unidirection(int locus, bool downstream);
+        void calc_ehh_unidirection_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m);
 
-        void calc_ehh_unidirection_ihs_unphased(int locus, bool downstream);
-        double calc_ihs_unphased(int locus);
+        void calc_ehh_unidirection_unphased(int locus, bool downstream);
+        double get_ihs_unphased(int locus);
 
         //unphased_ihs        
-        void updateEHH_from_split( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t* ehh_before_norm, uint64_t* cehh_before_norm, bool* is1, bool* is2);
+        void updateEHH_from_split_unphased( map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, uint64_t* ehh_before_norm, uint64_t* cehh_before_norm, bool* is1, bool* is2);
 
         void calc_ihh(int locus, unordered_map<unsigned int, vector<unsigned int> >& m);  
 

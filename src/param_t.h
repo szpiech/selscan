@@ -29,6 +29,7 @@ struct param_main{
     bool ALT,WAGH,TRUNC;
     double MAF;
     int MAX_EXTEND;
+    int MAX_EXTEND_NSL;
     bool SKIP, WRITE_DETAILED_IHS;
     bool CALC_XPNSL, CALC_XP;
     bool SINGLE_EHH;
