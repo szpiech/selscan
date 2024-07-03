@@ -42,6 +42,7 @@ struct param_main{
     bool USE_PMAP;
 
     int EHH1K;
+    int QWIN;
 
     bool CALC_PI;
     int PI_WIN;

@@ -42,7 +42,7 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
-    params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
+    //params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
     params.addFlag(ARG_MAX_EXTEND_NSL, DEFAULT_MAX_EXTEND_NSL, "", HELP_MAX_EXTEND_NSL);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
@@ -126,7 +126,7 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
     }
     //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
-    int EHH1K = params.getIntFlag(ARG_SOFT_K);
+    // int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
     bool CALC_PI = params.getBoolFlag(ARG_PI);
     int PI_WIN = params.getIntFlag(ARG_PI_WIN);
@@ -227,11 +227,11 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
         }
 
     }
-    if (EHH1K < 1)
-    {
-        cerr << "ERROR: EHH1K must be > 0.\n";
-        return 1;
-    }
+    // if (EHH1K < 1)
+    // {
+    //     cerr << "ERROR: EHH1K must be > 0.\n";
+    //     return 1;
+    // }
 
     if (PI_WIN < 1)
     {

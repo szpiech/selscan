@@ -12,7 +12,7 @@ LINK_OPTS2 = -lpthread -lz -fopenmp
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
-OBJ_STATS = xpihh.o ehh.o ihs.o
+OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o
 
 all : selscan norm
 # build_and_cleanup

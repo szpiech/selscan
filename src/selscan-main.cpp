@@ -31,6 +31,8 @@
 #include "stats/ihs.h"
 #include "stats/ehh.h"
 #include "stats/xpihh.h"
+#include "stats/ihh12.h"
+
 
 
 #define IS_TRUE(x) { if (!(x)) std::cout << __FUNCTION__ << " failed on line " << __LINE__ << std::endl; }
@@ -103,7 +105,8 @@ int main(int argc, char *argv[])
     }
     //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
-    p.EHH1K = params.getIntFlag(ARG_SOFT_K);
+    // p.EHH1K = params.getIntFlag(ARG_SOFT_K);
+    p.QWIN = params.getIntFlag(ARG_QWIN);
 
     p.CALC_PI = params.getBoolFlag(ARG_PI);
     p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
@@ -217,9 +220,7 @@ int main(int argc, char *argv[])
 
     p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
     p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
-
-
-    
+    p.TRUNC = params.getBoolFlag(ARG_TRUNC);
 
     if (p.SINGLE_EHH)
     {
@@ -237,11 +238,17 @@ int main(int argc, char *argv[])
     }else if(p.CALC_IHS || p.CALC_NSL){
         cout<<"IHS or NSL\n";
         IHS ihsfinder(hm, p, &flog, &fout);
-        ihsfinder.ihs_main();
+        ihsfinder.main();
     }else if (p.CALC_XP || p.CALC_XPNSL)
     {
+        cout<<"XPIHH\n";
         XPIHH xpihhfinder(hm, p, &flog, &fout);
-        xpihhfinder.xpihh_main();
+        xpihhfinder.main();
+    }else if (p.CALC_SOFT){
+        cout<<"IHH12\n";
+
+        IHH12 ihh12finder(hm, p, &flog, &fout);
+        ihh12finder.main();
     }
     flog.close();
     fout.close();

@@ -231,7 +231,7 @@ void XPIHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
 }
 
 
-void XPIHH::xpihh_main()
+void XPIHH::main()
 {
     int nloci = hm.mapData.nloci;
     ihh_p1 = new double[nloci];

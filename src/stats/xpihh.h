@@ -122,7 +122,7 @@ class XPIHH_ehh_data{
 class XPIHH : public MainTools{
     public:
         XPIHH(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){}
-        void xpihh_main();
+        void main();
 
         
 

@@ -89,6 +89,8 @@ void IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
     n_c[0] = numHaps - v1.size() - v2.size();
     n_c[2] = v2.size();
     n_c[1] = v1.size();
+
+    
     /*
     n_c[0] = numHaps - v1.size();
     n_c[2] = 0;
@@ -211,7 +213,7 @@ void IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
         
         
         //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
-        if(curr_ehh_before_norm[1]*1.0/twice_num_pair(n_c[1]) <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/twice_num_pair(n_c[0])  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+        if(curr_ehh_before_norm[2]*1.0/twice_num_pair(n_c[2]) <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/twice_num_pair(n_c[0])  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
             //std::cout<<"breaking"<<endl;
             break;
         }
@@ -352,16 +354,16 @@ void IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
 
         for(int i=0; i<3; i++){
             if(twice_num_pair(n_c[i])!=0){
-                //if(ehh_before_norm[i]*1.0/twice_num_pair(n_c[i]) > p.EHH_CUTOFF){
+                if(curr_ehh_before_norm[i]*1.0/twice_num_pair(n_c[i]) > p.EHH_CUTOFF){
                     // this was working iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i]) * scale * distance* 0.5 / twice_num_pair(n_c[i]);
                     iHH[i][locus] += (curr_ehh_before_norm[i] + prev_ehh_before_norm[i])  * distance * 0.5 / twice_num_pair(n_c[i]);
 
-                //}
+                }
             }
 
 
             if(twice_num_pair(numHaps - n_c[i])!=0){
-                //if(cehh_before_norm[i]*1.0/twice_num_pair(numHaps - n_c[i]) > p.EHH_CUTOFF){
+                //this is how it's in selscan //if(cehh_before_norm[i]*1.0/twice_num_pair(numHaps - n_c[i]) > p.EHH_CUTOFF){
                     ciHH[i][locus] += (curr_cehh_before_norm[i] + prev_cehh_before_norm[i])  * distance * 0.5 / twice_num_pair(numHaps - n_c[i]);
                 //}
             }
@@ -1038,7 +1040,7 @@ void IHS::thread_ihs(int tid,  unordered_map<unsigned int, vector<unsigned int> 
 
 
 
-void IHS::ihs_main(){
+void IHS::main(){
     iHH0 = new double[hm.hapData.nloci];
     iHH1 = new double[hm.hapData.nloci];
 

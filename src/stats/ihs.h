@@ -13,7 +13,7 @@ class IHS : public MainTools{
    
         IHS(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){  
         }
-        void ihs_main(); //thread_ihs
+        void main(); //thread_ihs
 
 
     private:

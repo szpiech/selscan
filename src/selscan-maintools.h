@@ -67,19 +67,13 @@ class MainTools{
             return (n*n - n)/2;
         }
 
+
+
         int physicalDistance_from_core(int currentLocus, int core, bool downstream){
             int distance;
             if(downstream){
-                if(currentLocus+1>hm.hapData.nloci-1){
-                    std::cerr << "ERROR: wrong locus"<<endl;
-                    throw 0;
-                }
                 distance =  hm.mapData.mapEntries[core].physicalPos - hm.mapData.mapEntries[currentLocus].physicalPos;
             }else{
-                if(currentLocus-1<0){
-                    std::cerr << "ERROR: wrong locus"<<endl;
-                    throw 0;
-                }
                 distance = hm.mapData.mapEntries[currentLocus].physicalPos - hm.mapData.mapEntries[core].physicalPos;
             }
 

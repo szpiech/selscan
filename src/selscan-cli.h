@@ -155,9 +155,9 @@ const string ARG_SOFT = "--ihh12";
 const bool DEFAULT_SOFT = false;
 const string HELP_SOFT = "Set this flag to calculate iHH12.";
 
-const string ARG_SOFT_K = "--k";
-const int DEFAULT_SOFT_K = 2;
-const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
+// const string ARG_SOFT_K = "--k";
+// const int DEFAULT_SOFT_K = 2;
+// const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;

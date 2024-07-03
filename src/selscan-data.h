@@ -177,6 +177,7 @@ struct MapEntry
     string locusName;
     string chr;
     int locId;
+    bool skipLocus = false;
 };
 
 
@@ -304,6 +305,7 @@ class MapData
 public:
     struct MapEntry* mapEntries = NULL; //vector of map entries
     unsigned int nloci;
+    
 
     map<string, int> locus_query_map;
 
