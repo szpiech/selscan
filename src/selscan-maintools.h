@@ -68,7 +68,6 @@ class MainTools{
         }
 
 
-
         int physicalDistance_from_core(int currentLocus, int core, bool downstream){
             int distance;
             if(downstream){

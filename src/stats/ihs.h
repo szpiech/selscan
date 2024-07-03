@@ -2,6 +2,7 @@
 #define __SELSCAN_IHS_H__
 
 #include "../selscan-maintools.h"
+#include "../thread_pool.h"
 #include <unordered_map>
 
 using namespace std;
@@ -10,13 +11,32 @@ using namespace std;
 
 class IHS : public MainTools{
     public:
+
    
         IHS(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){  
+            pool = new ThreadPool(10);
         }
         void main(); //thread_ihs
-
+        void main_old(); //thread_ihs
+        //ThreadPool* pool;
+        ~IHS(){
+            delete pool;
+        }
+        void runTasks();
 
     private:
+
+        void memberTask(int taskNumber) {
+            unordered_map<unsigned int, vector<unsigned int> > m;
+            std::cout << "Executing member task " << taskNumber << std::endl;
+            //point.calc_ihh(10);
+            calc_ihh(taskNumber, m);
+
+        }
+
+        ThreadPool* pool;
+
+
         static pthread_mutex_t mutex_log;
         double* iHH0;
         double* iHH1;

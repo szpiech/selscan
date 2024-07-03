@@ -1020,27 +1020,100 @@ void IHS::calc_ehh_unidirection_bitset(int locus, bool downstream, unordered_map
 // }
 
 
-void IHS::thread_ihs(int tid,  unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj){
-    int elem_per_block = floor(ehh_obj->hm.hapData.nloci/ehh_obj->numThreads);
-    int start = tid*elem_per_block ;
-    int end = start + elem_per_block  ;
-    if(tid == ehh_obj->numThreads-1 ){
-        end = ehh_obj->hm.hapData.nloci;
-    }
-
-    //#pragma omp parallel 
-    for(int locus = start; locus< end; locus++){
-        ehh_obj->calc_ihh(locus, m);
-    }
+// void IHS::thread_ihs(int tid,  unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj){
+//     int elem_per_block = floor(ehh_obj->hm.hapData.nloci/ehh_obj->numThreads);
+//     int start = tid*elem_per_block ;
+//     int end = start + elem_per_block  ;
+//     if(tid == ehh_obj->numThreads-1 ){
+//         end = ehh_obj->hm.hapData.nloci;
+//     }
+//     //#pragma omp parallel 
+//     for(int locus = start; locus< end; locus++){
+//         ehh_obj->calc_ihh(locus, m);
+//     }
     
-    pthread_mutex_lock(&mutex_log);
-    (*(ehh_obj->flog))<<("Finishing thread # "+to_string(tid)+" at "+to_string(MainTools::readTimer())+"\n");
-    pthread_mutex_unlock(&mutex_log);
+//     pthread_mutex_lock(&mutex_log);
+//     (*(ehh_obj->flog))<<("Finishing thread # "+to_string(tid)+" at "+to_string(MainTools::readTimer())+"\n");
+//     pthread_mutex_unlock(&mutex_log);
+// }
+
+void IHS::thread_ihs(int locus,  unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj){
+    unordered_map<unsigned int, vector<unsigned int> > m2;
+    ehh_obj->calc_ihh(locus, m2);
+    m2.clear();
 }
 
 
+void IHS::runTasks() {
+    unordered_map<unsigned int, vector<unsigned int> > m2;
+        for (int i = 0; i < 10; ++i) {
+            pool->enqueue(std::bind(&IHS::memberTask, this, i));
+            //std::placeholders::_1, std::placeholders::_2, 
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(2)); // Give some time for tasks to complete
+    }
 
-void IHS::main(){
+
+void IHS::main() {
+
+    iHH0 = new double[hm.hapData.nloci];
+    iHH1 = new double[hm.hapData.nloci];
+    std::vector< std::unordered_map<unsigned int, std::vector<unsigned int> > > map_per_thread( hm.hapData.nloci );
+
+    if(hm.hapData.unphased){
+        iHH2 = new double[hm.hapData.nloci];
+        ciHH0 = new double[hm.hapData.nloci];
+        ciHH1 = new double[hm.hapData.nloci];
+        ciHH2 = new double[hm.hapData.nloci];
+    }
+    int total_calc_to_be_done = hm.hapData.nloci;
+    cout<<"total calc to be done: "<<total_calc_to_be_done<<endl;
+    
+    this->runTasks();
+    //ThreadPool pool(p.numThreads); // Create a thread pool with 4 threads
+    
+    
+    
+    
+    // for (int i = 0; i < 10; ++i) {
+    //     //pool.enqueue([this, i] { calc_ihh(i, map_per_thread[i]) });
+    //      pool.enqueue([this, i, map_per_thread[i] ] { calc_ihh(i, map_per_thread[i]); });
+    // }}
+    
+    
+    
+    // for (int i = 0; i < hm.mapData.nloci; ++i) {
+    //   //  pool.enqueue([this, i](std::unordered_map< unsigned int, std::vector<unsigned int> >& map_per_worker) { IHS::thread_ihs(i, map_per_worker, this); });
+    //    // pool.enqueue([i](std::unordered_map< unsigned int, std::vector<unsigned int> >& map_per_worker) { thread_ihs(i, map_per_worker, this); });
+    //       pool.enqueue(std::bind(&IHS::thread_ihs, i, std::ref(map_per_thread[i]), this));
+    // }
+    // Give some time for tasks to complete
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    if(hm.hapData.unphased){
+        for (int locus = 0; locus < hm.hapData.nloci; locus++){
+            (*fout) << std::fixed <<   hm.mapData.mapEntries[locus].locusName << " " <<   hm.mapData.mapEntries[locus].physicalPos << " "
+                    <<  hm.mapData.mapEntries[locus].locId << " " << hm.hapData.calcFreq(locus) << " "
+                    << iHH2[locus] << " " << iHH0[locus] <<" "<< get_ihs_unphased(locus) <<endl;
+                    //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< get_ihs_unphased(locus) <<endl;
+        }
+        delete[] iHH2;
+        delete[] ciHH0;
+        delete[] ciHH1;
+        delete[] ciHH2;
+    }else{
+        for (int locus = 0; locus < hm.hapData.nloci; locus++){
+            (*fout) << std::fixed <<   hm.mapData.mapEntries[locus].locusName << " " <<   hm.mapData.mapEntries[locus].physicalPos << " "
+                    <<  hm.mapData.mapEntries[locus].locId << " " << hm.hapData.calcFreq(locus) << " "
+                    << iHH1[locus] << " " << iHH0[locus] <<" "<< log10(iHH1[locus]/iHH0[locus]) <<endl;
+                    //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< get_ihs_unphased(locus) <<endl;
+        }
+    }
+    delete[] iHH0;
+    delete[] iHH1; 
+}
+
+void IHS::main_old(){
     iHH0 = new double[hm.hapData.nloci];
     iHH1 = new double[hm.hapData.nloci];
 
@@ -1219,4 +1292,5 @@ void IHS::calc_ihh(int locus, unordered_map<unsigned int, vector<unsigned int> >
         }
     }
 }
+
 

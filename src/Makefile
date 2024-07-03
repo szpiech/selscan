@@ -20,17 +20,20 @@ all : selscan norm
 # build_and_cleanup: selscan norm
 # 	rm -rf *.o	
 
-selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  
-	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
+selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o
 	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
-selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
-	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
-
 %.o: stats/%.cpp stats/%.h 
 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+thread_pool.o : thread_pool.cpp thread_pool.h
+	$(CC) $(G++FLAG) -c thread_pool.cpp $(LINK_OPTS2)
+
+selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
+	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
 
 selscan-data.o : selscan-data.cpp selscan-data.h
 	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
