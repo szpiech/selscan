@@ -8,7 +8,8 @@ CC = g++-14 -g -std=c++17
 G++FLAG = -O3 -m64  #-mmmx -msse -msse2
 LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
 #LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
-LINK_OPTS2 = -lpthread -lz -fopenmp 
+LINK_OPTS2 = -lpthread -lz 
+#-fopenmp 
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
@@ -20,8 +21,8 @@ all : selscan norm
 # build_and_cleanup: selscan norm
 # 	rm -rf *.o	
 
-selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o
-	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o
+selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o 
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o 
 	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)

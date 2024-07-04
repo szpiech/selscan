@@ -41,6 +41,18 @@
 
 using namespace std;
 
+class IHSTask{
+    public:
+    void static my_work_routine(void *arg) {
+        WorkArgs_t *work_args = (WorkArgs_t *)arg;
+        printf("Num1: %d,\n", work_args->num1);
+        //work_args->ihs_obj->memberTask(work_args->num1);
+        work_args->ihs_obj->calc_ehh_unidirection(work_args->num1, false);
+        free(work_args);
+    }
+};
+
+
 int main(int argc, char *argv[])
 {
     cerr << "selscan v" + VERSION + "\n";
@@ -239,6 +251,26 @@ int main(int argc, char *argv[])
         cout<<"IHS or NSL\n";
         IHS ihsfinder(hm, p, &flog, &fout);
         ihsfinder.main();
+        ThreadPool pool(p.numThreads);
+        std::vector< std::future<double> > results;
+        for(int i = 0; i <  hm.mapData.nloci; ++i) {
+            results.emplace_back(
+                pool.enqueue([i,&ihsfinder] {
+                    //ihsfinder.calc_ehh_unidirection(i, false);
+                    ihsfinder.calc_ihh(i);
+                    //return log10(ihsfinder.iHH1[i]/ihsfinder.iHH0[i]);
+                    return 0.0;
+                })
+            );
+        }
+
+        for(auto && result: results){
+            result.get();
+        }
+        //    std::cout << result.get() << ' ';
+        //std::cout << std::endl;
+        //std::this_thread::sleep_for(std::chrono::seconds(2));
+        ihsfinder.runTasks();
     }else if (p.CALC_XP || p.CALC_XPNSL)
     {
         cout<<"XPIHH\n";

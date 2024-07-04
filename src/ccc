@@ -1,0 +1,3 @@
+(lldb) target create "./selscan"
+Current executable set to '/Users/amatur/code/selscan/src/selscan' (arm64).
+(lldb) settings set -- target.run-args  "--vcf" "/Users/amatur/code/selbin-integration/example/p4.2000.vcf" "--pmap" "--ihs" "--threads" "1000"

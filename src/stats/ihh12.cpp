@@ -333,7 +333,7 @@ void IHH12::main()
     if (p.CALC_XP) std::cerr << "Starting XP-EHH calculations.\n";
     if (p.CALC_XPNSL) std::cerr << "Starting XP-nSL calculations.\n";
 
-    std::unordered_map<unsigned int, std::vector<unsigned int> > map_per_thread[numThreads];
+    std::unordered_map<unsigned int, std::vector<unsigned int> >* map_per_thread = new std::unordered_map<unsigned int, std::vector<unsigned int> > [numThreads];
 
     bool openmp_enabled = false; // two different ways to parallelize: first block does pthread, second block does openmp
     if (!openmp_enabled)
@@ -354,6 +354,8 @@ void IHH12::main()
     }
 
     std::cerr << "\nFinished.\n";
+
+    delete[] map_per_thread; // free memory
 
     (*fout) << "id\tpos\tp1\tihh12\n";
     for (int i = 0; i < hm.mapData.nloci; i++)
