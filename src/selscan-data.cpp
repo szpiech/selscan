@@ -24,6 +24,21 @@
 #include<algorithm>
 using namespace std;
 
+void initialHapDataReading(){
+    //read the input
+    // get info about
+    // nloci, nhaps, queue, num1s, num2s
+    // line id ()
+}
+class DataReader{
+
+};
+
+class ParallelDataReader{
+    void initialHapDataReading();
+
+
+};
 
 template<typename T>
 void getThreeUnphasedGroups(const std::vector<T>& new1, const std::vector<T>& old1, const std::vector<T>& new2, const std::vector<T>& old2, std::vector<T> g[]) {
@@ -281,6 +296,7 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
     hapData.initParams(UNPHASED, p.SKIP, p.MAF);
     hapData2.initParams(UNPHASED, p.SKIP, p.MAF);
 
+    auto start_reading = std::chrono::high_resolution_clock::now();
 
     if(LOW_MEM){
         try
@@ -391,9 +407,12 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
         }
     }
 
-    
+    auto end_reading = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> read_duration =  end_reading - start_reading;
     //FLOG
-    (*(flog))<<("Input file loaded in "+to_string(MainTools::readTimer())+"\n");
+    cout<<("Input file loaded in "+to_string(read_duration.count())+" s.\n");
+
+    (*(flog))<<("Input file loaded in "+to_string(read_duration.count())+" s.\n");
     //mapData.print();
 
 

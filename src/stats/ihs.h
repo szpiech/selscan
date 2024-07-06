@@ -19,7 +19,7 @@ class IHS : public MainTools{
         ~IHS(){
             //delete pool;
         }
-        void runTasks();
+        void print_results_to_out();
         //void runTaskTQ(void *arg);
          void memberTask(int taskNumber) ;
         // void memberTask(int taskNumber) {
@@ -32,8 +32,10 @@ class IHS : public MainTools{
         double* iHH2;
 
         
-        void calc_ehh_unidirection(int locus, bool downstream);
-        void calc_ihh(int locus);  
+        pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
+        pair<double, double> calc_ihh1(int locus);  
+        pair<double, double>  calc_ihh(int locus);  
+
         
     private:
 
@@ -47,8 +49,8 @@ class IHS : public MainTools{
         double* ciHH1;
         double* ciHH2;
 
-        //void static thread_ihs(int tid, IHS* ehh_obj);
-        void static thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);
+        void static thread_ihs(int tid, IHS* ehh_obj);
+        //pair<double, double>  static  thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);
 
         
         void calc_ehh_unidirection_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m);

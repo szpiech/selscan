@@ -41,20 +41,13 @@
 
 using namespace std;
 
-class IHSTask{
-    public:
-    void static my_work_routine(void *arg) {
-        WorkArgs_t *work_args = (WorkArgs_t *)arg;
-        printf("Num1: %d,\n", work_args->num1);
-        //work_args->ihs_obj->memberTask(work_args->num1);
-        work_args->ihs_obj->calc_ehh_unidirection(work_args->num1, false);
-        free(work_args);
-    }
-};
-
 
 int main(int argc, char *argv[])
 {
+    double time_start = (clock() / (double) CLOCKS_PER_SEC);
+
+    auto start = std::chrono::high_resolution_clock::now();
+
     cerr << "selscan v" + VERSION + "\n";
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
@@ -250,27 +243,34 @@ int main(int argc, char *argv[])
     }else if(p.CALC_IHS || p.CALC_NSL){
         cout<<"IHS or NSL\n";
         IHS ihsfinder(hm, p, &flog, &fout);
-        ihsfinder.main();
+        ihsfinder.main_old();
+        //ihsfinder.main();
+        /*
         ThreadPool pool(p.numThreads);
         std::vector< std::future<double> > results;
         for(int i = 0; i <  hm.mapData.nloci; ++i) {
             results.emplace_back(
                 pool.enqueue([i,&ihsfinder] {
                     //ihsfinder.calc_ehh_unidirection(i, false);
-                    ihsfinder.calc_ihh(i);
+                    return ihsfinder.calc_ihh(i);
                     //return log10(ihsfinder.iHH1[i]/ihsfinder.iHH0[i]);
-                    return 0.0;
+                    //return 0.0;
                 })
             );
-        }
+            //std::this_thread::sleep_for(std::chrono::milliseconds(1));  // Sleep for 1 second
 
-        for(auto && result: results){
-            result.get();
+            
         }
-        //    std::cout << result.get() << ' ';
+        int i = 0;
+        for(auto && result: results){
+            //result.get();
+            //std::cout << result.get() << ' ';
+            ihsfinder.iHH1[i++] = result.get();
+        }
+           
         //std::cout << std::endl;
-        //std::this_thread::sleep_for(std::chrono::seconds(2));
         ihsfinder.runTasks();
+        */
     }else if (p.CALC_XP || p.CALC_XPNSL)
     {
         cout<<"XPIHH\n";
@@ -289,6 +289,13 @@ int main(int argc, char *argv[])
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_detach_np();
 #endif
+
+    double time_end = (clock() / (double) CLOCKS_PER_SEC);
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> duration = end - start;
+    cout<<("Total CPU time: "+to_string(time_end-time_start)+" s. \n");
+    std::cout << "Program took " << duration.count() << " seconds to complete." << std::endl;
 
     return 0;
 }
