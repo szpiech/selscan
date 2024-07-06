@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
     }else if(p.CALC_IHS || p.CALC_NSL){
         cout<<"IHS or NSL\n";
         IHS ihsfinder(hm, p, &flog, &fout);
-        ihsfinder.main_old();
+        ihsfinder.main();
         //ihsfinder.main();
         /*
         ThreadPool pool(p.numThreads);
