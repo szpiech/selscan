@@ -1133,12 +1133,6 @@ void IHS::memberTask(int i) {
     //cout << "Task " << i << " is done" << endl;
     calc_ihh(i);
 }
-void runTaskTQ(void *arg, IHS* obj){
-	// printf("Thread #%u working on %d\n", (int) pthread_self(), (int) (long) arg);
-    // int i = (int) (long) arg;
-    //obj->memberTask(i);
-    sleep(1);
-}
 
 
 
@@ -1185,7 +1179,9 @@ void IHS::main() {
 
             locus++;
         }
-           
+
+
+        /*   
         if(hm.hapData.unphased){
             // for (int locus = 0; locus < hm.hapData.nloci; locus++){
             //     (*fout) << std::fixed <<   hm.mapData.mapEntries[locus].locusName << " " <<   hm.mapData.mapEntries[locus].physicalPos << " "
@@ -1205,6 +1201,7 @@ void IHS::main() {
                         //<< log10(ciHH2[locus]/iHH2[locus]) << " " << log10(ciHH0[locus]/iHH0[locus]) <<" "<< get_ihs_unphased(locus) <<endl;
             }
         }
+        */
 
 
         //std::cout << std::endl;

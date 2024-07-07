@@ -35,10 +35,11 @@ class DataReader{
 
         /// Assigns value of HapData.nhaps and HapData.nloci  
         virtual void get_nloci_nhaps() {}
-        virtual void n1s_n2s() {}
-
+ 
         /// At the end, assigns value of number_of_1s_per_loci and number_of_2s_per_loci and skiplist in args
-        virtual void n1s_n2s_q(int* num1s_per_loci, int* num2s_per_loci, queue<int>& skiplist ) {}
+        virtual void n1s_n2s_q() {}
+        virtual void do_xor() {}
+
 
         virtual ~DataReader() {}
 };

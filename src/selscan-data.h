@@ -146,19 +146,18 @@ public:
 
         if(flag=="--vcf"){
             if(is_gzipped(filename)){
-                dataReader = new VCFSerialReader(filename, hapData);
+                //dataReader = new VCFSerialReader(filename, hapData);
             }else{
                 dataReader = new VCFParallelReader(filename, hapData);
             }
         }
         
         dataReader->get_nloci_nhaps(); 
-        int* num1s_per_loci = new int[hapData.nloci];
-        int* num2s_per_loci = new int[hapData.nloci];
-        queue<int> skiplist;
-        //dataReader->n1s_n2s_q(num1s_per_loci, num2s_per_loci, skiplist);
-        delete[] num1s_per_loci;
-        delete[] num2s_per_loci;
+        int num_loci_before_filter = hapData.nloci;
+        dataReader->n1s_n2s_q();
+        int num_loci_after_filter = hapData.nloci;
+        dataReader->do_xor();
+
     }
 
     /*

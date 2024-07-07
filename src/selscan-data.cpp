@@ -135,7 +135,7 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
             }
             else if (VCF) {
                 handleData(vcfFilename);
-                exit(1);
+                //exit(1);
                 //ataReader dr(vcfFilename, hapData);
                 
                 
