@@ -148,7 +148,7 @@ public:
             if(is_gzipped(filename)){
                 dataReader = new VCFSerialReader(filename, hapData);
             }else{
-                //dataReader = new VCFParallelReader(filename, hapData);
+                dataReader = new VCFParallelReader(filename, hapData);
             }
         }
         

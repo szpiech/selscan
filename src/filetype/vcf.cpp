@@ -1,3 +1,5 @@
+#include "vcf.h"
+
 #include <sstream>
 using namespace std;
 
@@ -5,9 +7,14 @@ using namespace std;
 
 /****  PARALLEL *****/
 
+void VCFParallelReader::n1s_n2s_q(int* num1s_per_loci, int* num2s_per_loci, queue<int>& skiplist ) {
+    return;
+}
 
-/*
 void VCFParallelReader::getLineStartPositions(std::vector<std::streampos>& start_positions, int& num_meta_lines){
+   auto start = std::chrono::high_resolution_clock::now();
+   
+   
     num_meta_lines = 0;
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -35,18 +42,42 @@ void VCFParallelReader::getLineStartPositions(std::vector<std::streampos>& start
 
         }
     }
+    cout<<"meta lines "<< num_meta_lines<<endl;
     file.close();
+
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    cout<<"serial read took "<< duration.count() << " s." <<endl;
 }
 
-void VCFParallelReader::get_nloci_nhaps_process_chunk(int start_line, int end_line, int thread_id) {
+void VCFParallelReader::get_nloci_nhaps_process_chunk(int start_line, int thread_id) {
     nloci_per_thread[thread_id] = 0;
     std::ifstream chunk_file(filename);
+
+    chunk_file.seekg(0, std::ios::end);
+    std::streampos file_size = chunk_file.tellg();
      
     chunk_file.seekg(line_start_positions[thread_id]);
 
     std::string line;
     const int genotype_start_column = 9;
-    while (std::getline(chunk_file, line) && chunk_file.tellg() <= line_start_positions[thread_id+1]-std::streampos(1)) {
+    std::streampos endpos;
+    if(thread_id == num_threads-1){
+        //std::lock_guard<std::mutex> lock(file_mutex);
+        
+        //cout<<"last thread "<< thread_id << " "<< line_start_positions[thread_id] << " "<< file_size <<endl;
+        
+        
+        //endpos = line_start_positions[thread_id+1];
+        endpos = file_size ; //filessize
+    }else{
+        endpos = line_start_positions[thread_id+1] ;
+    }
+
+    while (std::getline(chunk_file, line) && chunk_file.tellg() <= endpos) {
+        //std::lock_guard<std::mutex> lock(file_mutex);
+        //if(thread_id==0) cout<<line_start_positions[thread_id]<< " " <<chunk_file.tellg()<<endl;
         // Process the line
         nlines_per_thread[thread_id]++;
 
@@ -56,7 +87,7 @@ void VCFParallelReader::get_nloci_nhaps_process_chunk(int start_line, int end_li
     
         nloci_per_thread[thread_id]++;
 
-        if(thread_id == num_threads-1){
+        if(thread_id == num_threads-2){
             std::istringstream ss(line);
             std::string word;
             int word_count = 0;
@@ -66,18 +97,23 @@ void VCFParallelReader::get_nloci_nhaps_process_chunk(int start_line, int end_li
             nhaps = word_count - genotype_start_column;
         }
         
-        // Here you would parse the VCF line
-        std::lock_guard<std::mutex> lock(file_mutex);
+        // std::lock_guard<std::mutex> lock(file_mutex);
+        // cout<<line.substr(6,10)<<" ";
     }
+    //     std::lock_guard<std::mutex> lock(file_mutex);
+
+    // cout<<endl;
     chunk_file.close();
+    // Here you would parse the VCF line
+       // std::lock_guard<std::mutex> lock(file_mutex);
+       // cout<< thread_id << " "<< nlines_per_thread[thread_id] <<endl;
 }
 
 void VCFParallelReader::get_nloci_nhaps() {
     done = false;
 
-    int num_meta_lines = 0;
-    vector<std::streampos> line_start_positions;
-    getLineStartPositions(line_start_positions, num_meta_lines);
+    vector<std::streampos> line_start_positions2;
+    getLineStartPositions(line_start_positions2, this->n_meta_lines);
 
     auto start = std::chrono::high_resolution_clock::now();
     
@@ -92,26 +128,26 @@ void VCFParallelReader::get_nloci_nhaps() {
     nlines_per_thread = new int[num_threads];
 
 
-    int num_data_lines = line_start_positions.size();
+    int num_data_lines = line_start_positions2.size();
+    cout<<"num_data_lines "<<num_data_lines<<endl;
     // Calculate chunk size
-    int chunk_size = num_data_lines / num_threads;
+    int chunk_size = ceil(num_data_lines * 1.0 / num_threads);
+    cout<<"chunk_size "<<chunk_size<<endl;
     this->chunk_size = chunk_size;  
     this->line_start_positions.resize(num_threads);
     for (int i = 0; i < num_threads; ++i) {
         int start_line = i * chunk_size;
-        //int end_line = (i == num_threads - 1) ? num_data_lines : start_line + chunk_size;
-        this->line_start_positions[i] = line_start_positions[start_line];
+        this->line_start_positions[i] = line_start_positions2[start_line];
     }
 
-    int pos_iterator = 0;
     // Start threads to process chunks
     for (int i = 0; i < num_threads; ++i) {
         // std::streampos start = i * chunk_size;
         // std::streampos end = (i == num_threads - 1) ? file_size : (i + 1) * chunk_size;
 
         int start_line = i * chunk_size;
-        int end_line = (i == num_threads - 1) ? num_data_lines : start_line + chunk_size;
-        threads.emplace_back(&VCFParallelReader::get_nloci_nhaps_process_chunk, this, start_line, end_line, i);
+        int end_line = (i == num_threads - 1) ? num_data_lines-1 : start_line + chunk_size - 1;
+        threads.emplace_back(&VCFParallelReader::get_nloci_nhaps_process_chunk, this, start_line, i);
     }
 
     // Join threads
@@ -121,11 +157,11 @@ void VCFParallelReader::get_nloci_nhaps() {
 
     for (int i = 0; i < num_threads; ++i) {
         nloci += nloci_per_thread[i];
-        n_meta_lines += nlines_per_thread[i];
+        //n_meta_lines += nlines_per_thread[i];
     }
     n_meta_lines -= nloci;
 
-    cout<<nloci<<" "<<nhaps<<endl;
+    cout<<n_meta_lines<<" "<<nloci<<" "<<nhaps<<endl;
     hapData.nloci = nloci;
     hapData.nhaps = nhaps;
 
@@ -136,9 +172,9 @@ void VCFParallelReader::get_nloci_nhaps() {
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    std::cout << "read nloci nhaps took " << duration.count() << " s." << std::endl;
+    std::cout << "Parallely read nloci nhaps took " << duration.count() << " s." << std::endl;
 }
-*/
+
 
 
 

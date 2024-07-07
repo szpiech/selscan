@@ -87,7 +87,7 @@ private:
 
 
     /// Return the number of loci and haps in the VCF file given the thread id
-    void get_nloci_nhaps_process_chunk(int start, int end, int thread_id);
+    void get_nloci_nhaps_process_chunk(int start_line, int thread_id);
 
     /// Return the number of 1s and 2s in the VCF file given the thread id
     void n1s_n2s_q_process_chunk(std::streampos start, std::streampos end, int thread_id, int* num1s_per_loci, int* num2s_per_loci, queue<int>& skiplist);
