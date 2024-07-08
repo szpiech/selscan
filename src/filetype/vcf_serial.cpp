@@ -232,14 +232,16 @@ void VCFSerialReader::do_xor(){
     // }
 
     // Parallelize the computation using OpenMP
-    /*
+    ///*
     omp_set_num_threads(this->num_threads);
     #pragma omp parallel for
     for(int i = 1; i<= hapData->nloci-1; i++){ // i: locus_after_filter
         symmetric_difference(hapData->hapEntries[i].positions, hapData->hapEntries[i-1].positions, i);
     }
-    */
+    //*/
 
+
+    /*
     threads.clear();
     
     this->chunk_size = ceil( hapData->nloci * 1.0 / num_threads); //recompute chunk size
@@ -252,6 +254,7 @@ void VCFSerialReader::do_xor(){
     for (auto& t : threads) { // Join threads
         t.join();
     }
+    */
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
