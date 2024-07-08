@@ -8,6 +8,17 @@
 #include <omp.h>
 using namespace std;
 
+ VCFSerialReader::VCFSerialReader(std::string filename, HapData* hapData)
+ {
+    this->filename = filename;
+    this->hapData = hapData;
+    flog = hapData->flog;
+    num_threads = hapData->num_threads;
+
+    init_based_on_lines(); 
+    populate_positions_skipqueue();
+    do_xor();
+}
 
 void VCFSerialReader::get_line_start_positions(){
     auto start = std::chrono::high_resolution_clock::now();

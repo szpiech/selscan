@@ -14,12 +14,7 @@ class VCFSerialReader   {
 public:
     std::string filename;
     HapData* hapData;
-    VCFSerialReader(std::string filename, HapData* hapData) {
-        this->filename = filename;
-        this->hapData = hapData;
-        flog = hapData->flog;
-        num_threads = hapData->num_threads;
-    }
+    VCFSerialReader(std::string filename, HapData* hapData);
     ~VCFSerialReader(){
         threads.clear();
         //delete[] nloci_per_thread;

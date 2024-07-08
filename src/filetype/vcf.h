@@ -10,31 +10,12 @@
 #include "../hapmap/hapdata.h"
 #include "data_reader.h"
 
-
-//class VCFParallelReader  : public DataReader {
-
 class VCFParallelReader {
 public:
-    string filename;
-    HapData& hapData;
-    ofstream* flog;
-    int num_threads;
-
-
-    VCFParallelReader(std::string filename, HapData* hapDataPtr) : filename(filename), hapData(*hapDataPtr){
-        hapData = *hapDataPtr;
-        this->filename = filename;
-        flog = hapData.flog;
-        num_threads = hapData.num_threads;
-        std::ifstream ifs(filename);
-        ifs.seekg(0, std::ios::end);
-        this->file_size = ifs.tellg();
-        ifs.close();
-    }
+    VCFParallelReader(std::string filename, HapData* hapDataPtr);
     ~VCFParallelReader(){}
 
     /// @brief assigns value to hapData.nloci
-    /// @param line_start_positions 
     void get_line_start_positions(std::vector<std::streampos>& line_start_positions);
     
     void init_based_on_lines();
@@ -44,6 +25,11 @@ public:
     void do_xor();
 
 private:
+    string filename;
+    HapData& hapData;
+    ofstream* flog;
+    int num_threads;
+
     std::vector<std::thread> threads;
     std::mutex file_mutex;
 
@@ -64,15 +50,11 @@ private:
         //l = g % c
         //t = g / c
     }
-    
-    /// Return the number of loci and haps in the VCF file given the thread id
-    //void get_nloci_nhaps_process_chunk(int start_line, int thread_id);
 
     /// Return the number of 1s and 2s in the VCF file given the thread id
     void populate_positions_skipqueue_process_chunk(int start_line, int thread_id);  
     void do_xor_process_chunk(int start_line, int thread_id);
 };
-
 
 
 #endif 

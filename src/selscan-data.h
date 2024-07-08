@@ -41,6 +41,7 @@
 #include "filetype/data_reader.h"
 #include "filetype/vcf.h"
 #include "filetype/vcf_serial.h"
+#include "filetype/hap.h"
 
 
 using namespace std;
@@ -141,29 +142,18 @@ public:
         // Check if the first two bytes are the gzip magic numbers
         return buffer[0] == 0x1F && buffer[1] == 0x8B;
     }
-    void handleData(string filename){
-        string flag="--vcf";
-        if(flag=="--vcf"){
+    void handleData(string filename, string EXT){
+        if(EXT == "VCF"){
             if(is_gzipped(filename)){
                 cout<<"Gzipped file: so reading in serial"<<endl;
                 VCFSerialReader dataReader(filename, &hapData);
-                dataReader.init_based_on_lines(); 
-                int num_loci_before_filter = hapData.nloci;
-                dataReader.populate_positions_skipqueue();
-                int num_loci_after_filter = hapData.nloci;
-                dataReader.do_xor();
-
-                if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci llll "<<hapData.nloci<<endl;
-
+                if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci from serial reader: "<<hapData.nloci<<endl;
             }else{
                 cout<<"Plain text VCF file: so reading in parallel"<<endl;
                 VCFParallelReader dataReader(filename, &hapData);
-                dataReader.init_based_on_lines(); 
-                int num_loci_before_filter = hapData.nloci;
-                dataReader.populate_positions_skipqueue();
-                int num_loci_after_filter = hapData.nloci;
-                dataReader.do_xor();
             }
+        }else if(EXT == "HAP"){
+            HapParallelReader dataReader(filename, &hapData);
         }
     }
 

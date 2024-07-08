@@ -3,7 +3,20 @@
 #include <sstream>
 #include <algorithm>
 using namespace std;
+ VCFParallelReader::VCFParallelReader(std::string filename, HapData* hapDataPtr) : filename(filename), hapData(*hapDataPtr){
+    hapData = *hapDataPtr;
+    this->filename = filename;
+    flog = hapData.flog;
+    num_threads = hapData.num_threads;
+    std::ifstream ifs(filename);
+    ifs.seekg(0, std::ios::end);
+    this->file_size = ifs.tellg();
+    ifs.close();
 
+    init_based_on_lines(); 
+    populate_positions_skipqueue();
+    do_xor();
+ }
 
 void VCFParallelReader::get_line_start_positions(std::vector<std::streampos>& start_positions){
     auto start = std::chrono::high_resolution_clock::now();

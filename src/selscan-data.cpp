@@ -134,7 +134,7 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
                 mapData.readMapDataTPED(tpedFilename, hapData.nloci, hapData.nhaps, USE_PMAP);
             }
             else if (VCF) {
-                handleData(vcfFilename);
+                handleData(vcfFilename, "VCF");
                 
                 //exit(1);
                 //ataReader dr(vcfFilename, hapData);
@@ -173,7 +173,8 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
                         return 1;
                     }
                 }else{
-                    hapData.readHapData(hapFilename);
+                    //hapData.readHapData(hapFilename);
+                    handleData(hapFilename, "HAP");
                 }
                 mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
                 
