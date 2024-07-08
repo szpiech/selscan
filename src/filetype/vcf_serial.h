@@ -47,7 +47,7 @@ private:
     ofstream* flog;
 
     queue<int> skiplist;
-    vector<unsigned int> * positions;
+    vector<vector<unsigned int> > positions;
     vector<unsigned int> * positions2;
 
     /// Return the number of 1s and 2s in the VCF file given the thread id

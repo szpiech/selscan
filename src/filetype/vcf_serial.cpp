@@ -136,14 +136,15 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
 
     hapData->nloci =  (hapData->SKIP) ? locus-skiplist.size(): locus;
     hapData->initHapData(hapData->nhaps, hapData->nloci); // skip done in initHapData
-    hapData->skipQueue = skiplist;
+    hapData->skipQueue = queue<int>(); 
 }
 
 void VCFSerialReader::populate_positions_skipqueue() {
     //IDEA::::: MINMAF MUST BE GREATER THAN  0 that means no monomorphic site, that means all 0 sites can be considered to be filtered.
     //this way you avoid the queueu
 
-    positions = new vector<unsigned int>[hapData->nloci];
+    positions.resize(hapData->nloci);
+
     if(hapData->unphased)
         positions2 = new vector<unsigned int> [hapData->nloci];
 
@@ -173,10 +174,11 @@ void VCFSerialReader::populate_positions_skipqueue() {
         }
     }else{
         int loc_after_skip = 0;
-        for(int i = 0; i<= hapData->nloci-1; i++){ // i: locus_before_filter
+        for(int i = 0; i<= hapData->nloci+skipcount-1; i++){ // i: locus_before_filter
             if(!skiplist.empty()){
                 if(skiplist.front() == i){
                     skiplist.pop();
+                    hapData->skipQueue.push(i);
                     if(positions[i].size() > 0){ //skip position must have 0 length vector as it was cleared to save space
                         {
                             cout<<"ERROR: skiplist not working"<<endl;
@@ -190,7 +192,7 @@ void VCFSerialReader::populate_positions_skipqueue() {
         }
     }
     
-    delete[] positions;
+    //delete[] positions;
     if(hapData->unphased){
         delete[] positions2;
     }
@@ -199,6 +201,7 @@ void VCFSerialReader::populate_positions_skipqueue() {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     std::cout << "Serial populate_positions_skipqueue took " << duration.count() << " s." << std::endl;
+    cout<<hapData->skipQueue.size()<<endl;
 }
 
 // Function to compute symmetric difference between two vectors
