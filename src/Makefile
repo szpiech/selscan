@@ -5,7 +5,8 @@
 #for osx/macos-arm systems
 CC = g++-14 -g -std=c++17
 #CC = g++-13 -g
-G++FLAG = -O3 -m64  #-mmmx -msse -msse2
+G++FLAG = -Og -m64  
+#-mmmx -msse -msse2 -O3
 LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
 #LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
 LINK_OPTS2 = -lpthread -lz 
@@ -14,7 +15,7 @@ I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o
-OBJ_FILETYPE = data_reader.o hap.o tped.o vcf.o
+OBJ_FILETYPE = data_reader.o hap.o tped.o vcf.o vcf_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 #OBJ_HAPMAP = ""
 

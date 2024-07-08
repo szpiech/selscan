@@ -32,6 +32,8 @@ struct HapEntry
 class HapData
 {
 public:
+    void do_xor();
+
     struct HapEntry* hapEntries = NULL; //vector of haplotype entries
     unsigned int nloci;
     unsigned int nhaps;
@@ -40,6 +42,10 @@ public:
     //string benchmark_flag = "BITSET";
     //string benchmark_flag = "FLIP_ONLY";
     //string benchmark_flag = "BASIC";
+
+    string DEBUG_FLAG = "VCF";
+    //string DEBUG_FLAG = "";
+
 
     bool unphased;
     double MAF;

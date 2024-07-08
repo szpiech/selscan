@@ -539,7 +539,28 @@ void HapData::readHapDataVCF_bitset(string filename)
 }
 
 
-
+void HapData::do_xor(){
+    for(int i = 0; i<this->nloci; i++){
+        if(i==0){
+            if(benchmark_flag == "XOR"){
+                hapEntries[i].xors = hapEntries[i].positions;
+                // vector<unsigned int>& source = hapEntries[i].positions;
+                // vector<unsigned int>& destination = hapEntries[i].xors;
+                // std::copy(source.begin(), source.end(), destination.begin());
+                // hapEntries[i].xors1 = hapEntries[i].positions;
+                // hapEntries[i].xors2 = hapEntries[i].positions2;
+            }
+        }else{
+            if(benchmark_flag == "XOR"){
+                vector<unsigned int>& curr_xor = hapEntries[i].xors;
+                vector<unsigned int>& curr_positions = hapEntries[i].positions;
+                vector<unsigned int>& prev_positions = hapEntries[i-1].positions;
+                std::set_symmetric_difference(curr_positions.begin(), curr_positions.end(),prev_positions.begin(), prev_positions.end(),
+                                std::back_inserter(curr_xor));
+            }
+        }
+    }
+}
 
 
 
@@ -873,6 +894,8 @@ void HapData::readHapDataVCF(string filename)
     //     }
     // }
     // //PHASE 4: FLIP
+
+    /*
     if(benchmark_flag == "XOR" || benchmark_flag == "FLIP_ONLY" ){
         for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
             if(hapEntries[locus_after_filter].positions.size() > this->nhaps/2){
@@ -897,6 +920,7 @@ void HapData::readHapDataVCF(string filename)
             }
         }
     }
+    */
 
     if(SKIP){
         cerr << "Removed " << skipcount << " low frequency variants.\n";
@@ -906,8 +930,6 @@ void HapData::readHapDataVCF(string filename)
     fin.close();
 
 }
-
-
 
 void HapData::readHapDataTPED(string filename)
 {
@@ -1027,9 +1049,6 @@ void HapData::readHapDataTPED(string filename)
 
     fin.close();
 }
-
-
-
 
 //reads in haplotype data and also does basic checks on integrity of format
 //returns a populated HaplotypeData structure if successful

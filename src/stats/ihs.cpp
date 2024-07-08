@@ -633,13 +633,17 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         if(hm.hapData.benchmark_flag != "XOR"){
             v = hm.hapData.hapEntries[i].positions; // uncomment to disable xor
         }
-        v = hm.hapData.hapEntries[i].positions;
-
-        
+        //v = hm.hapData.hapEntries[i].positions;
         
         for (const unsigned int& set_bit_pos : v){
             int old_group_id = group_id[set_bit_pos];
-            m[old_group_id].push_back(set_bit_pos);
+            try {
+                m[old_group_id].push_back(set_bit_pos);
+            } catch (const std::exception& e) {
+                std::cerr << "Exception caught: " << e.what() << std::endl;
+                // Handle exception, if necessary
+            }
+            
         }
 
         for (const auto &ele : m) {
@@ -676,8 +680,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 ehh0_before_norm += del_update;
             }
         }
-        m.clear();
-        
+        unordered_map<unsigned int, vector<unsigned int> >().swap(m);
 
         if(twice_num_pair(n_c1)!=0){
 

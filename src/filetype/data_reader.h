@@ -18,28 +18,22 @@ using namespace std;
 // if u get the vectors at first
 
 class DataReader{
-
-
     public:
-
         const string filename;
         HapData& hapData;
-        bool unphased, SKIP, MAF;
         ofstream* flog;
         int num_threads;
 
-
         DataReader(const std::string& filename, HapData& hapData)
-            : filename(filename), hapData(hapData), unphased(hapData.unphased), SKIP(hapData.SKIP), MAF(hapData.MAF), flog(hapData.flog),  num_threads(hapData.num_threads)
+            : filename(filename), hapData(hapData), flog(hapData.flog), num_threads(hapData.num_threads)
         {}
 
         /// Assigns value of HapData.nhaps and HapData.nloci  
-        virtual void get_nloci_nhaps() {}
+        virtual void init_based_on_lines() {}
  
-        /// At the end, assigns value of number_of_1s_per_loci and number_of_2s_per_loci and skiplist in args
-        virtual void n1s_n2s_q() {}
+        /// @brief Assigns value of #hapData.positions  #hapData.positions2  #skiplist  #hapData.nhaps
+        virtual void populate_positions_skipqueue() {}
         virtual void do_xor() {}
-
 
         virtual ~DataReader() {}
 };
@@ -54,7 +48,7 @@ class DataReader{
     //     // nloci, nhaps, queue, num1s, num2s
     //     // line id ()
     // }
-    void get_nloci_nhaps(){ //can do parallely in vcf
+    void init_based_on_lines(){ //can do parallely in vcf
        
         igzstream fin;
 
@@ -164,7 +158,7 @@ class DataReader{
     void n1s_n2s(){ //can do parallely in vcf
 
     }
-    void n1s_n2s_q(){ //can do parallely in vcf
+    void populate_positions_skipqueue(){ //can do parallely in vcf
         //Pass 2: Load according to first pass information
         igzstream fin;
         fin.open(filename.c_str());
@@ -316,7 +310,7 @@ class DataReader{
     void doXor(){ // can do parallely
 
     }
-    //if skip low freq n1s_n2s_q else n1s_n2s
+    //if skip low freq populate_positions_skipqueue else n1s_n2s
     //then init
 
 

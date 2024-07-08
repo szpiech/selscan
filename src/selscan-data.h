@@ -40,6 +40,7 @@
 
 #include "filetype/data_reader.h"
 #include "filetype/vcf.h"
+#include "filetype/vcf_serial.h"
 
 
 using namespace std;
@@ -141,23 +142,45 @@ public:
         return buffer[0] == 0x1F && buffer[1] == 0x8B;
     }
     void handleData(string filename){
-        DataReader* dataReader;
         string flag="--vcf";
-
         if(flag=="--vcf"){
             if(is_gzipped(filename)){
-                //dataReader = new VCFSerialReader(filename, hapData);
+                
+                cout<<"Gzipped file: so reading in serial"<<endl;
+                //hapData.readHapDataVCF(filename);
+
+                VCFSerialReader dataReader(filename, &hapData);
+                dataReader.init_based_on_lines(); 
+                int num_loci_before_filter = hapData.nloci;
+                dataReader.populate_positions_skipqueue();
+                int num_loci_after_filter = hapData.nloci;
+                
+                hapData.do_xor();
+                //dataReader->do_xor();
+
+                cout<<"Number of loci llll "<<hapData.nloci<<endl;
+                //dataReader.~VCFSerialReader();
+
+                // for(int i=100; i<hapData.nloci; i++){
+                //     cout<<i<<" ";
+                //     cout<<hapData.hapEntries[i].xors[0]<<" "<<endl;
+                //     // cout<<hapData.hapEntries[i].xors.size()<<" ";
+                //     // cout<<hapData.hapEntries[i].xors[hapData.hapEntries[i].xors.size()-1]<<endl;
+
+                // }
+                //exit(1);
             }else{
-                dataReader = new VCFParallelReader(filename, hapData);
+                // DataReader* dataReader;
+                // cout<<"Plain text VCF file: so reading in parallel"<<endl;
+                // dataReader = new VCFParallelReader(filename, hapData);
+                // dataReader->init_based_on_lines(); 
+                // int num_loci_before_filter = hapData.nloci;
+                // dataReader->populate_positions_skipqueue();
+                // int num_loci_after_filter = hapData.nloci;
+                // dataReader->do_xor();
+                //delete dataReader;
             }
         }
-        
-        dataReader->get_nloci_nhaps(); 
-        int num_loci_before_filter = hapData.nloci;
-        dataReader->n1s_n2s_q();
-        int num_loci_after_filter = hapData.nloci;
-        dataReader->do_xor();
-
     }
 
     /*

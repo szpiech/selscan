@@ -139,7 +139,8 @@ bool HapMap::loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flo
                 //ataReader dr(vcfFilename, hapData);
                 
                 
-                hapData.readHapDataVCF(vcfFilename);
+                //hapData.readHapDataVCF(vcfFilename);
+                
                 if (CALC_XP || CALC_XPNSL)
                 {
                     hapData2.readHapDataVCF(vcfFilename2);

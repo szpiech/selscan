@@ -24,7 +24,6 @@ public:
     struct MapEntry* mapEntries = NULL; //vector of map entries
     unsigned int nloci;
     
-
     map<string, int> locus_query_map;
 
     //allocates the arrays and populates them with -9 or "--" depending on type
