@@ -219,7 +219,7 @@ void VCFParallelReader::populate_positions_skipqueue_process_chunk(int start_lin
             }
         }
         if(local_line_id == 0){
-            hapData.nhaps = word_count - genotype_start_column;
+            hapData.nhaps = hapData.unphased?(word_count - genotype_start_column):(word_count - genotype_start_column)*2;
         }
 
         if(hapData.SKIP){
@@ -280,6 +280,7 @@ void VCFParallelReader::populate_positions_skipqueue() {
     if(hapData.DEBUG_FLAG=="VCF") cout<<n_meta_lines<<" "<<hapData.nloci<<" "<<hapData.nhaps<<" b4 "<< num_loci_before_filter<<" after "<< num_loci_after_filter<<endl; // Print results
 
     hapData.initHapData(hapData.nhaps, hapData.nloci); // skip done in initHapData
+    hapData.skipQueue = queue<int>();
 
 
     int loc_after_skip = 0;
@@ -354,6 +355,9 @@ void VCFParallelReader::do_xor(){
     this->chunk_size = ceil( hapData.nloci * 1.0 / num_threads);
     if(hapData.DEBUG_FLAG=="VCF") cout<<"recomputed chunk_size "<<chunk_size<<endl; 
 
+
+    vector<thread>().swap(threads); //clear the vector
+    
     for (int i = 0; i < num_threads; ++i) { // Start threads to process chunks
         int start_line = i * chunk_size; //int end_line = (i == num_threads - 1) ? num_data_lines-1 : start_line + chunk_size - 1;
         threads.emplace_back(&VCFParallelReader::do_xor_process_chunk, this, start_line, i);
@@ -366,7 +370,9 @@ void VCFParallelReader::do_xor(){
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     std::cout << "Parallel xor took " << duration.count() << " s." << std::endl;
-    vector<thread>().swap(threads); //clear the vector
+    
+    //vector<thread>().swap(threads); //clear the vector
+    
     /*
     for (int locus_after_filter = 0; locus_after_filter < hapData.nloci; locus_after_filter++){
         if(locus_after_filter==0){

@@ -11,28 +11,37 @@
 #include "data_reader.h"
 
 
-class VCFParallelReader  : public DataReader {
+//class VCFParallelReader  : public DataReader {
+
+class VCFParallelReader {
 public:
-    //VCFParallelReader(std::string& filename, HapData& hapData);
-    VCFParallelReader(const std::string filename, HapData& hapData) : DataReader(filename, hapData){
+    string filename;
+    HapData& hapData;
+    ofstream* flog;
+    int num_threads;
+
+
+    VCFParallelReader(std::string filename, HapData* hapDataPtr) : filename(filename), hapData(*hapDataPtr){
+        hapData = *hapDataPtr;
+        this->filename = filename;
+        flog = hapData.flog;
+        num_threads = hapData.num_threads;
         std::ifstream ifs(filename);
         ifs.seekg(0, std::ios::end);
         this->file_size = ifs.tellg();
         ifs.close();
     }
-    ~VCFParallelReader(){
-        //delete[] nloci_per_thread;
-    }
+    ~VCFParallelReader(){}
 
     /// @brief assigns value to hapData.nloci
     /// @param line_start_positions 
     void get_line_start_positions(std::vector<std::streampos>& line_start_positions);
     
-    void init_based_on_lines() override;
+    void init_based_on_lines();
 
     /// @brief Assigns value of #hapData.positions  #hapData.positions2  #skiplist  #hapData.nhaps
-    void populate_positions_skipqueue() override;
-    void do_xor() override;
+    void populate_positions_skipqueue();
+    void do_xor();
 
 private:
     std::vector<std::thread> threads;

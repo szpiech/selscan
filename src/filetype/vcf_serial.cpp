@@ -4,6 +4,8 @@
 #include <sstream>
 #include <algorithm>
 #include<cmath>
+#include <set>
+#include <omp.h>
 using namespace std;
 
 
@@ -45,7 +47,6 @@ void VCFSerialReader::get_line_start_positions(){
 
 void VCFSerialReader::init_based_on_lines() {
     get_line_start_positions();
-
     auto start = std::chrono::high_resolution_clock::now();
     cout<<"Starting init based on nloci "<< filename<<endl;
 
@@ -66,13 +67,6 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
         throw 0;
     }
 
-    positions = new vector<unsigned int> [hapData->nloci];
-
-
-    if(hapData->unphased)
-        positions2 = new vector<unsigned int> [hapData->nloci];
-
-
     std::string line;
     int locus = 0;
     while (std::getline(chunk_file, line)) {
@@ -84,7 +78,7 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
         std::string word;
         int word_count = 0;
         
-        positions[locus].reserve(hapData->nhaps);
+        
         while (ss >> word) {
             ++word_count;
             if(word_count<= genotype_start_column){ //TODO: check if this is correct
@@ -92,7 +86,8 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
             }
 
             int hapId = word_count - genotype_start_column - 1;
-            
+        
+
             char &allele1 = word[0]; //separator = word[1];
             char &allele2 = word[2];
             if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
@@ -120,12 +115,13 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
                 }
             }
         }
+
         if(locus == 0){
-            hapData->nhaps = word_count - genotype_start_column;
+            hapData->nhaps = (hapData->unphased)? (word_count - genotype_start_column): (word_count - genotype_start_column)*2;
         }
 
         if(hapData->SKIP){
-            int num1s = positions[locus].size();
+            int num1s =  positions[locus].size();
             if( num1s*1.0/hapData->nhaps < hapData->MAF || 1-num1s*1.0/hapData->nhaps < hapData->MAF ){
                 skiplist.push(locus);
                 vector<unsigned int>().swap(positions[locus]); //clear the vector
@@ -135,10 +131,22 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
         locus++;
     }
     chunk_file.close();
+
+    if(hapData->DEBUG_FLAG=="VCF") cout<<n_meta_lines<<" "<<hapData->nloci<<" "<<hapData->nhaps<<" b4 "<< locus<<" after "<<  locus-skiplist.size()<<endl; // Print results
+
+    hapData->nloci =  (hapData->SKIP) ? locus-skiplist.size(): locus;
+    hapData->initHapData(hapData->nhaps, hapData->nloci); // skip done in initHapData
+    hapData->skipQueue = skiplist;
 }
 
 void VCFSerialReader::populate_positions_skipqueue() {
-    
+    //IDEA::::: MINMAF MUST BE GREATER THAN  0 that means no monomorphic site, that means all 0 sites can be considered to be filtered.
+    //this way you avoid the queueu
+
+    positions = new vector<unsigned int>[hapData->nloci];
+    if(hapData->unphased)
+        positions2 = new vector<unsigned int> [hapData->nloci];
+
     cout<<"Starting "<<"populate_positions_skipqueue ..."<<endl;
     auto start = std::chrono::high_resolution_clock::now();
     
@@ -150,7 +158,6 @@ void VCFSerialReader::populate_positions_skipqueue() {
         (*flog) << ARG_KEEP << " set. Not removing variants < " << hapData->MAF << ".\n";
     }
 
-    // do serial procsessing
     populate_positions_skipqueue_process_chunk();
 
     int skipcount = 0;
@@ -159,19 +166,14 @@ void VCFSerialReader::populate_positions_skipqueue() {
     }
 
     if(hapData->DEBUG_FLAG=="VCF") cout<<"skipcount "<<skipcount<<endl;
-    
-    int num_loci_before_filter = hapData->nloci;
-    hapData->nloci -= skipcount;
-    int num_loci_after_filter = hapData->nloci;
-    
-    if(hapData->DEBUG_FLAG=="VCF") cout<<n_meta_lines<<" "<<hapData->nloci<<" "<<hapData->nhaps<<" b4 "<< num_loci_before_filter<<" after "<< num_loci_after_filter<<endl; // Print results
 
-    hapData->initHapData(hapData->nhaps, hapData->nloci); // skip done in initHapData
-    hapData->skipQueue = skiplist;
-    
-    int loc_after_skip = 0;
-    for(int i = 0;  i<num_loci_before_filter; i++){ // i = loc_before_skip // do this serially
-        if(hapData->SKIP){
+   if(!hapData->SKIP){
+        for(int i = 0; i<= hapData->nloci-1; i++){ // i: locus_before_filter
+            hapData->hapEntries[i].positions = positions[i];   
+        }
+    }else{
+        int loc_after_skip = 0;
+        for(int i = 0; i<= hapData->nloci-1; i++){ // i: locus_before_filter
             if(!skiplist.empty()){
                 if(skiplist.front() == i){
                     skiplist.pop();
@@ -180,25 +182,15 @@ void VCFSerialReader::populate_positions_skipqueue() {
                             cout<<"ERROR: skiplist not working"<<endl;
                             throw 0;
                         }
-                        //vector<int>().swap(positions_per_thread[tid][i]); //clear the vector
                     }
                     continue;
                 }  
             }
+            hapData->hapEntries[loc_after_skip++].positions = positions[i];   
         }
-        
-       // hapData.hapEntries[loc_after_skip++].positions.resize(positions[i].size());
-       // std::copy(positions[i].begin(), positions[i].end(), hapData.hapEntries[loc_after_skip].positions.begin());
-       positions[i].shrink_to_fit();
-       //hapData.hapEntries[loc_after_skip++].positions.swap(positions[i]); 
-
-       hapData->hapEntries[loc_after_skip++].positions = (positions[i]);   
-
     }
-
-    //queue<int>().swap(skiplist); //clear the vector
+    
     delete[] positions;
-
     if(hapData->unphased){
         delete[] positions2;
     }
@@ -209,83 +201,59 @@ void VCFSerialReader::populate_positions_skipqueue() {
     std::cout << "Serial populate_positions_skipqueue took " << duration.count() << " s." << std::endl;
 }
 
+// Function to compute symmetric difference between two vectors
+void VCFSerialReader::symmetric_difference(const std::vector<unsigned int>& vec1, const std::vector<unsigned int>& vec2,  int i) {
+    std::vector<unsigned int> diff;
+    std::set<unsigned int> set1(vec1.begin(), vec1.end());
+    std::set<unsigned int> set2(vec2.begin(), vec2.end());
 
-void VCFSerialReader::do_xor_process_chunk(int start_line, int thread_id) {
-    int endline = (thread_id == num_threads-1) ? hapData->nloci-1 : start_line + chunk_size - 1;
-    cout<<"stend "<< start_line<<" "<<endline<<endl;
-    for(int locus_after_filter = start_line; locus_after_filter<=endline; locus_after_filter++){
-
-        if(locus_after_filter==0){
-            if(hapData->benchmark_flag == "XOR"){
-                hapData->hapEntries[locus_after_filter].xors = hapData->hapEntries[locus_after_filter].positions;
-                //cout<<"p0 size"<<hapData.hapEntries[locus_after_filter].xors.size()<<endl;
-                //hapData.hapEntries[locus_after_filter].xors1 = hapData.hapEntries[locus_after_filter].positions;
-                //hapData.hapEntries[locus_after_filter].xors2 = hapData.hapEntries[locus_after_filter].positions2;
-            }
-        }else{
-            if(hapData->benchmark_flag == "XOR"){
-                vector<unsigned int> curr_xor;
-                std::set_symmetric_difference(hapData->hapEntries[locus_after_filter].positions.begin(), hapData->hapEntries[locus_after_filter].positions.end(),hapData->hapEntries[locus_after_filter-1].positions.begin(), hapData->hapEntries[locus_after_filter-1].positions.end(),
-                                std::back_inserter(curr_xor));
-                hapData->hapEntries[locus_after_filter].xors.resize(curr_xor.size());
-                hapData->hapEntries[locus_after_filter].xors = (curr_xor);
-            }
-        }
-    }
+    std::set_symmetric_difference(set1.begin(), set1.end(),
+                                  set2.begin(), set2.end(),
+                                  std::back_inserter(diff));
+    hapData->hapEntries[i].xors = diff;                              
 }
-
+void VCFSerialReader::do_xor_process_chunk(int start_line, int thread_id){
+    int end_line = (thread_id == num_threads - 1) ? hapData->nloci-1 : start_line + chunk_size - 1;
+    for(int i = start_line; i<= hapData->nloci-1; i++){ // i: locus_after_filter
+        symmetric_difference(hapData->hapEntries[i].positions, hapData->hapEntries[i-1].positions, i);
+    }
+}    
 void VCFSerialReader::do_xor(){
     auto start = std::chrono::high_resolution_clock::now();
+    hapData->hapEntries[0].xors = hapData->hapEntries[0].positions;
+
+    // Print the number of threads
+    // #pragma omp parallel
+    // {
+    //     #pragma omp single
+    //     {
+    //         std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
+    //     }
+    // }
+
+    // Parallelize the computation using OpenMP
+    /*
+    omp_set_num_threads(this->num_threads);
+    #pragma omp parallel for
+    for(int i = 1; i<= hapData->nloci-1; i++){ // i: locus_after_filter
+        symmetric_difference(hapData->hapEntries[i].positions, hapData->hapEntries[i-1].positions, i);
+    }
+    */
+
     threads.clear();
-    //recompute chunk size
-    this->chunk_size = ceil( hapData->nloci * 1.0 / num_threads);
-    if(hapData->DEBUG_FLAG=="VCF") cout<<"recomputed chunk_size "<<chunk_size<<endl; 
+    
+    this->chunk_size = ceil( hapData->nloci * 1.0 / num_threads); //recompute chunk size
+    // if(hapData->DEBUG_FLAG=="VCF") cout<<"recomputed chunk_size "<<chunk_size<<endl; 
 
-    cout<<num_threads<<" threads "<<endl;
-    // for (int i = 0; i < num_threads; ++i) { // Start threads to process chunks
-    //     int start_line = i * chunk_size; //int end_line = (i == num_threads - 1) ? num_data_lines-1 : start_line + chunk_size - 1;
-    //     threads.emplace_back(&VCFSerialReader::do_xor_process_chunk, this, start_line, i);
-    // }
-    // for (auto& t : threads) { // Join threads
-    //     t.join();
-    // }
-
-
-    // int endline = (thread_id == num_threads-1) ? hapData.nloci-1 : start_line + chunk_size - 1;
-    // cout<<"stend "<< start_line<<" "<<endline<<endl;
-    for(int locus_after_filter = 0; locus_after_filter<=hapData->nloci-1; locus_after_filter++){
-        cout<<locus_after_filter<<endl;
-        if(locus_after_filter==0){
-            if(hapData->benchmark_flag == "XOR"){
-                hapData->hapEntries[locus_after_filter].xors = hapData->hapEntries[locus_after_filter].positions;
-                cout<<"p0 size"<<hapData->hapEntries[locus_after_filter].xors.size()<<endl;
-                //hapData.hapEntries[locus_after_filter].xors1 = hapData.hapEntries[locus_after_filter].positions;
-                //hapData.hapEntries[locus_after_filter].xors2 = hapData.hapEntries[locus_after_filter].positions2;
-            }
-        }else{
-            if(hapData->benchmark_flag == "XOR"){
-                        vector<unsigned int>& curr_xor = hapData->hapEntries[locus_after_filter].xors;
-        vector<unsigned int>& curr_positions = hapData->hapEntries[locus_after_filter].positions;
-        hapData->hapEntries[locus_after_filter].positions.shrink_to_fit();
-        vector<unsigned int>& prev_positions = hapData->hapEntries[locus_after_filter-1].positions;
-        hapData->hapEntries[locus_after_filter-1].positions.shrink_to_fit();
-
-        std::set_symmetric_difference(curr_positions.begin(), curr_positions.end(),prev_positions.begin(), prev_positions.end(), std::back_inserter(curr_xor));  
-                
-                /*
-                //vector<unsigned int> curr_xor;
-                std::set_symmetric_difference(hapData.hapEntries[locus_after_filter].positions.begin(), hapData.hapEntries[locus_after_filter].positions.end(),hapData.hapEntries[locus_after_filter-1].positions.begin(), hapData.hapEntries[locus_after_filter-1].positions.end(),
-                                std::back_inserter(hapData.hapEntries[locus_after_filter].xors));
-                //hapData.hapEntries[locus_after_filter].xors.resize(curr_xor.size());
-                //hapData.hapEntries[locus_after_filter].xors = (curr_xor);
-                */
-            }
-        }
+    for (int i = 0; i < num_threads; ++i) { // Start threads to process chunks
+        int start_line = i * chunk_size; //int end_line = (i == num_threads - 1) ? num_data_lines-1 : start_line + chunk_size - 1;
+        threads.emplace_back(&VCFSerialReader::do_xor_process_chunk, this, start_line, i);
+    }
+    for (auto& t : threads) { // Join threads
+        t.join();
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     std::cout << "Parallel xor took " << duration.count() << " s." << std::endl;
-    vector<thread>().swap(threads); //clear the vector
-    
 }

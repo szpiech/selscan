@@ -145,40 +145,24 @@ public:
         string flag="--vcf";
         if(flag=="--vcf"){
             if(is_gzipped(filename)){
-                
                 cout<<"Gzipped file: so reading in serial"<<endl;
-                //hapData.readHapDataVCF(filename);
-
                 VCFSerialReader dataReader(filename, &hapData);
                 dataReader.init_based_on_lines(); 
                 int num_loci_before_filter = hapData.nloci;
                 dataReader.populate_positions_skipqueue();
                 int num_loci_after_filter = hapData.nloci;
-                
-                hapData.do_xor();
-                //dataReader->do_xor();
+                dataReader.do_xor();
 
-                cout<<"Number of loci llll "<<hapData.nloci<<endl;
-                //dataReader.~VCFSerialReader();
+                if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci llll "<<hapData.nloci<<endl;
 
-                // for(int i=100; i<hapData.nloci; i++){
-                //     cout<<i<<" ";
-                //     cout<<hapData.hapEntries[i].xors[0]<<" "<<endl;
-                //     // cout<<hapData.hapEntries[i].xors.size()<<" ";
-                //     // cout<<hapData.hapEntries[i].xors[hapData.hapEntries[i].xors.size()-1]<<endl;
-
-                // }
-                //exit(1);
             }else{
-                // DataReader* dataReader;
-                // cout<<"Plain text VCF file: so reading in parallel"<<endl;
-                // dataReader = new VCFParallelReader(filename, hapData);
-                // dataReader->init_based_on_lines(); 
-                // int num_loci_before_filter = hapData.nloci;
-                // dataReader->populate_positions_skipqueue();
-                // int num_loci_after_filter = hapData.nloci;
-                // dataReader->do_xor();
-                //delete dataReader;
+                cout<<"Plain text VCF file: so reading in parallel"<<endl;
+                VCFParallelReader dataReader(filename, &hapData);
+                dataReader.init_based_on_lines(); 
+                int num_loci_before_filter = hapData.nloci;
+                dataReader.populate_positions_skipqueue();
+                int num_loci_after_filter = hapData.nloci;
+                dataReader.do_xor();
             }
         }
     }

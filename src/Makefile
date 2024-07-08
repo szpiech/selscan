@@ -3,13 +3,13 @@
 #G++FLAG = -g -Wall -Werror   #debugging
 
 #for osx/macos-arm systems
-CC = g++-14 -g -std=c++17
+CC = g++-14 -std=c++17
 #CC = g++-13 -g
-G++FLAG = -Og -m64  
-#-mmmx -msse -msse2 -O3
+G++FLAG =  -O3  -m64  -g
+#-mmmx -msse -msse2 -Og
 LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
 #LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
-LINK_OPTS2 = -lpthread -lz 
+LINK_OPTS2 = -lpthread -lz -fopenmp
 #-fopenmp 
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx

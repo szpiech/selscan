@@ -5,8 +5,8 @@
 
 #for linux systems
 CC = g++
-G++FLAG = -Og -g -m64 -mmmx -msse -msse2 --std=c++17
-#-O3 -m64 -mmmx -msse -msse2 --std=c++17
+G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17 
+#-Og -g -m64 -mmmx -msse -msse2 --std=c++17
 LINK_OPTS2 = -pthread -lz -fopenmp
 I_PATH = -I../include
 L_PATH = ../lib/linux
@@ -39,6 +39,13 @@ selscan-main.o : selscan-main.cpp
 
 %.o: filetype/%.cpp filetype/%.h 
 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+thread_pool.o : thread_pool.cpp thread_pool.h
+	$(CC) $(G++FLAG) -c thread_pool.cpp $(LINK_OPTS2)
+
+selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
+	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
+
 
 selscan-data.o : selscan-data.cpp selscan-data.h
 	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)

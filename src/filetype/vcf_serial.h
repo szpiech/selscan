@@ -52,7 +52,13 @@ private:
 
     /// Return the number of 1s and 2s in the VCF file given the thread id
     void populate_positions_skipqueue_process_chunk();  
+    //void do_xor_process_chunk(int start_line, int thread_id);
+    //void do_xor_process_chunk();
     void do_xor_process_chunk(int start_line, int thread_id);
+
+    void symmetric_difference(const std::vector<unsigned int>& vec1, const std::vector<unsigned int>& vec2, int i);
+
+
 };
 
 
