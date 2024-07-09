@@ -7,6 +7,9 @@
 #include <queue>
 #include <iostream>
 
+
+
+
 using namespace std;
 
 struct HapEntry
@@ -32,7 +35,7 @@ struct HapEntry
 class HapData
 {
 public:
-    void do_xor();
+    void do_xor(); //experimental
 
     struct HapEntry* hapEntries = NULL; //vector of haplotype entries
     unsigned int nloci;
@@ -46,14 +49,12 @@ public:
     string DEBUG_FLAG = "VCF";
     //string DEBUG_FLAG = "";
 
-
     bool unphased;
     double MAF;
     bool SKIP;
     int num_threads;
     
     queue<int> skipQueue;
-
     
     ofstream* flog;
 
@@ -69,27 +70,21 @@ public:
      * throws an exception otherwise
      */ 
     void readHapData(string filename);
-
-
     void readHapDataTPED(string filename);
     void readHapDataVCF(string filename);
-    
-
 
     void initHapData_bitset(int nhaps, unsigned int nloci);
     void releaseHapData_bitset();
     void readHapDataVCF_bitset(string filename);
     void readHapData_bitset(string filename);
 
-
-    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads){
+    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog){
         this->unphased = UNPHASED;
         this->SKIP = SKIP;
         this->MAF = MAF;
         this->num_threads = num_threads;
+        this->flog = flog;
     }
-
-
 
     pair<int, int> countFieldsAndOnes(const string &str)
     {
@@ -116,8 +111,6 @@ public:
         }
         return make_pair(numFields, ones);
     }
-
-
 
     int countFields(const string &str)
     {
@@ -206,8 +199,6 @@ public:
         // }
         return (freq / total);
     }
-
-
 
     template<typename T>
     void getThreeUnphasedGroups(const std::vector<T>& new1, const std::vector<T>& old1, const std::vector<T>& new2, const std::vector<T>& old2, std::vector<T> g[]) {
@@ -374,6 +365,8 @@ public:
             //2-1
         }
     }
+
+
 
 };
 

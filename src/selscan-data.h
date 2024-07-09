@@ -20,6 +20,12 @@
 #define __DATA_H__
 
 
+#include "selscan-cli.h"
+
+// #include "selscan-maintools.h"
+#include <sstream>
+#include <algorithm>
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -29,36 +35,25 @@
 // # include <unordered_map>
 #include "selscan-pbar.h"
 
-#include<queue>
+#include <queue>
 #include <cmath>
 
 #include "hapmap/bitset.h"
 #include "hapmap/hapdata.h"
 #include "hapmap/mapdata.h"
-//#include "hapmap/hapmap.h"
 
-
-#include "filetype/data_reader.h"
 #include "filetype/vcf.h"
 #include "filetype/vcf_serial.h"
 #include "filetype/hap.h"
-
+//#include "hapmap/hapmap.h"
 
 using namespace std;
 
-const int MISSING = -9999;
-const char MISSING_CHAR = '9';
+const int MISSING = -9999;  // TO_BE_DELETED
+const char MISSING_CHAR = '9';  // TO_BE_DELETED
 
-/**
- * counts the number of "fields" in a string
- * where a field is defined as a contiguous set of non whitespace
- * characters and fields are delimited by whitespace
- *  @param str the string to count fields in
-*/
-int countFields(const string &str);
-pair<int, int> countFieldsAndOnes(const string &str);
-
-
+// int countFields(const string &str);
+// pair<int, int> countFieldsAndOnes(const string &str);
 
 // int countFields(const string &str)
 // {
@@ -122,66 +117,9 @@ public:
     ofstream *fout;
     Bar *bar;
 
-    bool loadHapMapData(param_main &params, int argc, char *argv[], ofstream *flog, ofstream *fout);
+    //bool loadHapMapData(param_main &params, int argc, char *argv[], ofstream *flog, ofstream *fout);
     //double calcFreq(string query);
-    bool is_gzipped(const std::string& filename) {
-        std::ifstream file(filename, std::ios::binary);
-        
-        if (!file.is_open()) {
-            std::cerr << "Error: Unable to open file " << filename << std::endl;
-            return false;
-        }
-
-        // Read the first two bytes
-        std::vector<unsigned char> buffer(2);
-        file.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
-
-        // Close the file
-        file.close();
-
-        // Check if the first two bytes are the gzip magic numbers
-        return buffer[0] == 0x1F && buffer[1] == 0x8B;
-    }
-    void handleData(string filename, string EXT){
-        if(EXT == "VCF"){
-            if(is_gzipped(filename)){
-                cout<<"Gzipped file: so reading in serial"<<endl;
-                VCFSerialReader dataReader(filename, &hapData);
-                if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci from serial reader: "<<hapData.nloci<<endl;
-            }else{
-                cout<<"Plain text VCF file: so reading in parallel"<<endl;
-                VCFParallelReader dataReader(filename, &hapData);
-            }
-        }else if(EXT == "HAP"){
-            HapParallelReader dataReader(filename, &hapData);
-        }
-    }
-
-    /*
-    void doSkip(){
-        if (SKIP) //prefilter all sites < MAF
-        {
-            cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-            (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-            
-
-            cerr << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-            (*flog) << "Removed " << mapData->nloci - count << " low frequency variants.\n";
-
-            // delete [] freq;
-            // freq = newfreq;
-            // newfreq = NULL;
-
-            // releaseHapData(hapData);
-            // hapData = newHapData;
-            // newHapData = NULL;
-
-            // releaseMapData(mapData);
-            // mapData = newMapData;
-            // newMapData = NULL;
-        }
-    }
-    */
+    
 
     /***
      * @param query: Locus name
@@ -214,7 +152,276 @@ public:
         }
         return  queryLoc;
     }
-};
 
+
+    //Returns 1 on error
+    bool loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flog, ofstream* fout){
+        this->flog = flog;
+        this->fout = fout;
+
+        string hapFilename = p.hapFilename;
+        string hapFilename2 =  p.hapFilename2;
+        string mapFilename = p.mapFilename;
+        string tpedFilename = p.tpedFilename;
+        string tpedFilename2 = p.tpedFilename2;
+        string vcfFilename = p.vcfFilename;
+        string vcfFilename2 = p.vcfFilename2;
+        
+        bool TPED = false;
+        if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+
+        bool VCF = false;
+        if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
+
+        bool UNPHASED = p.UNPHASED;
+        
+        bool USE_PMAP = p.USE_PMAP;
+        bool ALT = p.ALT;
+        bool WAGH = p.WAGH;
+        bool CALC_IHS = p.CALC_IHS;
+        bool CALC_XPNSL = p.CALC_XPNSL;
+        bool CALC_NSL = p.CALC_NSL;
+        bool WRITE_DETAILED_IHS = p.WRITE_DETAILED_IHS;
+        bool CALC_XP = p.CALC_XP;
+        bool CALC_SOFT = p.CALC_SOFT;
+        bool SINGLE_EHH = p.SINGLE_EHH;
+        bool LOW_MEM = p.LOW_MEM;
+
+        hapData.initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog);
+        hapData2.initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog);
+
+        auto start_reading = std::chrono::high_resolution_clock::now();
+
+        if(LOW_MEM){
+            try
+            {
+                if (VCF) {
+                    hapData.readHapDataVCF_bitset(vcfFilename);
+                    if (CALC_XP || CALC_XPNSL)
+                    {
+                        hapData2.readHapDataVCF_bitset(vcfFilename2);
+                        if (hapData.nloci != hapData2.nloci)
+                        {
+                            std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                            return 1;
+                        }
+                    }
+                    if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
+                        mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                    }
+                    else{//Load physical positions
+                        mapData.readMapDataVCF(vcfFilename, hapData.nloci, hapData.skipQueue);
+                    }
+                }
+                else
+                {
+                    if (CALC_XP || CALC_XPNSL)
+                    {
+                        hapData.initParams(UNPHASED, false, p.MAF, p.numThreads, flog); // we want SKIP to be false
+                        hapData2.initParams(UNPHASED, false, p.MAF, p.numThreads, flog); // we want SKIP to be false
+
+                        hapData.readHapData_bitset(hapFilename);
+                        hapData2.readHapData_bitset(hapFilename2);
+                        if (hapData.nloci != hapData2.nloci)
+                        {
+                            std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                            return 1;
+                        }
+                    }else{
+                        hapData.readHapData_bitset(hapFilename);
+                    }
+                    mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                    
+                }
+            }
+            catch (...)
+            {
+                return 1;
+            }
+        }else{
+            try
+            {
+                if (TPED)
+                {
+                    handleData(tpedFilename, "TPED", hapData);
+                    if (CALC_XP || CALC_XPNSL)
+                    {
+                        handleData(tpedFilename2, "TPED", hapData2);
+                        if (hapData.nloci != hapData2.nloci)
+                        {
+                            std::cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
+                            return 1;
+                        }
+                    }
+                    mapData.readMapDataTPED(tpedFilename, hapData.nloci, hapData.nhaps, USE_PMAP, hapData.skipQueue);
+                }
+                else if (VCF) {
+                    handleData(vcfFilename, "VCF", hapData);
+                    //hapData.readHapDataVCF(vcfFilename);
+                    
+                    if (CALC_XP || CALC_XPNSL)
+                    {
+                        handleData(vcfFilename2, "VCF", hapData2);
+                        if (hapData.nloci != hapData2.nloci)
+                        {
+                            std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                            return 1;
+                        }
+                    }
+                    if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
+                        mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                    }
+                    else{//Load physical positions
+                        mapData.readMapDataVCF(vcfFilename, hapData.nloci, hapData.skipQueue);
+                    }
+                }
+                else
+                {
+                    if (CALC_XP || CALC_XPNSL)
+                    {
+                        hapData.initParams(UNPHASED, false, p.MAF, p.numThreads, flog);
+                        hapData2.initParams(UNPHASED, false, p.MAF, p.numThreads, flog);
+
+                        // hapData.readHapData(hapFilename);
+                        // hapData2.readHapData(hapFilename2);
+
+                        handleData(hapFilename, "HAP", hapData);
+                        handleData(hapFilename2, "HAP", hapData2);
+
+                        if (hapData.nloci != hapData2.nloci)
+                        {
+                            std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                            return 1;
+                        }
+                    }else{
+                        //hapData.readHapData(hapFilename);
+                        handleData(hapFilename, "HAP", hapData);
+                    }
+                    mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                    
+                }
+            }
+            catch (...)
+            {
+                return 1;
+            }
+        }
+
+        auto end_reading = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> read_duration =  end_reading - start_reading;
+        //FLOG
+        cout<<("Input file loaded in "+to_string(read_duration.count())+" s.\n");
+
+        (*(flog))<<("Input file loaded in "+to_string(read_duration.count())+" s.\n");
+        //mapData.print();
+
+
+        // Check if map is in order
+        for (int i = 1; i < mapData.nloci; i++) {
+            if ( mapData.mapEntries[i].physicalPos <  mapData.mapEntries[i-1].physicalPos ) {
+                std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
+                std::cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].physicalPos << " appears after";
+                std::cerr << "\t" <<  mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].physicalPos << "\n";
+                return 1;
+            }
+            if ( !CALC_NSL && mapData.mapEntries[i].geneticPos  < mapData.mapEntries[i-1].geneticPos  ) {
+                std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
+                std::cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].geneticPos << " appears after";
+                std::cerr << "\t" << mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].geneticPos << "\n";
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+        bool is_gzipped(const std::string& filename) {
+        std::ifstream file(filename, std::ios::binary);
+        
+        if (!file.is_open()) {
+            std::cerr << "Error: Unable to open file " << filename << std::endl;
+            return false;
+        }
+
+        // Read the first two bytes
+        std::vector<unsigned char> buffer(2);
+        file.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
+
+        // Close the file
+        file.close();
+
+        // Check if the first two bytes are the gzip magic numbers
+        return buffer[0] == 0x1F && buffer[1] == 0x8B;
+    }
+
+
+    void handleData(string filename, string EXT, HapData& hapData){
+        if(hapData.unphased){
+            if(EXT == "VCF"){
+                hapData.readHapDataVCF(filename);
+            }else if(EXT == "HAP"){
+                hapData.readHapData(filename);
+            }else if(EXT == "TPED"){
+                hapData.readHapDataTPED(filename);
+            }
+        }else{
+            if(EXT == "VCF"){
+                if(is_gzipped(filename)){
+                    cout<<"Gzipped file: so reading in serial"<<endl;
+                    VCFSerialReader dataReader(filename, &hapData);
+                    if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci from serial reader: "<<hapData.nloci<<endl;
+                }else{
+                    cout<<"Plain text VCF file: so reading in parallel"<<endl;
+                    VCFParallelReader dataReader(filename, &hapData);
+                }
+            }else if(EXT == "HAP"){
+                HapParallelReader dataReader(filename, &hapData);
+            }else if(EXT == "TPED"){
+                hapData.readHapDataTPED(filename);
+            }
+
+            // //PHASE 4: FLIP
+            int count_flip = 0;
+            if(hapData.benchmark_flag == "XOR"){
+                for (int locus_after_filter = 0; locus_after_filter < hapData.nloci; locus_after_filter++){
+                    if(hapData.hapEntries[locus_after_filter].positions.size() > hapData.nhaps/2){
+                        hapData.hapEntries[locus_after_filter].flipped = true;
+                        count_flip++;
+
+                        vector<unsigned int> copy_pos;
+                        copy_pos.reserve(hapData.nhaps - hapData.hapEntries[locus_after_filter].positions.size());
+                        int cnt = 0;
+                        for(int i = 0; i< hapData.nhaps; i++){
+                            unsigned int curr =  hapData.hapEntries[locus_after_filter].positions[cnt];
+                            if(i==curr){
+                                cnt++;
+                            }else{
+                                copy_pos.push_back(i);
+                            }
+                        }
+                        
+                        hapData.hapEntries[locus_after_filter].positions = copy_pos;
+                        vector<unsigned int>().swap(copy_pos);
+                        // vector<unsigned int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
+                        // int j = 0;
+                        // unsigned int front_one = this->hapEntries[locus_after_filter].positions[j++];
+                        // for(int i=0; i<nhaps; i++){
+                        //     if(i==front_one){
+                        //         front_one = this->hapEntries[locus_after_filter].positions[j++];
+                        //     }else{
+                        //         zero_positions.push_back(i);
+                        //     }   
+                        // }
+                        // this->hapEntries[locus_after_filter].positions = zero_positions;
+                    }else{
+                        hapData.hapEntries[locus_after_filter].flipped = false;
+                    }
+                }
+            }
+            cout<<"### Count of flipped loci: "<<count_flip<<endl;
+        }
+    }
+
+};
 
 #endif

@@ -1140,8 +1140,8 @@ void IHS::memberTask(int i) {
 
 
 void IHS::main() {
-    iHH0 = new double[hm.hapData.nloci];
-    iHH1 = new double[hm.hapData.nloci];
+    // iHH0 = new double[hm.hapData.nloci];
+    // iHH1 = new double[hm.hapData.nloci];
     //std::vector< std::unordered_map<unsigned int, std::vector<unsigned int> > > map_per_thread( hm.hapData.nloci );
 
     if(hm.hapData.unphased){

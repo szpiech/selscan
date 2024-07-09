@@ -933,6 +933,12 @@ void HapData::readHapDataVCF(string filename)
 
 void HapData::readHapDataTPED(string filename)
 {
+    if(unphased){
+        cerr<<"TPED for unphased not implemented"<<endl;
+        throw 1;
+    }
+
+
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
@@ -946,7 +952,7 @@ void HapData::readHapDataTPED(string filename)
     int numMapCols = 4;
     //int fileStart = fin.tellg();
     string line;
-    unsigned int nloci = 0;
+    unsigned int nloci_before_filter = 0;
     int previous_nhaps = -1;
     int current_nhaps = 0;
     //Counts number of haps (cols) and number of loci (rows)
@@ -955,9 +961,9 @@ void HapData::readHapDataTPED(string filename)
     {
         //getline(fin,line);
         //if(fin.eof()) break;
-        nloci++;
+        nloci_before_filter++;
         current_nhaps = countFields(line);
-        //cout << "nloci: " << current_nhaps << endl;
+        
         if (previous_nhaps < 0)
         {
             previous_nhaps = current_nhaps;
@@ -965,7 +971,7 @@ void HapData::readHapDataTPED(string filename)
         }
         else if (previous_nhaps != current_nhaps)
         {
-            cerr << "ERROR: line " << nloci << " of " << filename << " has " << current_nhaps
+            cerr << "ERROR: line " << nloci_before_filter << " of " << filename << " has " << current_nhaps
                  << " fields, but the previous line has " << previous_nhaps << " fields.\n";
             throw 0;
         }
@@ -983,26 +989,24 @@ void HapData::readHapDataTPED(string filename)
         throw 0;
     }
 
-    cerr << "Loading " << current_nhaps - numMapCols << " haplotypes and " << nloci << " loci...\n";
+    cerr << "Loading " << current_nhaps - numMapCols << " haplotypes and " << nloci_before_filter << " loci...\n";
     
-
     if (unphased){
-        initHapData((current_nhaps - numMapCols)/2, nloci);
-    }
-    else{
-        initHapData(current_nhaps - numMapCols, nloci);
+        initHapData((current_nhaps - numMapCols)/2, nloci_before_filter); //TODO
     }
 
+
+    vector<vector<unsigned int> > positions(nloci_before_filter);
     string junk;
     char allele1, allele2;
-
-    for (int locus = 0; locus < this->nloci; locus++)
+    queue<int> skipQueue_local;
+    for (int locus = 0; locus < nloci_before_filter; locus++)
     {
         for (int i = 0; i < numMapCols; i++)
         {
             fin >> junk;
         }
-        for (int hap = 0; hap < this->nhaps; hap++)
+        for (int hap = 0; hap < current_nhaps - numMapCols; hap++)
         {
             if(unphased){
                 fin >> allele1;
@@ -1038,16 +1042,38 @@ void HapData::readHapDataTPED(string filename)
                 if (allele!= '0' && allele!= '1')
                 {
                     cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+                    cerr << "Allele "<<allele << endl;
                     throw 0;
                 }
                 if(allele=='1'){
-                    hapEntries[locus].positions.push_back(hap);
+                    positions[locus].push_back(hap);
                 }
             }
+        }
+        if( SKIP && (positions[locus].size()*1.0/current_nhaps < MAF || 1-(positions[locus].size()*1.0/current_nhaps) < MAF ) ) {
+            skipQueue_local.push(locus);
+            vector<unsigned int>().swap(positions[locus]);
         }
     }
 
     fin.close();
+
+    if(!unphased){
+        initHapData(current_nhaps - numMapCols, nloci_before_filter-skipQueue_local.size());
+    }
+    this->skipQueue =  queue<int>(skipQueue_local); 
+    int loc_after_filter=0;
+    for(int i=0; i<nloci_before_filter; i++){
+         if(!skipQueue_local.empty()){
+            if(skipQueue_local.front() == i){
+                skipQueue_local.pop();    
+                this->skipQueue.push(i); // make a copy to skipQueue
+                continue;
+            }
+        }
+        hapEntries[loc_after_filter++].positions = positions[i];
+    }
+
 }
 
 //reads in haplotype data and also does basic checks on integrity of format
@@ -1213,6 +1239,7 @@ void HapData::readHapData(string filename)
     // }
 
 }
+
 
 
 

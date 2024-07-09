@@ -35,7 +35,7 @@ public:
     //returns a populated MapData structure if successful
     //throws an exception otherwise
     void readMapData(string filename, int expected_loci, bool USE_PMAP, queue<int>& skip_queue);
-    void readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP);
+    void readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP, queue<int>& skip_queue);
     void readMapDataVCF(string filename, int expected_loci, queue<int>& skipQueue); //Physical positions only
 
     inline int countFields(const string &str)
