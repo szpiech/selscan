@@ -42,6 +42,8 @@ public:
     unsigned int nhaps;
 
     string benchmark_flag = "XOR";
+    string benchmark_flag2 = ""; //"FLIP";
+
     //string benchmark_flag = "BITSET";
     //string benchmark_flag = "FLIP_ONLY";
     //string benchmark_flag = "BASIC";

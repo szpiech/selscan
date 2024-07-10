@@ -8,7 +8,9 @@ HapParallelReader::HapParallelReader(std::string filename, HapData* hapDataPtr) 
     hapData = *hapDataPtr;
     this->filename = filename;
     flog = hapData.flog;
-    num_threads = hapData.num_threads;
+    num_threads = thread::hardware_concurrency(); 
+  
+    
     std::ifstream ifs(filename);
     ifs.seekg(0, std::ios::end);
     this->file_size = ifs.tellg();
@@ -20,6 +22,7 @@ HapParallelReader::HapParallelReader(std::string filename, HapData* hapDataPtr) 
 }
 
 void HapParallelReader::get_line_start_positions(std::vector<std::streampos>& start_positions){
+    cout << "Running with number of concurrent threads supported: "<< num_threads << endl; 
     auto start = std::chrono::high_resolution_clock::now();
    
     std::ifstream file(filename);
@@ -41,6 +44,8 @@ void HapParallelReader::get_line_start_positions(std::vector<std::streampos>& st
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
+
+
     if(hapData.DEBUG_FLAG=="VCF") cout<<"Serial read (to get line starts and nloci) took "<< duration.count() << " s." <<endl;
 }
 
@@ -72,7 +77,7 @@ void HapParallelReader::init_based_on_lines() {
     std::cout << "Serial simple init took " << duration.count() << " s." << std::endl;    
 }
 
-void HapParallelReader::populate_positions_skipqueue_process_chunk(int start_line, int thread_id){
+void HapParallelReader::populate_positions_skipqueue_process_chunk(int start_line, int thread_id, vector<vector<vector<unsigned int> > >& positions_per_thread){
     std::ifstream chunk_file(filename);
     chunk_file.seekg(line_start_positions[thread_id]);  // go to the start of the chunk
     std::streampos endpos = (thread_id == num_threads-1) ? file_size : line_start_positions[thread_id+1];
@@ -146,7 +151,7 @@ void HapParallelReader::populate_positions_skipqueue() {
         (*flog) << ARG_KEEP << " set. Not removing variants < " << hapData.MAF << ".\n";
     }
     
-    positions_per_thread = new vector<vector<unsigned int> > [num_threads];
+    positions_per_thread.resize(num_threads);
     
     if(hapData.unphased){
         positions2_per_thread = new vector<vector<unsigned int> > [num_threads];
@@ -154,7 +159,7 @@ void HapParallelReader::populate_positions_skipqueue() {
 
     for (int i = 0; i < num_threads; ++i) { // Start threads to process chunks
         int start_line = i * chunk_size;
-        threads.emplace_back(&HapParallelReader::populate_positions_skipqueue_process_chunk, this, start_line, i);
+        threads.emplace_back(&HapParallelReader::populate_positions_skipqueue_process_chunk, this, start_line, i, std::ref(positions_per_thread));
     }
 
     for (auto& t : threads) { // Join threads
@@ -210,7 +215,7 @@ void HapParallelReader::populate_positions_skipqueue() {
     if(hapData.SKIP){
         delete[] skiplist_per_thread;
     }
-    delete[] positions_per_thread;
+    //delete[] positions_per_thread;
     if(hapData.unphased){
         delete[] positions2_per_thread;
     }

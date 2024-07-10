@@ -45,6 +45,8 @@
 #include "filetype/vcf.h"
 #include "filetype/vcf_serial.h"
 #include "filetype/hap.h"
+#include "filetype/hap_serial.h"
+
 //#include "hapmap/hapmap.h"
 
 using namespace std;
@@ -376,13 +378,16 @@ public:
                 }
             }else if(EXT == "HAP"){
                 HapParallelReader dataReader(filename, &hapData);
+                //HapSerialReader dataReader(filename, &hapData);
+
             }else if(EXT == "TPED"){
                 hapData.readHapDataTPED(filename);
             }
 
-            // //PHASE 4: FLIP
-            int count_flip = 0;
-            if(hapData.benchmark_flag == "XOR"){
+            
+            if(hapData.benchmark_flag == "XOR" && hapData.benchmark_flag2 == "FLIP"){
+                // //PHASE 4: FLIP
+                int count_flip = 0;
                 for (int locus_after_filter = 0; locus_after_filter < hapData.nloci; locus_after_filter++){
                     if(hapData.hapEntries[locus_after_filter].positions.size() > hapData.nhaps/2){
                         hapData.hapEntries[locus_after_filter].flipped = true;
@@ -417,8 +422,9 @@ public:
                         hapData.hapEntries[locus_after_filter].flipped = false;
                     }
                 }
+                cout<<"### Count of flipped loci: "<<count_flip<<endl;
             }
-            cout<<"### Count of flipped loci: "<<count_flip<<endl;
+            
         }
     }
 

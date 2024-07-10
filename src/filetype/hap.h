@@ -28,7 +28,7 @@ private:
     string filename;
     HapData& hapData;
     ofstream* flog;
-    int num_threads;
+    int num_threads = 4;
 
     std::vector<std::thread> threads;
     std::mutex file_mutex;
@@ -38,7 +38,7 @@ private:
     int chunk_size; // number of lines per thread
     
     queue<int>* skiplist_per_thread;
-    vector<vector<unsigned int> > * positions_per_thread;
+    vector<vector<vector<unsigned int> > > positions_per_thread;
     vector<vector<unsigned int> > * positions2_per_thread;
 
     inline int getGlobalLineId(int local_line_number, int thread_id){
@@ -49,7 +49,7 @@ private:
     }
 
     /// Return the number of 1s and 2s in the VCF file given the thread id
-    void populate_positions_skipqueue_process_chunk(int start_line, int thread_id);  
+    void populate_positions_skipqueue_process_chunk(int start_line, int thread_id, vector<vector<vector<unsigned int> > >& positions_per_thread);  
     void do_xor_process_chunk(int start_line, int thread_id);
 };
 
