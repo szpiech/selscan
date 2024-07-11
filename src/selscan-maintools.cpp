@@ -1952,7 +1952,6 @@ void calc_soft_ihs(void *order)
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                skipLocus = 1;
                 break;
             }
             else if (physicalPos[currentLocus] - physicalPos[nextLocus] > MAX_GAP)
@@ -2061,7 +2060,6 @@ void calc_soft_ihs(void *order)
                 }
                 (*flog) << "\n";
                 pthread_mutex_unlock(&mutex_log);
-                skipLocus = 1;
                 break;
             }
             else if (physicalPos[nextLocus] - physicalPos[currentLocus] > MAX_GAP)
