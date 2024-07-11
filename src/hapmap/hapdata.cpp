@@ -43,14 +43,14 @@ void HapData::releaseHapData_bitset()
 /** Sets up structure according to nhaps and nloci
  * 
 */
-void HapData::initHapData(int nhaps, unsigned int nloci)
+void HapData::initHapData(int nhaps, int nloci)
 {
     if (nhaps < 1 || nloci < 1)
     {
         cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
         throw 0;
     }
-
+    cout<<"hapdata with nhaps: "<<nhaps<<"nloci "<<nloci<<endl;
     this->hapEntries = new struct HapEntry[nloci];
     this->nhaps = nhaps;
     this->nloci = nloci;
@@ -1083,7 +1083,7 @@ void HapData::readHapDataTPED(string filename)
 void HapData::readHapData(string filename)
 {
     //PHASE 1: Read Hap File to get "nloci", "nhaps" and "skiplist"
-    igzstream fin;
+    ifstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
     if (fin.fail())
@@ -1152,7 +1152,7 @@ void HapData::readHapData(string filename)
         if(!skiplist.empty()){
             if(skiplist.front() == locus_before_filter){
                 skiplist.pop();
-                skipQueue.push(locus_before_filter);
+                 this->skipQueue.push(locus_before_filter);
                 getline(fin, line);
                 continue;
             }
@@ -1186,6 +1186,7 @@ void HapData::readHapData(string filename)
             }
         }
         locus_after_filter++;
+        getline(fin, line);
     }
     fin.clear();
     fin.close();

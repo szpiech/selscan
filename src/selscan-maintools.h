@@ -56,6 +56,19 @@ class MainTools{
         inline unsigned int square_alt(int n){
             return n*n;
         }
+
+        inline long double twice_num_pair_or_square(int n, bool alt){
+            
+            if(n < 2){
+                return 0;
+            }
+            if(alt){
+                return nCk(n, 2)+n;
+            }
+            return 2*nCk(n, 2);
+            //return n*n - n;
+        }
+
         inline double twice_num_pair(int n){
             if(n < 2){
                 return 0;

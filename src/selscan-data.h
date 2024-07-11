@@ -312,9 +312,9 @@ public:
         auto end_reading = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> read_duration =  end_reading - start_reading;
         //FLOG
-        cout<<("Input file loaded in "+to_string(read_duration.count())+" s.\n");
+        cout<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
 
-        (*(flog))<<("Input file loaded in "+to_string(read_duration.count())+" s.\n");
+        (*(flog))<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
         //mapData.print();
 
 

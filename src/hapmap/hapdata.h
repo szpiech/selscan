@@ -60,11 +60,14 @@ public:
     
     ofstream* flog;
 
+    ~HapData(){
+        //releaseHapData();
+    }
     //allocates the 2-d array and populated it with -9,
     /** Sets up structure according to nhaps and nloci
      * 
     */
-    void initHapData(int nhaps, unsigned int nloci);
+    void initHapData(int nhaps, int nloci);
     void releaseHapData();
     /**
      * reads in haplotype data and also does basic checks on integrity of format
