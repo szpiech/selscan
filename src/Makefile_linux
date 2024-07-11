@@ -5,7 +5,7 @@
 
 #for linux systems
 CC = g++
-G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17 
+G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17  -march=native -lm -ftree-vectorize
 #-Og -g -m64 -mmmx -msse -msse2 --std=c++17
 LINK_OPTS2 = -pthread -lz -fopenmp
 I_PATH = -I../include

@@ -378,7 +378,8 @@ public:
                 }
             }else if(EXT == "HAP"){
                 //HapParallelReader dataReader(filename, &hapData);
-                HapSerialReader dataReader(filename, &hapData);
+                //HapSerialReader dataReader(filename, &hapData);
+                hapData.readHapData(filename);
 
             }else if(EXT == "TPED"){
                 hapData.readHapDataTPED(filename);
