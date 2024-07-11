@@ -20,7 +20,6 @@ void HapData::initHapData_bitset(int nhaps, unsigned int nloci)
         hapEntries[j].hapbitset = new MyBitset(nhaps);
         hapEntries[j].xorbitset = new MyBitset(nhaps);
     }
-    
 }
 
 void HapData::releaseHapData_bitset()
@@ -937,8 +936,7 @@ void HapData::readHapDataTPED(string filename)
         cerr<<"TPED for unphased not implemented"<<endl;
         throw 1;
     }
-
-
+    
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
@@ -1085,21 +1083,17 @@ void HapData::readHapDataTPED(string filename)
 void HapData::readHapData(string filename)
 {
     //PHASE 1: Read Hap File to get "nloci", "nhaps" and "skiplist"
-    
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
-
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
         throw 0;
     }
-
     string line;
     int previous_nhaps = -1;
     int current_nhaps = 0;
-    
     queue<int> skiplist;
     vector<int> num_1s_per_loci;
     int nloci_before_filter = 0;
@@ -1127,8 +1121,7 @@ void HapData::readHapData(string filename)
         }
         previous_nhaps = current_nhaps;
     }
-
-    fin.clear(); 
+    fin.clear();
     fin.close();
 
 
@@ -1147,21 +1140,25 @@ void HapData::readHapData(string filename)
     else{
         initHapData(current_nhaps, nloci_before_filter-skiplist.size());
     }
-    this->skipQueue = skiplist; // make a copy
+    this->skipQueue = queue<int>(); // make a copy
     
 
     char allele1;
 
     int locus_after_filter = 0;
+    getline(fin, line);
     for (int locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
     {
         if(!skiplist.empty()){
             if(skiplist.front() == locus_before_filter){
                 skiplist.pop();
+                skipQueue.push(locus_before_filter);
                 getline(fin, line);
                 continue;
             }
         }
+        
+        stringstream ss(line);
         this->hapEntries[locus_after_filter].positions.reserve(num_1s_per_loci[locus_before_filter]);
         for (int hap = 0; hap < current_nhaps; hap++)
         {
@@ -1169,7 +1166,7 @@ void HapData::readHapData(string filename)
                 cerr << "ERROR: UNPHASED HAP NOT IMPLEMENTED.\n";
                 throw 0;
 
-                fin >> allele1;
+                ss >> allele1;
                 if (allele1 != '0' && allele1 != '1'){
                     cerr << "ERROR: Alleles must be coded 0/1 only.\n";
                     cerr << allele1 << endl;
@@ -1177,7 +1174,7 @@ void HapData::readHapData(string filename)
                 }
             }
             else{
-                fin >> allele1;
+                ss >> allele1;
                 if (allele1 != '0' && allele1 != '1')
                 {
                     cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
