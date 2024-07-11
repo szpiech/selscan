@@ -2025,10 +2025,6 @@ void calc_soft_ihs(void *order)
         previous_ehh2d1 = 1;
         previous_ehh12 = 1;
 
-        ihh1 = 0;
-        ihh2d1 = 0;
-        ihh12 = 0;
-
         currentLocus = locus;
         nextLocus = locus + 1;
         skipLocus = 0;
