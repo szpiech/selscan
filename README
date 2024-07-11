@@ -11,8 +11,7 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 
 Citations:
 
-ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. biorxiv doi: 
-	doi:10.1101/2021.10.22.465497.
+ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. Bioinformatics 40: btae006.
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
 	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
 	31: 2824-2827.
@@ -33,6 +32,8 @@ BF Voight et al. (2006) A map of recent positive selection in the human
 PC Sabeti et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature 419: 832–837.
 
+
+11JUL2024 - selscan v2.0.3 - Big fixes. iHH12 now properly records iHH12 decay to the left. --trunk-ok flag now properly functions with --ihh12. --unphased iHS calculations corrected, previously the notXiHH values were not being properly scaled with genetic distance. 
 
 17NOV2023 - selscan v2.0.1 - Bug fixes for --ehh flag. Total EHH at the core snp will now be reported correctly (i.e. homozygosity of the site and not as 0). Also implemented --unphased for --ehh, and EHH output files now have a header line.
 
@@ -180,7 +181,7 @@ USAGE:
 
 **Data must have no missing genotypes.**
 
-selscan v2.0.0 -- a program to calculate EHH-based scans for positive selection in genomes.
+selscan v2.0.3 -- a program to calculate EHH-based scans for positive selection in genomes.
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.
 
 selscan currently implements EHH, iHS, XP-EHH, nSL, and XP-nSL.
