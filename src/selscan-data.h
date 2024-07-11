@@ -118,10 +118,35 @@ public:
     ofstream *flog;
     ofstream *fout;
     Bar *bar;
+    bool low_mem=false;
 
     //bool loadHapMapData(param_main &params, int argc, char *argv[], ofstream *flog, ofstream *fout);
     //double calcFreq(string query);
     
+
+    double calcFreq(int locus)
+    {
+        double total = 0;
+        double freq = 0;
+
+        //assuming no missing data in hapmap structure
+        
+        if(this->hapData.unphased){
+            freq = this->hapData.hapEntries[locus].count1 + this->hapData.hapEntries[locus].count2*2;
+            //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
+            total = this->hapData.nhaps*2;
+        }else{
+            freq = this->hapData.hapEntries[locus].positions.size();
+            if(low_mem){
+                //freq = hapEntries[locus].hapbitset->count_1s();
+                freq = this->hapData.hapEntries[locus].hapbitset->num_1s;
+            }
+                
+
+            total = this->hapData.nhaps;
+        }
+        return freq/total;
+    }
 
     /***
      * @param query: Locus name
@@ -188,6 +213,7 @@ public:
         bool CALC_SOFT = p.CALC_SOFT;
         bool SINGLE_EHH = p.SINGLE_EHH;
         bool LOW_MEM = p.LOW_MEM;
+        this->low_mem = LOW_MEM;
 
         hapData.initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog);
         hapData2.initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog);

@@ -32,9 +32,9 @@ class MyBitset{
 
     int count_1s(){
         int sum = 0;
-        omp_set_num_threads(4);
+        //omp_set_num_threads(4);
 
-        #pragma `omp parallel for reduction(+:sum)
+        //#pragma `omp parallel for reduction(+:sum)
         for (int k = 0; k < nwords; k++) {
             sum += __builtin_popcountll ((uint64_t)bits[k]);
         }
@@ -99,7 +99,7 @@ class MyBitset{
     MyBitset operator^(const MyBitset& b) {
         MyBitset xor_bitset(this->nbits);
 
-        #pragma `omp parallel for
+        //#pragma `omp parallel for
         for (int k = 0; k < this->nwords; k++) {
             xor_bitset.bits[k] = this->bits[k] ^ b.bits[k];
         }

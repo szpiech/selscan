@@ -183,9 +183,11 @@ public:
             total = this->nhaps*2;
         }else{
             freq = hapEntries[locus].positions.size();
-            if(benchmark_flag=="BITSET")
+            if(false){
                 //freq = hapEntries[locus].hapbitset->count_1s();
                 freq = hapEntries[locus].hapbitset->num_1s;
+            }
+                
 
             total = this->nhaps;
         }

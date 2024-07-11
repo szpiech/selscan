@@ -15,6 +15,7 @@ void HapData::initHapData_bitset(int nhaps, unsigned int nloci)
     this->hapEntries = new struct HapEntry[nloci];
     this->nhaps = nhaps;
     this->nloci = nloci;
+         cout << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
 
     for (unsigned int j = 0; j < nloci; j++){
         hapEntries[j].hapbitset = new MyBitset(nhaps);
@@ -250,25 +251,25 @@ void HapData::readHapData_bitset(string filename)
     }
 
     //PHASE 4: FLIP
-    for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
-        if(hapEntries[locus_after_filter].hapbitset->num_1s > nhaps/2){
-            hapEntries[locus_after_filter].flipped = true;
-            MyBitset* b1;
-            b1 = hapEntries[locus_after_filter].hapbitset;
+    // for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+    //     if(hapEntries[locus_after_filter].hapbitset->num_1s > nhaps/2){
+    //         hapEntries[locus_after_filter].flipped = true;
+    //         MyBitset* b1;
+    //         b1 = hapEntries[locus_after_filter].hapbitset;
 
-            //#pragma omp simd
-            for(int k = 0; k<b1->nwords; k++){
-                b1->bits[k] = ~(b1->bits[k]);   // negate all bits
-            }
+    //         //#pragma omp simd
+    //         for(int k = 0; k<b1->nwords; k++){
+    //             b1->bits[k] = ~(b1->bits[k]);   // negate all bits
+    //         }
 
-            //#pragma omp simd
-            for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
-                b1->clear_bit(i);       // clear the trailing bits
-            }
-        }else{
-            hapEntries[locus_after_filter].flipped = false;
-        }
-    }
+    //         //#pragma omp simd
+    //         for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
+    //             b1->clear_bit(i);       // clear the trailing bits
+    //         }
+    //     }else{
+    //         hapEntries[locus_after_filter].flipped = false;
+    //     }
+    // }
 }
 
 
@@ -1083,7 +1084,7 @@ void HapData::readHapDataTPED(string filename)
 void HapData::readHapData(string filename)
 {
     //PHASE 1: Read Hap File to get "nloci", "nhaps" and "skiplist"
-    ifstream fin;
+    igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
     if (fin.fail())
