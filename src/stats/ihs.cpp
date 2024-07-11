@@ -782,7 +782,11 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m){
+pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstream){
+
+    unordered_map<unsigned int, vector<unsigned int> >* mp = new unordered_map<unsigned int, vector<unsigned int> >();
+    unordered_map<unsigned int, vector<unsigned int> > m = *mp;
+
     double ihh1 = 0;
     double ihh0 = 0;
     int numSnps = hm.hapData.nloci;
@@ -1061,6 +1065,7 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
     delete[] isDerived;
     delete[] isAncestral;
     return make_pair(ihh1, ihh0);
+    delete mp;
 }
 
 
@@ -1262,7 +1267,7 @@ void IHS::main() {
     // }
     // Give some time for tasks to complete
     //std::this_thread::sleep_for(std::chrono::seconds(2));
-
+    
    
 }
 
@@ -1412,13 +1417,10 @@ pair<double, double> IHS::calc_ihh1(int locus){
         calc_ehh_unidirection_unphased(locus, true); // downstream
     }else{
         if(p.LOW_MEM){
-            unordered_map<unsigned int, vector<unsigned int> >* mp = new unordered_map<unsigned int, vector<unsigned int> >();
-            unordered_map<unsigned int, vector<unsigned int> > m = *mp;
-            auto ihh1_ihh0_upstream = calc_ehh_unidirection_bitset(locus, false, m); // upstream
-            auto ihh1_ihh0_downstream = calc_ehh_unidirection_bitset(locus, true, m); // downstream
+            auto ihh1_ihh0_upstream = calc_ehh_unidirection_bitset(locus, false); // upstream
+            auto ihh1_ihh0_downstream = calc_ehh_unidirection_bitset(locus, true); // downstream
             ihh1 = ihh1_ihh0_upstream.first + ihh1_ihh0_downstream.first;
             ihh0 = ihh1_ihh0_upstream.second + ihh1_ihh0_downstream.second;
-            delete mp;
         }else{
             auto ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false); // upstream
             auto ihh1_ihh0_downstream = calc_ehh_unidirection(locus,  true); // downstream

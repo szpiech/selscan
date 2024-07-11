@@ -27,9 +27,10 @@ void HapData::releaseHapData_bitset()
 {
     if (hapEntries == NULL) return;
 
+    //we have a MyBitset for every locus
     for (unsigned int j = 0; j < nloci; j++){
-        delete[] hapEntries[j].hapbitset ;
-        delete[] hapEntries[j].xorbitset;
+        delete hapEntries[j].hapbitset ; //MyBitset destructor called
+        delete hapEntries[j].xorbitset; //MyBitset destructor called
     }
     delete [] hapEntries;
     hapEntries = NULL;
@@ -198,6 +199,8 @@ void HapData::readHapData_bitset(string filename)
         }
 
         if (unphased){
+            cerr<<"Unphased lowmem not implemented"<<endl;
+            throw 0;
             if (current_nhaps % 2 != 0)
             {
                 cerr << "ERROR:  Number of haplotypes must be even for unphased.\n";

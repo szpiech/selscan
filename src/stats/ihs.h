@@ -53,7 +53,7 @@ class IHS : public MainTools{
         //pair<double, double>  static  thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);
 
         
-        pair<double, double> calc_ehh_unidirection_bitset(int locus, bool downstream, unordered_map<unsigned int, vector<unsigned int> >& m);
+        pair<double, double> calc_ehh_unidirection_bitset(int locus, bool downstream);
 
         void calc_ehh_unidirection_unphased(int locus, bool downstream);
         double get_ihs_unphased(int locus);

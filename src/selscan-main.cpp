@@ -247,6 +247,7 @@ int main(int argc, char *argv[])
         IHS ihsfinder(hm, p, &flog, &fout);
         //ihsfinder.main_old();
         ihsfinder.main(); //thread pool
+        hm.hapData.releaseHapData_bitset();
         /*
         ThreadPool pool(p.numThreads);
         std::vector< std::future<double> > results;

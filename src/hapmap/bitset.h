@@ -9,7 +9,7 @@ using namespace std;
 class MyBitset{
     public:
     uint64_t* bits;
-    int nbits;
+    int nbits;  // number of bits
     int nwords;
     int WORDSZ = 64;
     int num_1s = 0;
@@ -24,11 +24,55 @@ class MyBitset{
         }
     }
 
-    // MyBitset(const MyBitset &source) {
-    //     bits = new uint64_t;
-    //     *bits = *source.bits;
-    //     cout << "Copy constructor called" << endl;
+    //untested
+    /*
+    MyBitset(const MyBitset& other) {
+        //     cout << "Copy constructor called" << endl;
+        nbits = other.nbits;
+        nwords = other.nwords;
+        bits = new uint64_t[nwords];
+        for (int i = 0; i < nwords; ++i) {
+            bits[i] = other.bits[i];
+        }
+    }
+
+    // Assignment operator
+    MyBitset& operator=(const MyBitset& other) {
+        if (this == &other) {
+            return *this;
+        }
+        delete[] bits;
+
+        nbits = other.nbits;
+        nwords = other.nwords;
+
+        bits = new uint64_t[nwords];
+        for (int i = 0; i < nwords; ++i) {
+            bits[i] = other.bits[i];
+        }
+        return *this;
+    }
+    // XOR operator
+    MyBitset operator^(const MyBitset& other) const {
+        if (nbits != other.nbits) {
+            throw std::invalid_argument("Bitsets must be of the same size for XOR operation");
+        }
+        MyBitset result(nbits);
+        for (int i = 0; i < nbits; ++i) {
+            result.bits[i] = bits[i] ^ other.bits[i];
+        }
+        return result;
+    }
+    // MyBitset operator^(const MyBitset& b) { //wrong?
+    //     MyBitset xor_bitset(this->nbits);
+
+    //     //#pragma `omp parallel for
+    //     for (int k = 0; k < this->nwords; k++) {
+    //         xor_bitset.bits[k] = this->bits[k] ^ b.bits[k];
+    //     }
+    //     return xor_bitset;
     // }
+    */
 
     int count_1s(){
         int sum = 0;
@@ -94,16 +138,6 @@ class MyBitset{
                 cout << i << " ";
         }
         cout << endl;
-    }
-
-    MyBitset operator^(const MyBitset& b) {
-        MyBitset xor_bitset(this->nbits);
-
-        //#pragma `omp parallel for
-        for (int k = 0; k < this->nwords; k++) {
-            xor_bitset.bits[k] = this->bits[k] ^ b.bits[k];
-        }
-        return xor_bitset;
     }
 
     ~MyBitset(){

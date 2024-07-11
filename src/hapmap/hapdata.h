@@ -61,6 +61,7 @@ public:
     ofstream* flog;
 
     ~HapData(){
+        //releaseHapData_bitset();
         //releaseHapData();
     }
     //allocates the 2-d array and populated it with -9,
