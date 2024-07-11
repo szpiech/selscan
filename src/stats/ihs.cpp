@@ -1006,7 +1006,8 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
             }
         }
 
-        m.clear();
+        //m.clear();
+        unordered_map<unsigned int, vector<unsigned int> >().swap(m);
 
         if(twice_num_pair_or_square(n_c1, p.ALT)!=0){
             if(ehh1_before_norm*1.0/twice_num_pair_or_square(n_c1, p.ALT) > p.EHH_CUTOFF){
