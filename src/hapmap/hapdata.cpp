@@ -1187,6 +1187,7 @@ void HapData::readHapData(string filename)
         }
         locus_after_filter++;
     }
+    fin.clear();
     fin.close();
 
 
