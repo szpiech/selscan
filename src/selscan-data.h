@@ -377,8 +377,8 @@ public:
                     VCFParallelReader dataReader(filename, &hapData);
                 }
             }else if(EXT == "HAP"){
-                HapParallelReader dataReader(filename, &hapData);
-                //HapSerialReader dataReader(filename, &hapData);
+                //HapParallelReader dataReader(filename, &hapData);
+                HapSerialReader dataReader(filename, &hapData);
 
             }else if(EXT == "TPED"){
                 hapData.readHapDataTPED(filename);

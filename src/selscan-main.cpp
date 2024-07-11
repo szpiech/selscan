@@ -44,6 +44,8 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+
+    cout<<"Max threads supoorted: "<<std::thread::hardware_concurrency()<<endl;
     double time_start = (clock() / (double) CLOCKS_PER_SEC);
 
     auto start = std::chrono::high_resolution_clock::now();
