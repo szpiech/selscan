@@ -38,8 +38,8 @@ public:
     void do_xor(); //experimental
 
     struct HapEntry* hapEntries = NULL; //vector of haplotype entries
-    unsigned int nloci;
-    unsigned int nhaps;
+    int nloci;
+    int nhaps;
 
     string benchmark_flag = "XOR";
     string benchmark_flag2 = ""; //"FLIP";

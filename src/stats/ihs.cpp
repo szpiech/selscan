@@ -438,7 +438,9 @@ string IHS::getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0){
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
 pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
-    unordered_map<unsigned int, vector<unsigned int> >  * mp  = new unordered_map<unsigned int, vector<unsigned int> >();
+     std::unique_ptr<std::unordered_map<unsigned int, std::vector<unsigned int>>> mp(new std::unordered_map<unsigned int, std::vector<unsigned int>>());
+
+//    unordered_map<unsigned int, vector<unsigned int> >  * mp  = new unordered_map<unsigned int, vector<unsigned int> >();
     unordered_map<unsigned int, vector<unsigned int> >& m = (* mp);
     // double& ihh1=iHH1[locus];
     // double& ihh0=iHH0[locus];
@@ -469,10 +471,15 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     uint64_t core_n_c0=0;
     uint64_t core_n_c1=0;
 
-    int* group_count = new int[numHaps];
-    int* group_id = new int[numHaps];
-    bool* isDerived = new bool [numHaps];
-    bool* isAncestral = new bool [numHaps];
+    // int* group_count = new int[numHaps];
+    // int* group_id = new int[numHaps];
+    // bool* isDerived = new bool [numHaps];
+    // bool* isAncestral = new bool [numHaps];
+
+    int group_count[numHaps];
+    int group_id[numHaps];
+    bool isDerived[numHaps];
+    bool isAncestral[numHaps];
 
     //will be vectorized with compile time flags
     for(int i = 0; i<numHaps; i++){
@@ -612,8 +619,13 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         // ensure that in boundary we don't do any calculation
         if(hm.hapData.hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ 
             v = hm.hapData.hapEntries[i].positions;
+            
             if(v.size()==0 or v.size()==numHaps){ // integrity check
+                pthread_mutex_lock(&mutex_log);
                 std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
+                cout<<v.size()<<" vsize"<<endl; 
+                cout<< i << " i " << n_c0 << n_c1 << "nc01" <<endl;
+                pthread_mutex_unlock(&mutex_log);
                 throw 0;
                 
                 if(twice_num_pair(n_c1)!=0){    // all 1s 
@@ -748,11 +760,11 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         // }
     }
 
-    delete[] group_count;
-    delete[] group_id;
-    delete[] isDerived;
-    delete[] isAncestral;
-    delete mp;
+    // delete[] group_count;
+    // delete[] group_id;
+    // delete[] isDerived;
+    // delete[] isAncestral;
+    //delete mp;
     return make_pair(ihh1, ihh0);
 }
 

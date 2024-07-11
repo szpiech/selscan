@@ -337,7 +337,7 @@ public:
         return 0;
     }
 
-        bool is_gzipped(const std::string& filename) {
+    bool is_gzipped(const std::string& filename) {
         std::ifstream file(filename, std::ios::binary);
         
         if (!file.is_open()) {
