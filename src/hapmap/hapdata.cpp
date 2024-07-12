@@ -162,7 +162,7 @@ void HapData::readHapData_bitset(string filename)
     this->skipQueue = queue<int>();
     
     getline(fin, line);
-    stringstream ss(line);
+    stringstream ss;
     char allele1;
     int locus_after_filter = 0;
     for (int locus = 0; locus < nloci_before_filter; locus++)
@@ -177,6 +177,7 @@ void HapData::readHapData_bitset(string filename)
             }
         }
 
+        ss.str(line);
         this->hapEntries[locus_after_filter].hapbitset->num_1s = num_1s_per_loci[locus];
         
         vector<bool> current_haps(current_nhaps, false);
