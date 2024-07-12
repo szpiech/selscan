@@ -284,13 +284,12 @@ void HapData::readHapData_bitset(string filename)
     // }
 
 
-    
-    for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
-        cout<<locus_after_filter<<"::: ";
-        hapEntries[locus_after_filter].hapbitset->print_pos();
-    }
+    // // // DEBUG
+    // for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+    //     cout<<locus_after_filter<<"::: ";
+    //     hapEntries[locus_after_filter].hapbitset->print_pos();
+    // }
 }
-
 
 void HapData::readHapDataVCF_bitset(string filename)
 {
