@@ -186,7 +186,6 @@ public:
             
         }
         */
-       exit(1);
     }
     //double calcFreq(int locus, bool unphased)
     double calcFreq(int locus)
