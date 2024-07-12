@@ -164,7 +164,7 @@ void HapData::readHapData_bitset(string filename)
 
     char allele1;
     int locus_after_filter = 0;
-    for (int locus = 0; locus < this->nloci; locus++)
+    for (int locus = 0; locus < nloci_before_filter; locus++)
     {
         if(!skiplist.empty()){
             if(skiplist.front() == locus){

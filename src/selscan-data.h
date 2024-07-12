@@ -79,7 +79,7 @@ public:
         if (queryLoc < 0)
         {
             cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-            exit(1);
+            throw 1;
         }else{
              cerr << "Found " << query << " in data.\n";
             // double queryFreq = hapData.calcFreq(queryLoc);
@@ -87,11 +87,11 @@ public:
             // {
             //     cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << hapData.MAF << ".\n";
             //     cerr << "\tIf you wish to calculate EHH at this locus either change --maf or set --keep-low-freq.\n";
-            //     exit(1);
+            //     throw 1;
             // }
             // else if (!hapData.SKIP && (queryFreq == 0 || queryFreq == 1)){
             //     cerr << "ERROR: EHH not calculated for " << query << ". Frequency = " << queryFreq << ".\n";
-            //     exit(1);
+            //     throw 1
             // }
             // else
             // {
