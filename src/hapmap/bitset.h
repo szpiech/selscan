@@ -39,6 +39,9 @@ class MyBitset{
         {
             bits[i] = 0;
         }
+
+        cout<<"BITSET: nwords: "<<nwords<<" nbits "<<nbits<< endl;
+
     }
 
     //untested

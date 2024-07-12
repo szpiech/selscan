@@ -5,6 +5,7 @@
 #for osx/macos-arm systems
 CC = g++-14 -std=c++17
 G++FLAG =  -O3  -m64  -march=native -lm -ftree-vectorize
+# -fsanitize=address -static-libasan
 #-mmmx -msse -msse2 -Og
 LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
 #LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs

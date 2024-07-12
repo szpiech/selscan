@@ -159,7 +159,7 @@ void HapData::readHapData_bitset(string filename)
         initHapData_bitset(current_nhaps, nloci_before_filter-skiplist.size());
     }
 
-    this->skipQueue = skiplist; // make a copy
+    this->skipQueue = queue<int>();
     
 
     char allele1;
@@ -169,10 +169,14 @@ void HapData::readHapData_bitset(string filename)
         if(!skiplist.empty()){
             if(skiplist.front() == locus){
                 skiplist.pop();
+                skipQueue.push(locus);
+                cout<<"skipping locus "<<locus<<endl;
                 getline(fin, line);
                 continue;
             }
         }
+
+        this->hapEntries[locus].hapbitset->num_1s = num_1s_per_loci[locus];
 
         vector<bool> current_haps(current_nhaps, false);
         for (int hap = 0; hap < current_nhaps; hap++)
@@ -194,7 +198,7 @@ void HapData::readHapData_bitset(string filename)
                     throw 0;
                 }
                 if(allele1=='1'){
-                    this->hapEntries[locus].hapbitset->num_1s = num_1s_per_loci[locus];
+                    
                     this->hapEntries[locus].hapbitset->set_bit(hap);
                 }
             }
@@ -275,6 +279,11 @@ void HapData::readHapData_bitset(string filename)
     //         hapEntries[locus_after_filter].flipped = false;
     //     }
     // }
+    for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+        cout<<locus_after_filter<<"::: ";
+        hapEntries[locus_after_filter].hapbitset->print_pos();
+    }
+    exit(1);
 }
 
 
