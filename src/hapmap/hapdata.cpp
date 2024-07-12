@@ -161,7 +161,8 @@ void HapData::readHapData_bitset(string filename)
 
     this->skipQueue = queue<int>();
     
-
+    getline(fin, line);
+    stringstream ss(line);
     char allele1;
     int locus_after_filter = 0;
     for (int locus = 0; locus < nloci_before_filter; locus++)
@@ -177,12 +178,12 @@ void HapData::readHapData_bitset(string filename)
         }
 
         this->hapEntries[locus_after_filter].hapbitset->num_1s = num_1s_per_loci[locus];
-
+        
         vector<bool> current_haps(current_nhaps, false);
         for (int hap = 0; hap < current_nhaps; hap++)
         {
             if(unphased){
-                fin >> allele1;
+                ss >> allele1;
                 if (allele1 != '0' && allele1 != '1'){
                     cerr << "ERROR: Alleles must be coded 0/1 only.\n";
                     cerr << allele1 << endl;
@@ -191,14 +192,13 @@ void HapData::readHapData_bitset(string filename)
                 current_haps[hap] = (allele1 == '1');
             }
             else{
-                fin >> allele1;
+                ss >> allele1;
                 if (allele1 != '0' && allele1 != '1')
                 {
                     cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
                     throw 0;
                 }
                 if(allele1=='1'){
-                    
                     this->hapEntries[locus_after_filter].hapbitset->set_bit(hap);
                 }
             }
@@ -233,6 +233,7 @@ void HapData::readHapData_bitset(string filename)
             }
         }
         locus_after_filter++;
+        getline(fin, line);
     }
     fin.close();
 
