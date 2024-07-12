@@ -68,12 +68,5 @@ class IHS : public MainTools{
 };
 
 
-typedef struct {
-    int num1;
-    int num2;
-    IHS *ihs_obj;
-} WorkArgs_t;
-
-
 
 #endif

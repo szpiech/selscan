@@ -462,8 +462,8 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     uint64_t curr_ehh0_before_norm = 0;
     uint64_t curr_ehh1_before_norm = 0;
 
-    int n_c0=0;
-    int n_c1=0;
+    unsigned int n_c0=0;
+    unsigned int n_c1=0;
 
     int* group_count = new int[numHaps];
     int* group_id = new int[numHaps];
@@ -679,7 +679,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 continue;
             }
 
-            for(int v: ele.second){
+            for(const int &v: ele.second){
                 group_id[v] = totgc;
             }
             
@@ -784,13 +784,19 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 */
 pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstream){
 
-    unordered_map<unsigned int, vector<unsigned int> >* mp = new unordered_map<unsigned int, vector<unsigned int> >();
-    unordered_map<unsigned int, vector<unsigned int> > m = *mp;
+    // unordered_map<unsigned int, vector<unsigned int> >* mp = new unordered_map<unsigned int, vector<unsigned int> >();
+    // unordered_map<unsigned int, vector<unsigned int> > m = *mp;
+
+      // Allocate the unordered_map on the heap
+    std::unique_ptr<std::unordered_map<unsigned int, std::vector<unsigned int>>> mp =
+        std::make_unique<std::unordered_map<unsigned int, std::vector<unsigned int>>>();
+
+
 
     double ihh1 = 0;
     double ihh0 = 0;
-    int numSnps = hm.hapData.nloci;
-    int numHaps = hm.hapData.nhaps;
+    const int& numSnps = hm.hapData.nloci;
+    const int& numHaps = hm.hapData.nhaps;
 
     int total_iteration_of_m = 0;
     uint64_t ehh0_before_norm = 0;
@@ -817,7 +823,7 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
         isAncestral[i] = false;
     }
 
-    int totgc=0;
+    int totgc = 0;
     n_c1 = (hm.hapData.hapEntries[locus].flipped? numHaps - hm.hapData.hapEntries[locus].hapbitset->num_1s: hm.hapData.hapEntries[locus].hapbitset->num_1s);
     n_c0 = numHaps - n_c1;
 
@@ -968,11 +974,11 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
                 bitset ^= t;
 
                 int old_group_id = group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);
+                (*mp)[old_group_id].push_back(set_bit_pos);
             }
         }
 
-        for (const auto &ele : m) {
+        for (const auto &ele : (*mp)) {
             
             int old_group_id = ele.first;
             int newgroup_size = ele.second.size() ;
@@ -983,7 +989,7 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
                 continue;
             }
 
-            for(int v: ele.second){
+            for(const unsigned int &v: ele.second){
                 group_id[v] = totgc;
             }
             
@@ -995,7 +1001,10 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
             group_count[old_group_id] -= newgroup_size;
             group_count[totgc] += newgroup_size;
             
+            assert(totgc<numHaps);
             totgc+=1;
+            assert(totgc<=numHaps);
+
             
             bool isDerivedGroup =  (!hm.hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm.hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
             if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
@@ -1006,8 +1015,10 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
             }
         }
 
-        //m.clear();
-        unordered_map<unsigned int, vector<unsigned int> >().swap(m);
+        mp->clear();
+
+        // m.clear();
+        // unordered_map<unsigned int, vector<unsigned int> >().swap(m);
 
         if(twice_num_pair_or_square(n_c1, p.ALT)!=0){
             if(ehh1_before_norm*1.0/twice_num_pair_or_square(n_c1, p.ALT) > p.EHH_CUTOFF){
@@ -1034,6 +1045,11 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
         if(twice_num_pair_or_square(n_c0,  p.ALT)==0){
             curr_ehh0_before_norm = 0;
         }
+
+         
+        if(!p.CALC_NSL && physicalDistance_from_core(i,locus, downstream) >= p.MAX_EXTEND) break;
+        if(p.CALC_NSL && abs(i-locus) >= p.MAX_EXTEND_NSL) break; //g(xi−1, xi) = 1.
+
 
 
 
@@ -1066,7 +1082,8 @@ pair<double, double> IHS::calc_ehh_unidirection_bitset(int locus, bool downstrea
     delete[] isDerived;
     delete[] isAncestral;
     return make_pair(ihh1, ihh0);
-    delete mp;
+    
+    //delete mp;
 }
 
 
@@ -1214,6 +1231,7 @@ void IHS::main() {
                         << ihh1 << " " << ihh0 <<" "<< log10(ihh1/ihh0) <<endl;
 
             locus++;
+            assert(locus<=hm.mapData.nloci);
         }
 
 
