@@ -23,8 +23,11 @@ class MapData
 public:
     struct MapEntry* mapEntries = NULL; //vector of map entries
     unsigned int nloci;
-    
     map<string, int> locus_query_map;
+    
+    ~MapData(){
+        releaseMapData();
+    }    
 
     //allocates the arrays and populates them with -9 or "--" depending on type
     void initMapData(int nloci);
@@ -80,22 +83,6 @@ public:
             return locus_query_map[query];
         }
         return -1;
-
-        // for (int locus = 0; locus < this->nloci; locus++)
-        // {
-        //     if (this->locusName[locus].compare(query) == 0) return locus;
-            
-        //     This is only set when compiling windows binaries
-        //     And I needed to use itoa for some reason under windows
-        //     #ifdef PTW32_STATIC_LIB
-        //     char buffer[100];
-        //     itoa(mapData->physicalPos[locus], buffer, 10);
-        //     if (string(buffer).compare(query) == 0) return locus;
-        //     #else
-        //     if (to_string(mapData->physicalPos[locus]).compare(query) == 0) return locus;
-        //     #endif
-        // }
-        // return -1;
     }
 };
 

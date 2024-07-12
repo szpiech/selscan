@@ -1,7 +1,7 @@
 #ifndef __XPIHH_H__
 #define __XPIHH_H__
 
-#include "../selscan-maintools.h"
+#include "selscan-stats.h"
 #include <unordered_map>
 
 using namespace std;
@@ -119,12 +119,10 @@ class XPIHH_ehh_data{
     }
 }; 
 
-class XPIHH : public MainTools{
+class XPIHH : public SelscanStats{
     public:
-        XPIHH(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){}
+        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params, ofstream* flog, ofstream* fout) : SelscanStats(hm, params,  flog,  fout){}
         void main();
-
-        
 
     private:
         static pthread_mutex_t mutex_log;

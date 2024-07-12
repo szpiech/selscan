@@ -1,11 +1,11 @@
 #ifndef __SELSCAN_EHH_H__
 #define __SELSCAN_EHH_H__
+#include <unordered_map>
+#include "selscan-stats.h"
 
-#include "../selscan-maintools.h"
-
-class EHH : public MainTools{
+class EHH : public SelscanStats{
     public:
-        EHH(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){      
+        EHH(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){      
         }
         void calc_single_ehh(string query);
         

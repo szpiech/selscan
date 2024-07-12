@@ -1,7 +1,7 @@
 #ifndef __IHH12_H__
 #define __IHH12_H__
 
-#include "../selscan-maintools.h"
+#include "selscan-stats.h"
 #include <unordered_map>
 
 using namespace std;
@@ -88,9 +88,9 @@ class IHH12_ehh_data{
 
 }; 
 
-class IHH12 : public MainTools{
+class IHH12 : public SelscanStats{
     public:
-        IHH12(HapMap& hm, param_main& params,  ofstream* flog,  ofstream* fout) : MainTools(hm, params,  flog,  fout){}
+        IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){}
         void main();
         void findMaxTwo(int* arr, int n, int &max1, int &max2);
         //void findMaxK(int* arr, int n, int &max1, int &max2, int k);
@@ -106,7 +106,6 @@ class IHH12 : public MainTools{
         void static thread_main(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHH12* obj);
 
         void updateEHH_from_split(const unordered_map<unsigned int, vector<unsigned int> > & m, IHH12_ehh_data* p);
-
 };
 
 

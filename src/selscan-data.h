@@ -47,113 +47,34 @@
 #include "filetype/hap.h"
 #include "filetype/hap_serial.h"
 
-//#include "hapmap/hapmap.h"
-
 using namespace std;
 
 const int MISSING = -9999;  // TO_BE_DELETED
 const char MISSING_CHAR = '9';  // TO_BE_DELETED
 
-// int countFields(const string &str);
-// pair<int, int> countFieldsAndOnes(const string &str);
-
-// int countFields(const string &str)
-// {
-//     string::const_iterator it;
-//     int result;
-//     int numFields = 0;
-//     int seenChar = 0;
-//     for (it = str.begin() ; it < str.end(); it++)
-//     {
-//         result = isspace(*it);
-//         if (result == 0 && seenChar == 0)
-//         {
-//             numFields++;
-//             seenChar = 1;
-//         }
-//         else if (result != 0)
-//         {
-//             seenChar = 0;
-//         }
-//     }
-//     return numFields;
-// }
-
-// pair<int, int> countFieldsAndOnes(const string &str)
-// {
-//     string::const_iterator it;
-//     int ones = 0;
-//     int result;
-//     int numFields = 0;
-//     int seenChar = 0;
-//     for (it = str.begin() ; it < str.end(); it++)
-//     {
-//         if(*it == '1'){
-//             ones++;
-//         }
-//         result = isspace(*it);
-//         if (result == 0 && seenChar == 0)
-//         {
-//             numFields++;
-//             seenChar = 1;
-//         }
-//         else if (result != 0)
-//         {
-//             seenChar = 0;
-//         }
-//     }
-//     return make_pair(numFields, ones);
-// }
-
-
 class HapMap{
 public:
-    //int nloci;
-    //int nhaps;
+    param_main p;
 
-    HapData hapData;
-    HapData hapData2;
-    MapData mapData;
+    // HapData* hapData;
+    // HapData* hapData2;
+    // MapData* mapData;
 
-    ofstream *flog;
-    ofstream *fout;
-    Bar *bar;
+    std::unique_ptr<MapData> mapData;
+    std::unique_ptr<HapData> hapData;
+    std::unique_ptr<HapData> hapData2;
+
+    ofstream* flog;
+    ofstream* fout;
+
     bool low_mem=false;
-
-    //bool loadHapMapData(param_main &params, int argc, char *argv[], ofstream *flog, ofstream *fout);
-    //double calcFreq(string query);
-    
-
-    double calcFreq(int locus)
-    {
-        double total = 0;
-        double freq = 0;
-
-        //assuming no missing data in hapmap structure
-        
-        if(this->hapData.unphased){
-            freq = this->hapData.hapEntries[locus].count1 + this->hapData.hapEntries[locus].count2*2;
-            //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
-            total = this->hapData.nhaps*2;
-        }else{
-            freq = this->hapData.hapEntries[locus].positions.size();
-            if(low_mem){
-                //freq = hapEntries[locus].hapbitset->count_1s();
-                freq = this->hapData.hapEntries[locus].hapbitset->num_1s;
-            }
-                
-
-            total = this->hapData.nhaps;
-        }
-        return freq/total;
-    }
 
     /***
      * @param query: Locus name
      * @returns locus ( in range [0 to nloci) ) after integrity check
     */
     int queryFound(string query){
-        int queryLoc  = mapData.queryFound(query);
+        int queryLoc  = mapData->queryFound(query);
         
         if (queryLoc < 0)
         {
@@ -181,18 +102,28 @@ public:
     }
 
 
-    //Returns 1 on error
-    bool loadHapMapData(param_main &p, int argc, char *argv[], ofstream* flog, ofstream* fout){
+    HapMap(param_main &p, ofstream* flog, ofstream* fout){
+        this->p = p;
         this->flog = flog;
         this->fout = fout;
+    }
 
-        string hapFilename = p.hapFilename;
-        string hapFilename2 =  p.hapFilename2;
-        string mapFilename = p.mapFilename;
-        string tpedFilename = p.tpedFilename;
-        string tpedFilename2 = p.tpedFilename2;
-        string vcfFilename = p.vcfFilename;
-        string vcfFilename2 = p.vcfFilename2;
+    ~HapMap(){
+        //delete hapData;
+        // if(p.CALC_XP || p.CALC_XPNSL)
+        //     delete hapData2;
+        //delete mapData;
+    }
+
+    /// Returns 1 on error, Returns 0 on success
+    bool loadHapMapData(){
+        const string& hapFilename = p.hapFilename;
+        const string& hapFilename2 =  p.hapFilename2;
+        const string& mapFilename = p.mapFilename;
+        const string& tpedFilename = p.tpedFilename;
+        const string& tpedFilename2 = p.tpedFilename2;
+        const string& vcfFilename = p.vcfFilename;
+        const string& vcfFilename2 = p.vcfFilename2;
         
         bool TPED = false;
         if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
@@ -201,7 +132,6 @@ public:
         if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
         bool UNPHASED = p.UNPHASED;
-        
         bool USE_PMAP = p.USE_PMAP;
         bool ALT = p.ALT;
         bool WAGH = p.WAGH;
@@ -214,9 +144,14 @@ public:
         bool SINGLE_EHH = p.SINGLE_EHH;
         bool LOW_MEM = p.LOW_MEM;
         this->low_mem = LOW_MEM;
-
-        hapData.initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog);
-        hapData2.initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog);
+        
+        mapData = std::make_unique<MapData>(); 
+        hapData = std::make_unique<HapData>();
+        hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+        if (CALC_XP || CALC_XPNSL){
+            hapData2 = std::make_unique<HapData>();
+            hapData2->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+        }   
 
         auto start_reading = std::chrono::high_resolution_clock::now();
 
@@ -224,41 +159,41 @@ public:
             try
             {
                 if (VCF) {
-                    hapData.readHapDataVCF_bitset(vcfFilename);
+                    hapData->readHapDataVCF_bitset(vcfFilename);
                     if (CALC_XP || CALC_XPNSL)
                     {
-                        hapData2.readHapDataVCF_bitset(vcfFilename2);
-                        if (hapData.nloci != hapData2.nloci)
+                        hapData2->readHapDataVCF_bitset(vcfFilename2);
+                        if (hapData->nloci != hapData2->nloci)
                         {
                             std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
                             return 1;
                         }
                     }
                     if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
-                        mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                        mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
                     }
                     else{//Load physical positions
-                        mapData.readMapDataVCF(vcfFilename, hapData.nloci, hapData.skipQueue);
+                        mapData->readMapDataVCF(vcfFilename, hapData->nloci, hapData->skipQueue);
                     }
                 }
                 else
                 {
                     if (CALC_XP || CALC_XPNSL)
                     {
-                        hapData.initParams(UNPHASED, false, p.MAF, p.numThreads, flog); // we want SKIP to be false
-                        hapData2.initParams(UNPHASED, false, p.MAF, p.numThreads, flog); // we want SKIP to be false
+                        hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM); // we want SKIP to be false
+                        hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM); // we want SKIP to be false
 
-                        hapData.readHapData_bitset(hapFilename);
-                        hapData2.readHapData_bitset(hapFilename2);
-                        if (hapData.nloci != hapData2.nloci)
+                        hapData->readHapData_bitset(hapFilename);
+                        hapData2->readHapData_bitset(hapFilename2);
+                        if (hapData->nloci != hapData2->nloci)
                         {
                             std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
                             return 1;
                         }
                     }else{
-                        hapData.readHapData_bitset(hapFilename);
+                        hapData->readHapData_bitset(hapFilename);
                     }
-                    mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                    mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
                     
                 }
             }
@@ -271,61 +206,61 @@ public:
             {
                 if (TPED)
                 {
-                    handleData(tpedFilename, "TPED", hapData);
+                    handleData(tpedFilename, "TPED", *hapData);
                     if (CALC_XP || CALC_XPNSL)
                     {
-                        handleData(tpedFilename2, "TPED", hapData2);
-                        if (hapData.nloci != hapData2.nloci)
+                        handleData(tpedFilename2, "TPED", *hapData2);
+                        if (hapData->nloci != hapData2->nloci)
                         {
                             std::cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
                             return 1;
                         }
                     }
-                    mapData.readMapDataTPED(tpedFilename, hapData.nloci, hapData.nhaps, USE_PMAP, hapData.skipQueue);
+                    mapData->readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps, USE_PMAP, hapData->skipQueue);
                 }
                 else if (VCF) {
-                    handleData(vcfFilename, "VCF", hapData);
+                    handleData(vcfFilename, "VCF", *hapData);
                     //hapData.readHapDataVCF(vcfFilename);
                     
                     if (CALC_XP || CALC_XPNSL)
                     {
-                        handleData(vcfFilename2, "VCF", hapData2);
-                        if (hapData.nloci != hapData2.nloci)
+                        handleData(vcfFilename2, "VCF", *hapData2);
+                        if (hapData->nloci != hapData2->nloci)
                         {
                             std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
                             return 1;
                         }
                     }
                     if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
-                        mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                        mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
                     }
                     else{//Load physical positions
-                        mapData.readMapDataVCF(vcfFilename, hapData.nloci, hapData.skipQueue);
+                        mapData->readMapDataVCF(vcfFilename, hapData->nloci, hapData->skipQueue);
                     }
                 }
                 else
                 {
                     if (CALC_XP || CALC_XPNSL)
                     {
-                        hapData.initParams(UNPHASED, false, p.MAF, p.numThreads, flog);
-                        hapData2.initParams(UNPHASED, false, p.MAF, p.numThreads, flog);
+                        hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                        hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
 
                         // hapData.readHapData(hapFilename);
                         // hapData2.readHapData(hapFilename2);
 
-                        handleData(hapFilename, "HAP", hapData);
-                        handleData(hapFilename2, "HAP", hapData2);
+                        handleData(hapFilename, "HAP", *hapData);
+                        handleData(hapFilename2, "HAP", *hapData2);
 
-                        if (hapData.nloci != hapData2.nloci)
+                        if (hapData->nloci != hapData2->nloci)
                         {
                             std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
                             return 1;
                         }
                     }else{
                         //hapData.readHapData(hapFilename);
-                        handleData(hapFilename, "HAP", hapData);
+                        handleData(hapFilename, "HAP", *hapData);
                     }
-                    mapData.readMapData(mapFilename, hapData.nloci, USE_PMAP, hapData.skipQueue);
+                    mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
                     
                 }
             }
@@ -345,21 +280,20 @@ public:
 
 
         // Check if map is in order
-        for (int i = 1; i < mapData.nloci; i++) {
-            if ( mapData.mapEntries[i].physicalPos <  mapData.mapEntries[i-1].physicalPos ) {
+        for (int i = 1; i < mapData->nloci; i++) {
+            if ( mapData->mapEntries[i].physicalPos <  mapData->mapEntries[i-1].physicalPos ) {
                 std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
-                std::cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].physicalPos << " appears after";
-                std::cerr << "\t" <<  mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].physicalPos << "\n";
+                std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].physicalPos << " appears after";
+                std::cerr << "\t" <<  mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].physicalPos << "\n";
                 return 1;
             }
-            if ( !CALC_NSL && mapData.mapEntries[i].geneticPos  < mapData.mapEntries[i-1].geneticPos  ) {
+            if ( !CALC_NSL && mapData->mapEntries[i].geneticPos  < mapData->mapEntries[i-1].geneticPos  ) {
                 std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
-                std::cerr << "\t" << mapData.mapEntries[i].locusName << " " << mapData.mapEntries[i].geneticPos << " appears after";
-                std::cerr << "\t" << mapData.mapEntries[i-1].locusName << " " << mapData.mapEntries[i-1].geneticPos << "\n";
+                std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].geneticPos << " appears after";
+                std::cerr << "\t" << mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].geneticPos << "\n";
                 return 1;
             }
         }
-
         return 0;
     }
 
@@ -451,7 +385,6 @@ public:
                 }
                 cout<<"### Count of flipped loci: "<<count_flip<<endl;
             }
-            
         }
     }
 

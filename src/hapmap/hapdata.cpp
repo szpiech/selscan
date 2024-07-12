@@ -21,6 +21,7 @@ void HapData::initHapData_bitset(int nhaps, unsigned int nloci)
         hapEntries[j].hapbitset = new MyBitset(nhaps);
         hapEntries[j].xorbitset = new MyBitset(nhaps);
     }
+    INIT_SUCCESS = true;
 }
 
 void HapData::releaseHapData_bitset()
@@ -56,6 +57,7 @@ void HapData::initHapData(int nhaps, int nloci)
     this->hapEntries = new struct HapEntry[nloci];
     this->nhaps = nhaps;
     this->nloci = nloci;
+    INIT_SUCCESS = true;
 }
 
 void HapData::releaseHapData()
@@ -515,22 +517,22 @@ void HapData::readHapDataVCF_bitset(string filename)
     }
 
     //handle fliiped
-    for (int locus = 0; locus < nloci_after_filtering; locus++){
-        if(hapEntries[locus].flipped){
-            MyBitset* b1;
-            b1 = hapEntries[locus].hapbitset;
+    // for (int locus = 0; locus < nloci_after_filtering; locus++){
+    //     if(hapEntries[locus].flipped){
+    //         MyBitset* b1;
+    //         b1 = hapEntries[locus].hapbitset;
 
-            //#pragma omp simd
-            for(int k = 0; k<b1->nwords; k++){
-                    b1->bits[k] = ~(b1->bits[k]);
-            }
+    //         //#pragma omp simd
+    //         for(int k = 0; k<b1->nwords; k++){
+    //                 b1->bits[k] = ~(b1->bits[k]);
+    //         }
 
-            //#pragma omp simd
-            for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
-                b1->clear_bit(i);
-            }
-        }
-    }
+    //         //#pragma omp simd
+    //         for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
+    //             b1->clear_bit(i);
+    //         }
+    //     }
+    // }
 
 
     if(SKIP){

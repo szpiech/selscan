@@ -20,14 +20,14 @@ OBJ_FILETYPE = data_reader.o hap.o tped.o vcf.o  vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 #OBJ_HAPMAP = ""
 
-all : selscan norm
+all : selscand
 # build_and_cleanup
 
 # build_and_cleanup: selscan norm
 # 	rm -rf *.o	
 
-selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) $(OBJ_FILETYPE) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o 
-	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) $(OBJ_FILETYPE)  selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o 
+selscand : selscan-main.o selscan-maintools.o $(OBJ_STATS) $(OBJ_FILETYPE) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o 
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscand selscan-main.o selscan-maintools.o $(OBJ_STATS) $(OBJ_FILETYPE)  selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o 
 	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)

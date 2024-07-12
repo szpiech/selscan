@@ -50,17 +50,14 @@ void XPIHH::updateEHH_from_split(const unordered_map<unsigned int, vector<unsign
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
 void XPIHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
-    HapData& hapData = hm.hapData;
-    HapData& hapData2 = hm.hapData2;
-
     XPIHH_ehh_data p1, p2, pooled;
-    int numSnps = hm.hapData.nloci; // must be same for both hapData and hapData2
+    int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
     
-    p1.init(hapData.nhaps, hm.hapData.hapEntries[locus].positions);
-    p2.init(hapData2.nhaps, hm.hapData2.hapEntries[locus].positions);
+    p1.init(hm->hapData->nhaps, hm->hapData->hapEntries[locus].positions);
+    p2.init(hm->hapData2->nhaps, hm->hapData2->hapEntries[locus].positions);
 
-    pooled.init(p1.nhaps + p2.nhaps, hm.hapData.hapEntries[locus].positions);
-    pooled.init_fix_for_pooled(hm.hapData2.hapEntries[locus].positions, hapData.nhaps);
+    pooled.init(p1.nhaps + p2.nhaps, hm->hapData->hapEntries[locus].positions);
+    pooled.init_fix_for_pooled(hm->hapData2->hapEntries[locus].positions, hm->hapData->nhaps);
 
     p1.initialize_core(p.ALT);
     p2.initialize_core(p.ALT);
@@ -86,14 +83,14 @@ void XPIHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
         // if(downstream){
         //     nextLocus = i - 1;
         // }
-        // if (nextLocus < 0 || nextLocus >= hm.mapData.nloci)
+        // if (nextLocus < 0 || nextLocus >= hm->mapData->nloci)
         // {
         //     pthread_mutex_lock(&mutex_log);
         //     (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
         //             << ". ";
         //     if (!p.TRUNC){
         //         skipLocus = true;
-        //         (*flog) << "Skipping calculation at position " << hm.mapData.mapEntries[locus].physicalPos << " id: " << hm.mapData.mapEntries[locus].locusName;
+        //         (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
         //     }
         //     (*flog) << "\n";
         //     pthread_mutex_unlock(&mutex_log);
@@ -103,7 +100,7 @@ void XPIHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
         // {
         //     pthread_mutex_lock(&mutex_log);
         //     (*flog) << "WARNING: Reached a gap of " << physicalDistance(nextLocus, downstream) << "bp > " << p.MAX_GAP 
-        //     << "bp. Skipping calculation at position " <<  hm.mapData.mapEntries[locus].physicalPos << " id: " <<  hm.mapData.mapEntries[locus].locusName << "\n";
+        //     << "bp. Skipping calculation at position " <<  hm->mapData->mapEntries[locus].physicalPos << " id: " <<  hm->mapData->mapEntries[locus].locusName << "\n";
         //     pthread_mutex_unlock(&mutex_log);
         //     skipLocus = true;
         //     break;
@@ -147,25 +144,25 @@ void XPIHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
         
         /*
         if(downstream){
-            p1.v = hm.hapData.hapEntries[i+1].xors;
-            p2.v = hm.hapData.hapEntries[i+1].xors;
-            pooled.v = hm.hapData.hapEntries[i+1].xors;
-            pooled.v2 = hm.hapData2.hapEntries[i+1].xors;
+            p1.v = hm->hapData->hapEntries[i+1].xors;
+            p2.v = hm->hapData->hapEntries[i+1].xors;
+            pooled.v = hm->hapData->hapEntries[i+1].xors;
+            pooled.v2 = hm->hapData2->hapEntries[i+1].xors;
         }else{
-            p1.v = hm.hapData.hapEntries[i].xors;
-            p2.v = hm.hapData.hapEntries[i].xors;
-            pooled.v = hm.hapData.hapEntries[i].xors;
-            pooled.v2 = hm.hapData2.hapEntries[i].xors;
+            p1.v = hm->hapData->hapEntries[i].xors;
+            p2.v = hm->hapData->hapEntries[i].xors;
+            pooled.v = hm->hapData->hapEntries[i].xors;
+            pooled.v2 = hm->hapData2->hapEntries[i].xors;
         }
         */
-        p1.v = hm.hapData.hapEntries[i].positions;
-        p2.v = hm.hapData2.hapEntries[i].positions;
+        p1.v = hm->hapData->hapEntries[i].positions;
+        p2.v = hm->hapData2->hapEntries[i].positions;
         pooled.v = p1.v;
         pooled.v2 = p2.v;
 
         // ensure that in boundary we don't do any calculation
-        // if(hm.hapData.hapEntries[i].positions.size() < ones_p1.size() && i!=nhaps1-1 ){ 
-        //     ones_p1 = hm.hapData.hapEntries[i].positions;
+        // if(hm->hapData->hapEntries[i].positions.size() < ones_p1.size() && i!=nhaps1-1 ){ 
+        //     ones_p1 = hm->hapData->hapEntries[i].positions;
         //     if(ones_p1.size()==0 or ones_p1.size()==nhaps1){ // integrity check
         //         std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
         //         throw 0;
@@ -233,15 +230,15 @@ void XPIHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
 
 void XPIHH::main()
 {
-    int nloci = hm.mapData.nloci;
+    int nloci = hm->mapData->nloci;
     ihh_p1 = new double[nloci];
     ihh_p2 = new double[nloci];
 
-    //barInit(*bar, hm.mapData.nloci, 78); //REWRITE
+    //barInit(*bar, hm->mapData->nloci, 78); //REWRITE
 
     if (p.CALC_XPNSL){
-        for (int i = 0; i < hm.mapData.nloci; i++){
-            hm.mapData.mapEntries[i].geneticPos = i;
+        for (int i = 0; i < hm->mapData->nloci; i++){
+            hm->mapData->mapEntries[i].geneticPos = i;
         }
     }
 
@@ -272,23 +269,23 @@ void XPIHH::main()
 
     if (p.CALC_XP) (*fout) << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
     if (p.CALC_XPNSL) (*fout) << "id\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
-    for (int i = 0; i < hm.mapData.nloci; i++)
+    for (int i = 0; i < hm->mapData->nloci; i++)
     {
         if (ihh_p1[i] != MISSING && ihh_p2[i] != MISSING && ihh_p1[i] != 0 && ihh_p2[i] != 0)
         {
-            (*fout) << hm.mapData.mapEntries[i].locusName << "\t"
-                    << hm.mapData.mapEntries[i].physicalPos << "\t"
-                    << hm.mapData.mapEntries[i].geneticPos << "\t"
-                    << hm.hapData.calcFreq(i) << "\t"  //<< freq1[i] << "\t"
+            (*fout) << hm->mapData->mapEntries[i].locusName << "\t"
+                    << hm->mapData->mapEntries[i].physicalPos << "\t"
+                    << hm->mapData->mapEntries[i].geneticPos << "\t"
+                    << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"
                     << ihh_p1[i] << "\t"
-                    << hm.hapData2.calcFreq(i) << "\t"  //<< freq2[i] << "\t"
+                    << hm->hapData2->calcFreq(i) << "\t"  //<< freq2[i] << "\t"
                     << ihh_p2[i] << "\t";
             (*fout) << log10(ihh_p1[i] / ihh_p2[i]) << endl;
         }
     }
 
-    hm.hapData.releaseHapData();
-    hm.hapData2.releaseHapData();
+    // hm->hapData->releaseHapData();
+    // hm->hapData2->releaseHapData();
 
     delete[] ihh_p1;
     delete[] ihh_p2;
@@ -306,7 +303,7 @@ void XPIHH::calc_xpihh(int locus, unordered_map<unsigned int, vector<unsigned in
 }
 
 void XPIHH::thread_xpihh(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, XPIHH* obj){
-    int numSnps = obj->hm.hapData.nloci;
+    int numSnps = obj->hm->hapData->nloci;
     int elem_per_block = floor(numSnps/obj->numThreads);
     int start = tid*elem_per_block ;
     int end = start + elem_per_block  ;
@@ -319,7 +316,7 @@ void XPIHH::thread_xpihh(int tid, unordered_map<unsigned int, vector<unsigned in
 
     
     //if total 20 tasks: and 4 threads: t0: 0, 4, 8, 12, 16: t1: 1, 5, 9, 13, 17  
-    //for (int locus = tid; locus < hm.mapData.nloci; locus += numThreads)
+    //for (int locus = tid; locus < hm->mapData->nloci; locus += numThreads)
     //#pragma omp parallel 
 
 
@@ -329,7 +326,7 @@ void XPIHH::thread_xpihh(int tid, unordered_map<unsigned int, vector<unsigned in
     }
 
     pthread_mutex_lock(&mutex_log);
-    (*(obj->flog))<<("finishing thread # "+to_string(tid)+" at "+to_string(MainTools::readTimer())+"\n");
+    (*(obj->flog))<<("finishing thread # "+to_string(tid)+" at "+to_string(SelscanStats::readTimer())+"\n");
     pthread_mutex_unlock(&mutex_log);
 }
 

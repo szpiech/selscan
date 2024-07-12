@@ -1,12 +1,13 @@
 #include "ehh.h"
 
 
+
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
 void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
-    int numHaps = hm.hapData.nhaps;
-    int numSnps = hm.mapData.nloci;
+    int numHaps = hm->hapData->nhaps;
+    int numSnps = hm->mapData->nloci;
     bool unphased = p.UNPHASED;
 
     int total_iteration_of_m = 0;
@@ -39,15 +40,15 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
     }
 
     int totgc=0;
-    vector<unsigned int> v = hm.hapData.hapEntries[locus].positions;
+    vector<unsigned int> v = hm->hapData->hapEntries[locus].positions;
     
     if(v.size() == 0 or  v.size() == numHaps){
         std::cerr<<"ERROR: Monomorphic site should not exist";
         throw 0;
     }
 
-    hm.hapData.hapEntries[locus].flipped = false;
-    if(hm.hapData.hapEntries[locus].flipped){
+    hm->hapData->hapEntries[locus].flipped = false;
+    if(hm->hapData->hapEntries[locus].flipped){
         group_count[1] = v.size();
         group_count[0] = numHaps - v.size();
         n_c0 = v.size();
@@ -97,9 +98,9 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         double distance;
         
         if(downstream){
-            distance = hm.mapData.mapEntries[i+1].physicalPos - hm.mapData.mapEntries[i].physicalPos;
+            distance = hm->mapData->mapEntries[i+1].physicalPos - hm->mapData->mapEntries[i].physicalPos;
         }else{
-            distance = hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[i-1].physicalPos;
+            distance = hm->mapData->mapEntries[i].physicalPos - hm->mapData->mapEntries[i-1].physicalPos;
         }
 
         // this should not happen as we already did integrity check previously
@@ -111,13 +112,13 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         
         
         if(downstream){
-            v = hm.hapData.hapEntries[i+1].xors;
+            v = hm->hapData->hapEntries[i+1].xors;
         }else{
-            v = hm.hapData.hapEntries[i].xors;
+            v = hm->hapData->hapEntries[i].xors;
         }
 
-        if(hm.hapData.hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ //  dont do in boundary
-            v = hm.hapData.hapEntries[i].positions;
+        if(hm->hapData->hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ //  dont do in boundary
+            v = hm->hapData->hapEntries[i].positions;
         }
         
         for (const unsigned int& set_bit_pos : v){
@@ -152,7 +153,7 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
             
             ehh_before_norm += del_update;
 
-            //bool isDerivedGroup =  (!hm.hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm.hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
+            //bool isDerivedGroup =  (!hm->hapData->hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm->hapData->hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
                 bool isDerivedGroup = isDerived[ele.second[0]];
             if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
             {
@@ -183,13 +184,13 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         }
 
         if(downstream){
-            (*fout) << std::fixed <<   -int(hm.mapData.mapEntries[locus].physicalPos -  hm.mapData.mapEntries[i].physicalPos)  << "\t"
-            <<  -(hm.mapData.mapEntries[locus].geneticPos -  hm.mapData.mapEntries[i].geneticPos)<< "\t"
+            (*fout) << std::fixed <<   -int(hm->mapData->mapEntries[locus].physicalPos -  hm->mapData->mapEntries[i].physicalPos)  << "\t"
+            <<  -(hm->mapData->mapEntries[locus].geneticPos -  hm->mapData->mapEntries[i].geneticPos)<< "\t"
             << current_derived_ehh << "\t"
             << current_ancestral_ehh << "\t";
         }else{
-            (*fout) << std::fixed <<   hm.mapData.mapEntries[i].physicalPos -  hm.mapData.mapEntries[locus].physicalPos  << "\t"
-            <<  hm.mapData.mapEntries[i].geneticPos -  hm.mapData.mapEntries[locus].geneticPos<< "\t"
+            (*fout) << std::fixed <<   hm->mapData->mapEntries[i].physicalPos -  hm->mapData->mapEntries[locus].physicalPos  << "\t"
+            <<  hm->mapData->mapEntries[i].geneticPos -  hm->mapData->mapEntries[locus].geneticPos<< "\t"
             << current_derived_ehh << "\t"
             << current_ancestral_ehh << "\t";
         }
@@ -224,11 +225,12 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
  * @param query The query locus name
 */
 void EHH::calc_single_ehh(string query){
-    int numSnps = hm.mapData.nloci;
-    int numHaps = hm.hapData.nhaps;
+    throw "Not implemented yet";
+    int numSnps = hm->mapData->nloci;
+    int numHaps = hm->hapData->nhaps;
 
     //TODO
-    int locus = hm.queryFound(query);
+    int locus = hm->queryFound(query);
 
     unordered_map<unsigned int, vector<unsigned int> > m;
     
@@ -241,8 +243,8 @@ void EHH::calc_single_ehh(string query){
 //  * @param query The query locus phys pos
 // */
 // void EHH::calc_single_ehh(unsigned int query){
-//     int numSnps = hm.mapData.nloci;
-//     int numHaps = hm.hapData.nhaps;
+//     int numSnps = hm->mapData->nloci;
+//     int numHaps = hm->hapData->nhaps;
 
 //     //TODO
 //     int locus = hm.queryFound(query);

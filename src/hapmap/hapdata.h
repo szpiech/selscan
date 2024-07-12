@@ -55,15 +55,20 @@ public:
     double MAF;
     bool SKIP;
     int num_threads;
+    bool LOW_MEM = false;
     
     queue<int> skipQueue;
     
     ofstream* flog;
 
     ~HapData(){
-        //releaseHapData_bitset();
-        //releaseHapData();
+        if(LOW_MEM){
+            releaseHapData_bitset();
+        }else{
+            releaseHapData();
+        }
     }
+
     //allocates the 2-d array and populated it with -9,
     /** Sets up structure according to nhaps and nloci
      * 
@@ -84,12 +89,13 @@ public:
     void readHapDataVCF_bitset(string filename);
     void readHapData_bitset(string filename);
 
-    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog){
+    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog, bool LOW_MEM){
         this->unphased = UNPHASED;
         this->SKIP = SKIP;
         this->MAF = MAF;
         this->num_threads = num_threads;
         this->flog = flog;
+        this->LOW_MEM = LOW_MEM;
     }
 
     pair<int, int> countFieldsAndOnes(const string &str)
@@ -207,6 +213,24 @@ public:
         // }
         return (freq / total);
     }
+
+    inline unsigned int get_n_c0(int locus)
+    {
+        unsigned int non_flipped_1s = 0;
+        non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+        unsigned int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
+        return result;
+        //return hapEntries[locus].count1;
+    }
+    inline unsigned int get_n_c1(int locus)
+    {
+        unsigned int non_flipped_1s = 0;
+        non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+        unsigned int result = hapEntries[locus].flipped ? nhaps - non_flipped_1s : non_flipped_1s;
+        return result;
+        //return hapEntries[locus].count1;
+    }
+
 
     template<typename T>
     void getThreeUnphasedGroups(const std::vector<T>& new1, const std::vector<T>& old1, const std::vector<T>& new2, const std::vector<T>& old2, std::vector<T> g[]) {
@@ -374,7 +398,8 @@ public:
         }
     }
 
-
+    private:
+        bool INIT_SUCCESS = false;
 
 };
 

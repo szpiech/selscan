@@ -9,12 +9,10 @@
 
 using namespace std;
 
-
-
 const string ARG_HELP = "--help";
 
 struct param_main{
-     string hapFilename, hapFilename2 ;
+    string hapFilename, hapFilename2 ;
     string mapFilename;
     string tpedFilename, tpedFilename2;
     string vcfFilename, vcfFilename2 ;
