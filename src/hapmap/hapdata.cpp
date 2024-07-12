@@ -1251,6 +1251,7 @@ void HapData::readHapData(string filename)
     //         this->hapEntries[locus_after_filter].flipped = false;
     //     }
     // }
+    this->print();
 
 }
 

@@ -148,6 +148,16 @@ public:
 
 
     void print(){
+        for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+            cout<<locus_after_filter<<"::: ";
+            for(int i = 0; i < hapEntries[locus_after_filter].positions.size(); i++){
+                cout<<hapEntries[locus_after_filter].positions[i]<<" ";
+            }
+            cout<<endl;
+            
+        }
+
+        /*
         for (int i = 0; i < 3; i++)
         {
             cout << "Locus: " << i << endl;
@@ -175,6 +185,8 @@ public:
             // }
             
         }
+        */
+       exit(1);
     }
     //double calcFreq(int locus, bool unphased)
     double calcFreq(int locus)
