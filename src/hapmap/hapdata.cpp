@@ -263,6 +263,7 @@ void HapData::readHapData_bitset(string filename)
     }
 
     //PHASE 4: FLIP
+    /*
     for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
         if(hapEntries[locus_after_filter].hapbitset->num_1s > nhaps/2){
             hapEntries[locus_after_filter].flipped = true;
@@ -282,6 +283,7 @@ void HapData::readHapData_bitset(string filename)
             hapEntries[locus_after_filter].flipped = false;
         }
     }
+    */
 
 
     // // // DEBUG
