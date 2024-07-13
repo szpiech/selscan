@@ -15,7 +15,7 @@ void HapData::initHapData_bitset(int nhaps, unsigned int nloci)
     this->hapEntries = new struct HapEntry[nloci];
     this->nhaps = nhaps;
     this->nloci = nloci;
-         cout << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
+    cout << "Number of haplotypes " << nhaps << ", number of loci " << nloci << ".\n";
 
     for (unsigned int j = 0; j < nloci; j++){
         hapEntries[j].hapbitset = new MyBitset(nhaps);
@@ -1255,8 +1255,6 @@ void HapData::readHapData(string filename)
     //         this->hapEntries[locus_after_filter].flipped = false;
     //     }
     // }
-    this->print();
-
 }
 
 

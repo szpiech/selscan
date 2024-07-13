@@ -551,12 +551,12 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
         if(downstream){
             if (--i < 0) {
-                std::cerr<<"Break reason for locus "<<locus<<":: REACHED_LEFT_EDGE."<<endl;
+                //std::cerr<<"Break reason for locus "<<locus<<":: REACHED_LEFT_EDGE."<<endl;
                 break;
             }
         }else{
             if (++i >= numSnps) {
-                std::cerr<<"Break reason for locus "<<locus<<":: REACHED_RIGHT_EDGE."<<endl;
+                //std::cerr<<"Break reason for locus "<<locus<<":: REACHED_RIGHT_EDGE."<<endl;
                 break;
             }
         }
@@ -681,16 +681,16 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         curr_ehh0_before_norm = prev_ehh0_before_norm;
 
         if(totgc == numHaps) {
-            std::cerr<<"Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
+            //std::cerr<<"Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
             break;
         }
         if(!p.CALC_NSL && physicalDistance_from_core(i,locus, downstream) >= max_extend) {
-            std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
+            //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
             break;
         }
         if(p.CALC_NSL && abs(i-locus) >= p.MAX_EXTEND_NSL) {
-            std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl;
-            break; //g(xi−1, xi) = 1.
+            //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl;
+            break; 
         }
     }
 
