@@ -11,6 +11,7 @@ class IHS: public SelscanStats{
     public:
         IHS(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){  
             //pool = new ThreadPool(numThreads);
+            this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,false) : p.MAX_EXTEND;
         }
         void main(); //thread_ihs
         void main_old(); //thread_ihs
@@ -30,10 +31,11 @@ class IHS: public SelscanStats{
         
     private:
         static pthread_mutex_t mutex_log;
-      
         double* ciHH0;
         double* ciHH1;
         double* ciHH2;
+
+        int max_extend;
 
         void static thread_ihs(int tid, IHS* ehh_obj);
         //pair<double, double>  static  thread_ihs(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHS* ehh_obj);

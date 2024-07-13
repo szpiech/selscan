@@ -263,25 +263,25 @@ void HapData::readHapData_bitset(string filename)
     }
 
     //PHASE 4: FLIP
-    // for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
-    //     if(hapEntries[locus_after_filter].hapbitset->num_1s > nhaps/2){
-    //         hapEntries[locus_after_filter].flipped = true;
-    //         MyBitset* b1;
-    //         b1 = hapEntries[locus_after_filter].hapbitset;
+    for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+        if(hapEntries[locus_after_filter].hapbitset->num_1s > nhaps/2){
+            hapEntries[locus_after_filter].flipped = true;
+            MyBitset* b1;
+            b1 = hapEntries[locus_after_filter].hapbitset;
 
-    //         //#pragma omp simd
-    //         for(int k = 0; k<b1->nwords; k++){
-    //             b1->bits[k] = ~(b1->bits[k]);   // negate all bits
-    //         }
+            //#pragma omp simd
+            for(int k = 0; k<b1->nwords; k++){
+                b1->bits[k] = ~(b1->bits[k]);   // negate all bits
+            }
 
-    //         //#pragma omp simd
-    //         for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
-    //             b1->clear_bit(i);       // clear the trailing bits
-    //         }
-    //     }else{
-    //         hapEntries[locus_after_filter].flipped = false;
-    //     }
-    // }
+            //#pragma omp simd
+            for(int i = b1->nbits; i<b1->nwords*b1->WORDSZ; i++){
+                b1->clear_bit(i);       // clear the trailing bits
+            }
+        }else{
+            hapEntries[locus_after_filter].flipped = false;
+        }
+    }
 
 
     // // // DEBUG

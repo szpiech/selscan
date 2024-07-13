@@ -316,7 +316,7 @@ void IHH12::main()
     // bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     // int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
 
-    max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,nloci-1,false) : p.MAX_EXTEND;
+    
     
     if (p.CALC_XPNSL){
         for (int i = 0; i < hm->mapData->nloci; i++){
