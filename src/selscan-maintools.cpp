@@ -1338,14 +1338,14 @@ void calc_ihs(void *order)
 
                 //directly calculate ihs, iteratively
                 //Trapezoid rule
-                notDerived_ihh += 0.5 * scale * (geneticPos[currentLocus + 1] - geneticPos[currentLocus]) * (current_notDerived_ehh + previous_notDerived_ehh);
+                notDerived_ihh += 0.5 * scale * (geneticPos[currentLocus] - geneticPos[currentLocus - 1]) * (current_notDerived_ehh + previous_notDerived_ehh);
                 previous_notDerived_ehh = current_notDerived_ehh;
 
                 current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
 
                 //directly calculate ihs, iteratively
                 //Trapezoid rule
-                notAncestral_ihh += 0.5 * scale * (geneticPos[currentLocus + 1] - geneticPos[currentLocus]) * (current_notAncestral_ehh + previous_notAncestral_ehh);
+                notAncestral_ihh += 0.5 * scale * (geneticPos[currentLocus] - geneticPos[currentLocus - 1]) * (current_notAncestral_ehh + previous_notAncestral_ehh);
                 previous_notAncestral_ehh = current_notAncestral_ehh;
             }
 
@@ -1377,9 +1377,11 @@ void calc_ihs(void *order)
                 ihh1[locus] = log10(derived_ihh / notDerived_ihh);
                 ihh2[locus] = log10(ancestral_ihh / notAncestral_ihh);
                 ihs[locus] = (ihh1[locus] > ihh2[locus]) ? ihh1[locus] : 0-ihh2[locus];
+                /*
                 if(isnan(ihs[locus])){
                     cerr << "NAN: " << derived_ihh << " " << notDerived_ihh << " " << ancestral_ihh << " " << notAncestral_ihh << endl;
                 }
+                */
             }
             else{
                 ihh1[locus] = derived_ihh;
