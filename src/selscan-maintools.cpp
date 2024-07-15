@@ -13,6 +13,7 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include <cmath> //isnan and isinf
 #include "selscan-maintools.h"
 pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
@@ -1376,6 +1377,9 @@ void calc_ihs(void *order)
                 ihh1[locus] = log10(derived_ihh / notDerived_ihh);
                 ihh2[locus] = log10(ancestral_ihh / notAncestral_ihh);
                 ihs[locus] = (ihh1[locus] > ihh2[locus]) ? ihh1[locus] : 0-ihh2[locus];
+                if(isnan(ihs[locus])){
+                    cerr << "NAN: " << derived_ihh << " " << notDerived_ihh << " " << ancestral_ihh << " " << notAncestral_ihh << endl;
+                }
             }
             else{
                 ihh1[locus] = derived_ihh;
