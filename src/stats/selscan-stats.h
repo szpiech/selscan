@@ -82,20 +82,23 @@ class SelscanStats {
             return distance;
         }
 
-        int physicalDistance(int currentLocus, bool downstream){
-            int distance;
+        double physicalDistance(int currentLocus, bool downstream){
+            double distance;
             if(downstream){
                 if(currentLocus+1> hm->hapData->nloci-1){
                     std::cerr << "ERROR: wrong locus"<<endl;
                     throw 0;
                 }
-                distance =   hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos;
+                distance =   double(hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
             }else{
                 if(currentLocus-1<0){
                     std::cerr << "ERROR: wrong locus"<<endl;
                     throw 0;
                 }
-                distance =  hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos;
+                distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos);
+                // if(currentLocus == 22){
+                //     cout<<hm->mapData->mapEntries[currentLocus].physicalPos<<" "<<hm->mapData->mapEntries[currentLocus-1].physicalPos<<" "<<distance<<endl;
+                // }
             }
 
             // this should not happen as we already did integrity check previously
@@ -111,9 +114,9 @@ class SelscanStats {
         double geneticDistance(int currentLocus, bool downstream){
             double distance;
             if(downstream){
-                distance =  hm->mapData->mapEntries[currentLocus+1].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos;
+                distance =  double(hm->mapData->mapEntries[currentLocus+1].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos);
             }else{
-                distance = hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[currentLocus-1].geneticPos;
+                distance = double(hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[currentLocus-1].geneticPos);
             }
 
             // this should not happen as we already did integrity check previously

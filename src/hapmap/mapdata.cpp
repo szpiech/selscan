@@ -90,7 +90,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
 
         double Mb = 1000000.0;
         //if (USE_PMAP) 
-        mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
+        mapEntries[locus_after_filter].geneticPos = (long double)(mapEntries[locus_after_filter].physicalPos/Mb);
         //if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos);
 
         locus_after_filter++;
