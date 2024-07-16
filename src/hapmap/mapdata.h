@@ -11,7 +11,7 @@ using namespace std;
 struct MapEntry
 {
     unsigned int physicalPos;
-    double geneticPos;
+    long double geneticPos;
     string locusName;
     string chr;
     int locId;

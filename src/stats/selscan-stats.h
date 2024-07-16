@@ -125,34 +125,34 @@ class SelscanStats {
             return distance;
         }
 
-        double calcFreq(int locus)
-        {
-            double total = 0;
-            double freq = 0;
+        // double calcFreq(int locus)
+        // {
+        //     double total = 0;
+        //     double freq = 0;
 
-            //assuming no missing data in hapmap structure
+        //     //assuming no missing data in hapmap structure
             
-            if(this->hm->hapData->unphased){
-                if(p.LOW_MEM){
-                    throw "Not implemented";
-                    //freq = hapEntries[locus].hapbitset->count_1s();
-                    freq = this->hm->hapData->hapEntries[locus].hapbitset->num_1s;
-                }
-                freq = this->hm->hapData->hapEntries[locus].count1 + this->hm->hapData->hapEntries[locus].count2*2;
-                //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
-                total = this->hm->hapData->nhaps*2;
+        //     if(this->hm->hapData->unphased){
+        //         if(p.LOW_MEM){
+        //             throw "Not implemented";
+        //             //freq = hapEntries[locus].hapbitset->count_1s();
+        //             freq = this->hm->hapData->hapEntries[locus].hapbitset->num_1s;
+        //         }
+        //         freq = this->hm->hapData->hapEntries[locus].count1 + this->hm->hapData->hapEntries[locus].count2*2;
+        //         //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
+        //         total = this->hm->hapData->nhaps*2;
                 
-            }else{
-                freq = this->hm->hapData->hapEntries[locus].positions.size();
-                if(p.LOW_MEM){
-                    //freq = hapEntries[locus].hapbitset->count_1s();
-                    freq = this->hm->hapData->hapEntries[locus].hapbitset->num_1s;
-                }
+        //     }else{
+        //         freq = this->hm->hapData->hapEntries[locus].positions.size();
+        //         if(p.LOW_MEM){
+        //             //freq = hapEntries[locus].hapbitset->count_1s();
+        //             freq = this->hm->hapData->hapEntries[locus].hapbitset->num_1s;
+        //         }
                 
-                total = this->hm->hapData->nhaps;
-            }
-            return freq/total;
-        }
+        //         total = this->hm->hapData->nhaps;
+        //     }
+        //     return freq/total;
+        // }
 };
 
 #endif

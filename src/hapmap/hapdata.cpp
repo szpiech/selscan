@@ -19,7 +19,9 @@ void HapData::initHapData_bitset(int nhaps, unsigned int nloci)
 
     for (unsigned int j = 0; j < nloci; j++){
         hapEntries[j].hapbitset = new MyBitset(nhaps);
-        hapEntries[j].xorbitset = new MyBitset(nhaps);
+        if(!unphased){
+            hapEntries[j].xorbitset = new MyBitset(nhaps);
+        }
     }
     INIT_SUCCESS = true;
 }
@@ -178,21 +180,19 @@ void HapData::readHapData_bitset(string filename)
         }
 
         ss.str(line);
-        this->hapEntries[locus_after_filter].hapbitset->num_1s = num_1s_per_loci[locus];
         
-        vector<bool> current_haps(current_nhaps, false);
-        for (int hap = 0; hap < current_nhaps; hap++)
-        {
-            if(unphased){
-                ss >> allele1;
-                if (allele1 != '0' && allele1 != '1'){
-                    cerr << "ERROR: Alleles must be coded 0/1 only.\n";
-                    cerr << allele1 << endl;
-                    throw 0;
-                }
-                current_haps[hap] = (allele1 == '1');
-            }
-            else{
+        
+        if(unphased){
+            line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
+                return std::isspace(static_cast<unsigned char>(c));
+            }), line.end());
+            //cout<<line<<endl;
+        }
+
+        if(!unphased){
+            this->hapEntries[locus_after_filter].hapbitset->num_1s = num_1s_per_loci[locus];
+            for (int hap = 0; hap < current_nhaps; hap++)
+            {   
                 ss >> allele1;
                 if (allele1 != '0' && allele1 != '1')
                 {
@@ -204,35 +204,54 @@ void HapData::readHapData_bitset(string filename)
                 }
             }
         }
-
+        
         if (unphased){
-            cerr<<"Unphased lowmem not implemented"<<endl;
-            throw 0;
+            // cerr<<"Unphased lowmem not implemented"<<endl;
+            // throw 0;
             if (current_nhaps % 2 != 0)
             {
                 cerr << "ERROR:  Number of haplotypes must be even for unphased.\n";
                 throw 0;
             }
 
-            for (int hap = 0; hap < current_nhaps/2; hap++){ 
-                if (hap % 2 == 1){
-                    if (current_haps[hap]  && current_haps[hap*2]){ 
-                        //data->data[(hap-1)/2][locus] = '2';
-                        this->hapEntries[locus].positions2.push_back(hap);
-                        //this->hapEntries[locus].positions.push_back(2*hap);
-                    }
-                    else if ( (current_haps[hap] && !current_haps[hap*2]) || (!current_haps[hap] && current_haps[hap*2]) ){
-                        //data->data[(hap-1)/2][locus] = '1';
-                        this->hapEntries[locus].positions.push_back(hap);
-                        //this->hapEntries[locus].positions.push_back(2*hap+1);
+            //    if (hap % 2 == 1){
+            //         if (allele1 == '1' && data->data[(hap-1)/2][locus] == '1'){
+            //             data->data[(hap-1)/2][locus] = '2';
+            //         }
+            //         else if (allele1 == '1' && data->data[(hap-1)/2][locus] == '0') {
+            //             data->data[(hap-1)/2][locus] = '1';
+            //         }
+            //     }
+            //     else{
+            //         data->data[hap/2][locus] = allele1;
+            //     }
 
+            //0 1 2 3 4 5
+            //1 1 0 1 0 0
+
+            hapEntries[locus_after_filter].xorbitset = new MyBitset(current_nhaps/2);
+            this->hapEntries[locus_after_filter].xorbitset->num_1s = 0;
+            this->hapEntries[locus_after_filter].hapbitset->num_1s = 0;
+
+            for (int hap = 0; hap < current_nhaps; hap++){ 
+                //xorbitset holds both 1 and 2
+                if (hap % 2 == 0){
+                    if(line[hap]=='1'  && line[hap+1]=='1'){
+                        this->hapEntries[locus_after_filter].xorbitset->set_bit(hap/2); // 2
+                        this->hapEntries[locus_after_filter].xorbitset->num_1s += 1;
+                    }
+                    else if ( (line[hap]=='1' && line[hap+1]=='0') || (line[hap]=='0' && line[hap+1]=='1') ){ // ==1
+                        this->hapEntries[locus_after_filter].hapbitset->set_bit(hap/2); // 1
+                        this->hapEntries[locus_after_filter].hapbitset->num_1s += 1;
+
+                        // this->hapEntries[locus_after_filter].xorbitset->set_bit(hap/2); // 1
+                        // this->hapEntries[locus_after_filter].xorbitset->num_1s += 1;
                     }
                 }
-                // else{
-                //     data->data[hap/2][locus] = allele1;
-                // }
             }
         }
+
+        
         locus_after_filter++;
         getline(fin, line);
     }
@@ -241,26 +260,29 @@ void HapData::readHapData_bitset(string filename)
 
 
     //PHASE 3: XOR
-    for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
-        if(locus_after_filter==0){
-            MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
-            for (int k = 0; k < b1->nwords; k++) {
-                hapEntries[locus_after_filter].xorbitset->bits[k] = b1->bits[k] ;
-            }
-            hapEntries[locus_after_filter].xorbitset->num_1s = b1->num_1s;
-        }else{
-            MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
-            MyBitset* b2 = (hapEntries[locus_after_filter-1].hapbitset);
+    if(!unphased){
+        for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+            if(locus_after_filter==0){
+                MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
+                for (int k = 0; k < b1->nwords; k++) {
+                    hapEntries[locus_after_filter].xorbitset->bits[k] = b1->bits[k] ;
+                }
+                hapEntries[locus_after_filter].xorbitset->num_1s = b1->num_1s;
+            }else{
+                MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
+                MyBitset* b2 = (hapEntries[locus_after_filter-1].hapbitset);
 
-            int sum = 0;
-            for (int k = 0; k < b1->nwords; k++) {
-                hapEntries[locus_after_filter].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
-                sum += __builtin_popcountll(hapEntries[locus_after_filter].xorbitset->bits[k]);
+                int sum = 0;
+                for (int k = 0; k < b1->nwords; k++) {
+                    hapEntries[locus_after_filter].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
+                    sum += __builtin_popcountll(hapEntries[locus_after_filter].xorbitset->bits[k]);
+                }
+                hapEntries[locus_after_filter].xorbitset->num_1s = sum;
+                
             }
-            hapEntries[locus_after_filter].xorbitset->num_1s = sum;
-            
         }
     }
+    
 
     //PHASE 4: FLIP
     /*
@@ -287,10 +309,15 @@ void HapData::readHapData_bitset(string filename)
 
 
     // // // DEBUG
-    // for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+    // for(int locus_after_filter = 0; locus_after_filter < 1; locus_after_filter++){
+    //     // cout<<locus_after_filter<<"::: ";
+    //     // hapEntries[locus_after_filter].hapbitset->print_pos();
+
     //     cout<<locus_after_filter<<"::: ";
-    //     hapEntries[locus_after_filter].hapbitset->print_pos();
+    //     hapEntries[locus_after_filter].xorbitset->print_pos();
+
     // }
+    // exit(1);
 }
 
 void HapData::readHapDataVCF_bitset(string filename)
@@ -680,7 +707,10 @@ void HapData::readHapDataVCF(string filename)
             skipcount++;
         } else {
             number_of_1s_per_loci.push_back(number_of_1s);
-            number_of_2s_per_loci.push_back(number_of_2s);
+            if(unphased){
+                number_of_2s_per_loci.push_back(number_of_2s);
+            }
+            
         }
 
         /*********/
@@ -838,7 +868,7 @@ void HapData::readHapDataVCF(string filename)
                         hapEntries[nloci_after_filtering].positions.push_back(2 * field);
                     }
                     if(allele2 == '1'){
-                            hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
+                        hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
                     }
                     //}
                 }
@@ -949,6 +979,21 @@ void HapData::readHapDataVCF(string filename)
 
     fin.close();
 
+        // // // DEBUG
+    // for(int locus_after_filter = 0; locus_after_filter < 1; locus_after_filter++){
+    //     cout<<locus_after_filter<<"::: ";
+    //     for(int i=0; i< hapEntries[locus_after_filter].positions.size(); i++){
+    //         cout<<hapEntries[locus_after_filter].positions[i]<<" ";
+    //     }
+    //     cout<<endl;
+        
+    //     cout<<locus_after_filter<<":::*";
+    //     for(int i=0; i< hapEntries[locus_after_filter].positions2.size(); i++){
+    //         cout<<hapEntries[locus_after_filter].positions2[i]<<" ";
+    //     }
+    //     cout<<endl;
+    // }
+    //  exit(1);
 }
 
 void HapData::readHapDataTPED(string filename)

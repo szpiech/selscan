@@ -89,7 +89,8 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         mapEntries[locus_after_filter].locId = locus_before_filter;
 
         double Mb = 1000000.0;
-        if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
+        //if (USE_PMAP) 
+        mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
         //if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos);
 
         locus_after_filter++;
@@ -260,8 +261,8 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
         locus_query_map[to_string(mapEntries[locus_after_filter].physicalPos)] = locus_after_filter;
         mapEntries[locus_after_filter].locId = locus_before_filter;
 
-        mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
-
+        mapEntries[locus_after_filter].geneticPos = (long double)(mapEntries[locus_after_filter].physicalPos)/Mb;
+        //cout<<mapEntries[locus_after_filter].geneticPos<<" "<<mapEntries[locus_after_filter].physicalPos<<endl;
         getline(fin, line);
         locus_after_filter++;
     }

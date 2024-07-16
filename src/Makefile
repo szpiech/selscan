@@ -4,7 +4,8 @@
 
 #for osx/macos-arm systems
 CC = g++-14 -std=c++17
-G++FLAG =  -O3  -m64  -march=native -lm -ftree-vectorize
+G++FLAG = -g -O3  -m64  -march=native -lm -ftree-vectorize
+#-Og -g
 # -fsanitize=address -static-libasan
 #-mmmx -msse -msse2 -Og
 LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking

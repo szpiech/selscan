@@ -166,8 +166,8 @@ class MyBitset{
 
     void set_bit(int bit){
         if(bit > nbits-1){
-            cout << "Error: bit out of range" << endl;
-            throw 0;
+            cerr << "Error: bit out of range: " << bit<< " "<<nbits-1 << endl;
+            throw (EXIT_FAILURE);
         }
         bits[bit/WORDSZ] |= (uint64_t) 1 << (bit % WORDSZ);
     }
@@ -178,8 +178,8 @@ class MyBitset{
 
     bool get_bit(int bit){
         if(bit > nbits-1){
-            cout << "Error: bit out of range" << endl;
-            throw 0;
+            cerr << "Error: bit out of range: " << bit<< " "<<nbits-1 << endl;
+            throw (EXIT_FAILURE);
         }
         return (bits[bit/WORDSZ] & ((uint64_t) 1 << (bit % WORDSZ))) != 0;
     }

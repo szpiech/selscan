@@ -190,7 +190,7 @@ const string HELP_QWIN = "When calculating EHH, this is the length of the window
 \tin each direction from the query locus.";
 
 const string ARG_MAX_EXTEND = "--max-extend";
-const int DEFAULT_MAX_EXTEND = 1000000;
+const int DEFAULT_MAX_EXTEND = 1000000;//1000000
 const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
 \tSet <= 0 for no restriction.";
 

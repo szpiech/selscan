@@ -32,6 +32,7 @@ struct HapEntry
 };
 
 
+
 class HapData
 {
 public:
@@ -199,9 +200,14 @@ public:
             freq = hapEntries[locus].count1 + hapEntries[locus].count2*2;
             //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
             total = this->nhaps*2;
+
+            if(LOW_MEM){
+                //freq = hapEntries[locus].hapbitset->count_1s();
+                freq = hapEntries[locus].hapbitset->num_1s + (hapEntries[locus].xorbitset->num_1s-hapEntries[locus].hapbitset->num_1s)*2;
+            }
         }else{
             freq = hapEntries[locus].positions.size();
-            if(false){
+            if(LOW_MEM){
                 //freq = hapEntries[locus].hapbitset->count_1s();
                 freq = hapEntries[locus].hapbitset->num_1s;
             }
