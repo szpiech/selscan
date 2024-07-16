@@ -202,8 +202,8 @@ public:
             total = this->nhaps*2;
 
             if(LOW_MEM){
-                //freq = hapEntries[locus].hapbitset->count_1s();
-                freq = hapEntries[locus].hapbitset->num_1s + (hapEntries[locus].xorbitset->num_1s-hapEntries[locus].hapbitset->num_1s)*2;
+                //freq = hapEntries[locus].hapbitset->num_1s + (hapEntries[locus].xorbitset->num_1s-hapEntries[locus].hapbitset->num_1s)*2;
+                freq = hapEntries[locus].hapbitset->num_1s + (hapEntries[locus].xorbitset->num_1s)*2;
             }
         }else{
             freq = hapEntries[locus].positions.size();
@@ -212,7 +212,6 @@ public:
                 freq = hapEntries[locus].hapbitset->num_1s;
             }
                 
-
             total = this->nhaps;
         }
         
