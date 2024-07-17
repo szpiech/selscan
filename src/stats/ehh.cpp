@@ -1,7 +1,5 @@
 #include "ehh.h"
 
-
-
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
