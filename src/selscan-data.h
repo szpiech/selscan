@@ -135,8 +135,7 @@ public:
         
         mapData = std::make_unique<MapData>(); 
         hapData = std::make_unique<HapData>();
-       
-
+        
         if (CALC_XP || CALC_XPNSL){
             hapData2 = std::make_unique<HapData>();
             hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
@@ -170,11 +169,11 @@ public:
                     hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
                     hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
 
-                    // hapData->readHapDataVCF(vcfFilename);
-                    // hapData2->readHapDataVCF(vcfFilename2);
+                    hapData->readHapDataVCF(vcfFilename);
+                    hapData2->readHapDataVCF(vcfFilename2);
 
-                    handleData(vcfFilename, "VCF", *hapData);
-                    handleData(vcfFilename2, "VCF", *hapData2);
+                    // handleData(vcfFilename, "VCF", *hapData);
+                    // handleData(vcfFilename2, "VCF", *hapData2);
 
 
                     if (hapData->nloci != hapData2->nloci)
@@ -184,8 +183,9 @@ public:
                     }
                 }else{
                     hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
-                    //hapData->readHapDataVCF(vcfFilename);
-                    handleData(vcfFilename, "VCF", *hapData);
+                    hapData->readHapDataVCF(vcfFilename);
+
+                    // handleData(vcfFilename, "VCF", *hapData);
 
                 }
                 if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
@@ -202,11 +202,11 @@ public:
                     hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
                     hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
 
-                    // hapData->readHapData(hapFilename);
-                    // hapData2->readHapData(hapFilename2);
+                    hapData->readHapData(hapFilename);
+                    hapData2->readHapData(hapFilename2);
 
-                    handleData(hapFilename, "HAP", *hapData);
-                    handleData(hapFilename2, "HAP", *hapData2);
+                    // handleData(hapFilename, "HAP", *hapData);
+                    // handleData(hapFilename2, "HAP", *hapData2);
 
                     if (hapData->nloci != hapData2->nloci)
                     {
@@ -215,8 +215,9 @@ public:
                     }
                 }else{
                     hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
-                    //hapData->readHapData(hapFilename);
-                    handleData(hapFilename, "HAP", *hapData);
+                    hapData->readHapData(hapFilename);
+
+                    // handleData(hapFilename, "HAP", *hapData);
                 }
                 mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
             }
@@ -235,7 +236,6 @@ public:
 
         (*(flog))<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
         //mapData.print();
-
 
         // Check if map is in order
         for (int i = 1; i < mapData->nloci; i++) {
