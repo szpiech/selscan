@@ -17,7 +17,8 @@ using namespace std;
 
     init_based_on_lines(); 
     populate_positions_skipqueue();
-    do_xor();
+    //do_xor();
+    hapData->xor_for_phased_and_unphased();
 }
 
 void VCFSerialReader::get_line_start_positions(){
@@ -136,7 +137,8 @@ void VCFSerialReader::populate_positions_skipqueue_process_chunk(){
             if( num1s*1.0/hapData->nhaps < hapData->MAF || 1-num1s*1.0/hapData->nhaps < hapData->MAF ){
                 skiplist.push(locus);
                 vector<unsigned int>().swap(positions[locus]); //clear the vector
-             }  
+                vector<unsigned int>().swap(positions2[locus]); //clear the vector
+            }  
         }
         
         locus++;
@@ -181,7 +183,23 @@ void VCFSerialReader::populate_positions_skipqueue() {
 
    if(!hapData->SKIP){
         for(int i = 0; i<= hapData->nloci-1; i++){ // i: locus_before_filter
-            hapData->hapEntries[i].positions = positions[i];   
+            if(hapData->LOW_MEM){
+                for(const int& set_bit_position: positions[i]){
+                    hapData->hapEntries[i].hapbitset->set_bit(set_bit_position); 
+                    hapData->hapEntries[i].hapbitset->num_1s++;
+                }
+                if(hapData->unphased){
+                    for(const int& set_bit_position: positions2[i]){
+                        hapData->hapEntries[i].xorbitset->set_bit(set_bit_position); 
+                        hapData->hapEntries[i].xorbitset->num_1s++;
+                    }
+                }
+            }else{
+                hapData->hapEntries[i].positions = positions[i];  
+                if(hapData->unphased){
+                    hapData->hapEntries[i].positions2 = positions2[i];  
+                }
+            }
         }
     }else{
         int loc_after_skip = 0;
@@ -199,7 +217,25 @@ void VCFSerialReader::populate_positions_skipqueue() {
                     continue;
                 }  
             }
-            hapData->hapEntries[loc_after_skip++].positions = positions[i];   
+            if(hapData->LOW_MEM){
+                for(const int& set_bit_position: positions[i]){
+                    hapData->hapEntries[loc_after_skip].hapbitset->set_bit(set_bit_position); 
+                    hapData->hapEntries[loc_after_skip].hapbitset->num_1s++;
+                }
+                if(hapData->unphased){
+                    for(const int& set_bit_position: positions2[i]){
+                        hapData->hapEntries[loc_after_skip].xorbitset->set_bit(set_bit_position); 
+                        hapData->hapEntries[loc_after_skip].xorbitset->num_1s++;
+                    }
+                }
+                loc_after_skip++;
+            }else{
+                hapData->hapEntries[loc_after_skip].positions = positions[i];   
+                if(hapData->unphased){
+                    hapData->hapEntries[loc_after_skip].positions2 = positions2[i];  
+                }
+                loc_after_skip++;
+            }   
         }
     }
     

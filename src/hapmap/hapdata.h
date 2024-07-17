@@ -7,36 +7,27 @@
 #include <queue>
 #include <iostream>
 
-
-
-
 using namespace std;
 
 struct HapEntry
 {
     bool flipped = false;
-    vector <unsigned int> xors;
-
-    vector <unsigned int> xors1; //unphased
-    vector <unsigned int> xors2; //unphased
-
-    vector<unsigned int> g[3];
-
     vector <unsigned int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
-    int count1 = 0;
-    int count2 = 0;
+    vector <unsigned int> xors;
+    
+    // for unphased
+    vector <unsigned int> g[3];
     vector <unsigned int> positions2; // 0-based indexing of allele "2"
 
+    // for LOW_MEM
     MyBitset* hapbitset;
     MyBitset* xorbitset;
 };
 
-
-
 class HapData
 {
 public:
-    void do_xor(); //experimental
+    void xor_for_phased_and_unphased(); //experimental
 
     struct HapEntry* hapEntries = NULL; //vector of haplotype entries
     int nloci;
@@ -57,7 +48,6 @@ public:
     bool SKIP;
     int num_threads;
     bool LOW_MEM = false;
-    
     queue<int> skipQueue;
     
     ofstream* flog;
@@ -79,10 +69,8 @@ public:
     void readHapDataTPED(string filename);
     void readHapDataVCF(string filename);
 
-    void initHapData_bitset(int nhaps, unsigned int nloci);
-    void releaseHapData_bitset();
-    void readHapDataVCF_bitset(string filename);
-    void readHapData_bitset(string filename);
+    // void readHapDataVCF_bitset(string filename);
+    // void readHapData_bitset(string filename);
 
     void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog, bool LOW_MEM){
         this->unphased = UNPHASED;
@@ -182,63 +170,50 @@ public:
         }
         */
     }
-    //double calcFreq(int locus, bool unphased)
+
+
     double calcFreq(int locus)
     {
+        //assuming no flip
         double total = 0;
         double freq = 0;
-
-        //assuming no missing data in hapmap structure
-        
         if(this->unphased){
-            freq = hapEntries[locus].count1 + hapEntries[locus].count2*2;
-            //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
-            total = this->nhaps*2;
-
             if(LOW_MEM){
                 //freq = hapEntries[locus].hapbitset->num_1s + (hapEntries[locus].xorbitset->num_1s-hapEntries[locus].hapbitset->num_1s)*2;
                 freq = hapEntries[locus].hapbitset->num_1s + (hapEntries[locus].xorbitset->num_1s)*2;
+            }else{
+                freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
             }
+            total = this->nhaps*2;
         }else{
             freq = hapEntries[locus].positions.size();
             if(LOW_MEM){
                 //freq = hapEntries[locus].hapbitset->count_1s();
                 freq = hapEntries[locus].hapbitset->num_1s;
             }
-                
             total = this->nhaps;
         }
-        
-
-        // for (int hap = 0; hap < hapData.nhaps; hap++)
-        // {
-        //     if (hapData->data[hap][locus] != MISSING_CHAR)
-        //     {
-        //         if (hapData->data[hap][locus] == '1') freq += 1;
-        //         else if (hapData->data[hap][locus] == '2') freq += 2;
-                
-        //         if (unphased) total+=2;
-        //         else total++;
-        //     }
-        // }
         return (freq / total);
     }
 
     inline unsigned int get_n_c0(int locus)
     {
-        unsigned int non_flipped_1s = 0;
-        non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
-        unsigned int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
-        return result;
-        //return hapEntries[locus].count1;
+        return LOW_MEM? nhaps - hapEntries[locus].hapbitset->num_1s: nhaps - hapEntries[locus].positions.size();
+        // // if flip was enabled
+        // unsigned int non_flipped_1s = 0;
+        // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+        // unsigned int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
+        // return result;
     }
+
     inline unsigned int get_n_c1(int locus)
     {
-        unsigned int non_flipped_1s = 0;
-        non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
-        unsigned int result = hapEntries[locus].flipped ? nhaps - non_flipped_1s : non_flipped_1s;
-        return result;
-        //return hapEntries[locus].count1;
+        return LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+        // // if flip was enabled
+        // unsigned int non_flipped_1s = 0;
+        // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+        // unsigned int result = hapEntries[locus].flipped ? nhaps - non_flipped_1s : non_flipped_1s;
+        // return result;
     }
 
 

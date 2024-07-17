@@ -135,7 +135,7 @@ public:
         
         mapData = std::make_unique<MapData>(); 
         hapData = std::make_unique<HapData>();
-        hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+       
 
         if (CALC_XP || CALC_XPNSL){
             hapData2 = std::make_unique<HapData>();
@@ -145,123 +145,88 @@ public:
 
         auto start_reading = std::chrono::high_resolution_clock::now();
 
-        if(p.LOW_MEM){
-            try
+        
+        try
+        {
+            if (TPED)
             {
-                if (VCF) {
-                    hapData->readHapDataVCF_bitset(vcfFilename);
-                    if (CALC_XP || CALC_XPNSL)
+                hapData->readHapDataTPED(tpedFilename);
+                //handleData(tpedFilename, "TPED", *hapData);
+                if (CALC_XP || CALC_XPNSL)
+                {
+                    hapData2->readHapDataTPED(tpedFilename);
+                    //handleData(tpedFilename2, "TPED", *hapData2);
+                    if (hapData->nloci != hapData2->nloci)
                     {
-                        hapData2->readHapDataVCF_bitset(vcfFilename2);
-                        if (hapData->nloci != hapData2->nloci)
-                        {
-                            std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
-                            return 1;
-                        }
-                    }
-                    if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
-                        mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
-                    }
-                    else{//Load physical positions
-                        mapData->readMapDataVCF(vcfFilename, hapData->nloci, hapData->skipQueue);
+                        std::cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
+                        return 1;
                     }
                 }
-                else
+                mapData->readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps, USE_PMAP, hapData->skipQueue);
+            }
+            else if (VCF) {
+                if (CALC_XP || CALC_XPNSL)
                 {
-                    if (CALC_XP || CALC_XPNSL)
-                    {
-                        hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM); // we want SKIP to be false
-                        hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM); // we want SKIP to be false
+                    hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
+                    hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
 
-                        hapData->readHapData_bitset(hapFilename);
-                        hapData2->readHapData_bitset(hapFilename2);
-                        if (hapData->nloci != hapData2->nloci)
-                        {
-                            std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
-                            return 1;
-                        }
-                    }else{
-                        hapData->readHapData_bitset(hapFilename);
+                    // hapData->readHapDataVCF(vcfFilename);
+                    // hapData2->readHapDataVCF(vcfFilename2);
+
+                    handleData(vcfFilename, "VCF", *hapData);
+                    handleData(vcfFilename2, "VCF", *hapData2);
+
+
+                    if (hapData->nloci != hapData2->nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
+                        return 1;
                     }
+                }else{
+                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    //hapData->readHapDataVCF(vcfFilename);
+                    handleData(vcfFilename, "VCF", *hapData);
+
+                }
+                if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
                     mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
-                    
+                }
+                else{//Load physical positions
+                    mapData->readMapDataVCF(vcfFilename, hapData->nloci, hapData->skipQueue);
                 }
             }
-            catch (...)
+            else
             {
-                return 1;
-            }
-        }else{
-            try
-            {
-                if (TPED)
+                if (CALC_XP || CALC_XPNSL)
                 {
-                    handleData(tpedFilename, "TPED", *hapData);
-                    if (CALC_XP || CALC_XPNSL)
-                    {
-                        handleData(tpedFilename2, "TPED", *hapData2);
-                        if (hapData->nloci != hapData2->nloci)
-                        {
-                            std::cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
-                            return 1;
-                        }
-                    }
-                    mapData->readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps, USE_PMAP, hapData->skipQueue);
-                }
-                else if (VCF) {
-                    if (CALC_XP || CALC_XPNSL)
-                    {
-                        hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
-                        hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
-                        handleData(vcfFilename, "VCF", *hapData);
-                        handleData(vcfFilename2, "VCF", *hapData2);
-                        if (hapData->nloci != hapData2->nloci)
-                        {
-                            std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
-                            return 1;
-                        }
-                    }else{
-                        hapData->readHapDataVCF(vcfFilename);
-                    }
-                    if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
-                        mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
-                    }
-                    else{//Load physical positions
-                        mapData->readMapDataVCF(vcfFilename, hapData->nloci, hapData->skipQueue);
-                    }
-                }
-                else
-                {
-                    if (CALC_XP || CALC_XPNSL)
-                    {
-                        hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
-                        hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
 
-                        // hapData.readHapData(hapFilename);
-                        // hapData2.readHapData(hapFilename2);
+                    // hapData->readHapData(hapFilename);
+                    // hapData2->readHapData(hapFilename2);
 
-                        handleData(hapFilename, "HAP", *hapData);
-                        handleData(hapFilename2, "HAP", *hapData2);
+                    handleData(hapFilename, "HAP", *hapData);
+                    handleData(hapFilename2, "HAP", *hapData2);
 
-                        if (hapData->nloci != hapData2->nloci)
-                        {
-                            std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
-                            return 1;
-                        }
-                    }else{
-                        //hapData.readHapData(hapFilename);
-                        handleData(hapFilename, "HAP", *hapData);
+                    if (hapData->nloci != hapData2->nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
+                        return 1;
                     }
-                    mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
-                    
+                }else{
+                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    //hapData->readHapData(hapFilename);
+                    handleData(hapFilename, "HAP", *hapData);
                 }
-            }
-            catch (exception& e)
-            {
-                cerr << "ERROR: " << e.what() << endl;
-                return 1;
+                mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
             }
         }
+        catch (exception& e)
+        {
+            cerr << "ERROR: " << e.what() << endl;
+            return 1;
+        }
+        
 
         auto end_reading = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> read_duration =  end_reading - start_reading;
@@ -311,18 +276,19 @@ public:
 
 
     void handleData(string filename, string EXT, HapData& hapData){
-        if(hapData.unphased){
-            if(EXT == "VCF"){
-                hapData.readHapDataVCF(filename);
-            }else if(EXT == "HAP"){
-                hapData.readHapData(filename);
-            }else if(EXT == "TPED"){
-                hapData.readHapDataTPED(filename);
-            }
-        }else{
-            if(EXT == "VCF"){
-                hapData.readHapDataVCF(filename);
+        if(EXT == "VCF"){
+            //hapData.readHapDataVCF(filename);
+            VCFSerialReader dataReader(filename, &hapData);
+        }else if(EXT == "HAP"){
+            //hapData.readHapData(filename);
+            HapSerialReader dataReader(filename, &hapData);
+        }else if(EXT == "TPED"){
+            hapData.readHapDataTPED(filename);
+        }
 
+        if(false){
+            if(EXT == "VCF"){
+                hapData.readHapDataVCF(filename);
                 // if(is_gzipped(filename)){
                 //     cout<<"Gzipped file: so reading in serial"<<endl;
                 //     VCFSerialReader dataReader(filename, &hapData);
@@ -380,7 +346,10 @@ public:
                 }
                 cout<<"### Count of flipped loci: "<<count_flip<<endl;
             }
+
         }
+        
+        
     }
 
 };

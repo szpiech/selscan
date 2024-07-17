@@ -116,20 +116,17 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
     }
 
 
-    vector<unsigned int>* v1;
-    vector<unsigned int>* v2;
-    MyBitset* vb1;
-    MyBitset* vb2;
-
-
-
+    vector<unsigned int>* v1 = &hm->hapData->hapEntries[locus].positions;
+    vector<unsigned int>* v2 = &hm->hapData2->hapEntries[locus].positions;
+    MyBitset* vb1 = hm->hapData->hapEntries[locus].hapbitset;
+    MyBitset* vb2 = hm->hapData2->hapEntries[locus].hapbitset;
 
     if(p.LOW_MEM){
-        p1->n_c[1] = hm->hapData->hapEntries[locus].hapbitset->num_1s;
-        p2->n_c[1] = hm->hapData2->hapEntries[locus].hapbitset->num_1s;
+        p1->n_c[1] = vb1->num_1s;
+        p2->n_c[1] = vb2->num_1s;
     }else{
-        p1->n_c[1] = hm->hapData->hapEntries[locus].positions.size();
-        p2->n_c[1] = hm->hapData2->hapEntries[locus].positions.size();
+        p1->n_c[1] = (*v1).size();
+        p2->n_c[1] = (*v2).size();
     }
     
     p1->n_c[0] = p1->nhaps - p1->n_c[1];
@@ -162,12 +159,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         p1->totgc+=2;
 
         if(p.LOW_MEM){
-            ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
+            ACTION_ON_ALL_SET_BITS(vb1, {
                 p1->group_id[set_bit_pos] = 1;
                 pooled->group_id[set_bit_pos] = 1;
             });
         }else{
-            for (int set_bit_pos : hm->hapData->hapEntries[locus].positions){
+            for (int set_bit_pos : *(v1)){
                 p1->group_id[set_bit_pos] = 1;
                 pooled->group_id[set_bit_pos] = 1;
             }
@@ -183,12 +180,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         p2->totgc+=2;
 
         if(p.LOW_MEM){
-            ACTION_ON_ALL_SET_BITS(hm->hapData2->hapEntries[locus].hapbitset, {
+            ACTION_ON_ALL_SET_BITS(vb2, {
                 p2->group_id[set_bit_pos] = 1;
                 pooled->group_id[set_bit_pos + p1->nhaps] = 1;
             });
         }else{
-            for (int set_bit_pos : hm->hapData2->hapEntries[locus].positions){
+            for (int set_bit_pos : (*v2)){
                 p2->group_id[set_bit_pos] = 1;
                 pooled->group_id[set_bit_pos + p1->nhaps] = 1;
             }
@@ -206,17 +203,17 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
     }
 
         // if(p.LOW_MEM){
-        //     ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
+        //     ACTION_ON_ALL_SET_BITS(vb1, {
         //         pooled->group_id[set_bit_pos] = 1;
         //     });
-        //     ACTION_ON_ALL_SET_BITS(hm->hapData2->hapEntries[locus].hapbitset, {
+        //     ACTION_ON_ALL_SET_BITS(vb2, {
         //         pooled->group_id[set_bit_pos + p1->nhaps] = 1;
         //     });
         // }else{
-        //     for (int set_bit_pos : hm->hapData->hapEntries[locus].positions){
+        //     for (int set_bit_pos : *(v1)){
         //         pooled->group_id[set_bit_pos] = 1;
         //     }
-        //     for (int set_bit_pos : hm->hapData2->hapEntries[locus].positions){
+        //     for (int set_bit_pos : (*v1)){
         //         pooled->group_id[set_bit_pos + p1->nhaps] = 1;
         //     }
         // }
@@ -290,7 +287,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         size_t pos_size;
         vector<unsigned int>* v; 
         MyBitset* vb; 
-
 
         if(p.LOW_MEM){
             xor_size = hm->hapData->hapEntries[i_xor].xorbitset->num_1s;

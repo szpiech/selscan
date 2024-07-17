@@ -2,6 +2,9 @@
 
 #include <sstream>
 #include <algorithm>
+#include "../selscan-cli.h"
+#include <cmath>
+
 using namespace std;
 
 HapParallelReader::HapParallelReader(std::string filename, HapData* hapDataPtr) : filename(filename), hapData(*hapDataPtr){

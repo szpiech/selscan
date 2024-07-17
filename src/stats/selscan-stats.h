@@ -63,7 +63,7 @@ class SelscanStats {
             return (n*n - n)/2;
         }
 
-        int physicalDistance_from_core(int currentLocus, int core, bool downstream){
+        double physicalDistance_from_core(int currentLocus, int core, bool downstream){
             int distance;
             if(downstream){
                 distance =  hm->mapData->mapEntries[core].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos;

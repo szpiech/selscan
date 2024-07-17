@@ -9,7 +9,6 @@
 #include <mutex>
 #include <chrono>
 
-
 class HapSerialReader   {
 public:
     std::string filename;
@@ -37,7 +36,7 @@ private:
 
     queue<int> skiplist;
     vector<vector<unsigned int> > positions;
-    vector<unsigned int> * positions2;
+    vector<vector<unsigned int> > positions2;
 
     /// Return the number of 1s and 2s in the VCF file given the thread id
     void populate_positions_skipqueue_process_chunk();  

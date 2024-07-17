@@ -8,7 +8,6 @@
 #include <mutex>
 #include <chrono>
 #include "../hapmap/hapdata.h"
-#include "data_reader.h"
 
 class VCFParallelReader {
 public:

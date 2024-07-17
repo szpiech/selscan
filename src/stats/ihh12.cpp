@@ -277,7 +277,7 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
             m[old_group_id].push_back(set_bit_pos);
         }
         updateEHH_from_split(m, &ehhdata);
-
+        m.clear();
 
         //DEBUG:: if(!downstream) cout<<"before ihh12"<<ihh12[locus]<<endl;
         if(p.ALT){
@@ -290,12 +290,15 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
         double previous_ehh1 = ehhdata.prev_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
         double current_ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
         double previous_ehh12 = ehhdata.prev_ehh12_before_norm / twice_num_pair(ehhdata.nhaps);
-        if(!downstream) cout<<current_ehh1<<" "<<previous_ehh1<<" "<<current_ehh12<<" "<<previous_ehh12<<" "<<ihh12[locus] <<" "<<scale * distance<< endl;
+        //if(!downstream) cout<<current_ehh1<<" "<<previous_ehh1<<" "<<current_ehh12<<" "<<previous_ehh12<<" "<<ihh12[locus] <<" "<<scale * distance<< endl;
 
         ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
         ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 
-        m.clear();
+        
+
+        if (physicalDistance_from_core(i, locus, downstream) >= max_extend) break;
+        
     }
     if(skipLocus==true){
         ihh12[locus] = MISSING;
@@ -316,13 +319,6 @@ void IHH12::main()
     // bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
     // int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
 
-    
-    
-    if (p.CALC_XPNSL){
-        for (int i = 0; i < hm->mapData->nloci; i++){
-            hm->mapData->mapEntries[i].geneticPos = i;
-        }
-    }
 
     std::cerr << "Starting iHH12 calculations."<<endl;
     std::unordered_map<unsigned int, std::vector<unsigned int> >* map_per_thread = new std::unordered_map<unsigned int, std::vector<unsigned int> > [numThreads];
@@ -376,7 +372,7 @@ void IHH12::calc_stat_at_locus(int locus, unordered_map<unsigned int, vector<uns
     //DEBUG: if(locus==239){
     ihh12[locus] = 0;
     calc_ehh_unidirection(locus, m, true);
-    ihh12[locus] = 0;
+    // ihh12[locus] = 0;
     calc_ehh_unidirection(locus, m, false);
 }
 

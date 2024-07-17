@@ -17,7 +17,8 @@ using namespace std;
 
     init_based_on_lines(); 
     populate_positions_skipqueue();
-    do_xor();
+    hapData->xor_for_phased_and_unphased();
+    //do_xor();
 }
 
 
@@ -62,6 +63,7 @@ void HapSerialReader::populate_positions_skipqueue_process_chunk(){
         std::string word;
         int word_count = 0;
         
+        char prev_allele;
         while (ss >> word) {
             int hapId = word_count;
             ++word_count;
@@ -75,10 +77,14 @@ void HapSerialReader::populate_positions_skipqueue_process_chunk(){
             }
 
             if(hapData->unphased){
-                cerr<<"Unphased for hapdata not IMPLEMENTED."<<endl;
-                throw 1;
-            }
-            else{
+                if (hapId % 2 == 1){
+                    if(prev_allele=='1'  && allele1=='1'){
+                        positions2[locus].push_back((hapId-1)/2);
+                    }else if ( (prev_allele=='1' && allele1=='0') || (prev_allele=='0' && allele1=='1') ){ // ==1
+                        positions[locus].push_back((hapId-1)/2);
+                    }
+                }
+            }else{  // PHASED
                 if(allele1 == '1'){
                     positions[locus].push_back(hapId);
                 }
@@ -87,6 +93,8 @@ void HapSerialReader::populate_positions_skipqueue_process_chunk(){
             if(locus == 0){
                 hapData->nhaps = hapData->unphased?(word_count/2):(word_count);
             }
+
+            prev_allele = allele1;
 
         }
 
@@ -114,9 +122,7 @@ void HapSerialReader::populate_positions_skipqueue() {
     //this way you avoid the queueu
 
     positions.resize(hapData->nloci);
-
-    if(hapData->unphased)
-        positions2 = new vector<unsigned int> [hapData->nloci];
+    positions2.resize(hapData->nloci);
 
     cout<<"Starting "<<"populate_positions_skipqueue ..."<<endl;
     auto start = std::chrono::high_resolution_clock::now();
@@ -131,6 +137,9 @@ void HapSerialReader::populate_positions_skipqueue() {
 
     populate_positions_skipqueue_process_chunk();
 
+    // positions.shrink_to_fit();
+    // positions2.shrink_to_fit();
+
     int skipcount = 0;
     if(hapData->SKIP){
         skipcount = skiplist.size();
@@ -138,34 +147,56 @@ void HapSerialReader::populate_positions_skipqueue() {
 
     if(hapData->DEBUG_FLAG=="VCF") cout<<"skipcount "<<skipcount<<endl;
 
-   if(!hapData->SKIP){
-        for(int i = 0; i<= hapData->nloci-1; i++){ // i: locus_before_filter
-            hapData->hapEntries[i].positions = positions[i];   
-        }
-    }else{
-        int loc_after_skip = 0;
-        for(int i = 0; i<= hapData->nloci+skipcount-1; i++){ // i: locus_before_filter
-            if(!skiplist.empty()){
-                if(skiplist.front() == i){
-                    skiplist.pop();
-                    hapData->skipQueue.push(i);
-                    if(positions[i].size() > 0){ //skip position must have 0 length vector as it was cleared to save space
-                        {
-                            cout<<"ERROR: skiplist not working"<<endl;
-                            throw 0;
-                        }
+//    if(!hapData->SKIP){
+//         for(int i = 0; i<= hapData->nloci-1; i++){ // i: locus_before_filter
+//             hapData->hapEntries[i].positions = positions[i];   
+//         }
+//     }else{
+//     }
+    int loc_after_skip = 0;
+    for(int i = 0; i<= hapData->nloci+skipcount-1; i++){ // i: locus_before_filter
+        if(!skiplist.empty()){
+            if(skiplist.front() == i){
+                skiplist.pop();
+                hapData->skipQueue.push(i);
+                if(positions[i].size() > 0){ //skip position must have 0 length vector as it was cleared to save space
+                    {
+                        cout<<"ERROR: skiplist not working"<<endl;
+                        throw 0;
                     }
-                    continue;
-                }  
-            }
-            hapData->hapEntries[loc_after_skip++].positions = positions[i];   
+                }
+                continue;
+            }  
         }
+
+        //both phased and unphased
+        if(hapData->LOW_MEM){
+            for(const int& set_bit_position: positions[i]){
+                hapData->hapEntries[loc_after_skip].hapbitset->set_bit(set_bit_position); 
+                hapData->hapEntries[loc_after_skip].hapbitset->num_1s++;
+            }
+        }else{
+            hapData->hapEntries[loc_after_skip].positions = positions[i]; 
+        }
+
+        //unphased only
+        if(hapData->unphased){
+            if(hapData->LOW_MEM){
+                for(const int& set_bit_position: positions2[i]){
+                    hapData->hapEntries[loc_after_skip].xorbitset->set_bit(set_bit_position); 
+                    hapData->hapEntries[loc_after_skip].xorbitset->num_1s++;
+                }
+            }else{
+                hapData->hapEntries[loc_after_skip].positions2 = positions2[i]; 
+            }
+        }
+        loc_after_skip++;
     }
     
     //delete[] positions;
-    if(hapData->unphased){
-        delete[] positions2;
-    }
+    // if(hapData->unphased){
+    //     delete[] positions2;
+    // }
     //queue<int>().swap(skiplist); //clear the vector
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -198,6 +229,11 @@ void HapSerialReader::do_xor(){
     ///*
     // // // METHOD 0: Serial XOR // // //
     for(int i = 0; i< hapData->nloci; i++){ // i: locus_after_filter
+        if(hapData->LOW_MEM){
+
+                    }else{
+                        
+                    }
         symmetric_difference(hapData->hapEntries[i].positions, hapData->hapEntries[i-1].positions, i);
     }
     //*/

@@ -90,7 +90,9 @@ class IHH12_ehh_data{
 
 class IHH12 : public SelscanStats{
     public:
-        IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){}
+        IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){
+            max_extend = ( p.MAX_EXTEND <= 0) ? hm->mapData->mapEntries[hm->mapData->nloci-1].physicalPos -  hm->mapData->mapEntries[0].physicalPos : p.MAX_EXTEND  ;
+        }
         void main();
         void findMaxTwo(int* arr, int n, int &max1, int &max2);
         //void findMaxK(int* arr, int n, int &max1, int &max2, int k);
