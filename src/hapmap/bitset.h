@@ -8,7 +8,7 @@
 #include <cstdlib>   // For std::aligned_alloc
 #include <cstring>   // For std::memset
 
- constexpr size_t alignment = alignof(uint64_t); // Alignment boundary
+constexpr size_t alignment = alignof(uint64_t); // Alignment boundary
 
 using namespace std;
 class MyBitset{
@@ -206,6 +206,5 @@ class MyBitset{
     }
 
 };
-
 
 #endif

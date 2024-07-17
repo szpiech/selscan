@@ -66,7 +66,6 @@ class MainTools{
             p.numThreads = params.getIntFlag(ARG_THREAD);
             p.SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
             p.MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
-            
 
             p.EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
             p.MAF = params.getDoubleFlag(ARG_MAF);
@@ -83,13 +82,11 @@ class MainTools{
             p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
             p.SINGLE_EHH = false;
 
-            
             p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
             if(params.getBoolFlag(ARG_SKIP)){
                 cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
             }
-            //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
-
+            
             // p.EHH1K = params.getIntFlag(ARG_SOFT_K);
             p.QWIN = params.getIntFlag(ARG_QWIN);
 
@@ -219,35 +216,27 @@ class MainTools{
                 EHH ehhfinder(hm, p, &flog, &fout);
                 if (p.CALC_SOFT)
                 {
-                    //TODO
-                    //query_locus_soft
-                    //selscanStatsComputer.query();
+                    throw ("ERROR: Soft EHH not implemented yet.\n");
                 }
                 else
                 {
                     ehhfinder.calc_single_ehh(p.query); //query_locus
                 }
             }else if(p.CALC_IHS || p.CALC_NSL){
-                cout<<"IHS or NSL"<<endl;
                 IHS ihsfinder(hm, p, &flog, &fout);
                 //ihsfinder.main_old();
                 ihsfinder.main(); //thread pool
                 //hm.hapData.releaseHapData_bitset();
             }else if (p.CALC_XP || p.CALC_XPNSL)
             {
-                cout<<"XPIHH\n";
                 XPIHH xpihhfinder(hm, p, &flog, &fout);
                 xpihhfinder.main();
             }else if (p.CALC_SOFT){
-                cout<<"IHH12\n";
                 IHH12 ihh12finder(hm, p, &flog, &fout);
                 ihh12finder.main();
             }
             flog.close();
             fout.close();
-
-            //delete hm;
-
 
         // #ifdef PTW32_STATIC_LIB
         //     pthread_win32_process_detach_np();

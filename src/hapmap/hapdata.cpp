@@ -3,6 +3,15 @@
 #include "../selscan-cli.h"
 #include <algorithm>
 #include <sstream>
+#include <memory>
+
+HapData::~HapData(){
+    if(LOW_MEM){
+        releaseHapData_bitset();
+    }else{
+        releaseHapData();
+    }
+}
 
 void HapData::initHapData_bitset(int nhaps, unsigned int nloci)
 {
@@ -263,11 +272,22 @@ void HapData::readHapData_bitset(string filename)
     if(!unphased){
         for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
             if(locus_after_filter==0){
-                MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
+                // MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
+                // for (int k = 0; k < b1->nwords; k++) {
+                //     hapEntries[locus_after_filter].xorbitset->bits[k] = b1->bits[k] ;
+                // }
+                // hapEntries[locus_after_filter].xorbitset->num_1s = b1->num_1s;
+                // CHANGEXOR
+                MyBitset* b1 =(hapEntries[0].hapbitset);
+                MyBitset* b2 = (hapEntries[1].hapbitset);
+
+                int sum = 0;
                 for (int k = 0; k < b1->nwords; k++) {
-                    hapEntries[locus_after_filter].xorbitset->bits[k] = b1->bits[k] ;
+                    hapEntries[0].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
+                    sum += __builtin_popcountll(hapEntries[0].xorbitset->bits[k]);
                 }
-                hapEntries[locus_after_filter].xorbitset->num_1s = b1->num_1s;
+                hapEntries[0].xorbitset->num_1s = sum;
+                
             }else{
                 MyBitset* b1 =(hapEntries[locus_after_filter].hapbitset);
                 MyBitset* b2 = (hapEntries[locus_after_filter-1].hapbitset);
@@ -387,6 +407,7 @@ void HapData::readHapDataVCF_bitset(string filename)
             //}
 
             if(unphased){
+                throw ("Unphased lowmem not implemented");
                 char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
                     //allele = '2';
@@ -614,8 +635,15 @@ void HapData::do_xor(){
 void HapData::readHapDataVCF(string filename)
 {
     igzstream fin;
-    vector<int> number_of_1s_per_loci;
-    vector<int> number_of_2s_per_loci;
+    //std::unique_ptr<std::vector<int>> vp(new std::vector<int>());
+    //auto vp1 = std::make_unique<std::vector<int>>();
+    //auto vp2 = std::make_unique<std::vector<int>>();
+
+    std::unique_ptr<std::vector<int> > vp1(new std::vector<int>());
+    std::unique_ptr<std::vector<int> > vp2(new std::vector<int>());
+
+    vector<int>& number_of_1s_per_loci = *vp1;
+    vector<int>& number_of_2s_per_loci = *vp2;
     queue<int> skiplist;
 
     // Pass 1: Counting so that inititalization is smooth
@@ -889,11 +917,18 @@ void HapData::readHapDataVCF(string filename)
         }else{
             if(nloci_after_filtering==0){
                 if(benchmark_flag == "XOR"){
-                    vector<unsigned int>& source = hapEntries[nloci_after_filtering].positions;
-                    vector<unsigned int>& destination = hapEntries[nloci_after_filtering].xors;
-                    std::copy(source.begin(), source.end(), destination.begin());
-                    hapEntries[nloci_after_filtering].xors1 = hapEntries[nloci_after_filtering].positions;
-                    hapEntries[nloci_after_filtering].xors2 = hapEntries[nloci_after_filtering].positions2;
+                    // vector<unsigned int>& source = hapEntries[nloci_after_filtering].positions;
+                    // vector<unsigned int>& destination = hapEntries[nloci_after_filtering].xors;
+                    // std::copy(source.begin(), source.end(), destination.begin());
+                    // hapEntries[nloci_after_filtering].xors1 = hapEntries[nloci_after_filtering].positions;
+                    // hapEntries[nloci_after_filtering].xors2 = hapEntries[nloci_after_filtering].positions2;
+
+                    //CHANGINGXOR
+                    std::set_symmetric_difference(hapEntries[0].positions.begin(), hapEntries[0].positions.end(),hapEntries[1].positions.begin(), hapEntries[1].positions.end(),
+                                    std::back_inserter(hapEntries[0].xors));
+                    if(nloci_after_filtering+1>=nloci){
+                        throw "ERROR: XOR out of bound, only 1 locus";    
+                    }
                 }
             }else{
                 if(benchmark_flag == "XOR"){

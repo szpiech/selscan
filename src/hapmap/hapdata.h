@@ -62,13 +62,7 @@ public:
     
     ofstream* flog;
 
-    ~HapData(){
-        if(LOW_MEM){
-            releaseHapData_bitset();
-        }else{
-            releaseHapData();
-        }
-    }
+    ~HapData();
 
     //allocates the 2-d array and populated it with -9,
     /** Sets up structure according to nhaps and nloci

@@ -33,7 +33,6 @@ public:
     void initMapData(int nloci);
     void releaseMapData();
 
-    
     //reads in map data and also does basic checks on integrity of format
     //returns a populated MapData structure if successful
     //throws an exception otherwise
@@ -85,8 +84,5 @@ public:
         return -1;
     }
 };
-
-
-
 
 #endif

@@ -5,8 +5,6 @@
 #include <queue>
 #include <sstream>
 
-
-
 using namespace std;
 
 /**
@@ -101,7 +99,10 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
 }
 
 void MapData::readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP, queue<int>& skip_queue)
-{
+{   
+    cerr<<"readMapDataTPED not tested yet."<<endl;
+    throw 1;
+
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
@@ -148,12 +149,9 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
 
     cerr << "Loading map data for " << nloci-skip_queue.size() << " loci\n";
 
-    //initMapData(nloci);
     initMapData(nloci-skip_queue.size());
     
     double Mb = 1000000.0;
-    
-    
     
     string chr;
     int locus_after_filter = 0;
@@ -279,36 +277,15 @@ void MapData::initMapData(int nloci)
         throw 0;
     }
 
-    //MapData *data = new MapData;
-    //
-
     mapEntries = new struct MapEntry[nloci];
     this->nloci = nloci;
-
-
-    // data->nloci = nloci;
-    // data->locusName = new string[nloci];
-    // data->physicalPos = new int[nloci];
-    // data->geneticPos = new double[nloci];
-
-    // for (int locus = 0; locus < nloci; locus++)
-    // {
-    //     data->locusName[locus] = "--";
-    //     data->physicalPos[locus] = MISSING;
-    //     data->geneticPos[locus] = MISSING;
-    // }
 }
 
 void MapData::releaseMapData()
 {
     if (mapEntries == NULL) return;
     this->nloci = -9;
-    // delete [] data->locusName;
-    // delete [] data->physicalPos;
-    // delete [] data->geneticPos;
-    // delete data;
-    // data = NULL;
-    
+
     delete [] mapEntries;
     mapEntries = NULL;
     return;

@@ -24,14 +24,9 @@ class IHS: public SelscanStats{
         ~IHS(){
             //delete pool;
         }
-
-        // double* iHH0;
-        // double* iHH1;
-        // double* iHH2;
         
         pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
         pair<double, double> calc_ihh1(int locus);  
-
         
     private:
         static pthread_mutex_t mutex_log;

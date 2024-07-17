@@ -55,19 +55,12 @@ const char MISSING_CHAR = '9';  // TO_BE_DELETED
 class HapMap{
 public:
     param_main p;
-
-    // HapData* hapData;
-    // HapData* hapData2;
-    // MapData* mapData;
-
     std::unique_ptr<MapData> mapData;
     std::unique_ptr<HapData> hapData;
     std::unique_ptr<HapData> hapData2;
 
     ofstream* flog;
     ofstream* fout;
-
-    bool low_mem=false;
 
     /***
      * @param query: Locus name
@@ -109,10 +102,6 @@ public:
     }
 
     ~HapMap(){
-        //delete hapData;
-        // if(p.CALC_XP || p.CALC_XPNSL)
-        //     delete hapData2;
-        //delete mapData;
     }
 
     /// Returns 1 on error, Returns 0 on success
@@ -143,19 +132,20 @@ public:
         bool CALC_SOFT = p.CALC_SOFT;
         bool SINGLE_EHH = p.SINGLE_EHH;
         bool LOW_MEM = p.LOW_MEM;
-        this->low_mem = LOW_MEM;
         
         mapData = std::make_unique<MapData>(); 
         hapData = std::make_unique<HapData>();
         hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+
         if (CALC_XP || CALC_XPNSL){
             hapData2 = std::make_unique<HapData>();
-            hapData2->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+            hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
+            hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
         }   
 
         auto start_reading = std::chrono::high_resolution_clock::now();
 
-        if(LOW_MEM){
+        if(p.LOW_MEM){
             try
             {
                 if (VCF) {
@@ -219,17 +209,19 @@ public:
                     mapData->readMapDataTPED(tpedFilename, hapData->nloci, hapData->nhaps, USE_PMAP, hapData->skipQueue);
                 }
                 else if (VCF) {
-                    handleData(vcfFilename, "VCF", *hapData);
-                    //hapData.readHapDataVCF(vcfFilename);
-                    
                     if (CALC_XP || CALC_XPNSL)
                     {
+                        hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
+                        hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
+                        handleData(vcfFilename, "VCF", *hapData);
                         handleData(vcfFilename2, "VCF", *hapData2);
                         if (hapData->nloci != hapData2->nloci)
                         {
                             std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
                             return 1;
                         }
+                    }else{
+                        hapData->readHapDataVCF(vcfFilename);
                     }
                     if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
                         mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
@@ -264,8 +256,9 @@ public:
                     
                 }
             }
-            catch (...)
+            catch (exception& e)
             {
+                cerr << "ERROR: " << e.what() << endl;
                 return 1;
             }
         }
@@ -328,14 +321,16 @@ public:
             }
         }else{
             if(EXT == "VCF"){
-                if(is_gzipped(filename)){
-                    cout<<"Gzipped file: so reading in serial"<<endl;
-                    VCFSerialReader dataReader(filename, &hapData);
-                    if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci from serial reader: "<<hapData.nloci<<endl;
-                }else{
-                    cout<<"Plain text VCF file: so reading in parallel"<<endl;
-                    VCFParallelReader dataReader(filename, &hapData);
-                }
+                hapData.readHapDataVCF(filename);
+
+                // if(is_gzipped(filename)){
+                //     cout<<"Gzipped file: so reading in serial"<<endl;
+                //     VCFSerialReader dataReader(filename, &hapData);
+                //     if(hapData.DEBUG_FLAG=="VCF") cout<<"Number of loci from serial reader: "<<hapData.nloci<<endl;
+                // }else{
+                //     cout<<"Plain text VCF file: so reading in parallel"<<endl;
+                //     VCFParallelReader dataReader(filename, &hapData);
+                // }
             }else if(EXT == "HAP"){
                 //HapParallelReader dataReader(filename, &hapData);
                 //HapSerialReader dataReader(filename, &hapData);
@@ -345,9 +340,9 @@ public:
                 hapData.readHapDataTPED(filename);
             }
 
-            
+
+            // // FINAL PHASE: FLIP if allowed
             if(hapData.benchmark_flag == "XOR" && hapData.benchmark_flag2 == "FLIP"){
-                // //PHASE 4: FLIP
                 int count_flip = 0;
                 for (int locus_after_filter = 0; locus_after_filter < hapData.nloci; locus_after_filter++){
                     if(hapData.hapEntries[locus_after_filter].positions.size() > hapData.nhaps/2){

@@ -30,14 +30,12 @@ class SelscanStats {
         }
 
         ~SelscanStats(){
-
         }
-
-        //virtual void main() = 0;
 
         double static readTimer() {
             return clock() / (double) CLOCKS_PER_SEC;
         }
+        
         inline unsigned int square_alt(int n){
             return n*n;
         }
@@ -60,6 +58,7 @@ class SelscanStats {
             return 2*nCk(n, 2);
             //return n*n - n;
         }
+
         inline unsigned int num_pair(int n){
             return (n*n - n)/2;
         }
@@ -82,6 +81,7 @@ class SelscanStats {
             return distance;
         }
 
+        /// @brief Compute physical distance between currentLocus and previous one
         double physicalDistance(int currentLocus, bool downstream){
             double distance;
             if(downstream){
@@ -111,6 +111,7 @@ class SelscanStats {
             return distance;
         }
             
+        /// @brief Compute genetic distance between currentLocus and previous one    
         double geneticDistance(int currentLocus, bool downstream){
             double distance;
             if(downstream){
@@ -127,35 +128,6 @@ class SelscanStats {
             }
             return distance;
         }
-
-        // double calcFreq(int locus)
-        // {
-        //     double total = 0;
-        //     double freq = 0;
-
-        //     //assuming no missing data in hapmap structure
-            
-        //     if(this->hm->hapData->unphased){
-        //         if(p.LOW_MEM){
-        //             throw "Not implemented";
-        //             //freq = hapEntries[locus].hapbitset->count_1s();
-        //             freq = this->hm->hapData->hapEntries[locus].hapbitset->num_1s;
-        //         }
-        //         freq = this->hm->hapData->hapEntries[locus].count1 + this->hm->hapData->hapEntries[locus].count2*2;
-        //         //freq = hapEntries[locus].positions.size() + hapEntries[locus].positions2.size()*2;
-        //         total = this->hm->hapData->nhaps*2;
-                
-        //     }else{
-        //         freq = this->hm->hapData->hapEntries[locus].positions.size();
-        //         if(p.LOW_MEM){
-        //             //freq = hapEntries[locus].hapbitset->count_1s();
-        //             freq = this->hm->hapData->hapEntries[locus].hapbitset->num_1s;
-        //         }
-                
-        //         total = this->hm->hapData->nhaps;
-        //     }
-        //     return freq/total;
-        // }
 };
 
 #endif
