@@ -1,5 +1,7 @@
 Max threads supoorted: 8
 0 0 1 0 0 0 0
-hapdata with nhaps: 100nloci 59226
-hapdata with nhaps: 100nloci 59226
-Input file loaded in 1.143370 s.
+Number of haplotypes 100, number of loci 59226.
+Number of haplotypes 100, number of loci 59226.
+Input file loaded in 0.627395 s.
+Total CPU time: 240.549811 s. 
+Program took 56.698 seconds to complete.

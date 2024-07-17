@@ -1,6 +1,11 @@
 #include "xpihh.h"
 #include "../thread_pool.h"
 
+/* Implementation log */
+/// LOW_MEM AND HAP
+/// NOT LOW MEM AND HAP AND VCF
+/// NO UNPHASED
+
 pthread_mutex_t XPIHH::mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -16,117 +21,9 @@ pthread_mutex_t XPIHH::mutex_log = PTHREAD_MUTEX_INITIALIZER;
         }                                            \
     }
 
-
 XPIHH_ehh_data::~XPIHH_ehh_data(){
     delete[] group_count;
     delete[] group_id;
-}
-inline unsigned int XPIHH_ehh_data::square_alt(int n){
-    return n*n;
-}
-
-inline double XPIHH_ehh_data::twice_num_pair(int n){
-    if(n < 2){
-        return 0;
-    }
-    return 2*nCk(n, 2);
-    //return n*n - n;
-}
-    
-void XPIHH_ehh_data::init(int nhaps, const vector <unsigned int>* positions, bool ALT, bool WAGH ){
-    this->nhaps = nhaps;
-    group_count = new int[nhaps];
-    group_id = new int[nhaps];
-
-    //will be vectorized with compile time flags
-    for(int i = 0; i< nhaps; i++){
-        group_count[i] = 0;
-        group_id[i] = 0;
-    }
-
-    //updated in pooled
-    n_c[0] = nhaps - (*positions).size();
-    n_c[1] = (*positions).size();
-
-    if(ALT){
-        this->normalizer = square_alt(nhaps);
-    }else if(WAGH){
-        this->normalizer = twice_num_pair(n_c[0])+twice_num_pair(n_c[1]);
-    }else{
-        this->normalizer = twice_num_pair(nhaps);
-    }
-
-}
-
-void XPIHH_ehh_data::init_for_pooled(const vector <unsigned int>* positions1, const vector <unsigned int>* positions2, int nhaps_tot, bool ALT, bool WAGH){
-    this->nhaps = nhaps_tot;
-
-    group_count = new int[nhaps_tot];
-    group_id = new int[nhaps_tot];
-
-    //will be vectorized with compile time flags
-    for(int i = 0; i< nhaps_tot; i++){
-        group_count[i] = 0;
-        group_id[i] = 0;
-    }
-    
-    n_c[1] = (*positions1).size() + (*positions2).size();
-    n_c[0] = this->nhaps - n_c[1] ;   
-
-    if(ALT){
-        this->normalizer = square_alt(this->nhaps);
-    }else if(WAGH){
-        this->normalizer = twice_num_pair(this->n_c[0])+twice_num_pair(this->n_c[1]);
-    }else{
-        this->normalizer = twice_num_pair(this->nhaps);
-    }
-}
-
-void XPIHH_ehh_data::initialize_core(const vector <unsigned int>* v){
-    if(n_c[1]==0){    //none set
-        group_count[0] = nhaps;
-        totgc+=1;
-    }else if (n_c[1]==nhaps){ // all set
-        group_count[0] = nhaps;
-        totgc+=1;
-    }else{
-        group_count[1] = n_c[1];
-        group_count[0] = n_c[0];
-        totgc+=2;
-        for (int set_bit_pos : *(v)){
-            group_id[set_bit_pos] = 1;
-        }
-    }
-
-
-    curr_ehh_before_norm = normalizer;
-    prev_ehh_before_norm = curr_ehh_before_norm;
-}
-
-void XPIHH_ehh_data::initialize_core_pooled(const vector <unsigned int>* v, const vector <unsigned int>* v2, int nhaps_p1){
-    if(n_c[1] == 0){    //none set
-        group_count[0] = nhaps;
-        totgc+=1;
-        //curr_ehh_before_norm = (ALT? square_alt(n_c[0]) : twice_num_pair(n_c[0]));
-    }else if (n_c[1] == nhaps){ // all set
-        group_count[0] = nhaps;
-        totgc+=1;
-        //curr_ehh_before_norm = (ALT? square_alt(n_c[1]) : twice_num_pair(n_c[1]));
-    }else{
-        group_count[1] = n_c[1];
-        group_count[0] = n_c[0];
-        totgc+=2;
-        for (int set_bit_pos : (*v)){
-            group_id[set_bit_pos] = 1;
-        }
-        for (int set_bit_pos : (*v2)){
-            group_id[set_bit_pos + nhaps_p1] = 1;
-        }
-        //curr_ehh_before_norm = (ALT?  square_alt(n_c[0]) +  square_alt(n_c[1]) : twice_num_pair(n_c[0]) + twice_num_pair(n_c[1]));
-    }
-
-    curr_ehh_before_norm = normalizer;
-    prev_ehh_before_norm = curr_ehh_before_norm;
 }
 
 void XPIHH::updateEHH_from_split(const unordered_map<unsigned int, vector<unsigned int> > & m, XPIHH_ehh_data* ehhdata){
@@ -192,13 +89,138 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
     p2 = new XPIHH_ehh_data();
     pooled = new XPIHH_ehh_data();
     
-    p1->init(hm->hapData->nhaps, &(hm->hapData->hapEntries[locus].positions), p.ALT, p.WAGH);
-    p2->init(hm->hapData2->nhaps, &(hm->hapData2->hapEntries[locus].positions), p.ALT, p.WAGH);
-    pooled->init_for_pooled(&(hm->hapData->hapEntries[locus].positions),&(hm->hapData2->hapEntries[locus].positions), p1->nhaps + p2->nhaps, p.ALT, p.WAGH);
+    p1->nhaps = hm->hapData->nhaps;
+    p2->nhaps = hm->hapData2->nhaps;
+    pooled->nhaps = p1->nhaps + p2->nhaps;
 
-    p1->initialize_core(&(hm->hapData->hapEntries[locus].positions));
-    p2->initialize_core(&(hm->hapData2->hapEntries[locus].positions));
-    pooled->initialize_core_pooled(&(hm->hapData->hapEntries[locus].positions), &(hm->hapData2->hapEntries[locus].positions), p1->nhaps);
+    p1->group_count = new int[p1->nhaps];
+    p2->group_count = new int[p2->nhaps];
+    pooled->group_count = new int[pooled->nhaps];
+
+    p1->group_id = new int[p1->nhaps];
+    p2->group_id = new int[p2->nhaps];
+    pooled->group_id = new int[pooled->nhaps];
+
+    for(int i = 0; i< p1->nhaps; i++){
+        p1->group_count[i] = 0;
+        p1->group_id[i] = 0;
+        pooled->group_count[i] = 0;
+        pooled->group_id[i] = 0;
+    }
+
+    for(int i = 0; i< p2->nhaps; i++){
+        p2->group_count[i] = 0;
+        p2->group_id[i] = 0;
+        pooled->group_count[p1->nhaps + i] = 0;
+        pooled->group_id[p1->nhaps + i] = 0;
+    }
+
+
+    vector<unsigned int>* v1;
+    vector<unsigned int>* v2;
+    MyBitset* vb1;
+    MyBitset* vb2;
+
+
+
+
+    if(p.LOW_MEM){
+        p1->n_c[1] = hm->hapData->hapEntries[locus].hapbitset->num_1s;
+        p2->n_c[1] = hm->hapData2->hapEntries[locus].hapbitset->num_1s;
+    }else{
+        p1->n_c[1] = hm->hapData->hapEntries[locus].positions.size();
+        p2->n_c[1] = hm->hapData2->hapEntries[locus].positions.size();
+    }
+    
+    p1->n_c[0] = p1->nhaps - p1->n_c[1];
+    p2->n_c[0] = p2->nhaps - p2->n_c[1];
+
+    pooled->n_c[1] = p1->n_c[1] + p2->n_c[1];
+    pooled->n_c[0] = pooled->nhaps - pooled->n_c[1];
+
+    if(p.ALT){
+        p1->normalizer = square_alt(p1->nhaps);
+        p2->normalizer = square_alt(p2->nhaps);
+        pooled->normalizer = square_alt(pooled->nhaps);
+    }else if(p.WAGH){
+        p1->normalizer = twice_num_pair(p1->n_c[0])+twice_num_pair(p1->n_c[1]);
+        p2->normalizer = twice_num_pair(p2->n_c[0])+twice_num_pair(p2->n_c[1]);
+        pooled->normalizer = twice_num_pair(pooled->n_c[0])+twice_num_pair(pooled->n_c[1]);
+    }else{
+        p1->normalizer = twice_num_pair(p1->nhaps);
+        p2->normalizer = twice_num_pair(p2->nhaps);
+        pooled->normalizer = twice_num_pair(pooled->nhaps);
+    }
+
+    //init core
+    if(p1->n_c[1]==0 || p1->n_c[1]==p1->nhaps){    //monomorphic
+        p1->group_count[0] = p1->nhaps;
+        p1->totgc+=1;
+    }else{
+        p1->group_count[1] = p1->n_c[1];
+        p1->group_count[0] = p1->n_c[0];
+        p1->totgc+=2;
+
+        if(p.LOW_MEM){
+            ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
+                p1->group_id[set_bit_pos] = 1;
+                pooled->group_id[set_bit_pos] = 1;
+            });
+        }else{
+            for (int set_bit_pos : hm->hapData->hapEntries[locus].positions){
+                p1->group_id[set_bit_pos] = 1;
+                pooled->group_id[set_bit_pos] = 1;
+            }
+        }
+    }
+
+    if(p2->n_c[1]==0 || p2->n_c[1]==p2->nhaps){    //monomorphic
+        p2->group_count[0] = p2->nhaps;
+        p2->totgc+=1;
+    }else{
+        p2->group_count[1] = p2->n_c[1];
+        p2->group_count[0] = p2->n_c[0];
+        p2->totgc+=2;
+
+        if(p.LOW_MEM){
+            ACTION_ON_ALL_SET_BITS(hm->hapData2->hapEntries[locus].hapbitset, {
+                p2->group_id[set_bit_pos] = 1;
+                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+            });
+        }else{
+            for (int set_bit_pos : hm->hapData2->hapEntries[locus].positions){
+                p2->group_id[set_bit_pos] = 1;
+                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+            }
+        }
+        
+    }
+
+    if(pooled->n_c[1]==0 || pooled->n_c[1]==pooled->nhaps){    //monomorphic
+        pooled->group_count[0] = pooled->nhaps;
+        pooled->totgc+=1;
+    }else{
+        pooled->group_count[1] = pooled->n_c[1];
+        pooled->group_count[0] = pooled->n_c[0];
+        pooled->totgc+=2;
+    }
+
+        // if(p.LOW_MEM){
+        //     ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
+        //         pooled->group_id[set_bit_pos] = 1;
+        //     });
+        //     ACTION_ON_ALL_SET_BITS(hm->hapData2->hapEntries[locus].hapbitset, {
+        //         pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+        //     });
+        // }else{
+        //     for (int set_bit_pos : hm->hapData->hapEntries[locus].positions){
+        //         pooled->group_id[set_bit_pos] = 1;
+        //     }
+        //     for (int set_bit_pos : hm->hapData2->hapEntries[locus].positions){
+        //         pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+        //     }
+        // }
+        //}
 
     if(p.ALT){
         p1->curr_ehh_before_norm = square_alt(p1->n_c[1])+square_alt(p1->n_c[0]);
@@ -209,11 +231,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         p2->curr_ehh_before_norm = twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[0]);
         pooled->curr_ehh_before_norm = twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[0]);
     }
+
     p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;
     p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
     pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
     
-    int i = locus;     //while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
+    int i = locus;     
     while(true){
         double pooled_ehh = (p.ALT ? pooled->curr_ehh_before_norm / square_alt(pooled->nhaps) : pooled->curr_ehh_before_norm/twice_num_pair(pooled->nhaps));
         
@@ -263,17 +286,33 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         distance *= scale;
         
         int i_xor = downstream ? i+1 : i;
-        size_t xor_size = hm->hapData->hapEntries[i_xor].xors.size();
-        size_t pos_size = hm->hapData->hapEntries[i].positions.size();
-        vector<unsigned int>* v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
+        size_t xor_size; 
+        size_t pos_size;
+        vector<unsigned int>* v; 
+        MyBitset* vb; 
+
+
+        if(p.LOW_MEM){
+            xor_size = hm->hapData->hapEntries[i_xor].xorbitset->num_1s;
+            pos_size = hm->hapData->hapEntries[i].hapbitset->num_1s;
+            vb =  (xor_size>pos_size) ? hm->hapData->hapEntries[i].hapbitset : hm->hapData->hapEntries[i_xor].xorbitset;
+        }else{
+            xor_size = hm->hapData->hapEntries[i_xor].xors.size();
+            pos_size = hm->hapData->hapEntries[i].positions.size();
+            v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
+        }
 
         if(p1->totgc != p1->nhaps){
-            for (const unsigned int& set_bit_pos : *v){
-                int old_group_id = p1->group_id[set_bit_pos];
-                if(set_bit_pos > p1->nhaps || set_bit_pos < 0){
-                    throw std::runtime_error("set_bit_pos out of bounds");
+            if(p.LOW_MEM){
+                ACTION_ON_ALL_SET_BITS(vb, {
+                    int old_group_id = p1->group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos);      
+                });
+            }else{
+                for (const unsigned int& set_bit_pos : *v){
+                    int old_group_id = p1->group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos);        
                 }
-                m[old_group_id].push_back(set_bit_pos);        
             }
             updateEHH_from_split(m, p1);
             ihh_p1 += 0.5*distance*(p1->curr_ehh_before_norm + p1->prev_ehh_before_norm)/p1->normalizer;
@@ -282,37 +321,75 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
             p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;   
         }
+
+        if(p.LOW_MEM){
+            xor_size = hm->hapData2->hapEntries[i_xor].xorbitset->num_1s;
+            pos_size = hm->hapData2->hapEntries[i].hapbitset->num_1s;
+            vb =  (xor_size>pos_size) ? hm->hapData2->hapEntries[i].hapbitset : hm->hapData2->hapEntries[i_xor].xorbitset;
+        }else{
+            xor_size = hm->hapData2->hapEntries[i_xor].xors.size();
+            pos_size = hm->hapData2->hapEntries[i].positions.size();
+            v =  (xor_size>pos_size) ? &(hm->hapData2->hapEntries[i].positions) : &(hm->hapData2->hapEntries[i_xor].xors);
+        }
         
-        xor_size = hm->hapData2->hapEntries[i_xor].xors.size();
-        pos_size = hm->hapData2->hapEntries[i].positions.size();
-        v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
         if(p2->totgc != p2->nhaps){
-            for (const unsigned int& set_bit_pos : hm->hapData2->hapEntries[i_xor].xors){
-                int old_group_id = p2->group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);         
+            if(p.LOW_MEM){
+                ACTION_ON_ALL_SET_BITS(vb, {
+                    int old_group_id = p2->group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos);  
+                });
+            }else{
+                for (const unsigned int& set_bit_pos : *v){
+                    int old_group_id = p2->group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos);         
+                }
             }
+            
             updateEHH_from_split(m, p2);
             ihh_p2 += 0.5*distance*(p2->curr_ehh_before_norm + p2->prev_ehh_before_norm)/p2->normalizer;
             p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
             m.clear();
         }
 
-        xor_size = hm->hapData->hapEntries[i_xor].xors.size() + hm->hapData2->hapEntries[i_xor].xors.size();
-        pos_size = hm->hapData->hapEntries[i].positions.size() + hm->hapData2->hapEntries[i].positions.size();
-        
+
+        if(p.LOW_MEM){
+            xor_size = hm->hapData2->hapEntries[i_xor].xorbitset->num_1s + hm->hapData->hapEntries[i_xor].xorbitset->num_1s;
+            pos_size = hm->hapData2->hapEntries[i].hapbitset->num_1s + hm->hapData->hapEntries[i].hapbitset->num_1s;
+        }else{
+            xor_size = hm->hapData->hapEntries[i_xor].xors.size() + hm->hapData2->hapEntries[i_xor].xors.size();
+            pos_size =  hm->hapData->hapEntries[i].positions.size() + hm->hapData2->hapEntries[i].positions.size();
+        }
+
         if(pooled->totgc != pooled->nhaps){
-            //NOW POOLED 1
-            v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
-            for (const unsigned int& set_bit_pos : *v){
-                int old_group_id = pooled->group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos); 
+            if(p.LOW_MEM){
+                //NOW POOLED 1
+                vb =  (xor_size>pos_size) ? hm->hapData->hapEntries[i].hapbitset : hm->hapData->hapEntries[i_xor].xorbitset;
+                ACTION_ON_ALL_SET_BITS(vb, {
+                    int old_group_id = pooled->group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos); 
+                });
+                //for pooled2
+                vb =  (xor_size>pos_size) ? hm->hapData2->hapEntries[i].hapbitset : hm->hapData2->hapEntries[i_xor].xorbitset;
+                ACTION_ON_ALL_SET_BITS(vb, {
+                    int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
+                    m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
+                });
+
+            }else{
+                //NOW POOLED 1
+                v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
+                for (const unsigned int& set_bit_pos : *v){
+                    int old_group_id = pooled->group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos); 
+                }
+                //for pooled2
+                v =  (xor_size>pos_size) ? &(hm->hapData2->hapEntries[i].positions) : &(hm->hapData2->hapEntries[i_xor].xors);
+                for (const unsigned int& set_bit_pos : *v){
+                    int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
+                    m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
+                }
             }
-            //for pooled2
-            v =  (xor_size>pos_size) ? &(hm->hapData2->hapEntries[i].positions) : &(hm->hapData2->hapEntries[i_xor].xors);
-            for (const unsigned int& set_bit_pos : *v){
-                int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
-                m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
-            }
+            
             updateEHH_from_split(m, pooled);
             pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
             // no need to update pooled ihh as we are not interested in it

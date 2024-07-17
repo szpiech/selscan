@@ -6,8 +6,7 @@
 
 using namespace std;
 
-class XPIHH_ehh_data{
-    public:
+struct XPIHH_ehh_data{
     double prev_ehh_before_norm = 0;
     double curr_ehh_before_norm = 0;
     unsigned int n_c[2] = {0,0};
@@ -18,15 +17,16 @@ class XPIHH_ehh_data{
     bool* isDerived;
     int* group_id;
     double normalizer;
+    bool LOW_MEM;
 
 
     ~XPIHH_ehh_data();
-    inline unsigned int square_alt(int n);
-    inline double twice_num_pair(int n);
-    void init(int nhaps, const vector <unsigned int>* positions, bool ALT, bool WAGH );
-    void init_for_pooled(const vector <unsigned int>* positions,const vector <unsigned int>* positions2, int nhaps_p1, bool ALT, bool WAGH );
-    void initialize_core(const vector <unsigned int>* v);
-    void initialize_core_pooled(const vector <unsigned int>* v, const vector <unsigned int>* v2,  int nhaps_p1); 
+    // inline unsigned int square_alt(int n);
+    // inline double twice_num_pair(int n);
+    // void init(int nhaps, const vector <unsigned int>* positions, bool ALT, bool WAGH );
+    // void init_for_pooled(const vector <unsigned int>* positions,const vector <unsigned int>* positions2, int nhaps_p1, bool ALT, bool WAGH );
+    // void initialize_core(const vector <unsigned int>* v);
+    // void initialize_core_pooled(const vector <unsigned int>* v, const vector <unsigned int>* v2,  int nhaps_p1); 
 }; 
 
 
