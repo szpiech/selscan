@@ -469,9 +469,9 @@ void HapData::readHapDataVCF(string filename)
         cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
         (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     }
-    cerr << "Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci...\n";
-
+   
     int nhaps = unphased ? (current_nhaps ) : (current_nhaps ) * 2;
+    cerr << "Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci...\n";
     initHapData(nhaps, nloci_before_filtering-skipcount);
 
     string junk;

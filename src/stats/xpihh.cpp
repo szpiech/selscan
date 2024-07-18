@@ -62,7 +62,9 @@ void XPIHH::updateEHH_from_split(const unordered_map<unsigned int, vector<unsign
         ehhdata->totgc += 1;
         ehhdata->curr_ehh_before_norm += del_update;
         if(ehhdata->totgc > ehhdata->nhaps){
+            cerr<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
             throw std::runtime_error("totgc out of bounds");
+            exit(1);
         }
     }
 }
@@ -115,7 +117,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         pooled->group_id[p1->nhaps + i] = 0;
     }
 
-
     vector<unsigned int>* v1 = &hm->hapData->hapEntries[locus].positions;
     vector<unsigned int>* v2 = &hm->hapData2->hapEntries[locus].positions;
     MyBitset* vb1 = hm->hapData->hapEntries[locus].hapbitset;
@@ -161,12 +162,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         if(p.LOW_MEM){
             ACTION_ON_ALL_SET_BITS(vb1, {
                 p1->group_id[set_bit_pos] = 1;
-                pooled->group_id[set_bit_pos] = 1;
             });
         }else{
             for (int set_bit_pos : *(v1)){
                 p1->group_id[set_bit_pos] = 1;
-                pooled->group_id[set_bit_pos] = 1;
             }
         }
     }
@@ -182,12 +181,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         if(p.LOW_MEM){
             ACTION_ON_ALL_SET_BITS(vb2, {
                 p2->group_id[set_bit_pos] = 1;
-                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
             });
         }else{
             for (int set_bit_pos : (*v2)){
                 p2->group_id[set_bit_pos] = 1;
-                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
             }
         }
         
@@ -200,24 +197,26 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         pooled->group_count[1] = pooled->n_c[1];
         pooled->group_count[0] = pooled->n_c[0];
         pooled->totgc+=2;
+
+        if(p.LOW_MEM){
+            ACTION_ON_ALL_SET_BITS(vb1, {
+                pooled->group_id[set_bit_pos] = 1;
+            });
+            ACTION_ON_ALL_SET_BITS(vb2, {
+                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+            });
+        }else{
+            for (int set_bit_pos : *(v1)){
+                pooled->group_id[set_bit_pos] = 1;
+            }
+            for (int set_bit_pos : (*v1)){
+                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+            }
+        }
+
     }
 
-        // if(p.LOW_MEM){
-        //     ACTION_ON_ALL_SET_BITS(vb1, {
-        //         pooled->group_id[set_bit_pos] = 1;
-        //     });
-        //     ACTION_ON_ALL_SET_BITS(vb2, {
-        //         pooled->group_id[set_bit_pos + p1->nhaps] = 1;
-        //     });
-        // }else{
-        //     for (int set_bit_pos : *(v1)){
-        //         pooled->group_id[set_bit_pos] = 1;
-        //     }
-        //     for (int set_bit_pos : (*v1)){
-        //         pooled->group_id[set_bit_pos + p1->nhaps] = 1;
-        //     }
-        // }
-        //}
+        
 
     if(p.ALT){
         p1->curr_ehh_before_norm = square_alt(p1->n_c[1])+square_alt(p1->n_c[0]);
