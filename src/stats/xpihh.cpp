@@ -393,8 +393,8 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         }
 
         // check if current locus is beyond 1Mb
-        if(!p.CALC_XPNSL && physicalDistance_from_core(i,locus, downstream) >= p.MAX_EXTEND) break;
-        if(p.CALC_XPNSL && abs(i-locus) >= p.MAX_EXTEND_NSL) break; //g(xi−1, xi) = 1.
+        if(!p.CALC_XPNSL && physicalDistance_from_core(i,locus, downstream) >= max_extend) break;
+        if(p.CALC_XPNSL && abs(i-locus) >= max_extend) break; //g(xi−1, xi) = 1.
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
 

@@ -32,11 +32,18 @@ struct XPIHH_ehh_data{
 
 class XPIHH : public SelscanStats{
     public:
-        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params, ofstream* flog, ofstream* fout) : SelscanStats(hm, params,  flog,  fout){}
+        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params, ofstream* flog, ofstream* fout) : SelscanStats(hm, params,  flog,  fout){
+            if(p.CALC_XPNSL){
+                this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
+            }else{
+                this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
+            }
+        }
         void main();
 
     private:
         static pthread_mutex_t mutex_log;
+        int max_extend;
         pair<double, double> calc_xpihh(int locus);
         pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
         void updateEHH_from_split(const unordered_map<unsigned int, vector<unsigned int> > & m, XPIHH_ehh_data* p);

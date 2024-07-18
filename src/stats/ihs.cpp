@@ -678,7 +678,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
             break;
         }
-        if(p.CALC_NSL && abs(i-locus) >= p.MAX_EXTEND_NSL) {
+        if(p.CALC_NSL && abs(i-locus) >= max_extend) {
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl;
             break; 
         }

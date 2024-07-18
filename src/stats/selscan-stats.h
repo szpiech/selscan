@@ -74,7 +74,7 @@ class SelscanStats {
             // this should not happen as we already did integrity check previously
             if (distance < 0)
             {
-                cout<<"Distance: "<<distance<<" "<<currentLocus<<" "<<downstream<<"\n";
+                cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
                 std::cerr << "ERROR: physical position not in ascending order.\n"; 
                 throw 0;
             }
