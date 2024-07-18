@@ -505,6 +505,12 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 group_id[set_bit_pos] = 1;
             }
         }
+
+        if(hm->mapData->mapEntries[locus].skipLocus){
+            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                    << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
+            return make_pair(0,0);
+        }
         
         totgc+=2;
         curr_ehh0_before_norm = normalizer_0;
@@ -576,12 +582,12 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         distance *= scale;
 
         if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ // monomorphic check
-            pthread_mutex_lock(&mutex_log);
-            std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
-            std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
-            std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
-            pthread_mutex_unlock(&mutex_log);
-            throw 0;
+            // pthread_mutex_lock(&mutex_log);
+            // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
+            // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
+            // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
+            // pthread_mutex_unlock(&mutex_log);
+            // throw 0;
             
             //if you wish to continue anyway
             if(normalizer_1!=0){    // case where not all are 0s

@@ -4,7 +4,7 @@
 #G++FLAG = -g -Wall -Werror
 
 #for linux systems
-CC = g++
+CC = g++ -Og -g --std=c++17 -m64
 #G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17  -march=native -lm -ftree-vectorize
 #-Og -g -m64 -mmmx -msse -msse2 --std=c++17
 G++FLAG = -Og -g -m64
