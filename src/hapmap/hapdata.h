@@ -196,6 +196,18 @@ public:
         return (freq / total);
     }
 
+
+    inline unsigned int get_n_c2(int locus)
+    {
+        return LOW_MEM? nhaps - hapEntries[locus].xorbitset->num_1s: nhaps - hapEntries[locus].positions2.size();
+        // // if flip was enabled
+        // unsigned int non_flipped_1s = 0;
+        // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+        // unsigned int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
+        // return result;
+    }
+
+
     inline unsigned int get_n_c0(int locus)
     {
         return LOW_MEM? nhaps - hapEntries[locus].hapbitset->num_1s: nhaps - hapEntries[locus].positions.size();

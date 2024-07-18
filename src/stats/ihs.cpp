@@ -183,8 +183,32 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         prev_cehh_before_norm[i] =  curr_cehh_before_norm[i];
     }
 
+    if(n_c[1] == numHaps || n_c[0] == numHaps || n_c[2] == numHaps){ 
+        pthread_mutex_lock(&mutex_log);
+        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
+                << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
+        pthread_mutex_unlock(&mutex_log);
+        hm->mapData->mapEntries[locus].skipLocus = true;
+        return make_pair(0,0);
+    }
+
+    double freqHetGT = n_c[1]*1.0/numHaps;
+    if (  freqHetGT > 1-p.MAF ) 
+    {
+        pthread_mutex_lock(&mutex_log);
+        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
+                << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
+        pthread_mutex_unlock(&mutex_log);
+        hm->mapData->mapEntries[locus].skipLocus = true;
+        return make_pair(0,0);
+    }
+
     int i = locus;  // locus == core_locus
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
+    
+        
         if(!p.CALC_NSL){
             if(curr_ehh_before_norm[2]*1.0/normalizer[2] <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/normalizer[0]  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
                 //std::cerr<<"Break reason for locus "<<locus<<":: EHH_CUTOFF."<<endl;
@@ -250,29 +274,17 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         }
 
 
-        double freqHetGT = double(n_c[1]) / double(n_c[2] + n_c[1] + n_c[0]);
-        //double freqAncestralGT = double(numAncestral) / double(numDerived + numAncestral + numHet);
-        if (  freqHetGT > 1-p.MAF ) 
-        {
-            pthread_mutex_lock(&mutex_log);
-            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-                    << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
-                    << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-            pthread_mutex_unlock(&mutex_log);
-            hm->mapData->mapEntries[locus].skipLocus = true;
-            break;
-        }
-        
-        if(n_c[0] == numHaps or n_c[1] == numHaps or n_c[2] == numHaps){
-            pthread_mutex_lock(&mutex_log);
-            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-                    << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
-                    << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-            pthread_mutex_unlock(&mutex_log);
-            hm->mapData->mapEntries[locus].skipLocus = true;
-            break;
-            /* // if you wish to continue
-            for(int i=0; i<3; i++){
+        /*
+        if( at i it is monomorphic){
+            // pthread_mutex_lock(&mutex_log);
+            // (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+            //         << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
+            //         << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
+            // pthread_mutex_unlock(&mutex_log);
+            // hm->mapData->mapEntries[locus].skipLocus = true;
+            // break;
+            // if you wish to continue
+            for(int i : {0, 2}){
                 if(normalizer[i]!=0){
                     iHH[i] += (curr_ehh_before_norm[i] * 1.0 / normalizer[i]  + prev_ehh_before_norm[i] * 1.0  / normalizer[i] ) * 0.5 * distance;
                 }
@@ -280,8 +292,27 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
                     ciHH[i] += (curr_cehh_before_norm[i] * 1.0  / normalizer_not[i] + prev_cehh_before_norm[i] * 1.0  / normalizer_not[i]) * 0.5  *  distance;
                 }
             }
-            continue;
-            */  
+            continue; 
+        }
+        */
+       if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, do not compute unnecessarily
+            // pthread_mutex_lock(&mutex_log);
+            // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
+            // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
+            // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
+            // pthread_mutex_unlock(&mutex_log);
+            // throw 0;
+            
+            //if you wish to continue anyway
+            for(int i : {0, 2}){
+                if(normalizer[i]!=0){
+                    iHH[i] += (curr_ehh_before_norm[i] * 1.0 / normalizer[i]  + prev_ehh_before_norm[i] * 1.0  / normalizer[i] ) * 0.5 * distance;
+                }
+                if(normalizer_not[i]!=0){
+                    ciHH[i] += (curr_cehh_before_norm[i] * 1.0  / normalizer_not[i] + prev_cehh_before_norm[i] * 1.0  / normalizer_not[i]) * 0.5  *  distance;
+                }
+            }
+            continue; 
         }
 
         if(p.LOW_MEM){
@@ -581,7 +612,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         if (scale > 1) scale = 1;
         distance *= scale;
 
-        if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ // monomorphic check
+        if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ // monomorphic check, do not compute unnecessarily
             // pthread_mutex_lock(&mutex_log);
             // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
             // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
