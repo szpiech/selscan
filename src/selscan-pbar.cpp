@@ -51,3 +51,4 @@ void barInit(Bar &bar, double total, int totalTicks)
     bar.currentTick = 0;
     return;
 }
+
