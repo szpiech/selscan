@@ -17,7 +17,7 @@ I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o
-OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
+# OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 all : selscan norm
@@ -26,8 +26,8 @@ all : selscan norm
 # build_and_cleanup: selscan norm
 # 	rm -rf *.o	
 
-selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) $(OBJ_FILETYPE) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o 
-	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) $(OBJ_FILETYPE)  selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o 
+selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o  thread_pool.o 
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o thread_pool.o 
 	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
@@ -38,8 +38,8 @@ selscan-main.o : selscan-main.cpp
 %.o: stats/%.cpp stats/%.h 
 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
 
-%.o: filetype/%.cpp filetype/%.h 
-	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+# %.o: filetype/%.cpp filetype/%.h 
+# 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
 
 thread_pool.o : thread_pool.cpp thread_pool.h
 	$(CC) $(G++FLAG) -c thread_pool.cpp $(LINK_OPTS2)

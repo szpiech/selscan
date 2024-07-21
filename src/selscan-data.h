@@ -38,6 +38,7 @@
 // # include <unordered_map>
 #include "selscan-pbar.h"
 
+#include <chrono>
 #include <queue>
 #include <cmath>
 
@@ -45,10 +46,12 @@
 #include "hapmap/hapdata.h"
 #include "hapmap/mapdata.h"
 
-#include "filetype/vcf.h"
-#include "filetype/vcf_serial.h"
-#include "filetype/hap.h"
-#include "filetype/hap_serial.h"
+#include <memory>
+
+// #include "filetype/vcf.h"
+// #include "filetype/vcf_serial.h"
+// #include "filetype/hap.h"
+// #include "filetype/hap_serial.h"
 
 using namespace std;
 
@@ -278,6 +281,7 @@ public:
     }
 
 
+    /*
     void handleData(string filename, string EXT, HapData& hapData){
         if(EXT == "VCF"){
             //hapData.readHapDataVCF(filename);
@@ -354,6 +358,7 @@ public:
         
         
     }
+    */
 
 };
 

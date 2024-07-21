@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sstream>
 #include <memory>
+#include <limits>
 
 HapData::~HapData(){
     releaseHapData();
