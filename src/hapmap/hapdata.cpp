@@ -15,33 +15,30 @@ HapData::~HapData(){
 */
 void HapData::initHapData(int nhaps, int nloci)
 {
+    if (nhaps > std::numeric_limits<int>::max() || nloci > std::numeric_limits<int>::max())
+    {
+        cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") exceed maximum value.\n";
+        throw 0;
+    }
+
+    if (nhaps < 1 || nloci < 1)
+    {
+        cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
+        throw 0;
+    }
+    cout << "Final number of haplotypes " << nhaps << ", number of loci " << nloci << ".\n";
+
+    this->hapEntries = new struct HapEntry[nloci];
+    this->nhaps = nhaps;
+    this->nloci = nloci;
+
     if(LOW_MEM){
-        if (nhaps < 1 || nloci < 1)
-        {
-            cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
-            throw 0;
-        }
-
-        this->hapEntries = new struct HapEntry[nloci];
-        this->nhaps = nhaps;
-        this->nloci = nloci;
-        cout << "Final number of haplotypes " << nhaps << ", number of loci " << nloci << ".\n";
-
         for (int j = 0; j < nloci; j++){
             hapEntries[j].hapbitset = new MyBitset(nhaps);
             hapEntries[j].xorbitset = new MyBitset(nhaps);
         }
         INIT_SUCCESS = true;
     }else{
-        if (nhaps < 1 || nloci < 1)
-        {
-            cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
-            throw 0;
-        }
-        cout << "Final number of haplotypes " << nhaps << ", number of loci " << nloci << ".\n";
-        this->hapEntries = new struct HapEntry[nloci];
-        this->nhaps = nhaps;
-        this->nloci = nloci;
         INIT_SUCCESS = true;
     }
 }
@@ -52,7 +49,7 @@ void HapData::releaseHapData()
         if (hapEntries == NULL) return;
 
         //we have a MyBitset for every locus
-        for (unsigned int j = 0; j < nloci; j++){
+        for (int j = 0; j < nloci; j++){
             delete hapEntries[j].hapbitset ; //MyBitset destructor called
             delete hapEntries[j].xorbitset; //MyBitset destructor called
         }
@@ -124,9 +121,9 @@ void HapData::xor_for_phased_and_unphased(){
                     }
                     hapEntries[nloci_after_filtering].xorbitset->num_1s = sum;
                 }else{
-                    vector<unsigned int>& curr_xor = hapEntries[nloci_after_filtering].xors;
-                    vector<unsigned int>& curr_positions = hapEntries[nloci_after_filtering].positions;
-                    vector<unsigned int>& prev_positions = hapEntries[nloci_after_filtering-1].positions;
+                    vector<int>& curr_xor = hapEntries[nloci_after_filtering].xors;
+                    vector<int>& curr_positions = hapEntries[nloci_after_filtering].positions;
+                    vector<int>& prev_positions = hapEntries[nloci_after_filtering-1].positions;
                     std::set_symmetric_difference(curr_positions.begin(), curr_positions.end(),prev_positions.begin(), prev_positions.end(),
                                     std::back_inserter(curr_xor));
                 }                    
@@ -589,9 +586,9 @@ void HapData::readHapDataVCF(string filename)
     // PHASE 4:  FLIP
     // for (int locus = 0; locus < nloci_after_filtering; locus++){
     //     if(hapEntries[locus].flipped){
-    //         vector<unsigned int> zero_positions(nhaps - hapEntries[locus].positions.size());
+    //         vector<int> zero_positions(nhaps - hapEntries[locus].positions.size());
     //         int j = 0;
-    //         unsigned int front_one = hapEntries[locus].positions[j++];
+    //         int front_one = hapEntries[locus].positions[j++];
     //         for(int i=0; i<nhaps; i++){
     //             if(i==front_one){
     //                 front_one = hapEntries[locus].positions[j++];
@@ -610,11 +607,11 @@ void HapData::readHapDataVCF(string filename)
             if(hapEntries[locus_after_filter].positions.size() > this->nhaps/2){
                 hapEntries[locus_after_filter].flipped = true;
 
-                vector<unsigned int> copy_pos;
+                vector<int> copy_pos;
                 copy_pos.reserve(this->nhaps - hapEntries[locus_after_filter].positions.size());
                 int cnt = 0;
                 for(int i = 0; i< this->nhaps; i++){
-                    unsigned int curr =  hapEntries[locus_after_filter].positions[cnt];
+                    int curr =  hapEntries[locus_after_filter].positions[cnt];
                     if(i==curr){
                         cnt++;
                     }else{
@@ -675,7 +672,7 @@ void HapData::readHapDataTPED(string filename)
     int numMapCols = 4;
     //int fileStart = fin.tellg();
     string line;
-    unsigned int nloci_before_filter = 0;
+    int nloci_before_filter = 0;
     int previous_nhaps = -1;
     int current_nhaps = 0;
     //Counts number of haps (cols) and number of loci (rows)
@@ -719,7 +716,7 @@ void HapData::readHapDataTPED(string filename)
     }
 
 
-    vector<vector<unsigned int> > positions(nloci_before_filter);
+    vector<vector<int> > positions(nloci_before_filter);
     string junk;
     char allele1, allele2;
     queue<int> skipQueue_local;
@@ -775,7 +772,7 @@ void HapData::readHapDataTPED(string filename)
         }
         if( SKIP && (positions[locus].size()*1.0/current_nhaps < MAF || 1-(positions[locus].size()*1.0/current_nhaps) < MAF ) ) {
             skipQueue_local.push(locus);
-            vector<unsigned int>().swap(positions[locus]);
+            vector<int>().swap(positions[locus]);
         }
     }
 

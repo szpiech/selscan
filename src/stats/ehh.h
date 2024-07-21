@@ -10,7 +10,7 @@ class EHH : public SelscanStats{
         void calc_single_ehh(string query);
         
     private:
-        void calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream);
+        void calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream);
 };
 
 

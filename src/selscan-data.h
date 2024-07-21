@@ -16,6 +16,9 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+
+
+
 #ifndef __DATA_H__
 #define __DATA_H__
 
@@ -315,11 +318,11 @@ public:
                         hapData.hapEntries[locus_after_filter].flipped = true;
                         count_flip++;
 
-                        vector<unsigned int> copy_pos;
+                        vector<int> copy_pos;
                         copy_pos.reserve(hapData.nhaps - hapData.hapEntries[locus_after_filter].positions.size());
                         int cnt = 0;
                         for(int i = 0; i< hapData.nhaps; i++){
-                            unsigned int curr =  hapData.hapEntries[locus_after_filter].positions[cnt];
+                            int curr =  hapData.hapEntries[locus_after_filter].positions[cnt];
                             if(i==curr){
                                 cnt++;
                             }else{
@@ -328,10 +331,10 @@ public:
                         }
                         
                         hapData.hapEntries[locus_after_filter].positions = copy_pos;
-                        vector<unsigned int>().swap(copy_pos);
-                        // vector<unsigned int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
+                        vector<int>().swap(copy_pos);
+                        // vector<int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
                         // int j = 0;
-                        // unsigned int front_one = this->hapEntries[locus_after_filter].positions[j++];
+                        // int front_one = this->hapEntries[locus_after_filter].positions[j++];
                         // for(int i=0; i<nhaps; i++){
                         //     if(i==front_one){
                         //         front_one = this->hapEntries[locus_after_filter].positions[j++];

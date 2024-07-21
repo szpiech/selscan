@@ -36,11 +36,11 @@ class SelscanStats {
             return clock() / (double) CLOCKS_PER_SEC;
         }
         
-        inline unsigned int square_alt(int n){
+        inline double square_alt(int n){
             return n*n;
         }
 
-        inline long double twice_num_pair_or_square(int n, bool alt){
+        inline double twice_num_pair_or_square(int n, bool alt){
             if(n < 2){
                 return 0;
             }
@@ -48,19 +48,20 @@ class SelscanStats {
                 return nCk(n, 2)+n;
             }
             return 2*nCk(n, 2);
-            //return n*n - n;
         }
 
-        inline double twice_num_pair(int n){
+        inline long double twice_num_pair(int n){
             if(n < 2){
                 return 0;
             }
             return 2*nCk(n, 2);
-            //return n*n - n;
         }
 
-        inline unsigned int num_pair(int n){
-            return (n*n - n)/2;
+        inline double num_pair(int n){
+            if(n < 2){
+                return 0;
+            }
+            return nCk(n, 2);
         }
 
         double physicalDistance_from_core(int currentLocus, int core, bool downstream){

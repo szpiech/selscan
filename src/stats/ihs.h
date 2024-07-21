@@ -31,6 +31,7 @@ class IHS: public SelscanStats{
     private:
         static pthread_mutex_t mutex_log;
         int max_extend;
+        //bool MISSING = false;
 
         void static thread_ihs(int tid, IHS* ehh_obj,  double& iHH1, double& iHH0);
         pair<double, double> calc_ehh_unidirection_bitset(int locus, bool downstream);
@@ -42,6 +43,11 @@ class IHS: public SelscanStats{
         
         //unphased_ihs helpers
         string getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0);
+
+
+
+
+
 
 };
 

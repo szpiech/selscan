@@ -10,8 +10,8 @@ using namespace std;
 
 struct MapEntry
 {
-    unsigned int physicalPos;
-    long double geneticPos;
+    int physicalPos;
+    double geneticPos;
     string locusName;
     string chr;
     int locId;
@@ -22,7 +22,7 @@ class MapData
 {
 public:
     struct MapEntry* mapEntries = NULL; //vector of map entries
-    unsigned int nloci;
+    int nloci;
     map<string, int> locus_query_map;
     
     ~MapData(){

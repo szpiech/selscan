@@ -3,7 +3,7 @@
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
+void EHH::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream){
     int numHaps = hm->hapData->nhaps;
     int numSnps = hm->mapData->nloci;
     bool unphased = p.UNPHASED;
@@ -38,7 +38,7 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
     }
 
     int totgc=0;
-    vector<unsigned int> v = hm->hapData->hapEntries[locus].positions;
+    vector<int> v = hm->hapData->hapEntries[locus].positions;
     
     if(v.size() == 0 or  v.size() == numHaps){
         std::cerr<<"ERROR: Monomorphic site should not exist";
@@ -88,7 +88,7 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
         //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
         
         ///*
-        if(ehh1_before_norm*1.0/twice_num_pair(n_c1) <= p.EHH_CUTOFF or ehh0_before_norm*1.0/twice_num_pair(n_c0)  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+        if(ehh1_before_norm/twice_num_pair(n_c1) <= p.EHH_CUTOFF or ehh0_before_norm/twice_num_pair(n_c0)  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
             //std::cout<<"breaking"<<endl;
             break;
         }
@@ -119,7 +119,7 @@ void EHH::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<un
             v = hm->hapData->hapEntries[i].positions;
         }
         
-        for (const unsigned int& set_bit_pos : v){
+        for (const int& set_bit_pos : v){
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
         }
@@ -230,7 +230,7 @@ void EHH::calc_single_ehh(string query){
     //TODO
     int locus = hm->queryFound(query);
 
-    unordered_map<unsigned int, vector<unsigned int> > m;
+    unordered_map<int, vector<int> > m;
     
     //calc_ehh_unidirection(locus, m, true); // downstream
     calc_ehh_unidirection(locus, m, false); // upstream
@@ -240,14 +240,14 @@ void EHH::calc_single_ehh(string query){
 //  * @brief Calculate the EHH for a single locus
 //  * @param query The query locus phys pos
 // */
-// void EHH::calc_single_ehh(unsigned int query){
+// void EHH::calc_single_ehh(int query){
 //     int numSnps = hm->mapData->nloci;
 //     int numHaps = hm->hapData->nhaps;
 
 //     //TODO
 //     int locus = hm.queryFound(query);
     
-//     unordered_map<unsigned int, vector<unsigned int> > m;
+//     unordered_map<int, vector<int> > m;
 //     calc_ehh_unidirection(locus, m, false); // upstream
 //     calc_ehh_unidirection(locus, m, true); // downstream
     
