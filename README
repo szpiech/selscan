@@ -33,7 +33,9 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 	genome from haplotype structure. Nature 419: 832–837.
 
 
-11JUL2024 - selscan v2.0.3 - Big fixes. iHH12 now properly records iHH12 decay to the left. --trunk-ok flag now properly functions with --ihh12. --unphased iHS calculations corrected, previously the notXiHH values were not being properly scaled with genetic distance. 
+23JUL2024 - selscan v2.0.3a - Bug fix, --ehh should work again.
+
+11JUL2024 - selscan v2.0.3 - Bug fixes. iHH12 now properly records iHH12 decay to the left. --trunk-ok flag now properly functions with --ihh12. --unphased iHS calculations corrected, previously the notXiHH values were not being properly scaled with genetic distance. 
 
 17NOV2023 - selscan v2.0.1 - Bug fixes for --ehh flag. Total EHH at the core snp will now be reported correctly (i.e. homozygosity of the site and not as 0). Also implemented --unphased for --ehh, and EHH output files now have a header line.
 
