@@ -759,18 +759,20 @@ void IHS::main() {
             pair<double, double> ihh1_ihh0 = calc_ihh1(locus);
             double ihh1 = ihh1_ihh0.first;
             double ihh0 = ihh1_ihh0.second;
-
-            if(hm->hapData->unphased){
-                const double& iHS2 = ihh1;
-                const double& iHS0 = ihh0;
-                double ihs = (iHS2) > (iHS0) ? iHS2 : 0-iHS0;
-                (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
-                        <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
-                        << iHS2 << " " << iHS0 <<" "<< ihs <<endl;
-            }else{
-                (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
-                        <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
-                        << ihh1 << " " << ihh0 <<" "<< log10(ihh1/ihh0) <<endl;
+            
+            if(hm->mapData->mapEntries[locus].skipLocus == false){
+                if(hm->hapData->unphased){
+                    const double& iHS2 = ihh1;
+                    const double& iHS0 = ihh0;
+                    double ihs = (iHS2) > (iHS0) ? iHS2 : 0-iHS0;
+                    (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
+                            <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
+                            << iHS2 << " " << iHS0 <<" "<< ihs <<endl;
+                }else{
+                    (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
+                            <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
+                            << ihh1 << " " << ihh0 <<" "<< log10(ihh1/ihh0) <<endl;
+                }
             }
         }
         return;
