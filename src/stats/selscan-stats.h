@@ -65,6 +65,25 @@ class SelscanStats {
             return nCk(n, 2);
         }
 
+
+        double geneticDistance_from_core(int currentLocus, int core, bool downstream){
+            double distance;
+            if(downstream){
+                distance =  hm->mapData->mapEntries[core].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos;
+            }else{
+                distance = hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[core].geneticPos;
+            }
+
+            // this should not happen as we already did integrity check previously
+            if (distance < 0)
+            {
+                cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
+                std::cerr << "ERROR: physical position not in ascending order.\n"; 
+                throw 0;
+            }
+            return distance;
+        }
+
         double physicalDistance_from_core(int currentLocus, int core, bool downstream){
             int distance;
             if(downstream){

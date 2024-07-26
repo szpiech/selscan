@@ -30,6 +30,8 @@
 #include "stats/ehh.h"
 #include "stats/xpihh.h"
 #include "stats/ihh12.h"
+#include "stats/pi.h"
+
 
 #include <unordered_map>
 #include <thread>
@@ -232,6 +234,10 @@ class MainTools{
             }else if (p.CALC_SOFT){
                 IHH12 ihh12finder(hm, p, &flog, &fout);
                 ihh12finder.main();
+            }else if(p.CALC_PI){
+                PI pifinder(hm, p, &flog, &fout);
+                pifinder.main();
+                //throw ("ERROR: PI not implemented yet.\n");
             }
             flog.close();
             fout.close();
