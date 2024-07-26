@@ -1,10 +1,17 @@
 # Makefile for selscan
 
+#  -arch x86_64  # Compile for Intel (x86_64)
+#  -arch arm64 # Compile for Apple Silicon (ARM64)
+# lipo -create -output main_universal main_x86_64 main_arm64
+# # Compile for 32-bit ARM
+# Compile for 64-bit ARM
+
 #G++FLAG = -g -Wall -Werror   #debugging
 
 #for osx/macos-arm systems
 CC = g++-14 -std=c++17
-G++FLAG = -g -O3  -m64  -march=native -lm -ftree-vectorize
+G++FLAG = -g -O3  -m64  -arch x86_64  -lm -ftree-vectorize
+#-march=native
 #-Og -g
 # -fsanitize=address -static-libasan
 #-mmmx -msse -msse2 -Og
