@@ -224,7 +224,7 @@ const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
 
 const string ARG_LOW_MEM = "--low-mem";
-const bool DEFAULT_LOW_MEM  = false;
+const bool DEFAULT_LOW_MEM  = true;
 const string HELP_LOW_MEM = "Switch to low memory bitset version.";
 
 const string ARG_MISSING_FLAG = "--missing";

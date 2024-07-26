@@ -10,7 +10,8 @@
 
 #for osx/macos-arm systems
 CC = g++-14 -std=c++17
-G++FLAG = -g -O3  -m64  -arch x86_64  -lm -ftree-vectorize
+G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize
+#-g 
 #-march=native
 #-Og -g
 # -fsanitize=address -static-libasan
@@ -27,7 +28,9 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o
 # OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
-all : selscan norm
+all : selscan 
+
+#norm
 # build_and_cleanup
 
 # build_and_cleanup: selscan norm
