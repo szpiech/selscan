@@ -411,6 +411,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
 void XPIHH::main()
 {
+    if(p.UNPHASED){
+        throw std::runtime_error("Unphased analysis not yet supported for XPIHH");
+        exit(1);    
+    }
     int nloci = hm->mapData->nloci;
 
     if (p.CALC_XPNSL){

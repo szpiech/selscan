@@ -8,7 +8,11 @@ using namespace std;
 
 class PI: public SelscanStats{
     public:
-        PI(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){          
+        PI(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){         
+            if(p.UNPHASED){
+                throw std::invalid_argument("Unphased data not supported for PI calculation");
+                exit(1);
+            } 
             this->winsize = p.PI_WIN;    
             if(this->winsize <= 0 ){
                 throw std::invalid_argument("Invalid window size for PI calculation");

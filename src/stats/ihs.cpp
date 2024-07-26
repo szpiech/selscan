@@ -4,8 +4,6 @@
 #include <cassert>
 #include <pthread.h>
 
-
-
 #define ACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
     for (int k = 0; k < (hapbitset->nwords); k++) {             \
         uint64_t bitset = (hapbitset->bits)[k];                 \

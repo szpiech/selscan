@@ -16,16 +16,12 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-
-
-
 #ifndef __DATA_H__
 #define __DATA_H__
 
 
 #include "selscan-cli.h"
 
-// #include "selscan-maintools.h"
 #include <sstream>
 #include <algorithm>
 
@@ -35,8 +31,6 @@
 #include <omp.h>
 #include "gzstream.h"
 #include "param_t.h"
-// # include <unordered_map>
-#include "selscan-pbar.h"
 
 #include <chrono>
 #include <queue>
@@ -47,7 +41,7 @@
 #include "hapmap/mapdata.h"
 
 #include <memory>
-#include<atomic>
+#include <atomic>
 
 // #include "filetype/vcf.h"
 // #include "filetype/vcf_serial.h"
@@ -71,38 +65,7 @@ public:
 
     std::atomic<int> currentProcessed = 0;
 
-    /***
-     * @param query: Locus name
-     * @returns locus ( in range [0 to nloci) ) after integrity check
-    */
-    int queryFound(string query){
-        int queryLoc  = mapData->queryFound(query);
-        
-        if (queryLoc < 0)
-        {
-            cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-            throw 1;
-        }else{
-             cerr << "Found " << query << " in data.\n";
-            // double queryFreq = hapData.calcFreq(queryLoc);
-            // if (hapData.SKIP && (queryFreq < hapData.MAF || 1 - queryFreq < hapData.MAF))
-            // {
-            //     cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << hapData.MAF << ".\n";
-            //     cerr << "\tIf you wish to calculate EHH at this locus either change --maf or set --keep-low-freq.\n";
-            //     throw 1;
-            // }
-            // else if (!hapData.SKIP && (queryFreq == 0 || queryFreq == 1)){
-            //     cerr << "ERROR: EHH not calculated for " << query << ". Frequency = " << queryFreq << ".\n";
-            //     throw 1
-            // }
-            // else
-            // {
-            //     cerr << "Found " << query << " in data.\n";
-            // }
-        }
-        return  queryLoc;
-    }
-
+    
 
     HapMap(param_main &p, ofstream* flog, ofstream* fout){
         this->p = p;
@@ -264,6 +227,7 @@ public:
         return 0;
     }
 
+    /*
     bool is_gzipped(const std::string& filename) {
         std::ifstream file(filename, std::ios::binary);
         
@@ -282,6 +246,7 @@ public:
         // Check if the first two bytes are the gzip magic numbers
         return buffer[0] == 0x1F && buffer[1] == 0x8B;
     }
+    */
 
 
     /*

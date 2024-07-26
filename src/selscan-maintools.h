@@ -22,8 +22,6 @@
 #include "binom.h"
 #include "param_t.h"
 #include "selscan-data.h"
-// #include "selscan-pbar.h"
-// #include "hamming_t.h"
 #include "selscan-cli.h"
 
 #include "stats/ihs.h"
@@ -237,7 +235,6 @@ class MainTools{
             }else if(p.CALC_PI){
                 PI pifinder(hm, p, &flog, &fout);
                 pifinder.main();
-                //throw ("ERROR: PI not implemented yet.\n");
             }
             flog.close();
             fout.close();

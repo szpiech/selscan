@@ -25,16 +25,13 @@
 #include "selscan-cli.h"
 #include "selscan-maintools.h"
 #include "selscan-data.h"
-#include "selscan-pbar.h"
 #include "param_t.h"
-
-#define IS_TRUE(x) { if (!(x)) std::cout << __FUNCTION__ << " failed on line " << __LINE__ << std::endl; }
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-    cout<<"Max threads supoorted: "<<std::thread::hardware_concurrency()<<endl;
+    cout<<"Max threads supported: "<<std::thread::hardware_concurrency()<<endl;
     double time_start = (clock() / (double) CLOCKS_PER_SEC);
 
     auto start = std::chrono::high_resolution_clock::now();

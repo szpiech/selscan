@@ -308,6 +308,10 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
 
 void IHH12::main()
 {
+    if(p.UNPHASED){
+        throw std::invalid_argument("Unphased analysis not yet supported for iHH12 calculations.");
+    }
+
     int nloci = hm->mapData->nloci;
     ihh12 = new double[nloci];
 

@@ -12,10 +12,9 @@ class EHHOutput{
         double gdist;
         int pdist;
         //for unphased
-        double cehh1 = 0;
-        double cehh0 = 0;
+        // double cehh1 = 0;
+        // double cehh0 = 0;
         
-
         // void print(){
         //     (*fout) << std::fixed <<   pdist  << "\t"
         //         <<  gdist<< "\t"
@@ -41,14 +40,54 @@ class EHH : public SelscanStats{
     public:
         EHH(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){    
             output.resize(hm->mapData->nloci);
+            //iterate over all loci
+            for(int i = 0; i < hm->mapData->nloci; i++){
+                locus_query_map[hm->mapData->mapEntries[i].locusName] = i;
+                locus_query_map[to_string(hm->mapData->mapEntries[i].physicalPos)] = i;
+            }
         }
         void calc_single_ehh(string query);
         
     private:
-
+        map<string, int> locus_query_map;
         vector<EHHOutput> output;
-        void calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream);
         void calc_ehh_unidirection(int locus, bool downstream);
+
+        /***
+         * @param query: Locus name
+         * @returns locus ( in range [0 to nloci) ) after integrity check
+        */
+        int queryFound(string query){
+            int queryLoc = -1;
+            if (locus_query_map.count(query)>0){
+                queryLoc =  locus_query_map[query];
+            }
+
+            if (queryLoc < 0)
+            {
+                cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
+                cerr << "(Note that we filtered all sites below MAF cutoff. If you wish to calculate EHH for all sites, either change --maf or set --keep-low-freq.)" << endl;
+                throw 1;
+            }else{
+                cerr << "Found " << query << " in data.\n";
+                // double queryFreq = hapData.calcFreq(queryLoc);
+                // if (hapData.SKIP && (queryFreq < hapData.MAF || 1 - queryFreq < hapData.MAF))
+                // {
+                //     cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << hapData.MAF << ".\n";
+                //     cerr << "\tIf you wish to calculate EHH at this locus either change --maf or set --keep-low-freq.\n";
+                //     throw 1;
+                // }
+                // else if (!hapData.SKIP && (queryFreq == 0 || queryFreq == 1)){
+                //     cerr << "ERROR: EHH not calculated for " << query << ". Frequency = " << queryFreq << ".\n";
+                //     throw 1
+                // }
+                // else
+                // {
+                //     cerr << "Found " << query << " in data.\n";
+                // }
+            }
+            return  queryLoc;
+        }
 
 };
 
