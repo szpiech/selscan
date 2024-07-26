@@ -2,9 +2,9 @@ plotHaplotypes <- function(filename)
 {
   #filename <- "outfile.rs7215219.ihs.out";
   
-  filename.der <- paste(filename,".der.colormap",sep="")
-  filename.anc <- paste(filename,".anc.colormap",sep="")
-  data<-as.matrix(read.table(filename.der))
+  # filename.der <- paste(filename,".der.colormap",sep="")
+  # filename.anc <- paste(filename,".anc.colormap",sep="")
+  # data<-as.matrix(read.table(filename.der))
   rawData<-read.table(filename)
 
 
@@ -150,3 +150,5 @@ plotHaplotypes <- function(filename)
 
   return
 }
+
+plotHaplotypes("/Users/amatur/code/selscan/src/out/outfile.ihs.out")

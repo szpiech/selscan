@@ -46,7 +46,7 @@ struct param_main{
     int PI_WIN;
 
     bool LOW_MEM;
-    int BENCHMARK_FLAG;
+    int MISSING;
 
 };
 

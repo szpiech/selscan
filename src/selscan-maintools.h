@@ -94,14 +94,14 @@ class MainTools{
             p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
             p.LOW_MEM = params.getBoolFlag(ARG_LOW_MEM);
-            p.BENCHMARK_FLAG = params.getIntFlag(ARG_BENCHMARK_FLAG);
+            p.MISSING = params.getBoolFlag(ARG_MISSING_FLAG);
 
-            //TODO FIX THIS
-            p.MAX_EXTEND_NSL = params.getIntFlag(ARG_MAX_EXTEND_NSL);
-
-            //p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
+            
+            p.MAX_EXTEND_NSL = params.getIntFlag(ARG_MAX_EXTEND_NSL); //p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
             p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
             p.TRUNC = params.getBoolFlag(ARG_TRUNC);
+
+            
             // this->hm = hm;
             //this->bar = new Bar();
             //this->numThreads = p.numThreads
@@ -195,7 +195,7 @@ class MainTools{
             flog << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
             flog << "Max gap parameter: " << p.MAX_GAP << "\n";
             flog << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
-            flog << "Benchmark value: " << p.BENCHMARK_FLAG << "\n";
+            flog << "Missing value: " << p.MISSING << "\n";
 
             flog << "Phased: ";
             if(p.UNPHASED) flog << "no\n";
@@ -211,7 +211,7 @@ class MainTools{
                 cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
             }
 
-             if (p.SINGLE_EHH)
+            if (p.SINGLE_EHH)
             {
                 EHH ehhfinder(hm, p, &flog, &fout);
                 if (p.CALC_SOFT)
@@ -224,9 +224,7 @@ class MainTools{
                 }
             }else if(p.CALC_IHS || p.CALC_NSL){
                 IHS ihsfinder(hm, p, &flog, &fout);
-                //ihsfinder.main_old();
                 ihsfinder.main(); //thread pool
-                //hm.hapData.releaseHapData_bitset();
             }else if (p.CALC_XP || p.CALC_XPNSL)
             {
                 XPIHH xpihhfinder(hm, p, &flog, &fout);

@@ -4,6 +4,8 @@
 #include <cassert>
 #include <pthread.h>
 
+
+
 #define ACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
     for (int k = 0; k < (hapbitset->nwords); k++) {             \
         uint64_t bitset = (hapbitset->bits)[k];                 \
@@ -753,7 +755,11 @@ void IHS::main() {
     int total_calc_to_be_done = hm->hapData->nloci;
     cout<<"Total number of loci: "<<total_calc_to_be_done<<endl;
 
+
+
     if(hm->p.numThreads == 1){
+        std::thread progressBarThread(displayProgressBar, std::ref(hm->currentProcessed), hm->hapData->nloci);
+
         for(int locus = 0; locus <  hm->mapData->nloci; locus++) {
         //for(int locus = 0; locus <  1; locus++) {
             pair<double, double> ihh1_ihh0 = calc_ihh1(locus);
@@ -775,8 +781,13 @@ void IHS::main() {
                 }
             }
         }
+        progressBarThread.join();
+
         return;
     }else{
+        
+        std::thread progressBarThread(displayProgressBar, std::ref(hm->currentProcessed), hm->hapData->nloci); // Launch the progress bar in a separate thread
+
         ThreadPool pool(p.numThreads);
         std::vector< std::future<pair<double, double> > > results;
         for(int i = 0; i <  hm->mapData->nloci; ++i) {
@@ -786,6 +797,10 @@ void IHS::main() {
                 })
             );
         }
+
+        
+        progressBarThread.join(); // Join the progress bar thread
+
         int locus = 0;
         for(auto && result: results){ // this is a blocking call
             pair<double, double> ihh1_ihh0 = result.get(); 
@@ -933,5 +948,8 @@ pair<double, double> IHS::calc_ihh1(int locus){
     //         ihh0 = (locus == 0 or locus == numSnps-1)? 0.5 : 1;
     //     }
     // }
+
+
+    hm->currentProcessed++;
     return make_pair(ihh1, ihh0);
 }

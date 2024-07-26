@@ -2,6 +2,7 @@
 #define __SELSCAN_STATS_H__
 
 #include <time.h>
+#include <thread>
 #include "../binom.h"
 #include "../selscan-data.h"
 
@@ -128,6 +129,30 @@ class SelscanStats {
                 throw 0;
             }
             return distance;
+        }
+
+
+        /// @brief Display progress bar
+        void static displayProgressBar(std::atomic<int>& current, int total) {
+            int barWidth = 70;  // Width of the progress bar
+            while (current < total) {
+                std::cout << "[";
+                int pos = barWidth * current / total;
+                for (int i = 0; i < barWidth; ++i) {
+                    if (i < pos) std::cout << "=";
+                    else if (i == pos) std::cout << ">";
+                    else std::cout << " ";
+                }
+                std::cout << "] " << int(current * 100.0 / total) << " % (" << current << "/" << total << ")\r";
+                std::cout.flush();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Update interval
+            }
+            // Final display to complete the progress bar at 100%
+            std::cout << "[";
+            for (int i = 0; i < barWidth; ++i) {
+                std::cout << "=";
+            }
+            std::cout << "] 100 % (" << total << "/" << total << ")" << std::endl;
         }
 };
 

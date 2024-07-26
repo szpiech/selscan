@@ -47,6 +47,7 @@
 #include "hapmap/mapdata.h"
 
 #include <memory>
+#include<atomic>
 
 // #include "filetype/vcf.h"
 // #include "filetype/vcf_serial.h"
@@ -67,6 +68,8 @@ public:
 
     ofstream* flog;
     ofstream* fout;
+
+    std::atomic<int> currentProcessed = 0;
 
     /***
      * @param query: Locus name
