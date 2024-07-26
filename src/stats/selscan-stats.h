@@ -2,6 +2,7 @@
 #define __SELSCAN_STATS_H__
 
 #include <time.h>
+#include <thread>
 #include "../binom.h"
 #include "../selscan-data.h"
 
@@ -36,11 +37,11 @@ class SelscanStats {
             return clock() / (double) CLOCKS_PER_SEC;
         }
         
-        inline unsigned int square_alt(int n){
+        inline double square_alt(int n){
             return n*n;
         }
 
-        inline long double twice_num_pair_or_square(int n, bool alt){
+        inline double twice_num_pair_or_square(int n, bool alt){
             if(n < 2){
                 return 0;
             }
@@ -48,19 +49,39 @@ class SelscanStats {
                 return nCk(n, 2)+n;
             }
             return 2*nCk(n, 2);
-            //return n*n - n;
         }
 
-        inline double twice_num_pair(int n){
+        inline long double twice_num_pair(int n){
             if(n < 2){
                 return 0;
             }
             return 2*nCk(n, 2);
-            //return n*n - n;
         }
 
-        inline unsigned int num_pair(int n){
-            return (n*n - n)/2;
+        inline double num_pair(int n){
+            if(n < 2){
+                return 0;
+            }
+            return nCk(n, 2);
+        }
+
+
+        double geneticDistance_from_core(int currentLocus, int core, bool downstream){
+            double distance;
+            if(downstream){
+                distance =  hm->mapData->mapEntries[core].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos;
+            }else{
+                distance = hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[core].geneticPos;
+            }
+
+            // this should not happen as we already did integrity check previously
+            if (distance < 0)
+            {
+                cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
+                std::cerr << "ERROR: physical position not in ascending order.\n"; 
+                throw 0;
+            }
+            return distance;
         }
 
         double physicalDistance_from_core(int currentLocus, int core, bool downstream){
@@ -127,6 +148,30 @@ class SelscanStats {
                 throw 0;
             }
             return distance;
+        }
+
+
+        /// @brief Display progress bar
+        void static displayProgressBar(std::atomic<int>& current, int total) {
+            int barWidth = 70;  // Width of the progress bar
+            while (current < total) {
+                std::cout << "[";
+                int pos = barWidth * current / total;
+                for (int i = 0; i < barWidth; ++i) {
+                    if (i < pos) std::cout << "=";
+                    else if (i == pos) std::cout << ">";
+                    else std::cout << " ";
+                }
+                std::cout << "] " << int(current * 100.0 / total) << " % (" << current << "/" << total << ")\r";
+                std::cout.flush();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Update interval
+            }
+            // Final display to complete the progress bar at 100%
+            std::cout << "[";
+            for (int i = 0; i < barWidth; ++i) {
+                std::cout << "=";
+            }
+            std::cout << "] 100 % (" << total << "/" << total << ")" << std::endl;
         }
 };
 

@@ -26,7 +26,7 @@ XPIHH_ehh_data::~XPIHH_ehh_data(){
     delete[] group_id;
 }
 
-void XPIHH::updateEHH_from_split(const unordered_map<unsigned int, vector<unsigned int> > & m, XPIHH_ehh_data* ehhdata){
+void XPIHH::updateEHH_from_split(const unordered_map<int, vector<int> > & m, XPIHH_ehh_data* ehhdata){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
         int newgroup_size = ele.second.size() ;
@@ -75,8 +75,8 @@ void XPIHH::updateEHH_from_split(const unordered_map<unsigned int, vector<unsign
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
 pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
-    std::unique_ptr<std::unordered_map<unsigned int, std::vector<unsigned int>>> mp(new std::unordered_map< unsigned int, std::vector<unsigned int>>());
-    unordered_map<unsigned int, vector<unsigned int> >& m = (* mp);
+    std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map< int, std::vector<int>>());
+    unordered_map<int, vector<int> >& m = (* mp);
 
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
     if(hm->hapData->nloci != hm->hapData2->nloci){
@@ -117,8 +117,8 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         pooled->group_id[p1->nhaps + i] = 0;
     }
 
-    vector<unsigned int>* v1 = &hm->hapData->hapEntries[locus].positions;
-    vector<unsigned int>* v2 = &hm->hapData2->hapEntries[locus].positions;
+    vector<int>* v1 = &hm->hapData->hapEntries[locus].positions;
+    vector<int>* v2 = &hm->hapData2->hapEntries[locus].positions;
     MyBitset* vb1 = hm->hapData->hapEntries[locus].hapbitset;
     MyBitset* vb2 = hm->hapData2->hapEntries[locus].hapbitset;
 
@@ -284,7 +284,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         int i_xor = downstream ? i+1 : i;
         size_t xor_size; 
         size_t pos_size;
-        vector<unsigned int>* v; 
+        vector<int>* v; 
         MyBitset* vb; 
 
         if(p.LOW_MEM){
@@ -304,7 +304,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
                     m[old_group_id].push_back(set_bit_pos);      
                 });
             }else{
-                for (const unsigned int& set_bit_pos : *v){
+                for (const int& set_bit_pos : *v){
                     int old_group_id = p1->group_id[set_bit_pos];
                     m[old_group_id].push_back(set_bit_pos);        
                 }
@@ -334,7 +334,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
                     m[old_group_id].push_back(set_bit_pos);  
                 });
             }else{
-                for (const unsigned int& set_bit_pos : *v){
+                for (const int& set_bit_pos : *v){
                     int old_group_id = p2->group_id[set_bit_pos];
                     m[old_group_id].push_back(set_bit_pos);         
                 }
@@ -373,13 +373,13 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             }else{
                 //NOW POOLED 1
                 v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
-                for (const unsigned int& set_bit_pos : *v){
+                for (const int& set_bit_pos : *v){
                     int old_group_id = pooled->group_id[set_bit_pos];
                     m[old_group_id].push_back(set_bit_pos); 
                 }
                 //for pooled2
                 v =  (xor_size>pos_size) ? &(hm->hapData2->hapEntries[i].positions) : &(hm->hapData2->hapEntries[i_xor].xors);
-                for (const unsigned int& set_bit_pos : *v){
+                for (const int& set_bit_pos : *v){
                     int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
                     m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
                 }
@@ -411,6 +411,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
 void XPIHH::main()
 {
+    if(p.UNPHASED){
+        throw std::runtime_error("Unphased analysis not yet supported for XPIHH");
+        exit(1);    
+    }
     int nloci = hm->mapData->nloci;
 
     if (p.CALC_XPNSL){

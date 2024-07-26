@@ -152,13 +152,13 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         });
 
    }else{
-        const vector<unsigned int>& v2 = hm->hapData->hapEntries[locus].positions2;
+        const vector<int>& v2 = hm->hapData->hapEntries[locus].positions2;
         for(const int& set_bit_pos : v2){
             is2[set_bit_pos] = true;
             group_id[set_bit_pos] = pos_of_012[2];
         }
 
-        const vector<unsigned int>& v1 = hm->hapData->hapEntries[locus].positions;
+        const vector<int>& v1 = hm->hapData->hapEntries[locus].positions;
         for(const int& set_bit_pos : v1){
             is1[set_bit_pos] = true;
             group_id[set_bit_pos] = pos_of_012[1];
@@ -331,25 +331,25 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             m.clear();
 
         }else{
-            const vector<unsigned int>& g0 = (downstream)? hm->hapData->hapEntries[i+1].g[0] : hm->hapData->hapEntries[i].g[0];
-            const vector<unsigned int>& g1 = (downstream)? hm->hapData->hapEntries[i+1].g[1] : hm->hapData->hapEntries[i].g[1];
-            const vector<unsigned int>& g2 = (downstream)? hm->hapData->hapEntries[i+1].g[2] : hm->hapData->hapEntries[i].g[2];
+            const vector<int>& g0 = (downstream)? hm->hapData->hapEntries[i+1].g[0] : hm->hapData->hapEntries[i].g[0];
+            const vector<int>& g1 = (downstream)? hm->hapData->hapEntries[i+1].g[1] : hm->hapData->hapEntries[i].g[1];
+            const vector<int>& g2 = (downstream)? hm->hapData->hapEntries[i+1].g[2] : hm->hapData->hapEntries[i].g[2];
 
-            for (const unsigned int& set_bit_pos : g0){
+            for (const int& set_bit_pos : g0){
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);         
             }
             updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
             m.clear();
 
-            for (const unsigned int& set_bit_pos : g1){
+            for (const int& set_bit_pos : g1){
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);         
             }
             updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
             m.clear();
 
-            for (const unsigned int& set_bit_pos : g2){
+            for (const int& set_bit_pos : g2){
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);         
             }
@@ -472,8 +472,8 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     double ihh1=0;
     double ihh0=0;
 
-    unsigned int n_c0 = hm->hapData->get_n_c0(locus);
-    unsigned int n_c1 = hm->hapData->get_n_c1(locus);
+    int n_c0 = hm->hapData->get_n_c0(locus);
+    int n_c1 = hm->hapData->get_n_c1(locus);
 
     double curr_ehh0_before_norm = 0;
     double curr_ehh1_before_norm = 0;
@@ -491,13 +491,13 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     int* group_count = new int[numHaps];
     int* group_id = new int[numHaps];
     bool* isDerived = new bool [numHaps];
-    bool* isAncestral = new bool [numHaps];
+    // bool* isAncestral = new bool [numHaps];
 
     for(int i = 0; i<numHaps; i++){ //will be vectorized with compile time flags
         group_count[i] = 0;
         group_id[i] = 0;
         isDerived[i] = false;
-        isAncestral[i] = false;        //assert(hm->hapData->hapEntries[locus].flipped == false);
+        // isAncestral[i] = false;        //assert(hm->hapData->hapEntries[locus].flipped == false);
     }
     int totgc = 0; // total group count upto this point
 
@@ -516,7 +516,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 isDerived[set_bit_pos] = true;
             });
         }else{
-            for (const unsigned int& set_bit_pos : hm->hapData->hapEntries[locus].positions){
+            for (const int& set_bit_pos : hm->hapData->hapEntries[locus].positions){
                 isDerived[set_bit_pos] = true;
             }
         }
@@ -531,7 +531,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 group_id[set_bit_pos] = 1;
             });
         }else{
-            for (const unsigned int& set_bit_pos : hm->hapData->hapEntries[locus].positions){
+            for (const int& set_bit_pos : hm->hapData->hapEntries[locus].positions){
                 isDerived[set_bit_pos] = true;
                 group_id[set_bit_pos] = 1;
             }
@@ -631,8 +631,8 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         }
 
         // PHASE 2: GET MAP
-        std::unique_ptr<std::unordered_map<unsigned int, std::vector<unsigned int>>> mp(new std::unordered_map<unsigned int, std::vector<unsigned int>>());
-        unordered_map<unsigned int, vector<unsigned int> >& m = (* mp);
+        std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
+        unordered_map<int, vector<int> >& m = (* mp);
 
         if(p.LOW_MEM){
             MyBitset* v2p = downstream? hm->hapData->hapEntries[i+1].xorbitset : hm->hapData->hapEntries[i].xorbitset;
@@ -647,7 +647,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 m[old_group_id].push_back(set_bit_pos);
             });
         }else{
-            vector<unsigned int> * v2p = downstream? &(hm->hapData->hapEntries[i+1].xors) : &(hm->hapData->hapEntries[i].xors);
+            vector<int> * v2p = downstream? &(hm->hapData->hapEntries[i+1].xors) : &(hm->hapData->hapEntries[i].xors);
 
              // ensure that in boundary we don't do any xor calculation
             if( (hm->hapData->hapEntries[i].positions.size() <(*v2p).size() && i!=numHaps-1) ||  hm->hapData->benchmark_flag != "XOR"){ 
@@ -655,7 +655,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             }
             //v2p = &hm->hapData->hapEntries[i].positions; // uncomment to disable xor
 
-            for (const unsigned int& set_bit_pos : (*v2p)){
+            for (const int& set_bit_pos : (*v2p)){
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);
             }
@@ -682,7 +682,10 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             
             totgc+=1;
             
-            bool isDerivedGroup =  (!hm->hapData->hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm->hapData->hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
+            // uncomment for flipped
+            //bool isDerivedGroup =  (!hm->hapData->hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm->hapData->hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
+            
+            bool isDerivedGroup =  isDerived[ele.second[0]];
             if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
             {
                 curr_ehh1_before_norm += del_update;
@@ -691,7 +694,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             }
         }
 
-        m.clear(); // CLEAR THE MAP //unordered_map<unsigned int, vector<unsigned int> >().swap(m);
+        m.clear(); // CLEAR THE MAP //unordered_map<int, vector<int> >().swap(m);
         
         if(curr_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){
             if(normalizer_1!=0){
@@ -724,7 +727,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     delete[] group_count;
     delete[] group_id;
     delete[] isDerived;
-    delete[] isAncestral;
+    //delete[] isAncestral;
     return make_pair(ihh1, ihh0);
 }
 
@@ -750,28 +753,39 @@ void IHS::main() {
     int total_calc_to_be_done = hm->hapData->nloci;
     cout<<"Total number of loci: "<<total_calc_to_be_done<<endl;
 
+
+
     if(hm->p.numThreads == 1){
+        std::thread progressBarThread(displayProgressBar, std::ref(hm->currentProcessed), hm->hapData->nloci);
+
         for(int locus = 0; locus <  hm->mapData->nloci; locus++) {
         //for(int locus = 0; locus <  1; locus++) {
             pair<double, double> ihh1_ihh0 = calc_ihh1(locus);
             double ihh1 = ihh1_ihh0.first;
             double ihh0 = ihh1_ihh0.second;
-
-            if(hm->hapData->unphased){
-                const double& iHS2 = ihh1;
-                const double& iHS0 = ihh0;
-                double ihs = (iHS2) > (iHS0) ? iHS2 : 0-iHS0;
-                (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
-                        <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
-                        << iHS2 << " " << iHS0 <<" "<< ihs <<endl;
-            }else{
-                (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
-                        <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
-                        << ihh1 << " " << ihh0 <<" "<< log10(ihh1/ihh0) <<endl;
+            
+            if(hm->mapData->mapEntries[locus].skipLocus == false){
+                if(hm->hapData->unphased){
+                    const double& iHS2 = ihh1;
+                    const double& iHS0 = ihh0;
+                    double ihs = (iHS2) > (iHS0) ? iHS2 : 0-iHS0;
+                    (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
+                            <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
+                            << iHS2 << " " << iHS0 <<" "<< ihs <<endl;
+                }else{
+                    (*fout) << std::fixed <<   hm->mapData->mapEntries[locus].locusName << " " <<   hm->mapData->mapEntries[locus].physicalPos << " "
+                            <<  hm->mapData->mapEntries[locus].locId << " " << hm->hapData->calcFreq(locus) << " "
+                            << ihh1 << " " << ihh0 <<" "<< log10(ihh1/ihh0) <<endl;
+                }
             }
         }
+        progressBarThread.join();
+
         return;
     }else{
+        
+        std::thread progressBarThread(displayProgressBar, std::ref(hm->currentProcessed), hm->hapData->nloci); // Launch the progress bar in a separate thread
+
         ThreadPool pool(p.numThreads);
         std::vector< std::future<pair<double, double> > > results;
         for(int i = 0; i <  hm->mapData->nloci; ++i) {
@@ -781,6 +795,10 @@ void IHS::main() {
                 })
             );
         }
+
+        
+        progressBarThread.join(); // Join the progress bar thread
+
         int locus = 0;
         for(auto && result: results){ // this is a blocking call
             pair<double, double> ihh1_ihh0 = result.get(); 
@@ -928,5 +946,8 @@ pair<double, double> IHS::calc_ihh1(int locus){
     //         ihh0 = (locus == 0 or locus == numSnps-1)? 0.5 : 1;
     //     }
     // }
+
+
+    hm->currentProcessed++;
     return make_pair(ihh1, ihh0);
 }

@@ -12,12 +12,12 @@ using namespace std;
 struct HapEntry
 {
     bool flipped = false;
-    vector <unsigned int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
-    vector <unsigned int> xors;
+    vector <int> positions; // 0-based indexing of derived alleles ("1") (if flipped false)
+    vector <int> xors;
     
     // for unphased
-    vector <unsigned int> g[3];
-    vector <unsigned int> positions2; // 0-based indexing of allele "2"
+    vector <int> g[3];
+    vector <int> positions2; // 0-based indexing of allele "2"
 
     // for LOW_MEM
     MyBitset* hapbitset;
@@ -197,34 +197,34 @@ public:
     }
 
 
-    inline unsigned int get_n_c2(int locus)
+    inline int get_n_c2(int locus)
     {
         return LOW_MEM? nhaps - hapEntries[locus].xorbitset->num_1s: nhaps - hapEntries[locus].positions2.size();
         // // if flip was enabled
-        // unsigned int non_flipped_1s = 0;
+        // int non_flipped_1s = 0;
         // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
-        // unsigned int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
+        // int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
         // return result;
     }
 
 
-    inline unsigned int get_n_c0(int locus)
+    inline int get_n_c0(int locus)
     {
         return LOW_MEM? nhaps - hapEntries[locus].hapbitset->num_1s: nhaps - hapEntries[locus].positions.size();
         // // if flip was enabled
-        // unsigned int non_flipped_1s = 0;
+        // int non_flipped_1s = 0;
         // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
-        // unsigned int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
+        // int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
         // return result;
     }
 
-    inline unsigned int get_n_c1(int locus)
+    inline int get_n_c1(int locus)
     {
         return LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
         // // if flip was enabled
-        // unsigned int non_flipped_1s = 0;
+        // int non_flipped_1s = 0;
         // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
-        // unsigned int result = hapEntries[locus].flipped ? nhaps - non_flipped_1s : non_flipped_1s;
+        // int result = hapEntries[locus].flipped ? nhaps - non_flipped_1s : non_flipped_1s;
         // return result;
     }
 

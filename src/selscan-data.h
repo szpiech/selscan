@@ -22,7 +22,6 @@
 
 #include "selscan-cli.h"
 
-// #include "selscan-maintools.h"
 #include <sstream>
 #include <algorithm>
 
@@ -32,9 +31,8 @@
 #include <omp.h>
 #include "gzstream.h"
 #include "param_t.h"
-// # include <unordered_map>
-#include "selscan-pbar.h"
 
+#include <chrono>
 #include <queue>
 #include <cmath>
 
@@ -42,10 +40,13 @@
 #include "hapmap/hapdata.h"
 #include "hapmap/mapdata.h"
 
-#include "filetype/vcf.h"
-#include "filetype/vcf_serial.h"
-#include "filetype/hap.h"
-#include "filetype/hap_serial.h"
+#include <memory>
+#include <atomic>
+
+// #include "filetype/vcf.h"
+// #include "filetype/vcf_serial.h"
+// #include "filetype/hap.h"
+// #include "filetype/hap_serial.h"
 
 using namespace std;
 
@@ -62,38 +63,9 @@ public:
     ofstream* flog;
     ofstream* fout;
 
-    /***
-     * @param query: Locus name
-     * @returns locus ( in range [0 to nloci) ) after integrity check
-    */
-    int queryFound(string query){
-        int queryLoc  = mapData->queryFound(query);
-        
-        if (queryLoc < 0)
-        {
-            cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-            throw 1;
-        }else{
-             cerr << "Found " << query << " in data.\n";
-            // double queryFreq = hapData.calcFreq(queryLoc);
-            // if (hapData.SKIP && (queryFreq < hapData.MAF || 1 - queryFreq < hapData.MAF))
-            // {
-            //     cerr << "ERROR: EHH not calculated for " << query << ". MAF < " << hapData.MAF << ".\n";
-            //     cerr << "\tIf you wish to calculate EHH at this locus either change --maf or set --keep-low-freq.\n";
-            //     throw 1;
-            // }
-            // else if (!hapData.SKIP && (queryFreq == 0 || queryFreq == 1)){
-            //     cerr << "ERROR: EHH not calculated for " << query << ". Frequency = " << queryFreq << ".\n";
-            //     throw 1
-            // }
-            // else
-            // {
-            //     cerr << "Found " << query << " in data.\n";
-            // }
-        }
-        return  queryLoc;
-    }
+    std::atomic<int> currentProcessed = 0;
 
+    
 
     HapMap(param_main &p, ofstream* flog, ofstream* fout){
         this->p = p;
@@ -255,6 +227,7 @@ public:
         return 0;
     }
 
+    /*
     bool is_gzipped(const std::string& filename) {
         std::ifstream file(filename, std::ios::binary);
         
@@ -273,8 +246,10 @@ public:
         // Check if the first two bytes are the gzip magic numbers
         return buffer[0] == 0x1F && buffer[1] == 0x8B;
     }
+    */
 
 
+    /*
     void handleData(string filename, string EXT, HapData& hapData){
         if(EXT == "VCF"){
             //hapData.readHapDataVCF(filename);
@@ -315,11 +290,11 @@ public:
                         hapData.hapEntries[locus_after_filter].flipped = true;
                         count_flip++;
 
-                        vector<unsigned int> copy_pos;
+                        vector<int> copy_pos;
                         copy_pos.reserve(hapData.nhaps - hapData.hapEntries[locus_after_filter].positions.size());
                         int cnt = 0;
                         for(int i = 0; i< hapData.nhaps; i++){
-                            unsigned int curr =  hapData.hapEntries[locus_after_filter].positions[cnt];
+                            int curr =  hapData.hapEntries[locus_after_filter].positions[cnt];
                             if(i==curr){
                                 cnt++;
                             }else{
@@ -328,10 +303,10 @@ public:
                         }
                         
                         hapData.hapEntries[locus_after_filter].positions = copy_pos;
-                        vector<unsigned int>().swap(copy_pos);
-                        // vector<unsigned int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
+                        vector<int>().swap(copy_pos);
+                        // vector<int> zero_positions(this->nhaps - this->hapEntries[locus_after_filter].positions.size());
                         // int j = 0;
-                        // unsigned int front_one = this->hapEntries[locus_after_filter].positions[j++];
+                        // int front_one = this->hapEntries[locus_after_filter].positions[j++];
                         // for(int i=0; i<nhaps; i++){
                         //     if(i==front_one){
                         //         front_one = this->hapEntries[locus_after_filter].positions[j++];
@@ -351,6 +326,7 @@ public:
         
         
     }
+    */
 
 };
 

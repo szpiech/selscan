@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "v3_Jul18_Unphased_Fix_MaxExtend";
+const string VERSION = "v3_Jul26_Optimized";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -224,12 +224,12 @@ const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
 
 const string ARG_LOW_MEM = "--low-mem";
-const bool DEFAULT_LOW_MEM  = false;
+const bool DEFAULT_LOW_MEM  = true;
 const string HELP_LOW_MEM = "Switch to low memory bitset version.";
 
-const string ARG_BENCHMARK_FLAG = "--benchmark";
-const int DEFAULT_BENCHMARK_FLAG = 0;
-const string HELP_BENCHMARK_FLAG = "Phased 3 mode: 0=xor, 1=flip, 2=basic";
+const string ARG_MISSING_FLAG = "--missing";
+const bool DEFAULT_MISSING_FLAG = false;
+const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
 bool checkParameters(param_t &params,int argc, char *argv[]);

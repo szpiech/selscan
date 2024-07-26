@@ -85,7 +85,7 @@ void IHH12::findMaxTwo(int* arr, int n, int &max1, int &max2) {
 
 
 
-void IHH12::updateEHH_from_split(const unordered_map<unsigned int, vector<unsigned int> > & m, IHH12_ehh_data* ehhdata){
+void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* ehhdata){
     double sum_del_update = 0;
     for (const auto &ele : m) {
         int old_group_id = ele.first;
@@ -157,7 +157,7 @@ void IHH12::updateEHH_from_split(const unordered_map<unsigned int, vector<unsign
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
+void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream){
     IHH12_ehh_data ehhdata;
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
     bool &skipLocus = hm->mapData->mapEntries[locus].skipLocus;
@@ -181,7 +181,7 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
             break;
         }
 
-        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm * 1.0 / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm * 1.0 /twice_num_pair(ehhdata.nhaps));
+        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
         if(breaking_ehh <= p.EHH_CUTOFF){
             /*DEBUG :
             if(downstream){
@@ -272,7 +272,7 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
         // main faster algorithm for ehh
 
         //for p1
-        for (const unsigned int& set_bit_pos : ehhdata.v){
+        for (const int& set_bit_pos : ehhdata.v){
             int old_group_id = ehhdata.group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
         }
@@ -308,6 +308,10 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<
 
 void IHH12::main()
 {
+    if(p.UNPHASED){
+        throw std::invalid_argument("Unphased analysis not yet supported for iHH12 calculations.");
+    }
+
     int nloci = hm->mapData->nloci;
     ihh12 = new double[nloci];
 
@@ -321,7 +325,7 @@ void IHH12::main()
 
 
     std::cerr << "Starting iHH12 calculations."<<endl;
-    std::unordered_map<unsigned int, std::vector<unsigned int> >* map_per_thread = new std::unordered_map<unsigned int, std::vector<unsigned int> > [numThreads];
+    std::unordered_map<int, std::vector<int> >* map_per_thread = new std::unordered_map<int, std::vector<int> > [numThreads];
 
     bool openmp_enabled = false; // two different ways to parallelize: first block does pthread, second block does openmp
     if (!openmp_enabled)
@@ -367,7 +371,7 @@ void IHH12::main()
 /**
  * populate ihh_p1 and ihh_p2 at the end with correct values
 */
-void IHH12::calc_stat_at_locus(int locus, unordered_map<unsigned int, vector<unsigned int> >& m)
+void IHH12::calc_stat_at_locus(int locus, unordered_map<int, vector<int> >& m)
 {
     //DEBUG: if(locus==239){
     ihh12[locus] = 0;
@@ -376,7 +380,7 @@ void IHH12::calc_stat_at_locus(int locus, unordered_map<unsigned int, vector<uns
     calc_ehh_unidirection(locus, m, false);
 }
 
-void IHH12::thread_main(int tid, unordered_map<unsigned int, vector<unsigned int> >& m, IHH12* obj){
+void IHH12::thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj){
     int numSnps = obj->hm->hapData->nloci;
     int elem_per_block = floor(numSnps/obj->numThreads);
     int start = tid*elem_per_block ;

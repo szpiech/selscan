@@ -4,7 +4,7 @@
 // /**
 //  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 // */
-// void EHH12::calc_ehh_unidirection(int locus, unordered_map<unsigned int, vector<unsigned int> > & m, bool downstream){
+// void EHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream){
 //     int numHaps = hm.hapData.nhaps;
 //     int numSnps = hm.mapData.nloci;
 //     bool unphased = p.UNPHASED;
@@ -39,7 +39,7 @@
 //     }
 
 //     int totgc=0;
-//     vector<unsigned int> v = hm.hapData.hapEntries[locus].positions;
+//     vector<int> v = hm.hapData.hapEntries[locus].positions;
     
 //     if(v.size() == 0 or  v.size() == numHaps){
 //         std::cerr<<"ERROR: Monomorphic site should not exist";
@@ -120,7 +120,7 @@
 //             v = hm.hapData.hapEntries[i].positions;
 //         }
         
-//         for (const unsigned int& set_bit_pos : v){
+//         for (const int& set_bit_pos : v){
 //             int old_group_id = group_id[set_bit_pos];
 //             m[old_group_id].push_back(set_bit_pos);
 //         }
@@ -230,7 +230,7 @@
 //     //TODO
 //     int locus = hm.queryFound(query);
 
-//     unordered_map<unsigned int, vector<unsigned int> > m;
+//     unordered_map<int, vector<int> > m;
     
 //     //calc_ehh_unidirection(locus, m, true); // downstream
 //     calc_ehh_unidirection(locus, m, false); // upstream
@@ -240,14 +240,14 @@
 // //  * @brief Calculate the EHH for a single locus
 // //  * @param query The query locus phys pos
 // // */
-// // void EHH::calc_single_ehh(unsigned int query){
+// // void EHH::calc_single_ehh(int query){
 // //     int numSnps = hm.mapData.nloci;
 // //     int numHaps = hm.hapData.nhaps;
 
 // //     //TODO
 // //     int locus = hm.queryFound(query);
     
-// //     unordered_map<unsigned int, vector<unsigned int> > m;
+// //     unordered_map<int, vector<int> > m;
 // //     calc_ehh_unidirection(locus, m, false); // upstream
 // //     calc_ehh_unidirection(locus, m, true); // downstream
     
