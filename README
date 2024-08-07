@@ -32,6 +32,7 @@ BF Voight et al. (2006) A map of recent positive selection in the human
 PC Sabeti et al. (2002) Detecting recent positive selection in the human 
 	genome from haplotype structure. Nature 419: 832–837.
 
+-fixed minor bug in --ehh where the only very first EHH value was incorrectly calculated.
 
 23JUL2024 - selscan v2.0.3a - Bug fix, --ehh should work again.
 
