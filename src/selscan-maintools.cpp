@@ -141,10 +141,10 @@ double calcFreq(HaplotypeData *hapData, int locus, bool unphased)
 }
 double getMaxFreq(map<string, int> &count){
     map<string, int>::iterator i;
-    double total = 0l
+    double total = 0;
     double max = 0;
 
-    for (i = hapCount.begin(); i != hapCount.end(); i++){
+    for (i = count.begin(); i != count.end(); i++){
         total += i->second;
         if (i->second > max) max = i->second;
     }
