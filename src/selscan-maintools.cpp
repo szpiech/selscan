@@ -156,7 +156,7 @@ double getMaxFreq(double a, double b, double c){
     double max = 0;
 
     if (a > b) max = a;
-    if (c > a) max = c
+    if (c > a) max = c;
 
     return max/total;
 }
@@ -431,6 +431,8 @@ void query_locus(void *order)
         current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
         current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
     }
+
+    if(SCALE_HOM) current_ehh = scaleHomozygosity(current_ehh,getMaxFreq(derivedCount,ancestralCount,hetCount));
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
