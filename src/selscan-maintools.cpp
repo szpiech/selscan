@@ -398,10 +398,20 @@ void query_locus(void *order)
     current_derived_ehh = 1;
     current_ancestral_ehh = 1;
 
-    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
-    current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
-    current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
-
+    if (ALT){
+        double h = derivedCount/nhaps;
+        current_ehh = h;
+        h = ancestralCount/nhaps;
+        current_ehh += h;
+        h = hetCount/nhaps;
+        current_ehh += h;
+    }
+    else{
+        current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
+        current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
+        current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
+    }
+    
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
             << geneticPos[locus] - geneticPos[locus] << "\t"
