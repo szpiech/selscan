@@ -382,8 +382,8 @@ void query_locus(void *order)
             current_ancestral_ehh = scaleHomozygosity(current_ancestral_ehh,getMaxFreq(ancestralHapCount));
             current_ehh = scaleHomozygosity(current_ehh,getMaxFreq(hapCount));
             if(unphased){
-                current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
-                current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+                current_notDerived_ehh = scaleHomozygosity(current_notDerived_ehh,getMaxFreq(notDerivedHapCount));
+                current_notAncestral_ehh = scaleHomozygosity(current_notAncestral_ehh,getMaxFreq(notAncestralHapCount));
             }
         }
 
@@ -549,8 +549,8 @@ void query_locus(void *order)
             current_ancestral_ehh = scaleHomozygosity(current_ancestral_ehh,getMaxFreq(ancestralHapCount));
             current_ehh = scaleHomozygosity(current_ehh,getMaxFreq(hapCount));
             if(unphased){
-                current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
-                current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+                current_notDerived_ehh = scaleHomozygosity(current_notDerived_ehh,getMaxFreq(notDerivedHapCount));
+                current_notAncestral_ehh = scaleHomozygosity(current_notAncestral_ehh,getMaxFreq(notAncestralHapCount));
             }
         }
 
