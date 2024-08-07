@@ -97,4 +97,8 @@ double calculateHomozygosity_Wagh(map<string, int> &count, int total, int derive
 
 double calculateHomozygosity(map<string, int> &count, int total, bool ALT);
 
+double getMaxFreq(map<string, int> &count);
+double getMaxFreq(double a, double b, double c);
+double scaleHomozygosity(double h, double M);
+
 #endif

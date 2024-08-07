@@ -151,6 +151,16 @@ double getMaxFreq(map<string, int> &count){
     return max/total;
 }
 
+double getMaxFreq(double a, double b, double c){
+    double total = a+b+c;
+    double max = 0;
+
+    if (a > b) max = a;
+    if (c > a) max = c
+
+    return max/total;
+}
+
 double scaleHomozygosity(double h, double M)
 {
     if(M == 1) return 1;
@@ -244,7 +254,7 @@ void query_locus(void *order)
         current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
     }
 
-
+    if(SCALE_HOM) current_ehh = scaleHomozygosity(current_ehh,getMaxFreq(derivedCount,ancestralCount,hetCount));
     
 
     
@@ -367,6 +377,16 @@ void query_locus(void *order)
             current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
         }
 
+        if (SCALE_HOM){
+            current_derived_ehh = scaleHomozygosity(current_derived_ehh,getMaxFreq(derivedHapCount));
+            current_ancestral_ehh = scaleHomozygosity(current_ancestral_ehh,getMaxFreq(ancestralHapCount));
+            current_ehh = scaleHomozygosity(current_ehh,getMaxFreq(hapCount));
+            if(unphased){
+                current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
+                current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+            }
+        }
+
     // use stringstreams  
         char tempStr[200];
         if(unphased){
@@ -398,9 +418,19 @@ void query_locus(void *order)
     current_derived_ehh = 1;
     current_ancestral_ehh = 1;
 
-    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
-    current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
-    current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
+    if (ALT){
+        double h = derivedCount/nhaps;
+        current_ehh = h;
+        h = ancestralCount/nhaps;
+        current_ehh += h;
+        h = hetCount/nhaps;
+        current_ehh += h;
+    }
+    else{
+        current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
+        current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
+        current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
+    }
 
     fout->precision(6);
     (*fout) << std::fixed <<  physicalPos[locus] - physicalPos[locus]  << "\t"
@@ -512,6 +542,16 @@ void query_locus(void *order)
         if(unphased){
             current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
             current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+        }
+
+        if (SCALE_HOM){
+            current_derived_ehh = scaleHomozygosity(current_derived_ehh,getMaxFreq(derivedHapCount));
+            current_ancestral_ehh = scaleHomozygosity(current_ancestral_ehh,getMaxFreq(ancestralHapCount));
+            current_ehh = scaleHomozygosity(current_ehh,getMaxFreq(hapCount));
+            if(unphased){
+                current_notDerived_ehh = (*calc)(notDerivedHapCount, numAncestral + numHet, ALT);
+                current_notAncestral_ehh = (*calc)(notAncestralHapCount, numDerived + numHet, ALT);
+            }
         }
 
         (*fout) << std::fixed <<  physicalPos[i] - physicalPos[locus]  << "\t"
