@@ -52,6 +52,8 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
 
+    params.addFlag(ARG_RESCALE, DEFAULT_RESCALE, "SILENT", HELP_RESCALE);
+
     try
     {
         params.parseCommandLine(argc, argv);

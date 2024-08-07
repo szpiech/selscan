@@ -139,6 +139,29 @@ double calcFreq(HaplotypeData *hapData, int locus, bool unphased)
     }
     return (freq / total);
 }
+double getMaxFreq(map<string, int> &count){
+    map<string, int>::iterator i;
+    double total = 0l
+    double max = 0;
+
+    for (i = hapCount.begin(); i != hapCount.end(); i++){
+        total += i->second;
+        if (i->second > max) max = i->second;
+    }
+    return max/total;
+}
+
+double scaleHomozygosity(double h, double M)
+{
+    if(M == 1) return 1;
+    if(M == 0) return 0;
+
+    double ceil_invM = ceil(1/M);
+    double lowerBound = M*M;
+    double upperBound = 1 - M*(ceil_invM - 1)*(2 - ceil_invM*M);
+    
+    return (h - lowerBound)/upperBound;
+}
 
 void query_locus(void *order)
 {
@@ -159,6 +182,7 @@ void query_locus(void *order)
     //bool WAGH = p->params->getBoolFlag(ARG_WAGH);
     double (*calc)(map<string, int> &, int, bool) = p->calc;
     bool unphased = p->params->getBoolFlag(ARG_UNPHASED);
+    bool SCALE_HOM = p->params->getBoolFlag(ARG_RESCALE);
 
     int locus = p->queryLoc;
     int queryPad = p->params->getIntFlag(ARG_QWIN);
@@ -201,14 +225,29 @@ void query_locus(void *order)
         }
         else{
             derivedCount += ( data[hap][locus] == '1' ) ? 1 : 0;
+            ancestralCount += ( data[hap][locus] == '0' ) ? 1 : 0;
         }
         
     }
 
-    current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
-    current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
-    current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
+    if (ALT){
+        double h = derivedCount/nhaps;
+        current_ehh = h;
+        h = ancestralCount/nhaps;
+        current_ehh += h;
+        h = hetCount/nhaps;
+        current_ehh += h;
+    }
+    else{
+        current_ehh = (derivedCount > 1) ? (nCk(derivedCount, 2) / nCk(nhaps, 2)) : 0;
+        current_ehh += (ancestralCount > 1) ? (nCk(ancestralCount, 2) / nCk(nhaps, 2)) : 0;
+        current_ehh += (hetCount > 1) ? (nCk(hetCount, 2) / nCk(nhaps, 2)) : 0;
+    }
 
+
+    
+
+    
     /*
         if (derivedCount == 0 || derivedCount == nhaps)
         {
