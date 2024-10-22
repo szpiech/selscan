@@ -42,13 +42,18 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
-    params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
+    //params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
     params.addFlag(ARG_MAX_EXTEND_NSL, DEFAULT_MAX_EXTEND_NSL, "", HELP_MAX_EXTEND_NSL);
     params.addFlag(ARG_SKIP, DEFAULT_SKIP, "", HELP_SKIP);
     params.addFlag(ARG_KEEP, DEFAULT_KEEP, "", HELP_KEEP);
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
+
+    params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
+    params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
+
+
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
 
@@ -112,18 +117,22 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
     bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
     bool CALC_XP = params.getBoolFlag(ARG_XP);
     bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
-    bool SINGLE_EHH = false;
+    bool SINGLE_EHH =  false;
+    if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
+
     bool SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
     if(params.getBoolFlag(ARG_SKIP)){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
     //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
-    int EHH1K = params.getIntFlag(ARG_SOFT_K);
+    // int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
     bool CALC_PI = params.getBoolFlag(ARG_PI);
     int PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
+
+    cout<<  CALC_XPNSL << " " << CALC_IHS << " " << CALC_XP << " " << SINGLE_EHH << " " << CALC_PI << " " << CALC_NSL << " " << CALC_SOFT << endl;
         if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
     {
         cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
@@ -218,11 +227,11 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
         }
 
     }
-    if (EHH1K < 1)
-    {
-        cerr << "ERROR: EHH1K must be > 0.\n";
-        return 1;
-    }
+    // if (EHH1K < 1)
+    // {
+    //     cerr << "ERROR: EHH1K must be > 0.\n";
+    //     return 1;
+    // }
 
     if (PI_WIN < 1)
     {

@@ -11,6 +11,46 @@ using namespace std;
 
 const string ARG_HELP = "--help";
 
+struct param_main{
+    string hapFilename, hapFilename2 ;
+    string mapFilename;
+    string tpedFilename, tpedFilename2;
+    string vcfFilename, vcfFilename2 ;
+
+    string outFilename;
+    string query;
+
+    bool TPED, VCF;
+
+    int SCALE_PARAMETER, MAX_GAP;
+    double EHH_CUTOFF;
+    bool ALT,WAGH,TRUNC;
+    double MAF;
+    int MAX_EXTEND;
+    int MAX_EXTEND_NSL;
+    bool SKIP, WRITE_DETAILED_IHS;
+    bool CALC_XPNSL, CALC_XP;
+    bool SINGLE_EHH;
+
+    bool CALC_NSL, CALC_IHS, CALC_SOFT;
+
+    int numThreads;
+
+    bool UNPHASED;
+    bool USE_PMAP;
+
+    int EHH1K;
+    int QWIN;
+
+    bool CALC_PI;
+    int PI_WIN;
+
+    bool LOW_MEM;
+    int MISSING;
+
+};
+
+
 class param_t
 {
 public:

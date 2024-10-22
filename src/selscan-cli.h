@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "2.0.2";
+const string VERSION = "v3_Jul26_Optimized";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -155,9 +155,9 @@ const string ARG_SOFT = "--ihh12";
 const bool DEFAULT_SOFT = false;
 const string HELP_SOFT = "Set this flag to calculate iHH12.";
 
-const string ARG_SOFT_K = "--k";
-const int DEFAULT_SOFT_K = 2;
-const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
+// const string ARG_SOFT_K = "--k";
+// const int DEFAULT_SOFT_K = 2;
+// const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
@@ -190,7 +190,7 @@ const string HELP_QWIN = "When calculating EHH, this is the length of the window
 \tin each direction from the query locus.";
 
 const string ARG_MAX_EXTEND = "--max-extend";
-const int DEFAULT_MAX_EXTEND = 1000000;
+const int DEFAULT_MAX_EXTEND = 1000000;//1000000
 const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
 \tSet <= 0 for no restriction.";
 
@@ -221,6 +221,15 @@ const string HELP_PI = "Set this flag to calculate mean pairwise sequence differ
 const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
+
+
+const string ARG_LOW_MEM = "--low-mem";
+const bool DEFAULT_LOW_MEM  = true;
+const string HELP_LOW_MEM = "Switch to low memory bitset version.";
+
+const string ARG_MISSING_FLAG = "--missing";
+const bool DEFAULT_MISSING_FLAG = false;
+const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
 bool checkParameters(param_t &params,int argc, char *argv[]);

@@ -7,7 +7,7 @@ long double fact(int x)
 
 //From Numerical Recipes in C
 //returns n choose k
-long double nCk(int n, int k)
+double nCk(int n, int k)
 {
     return floor(0.5 + exp(factln(n) - factln(k) - factln(n - k)));
 }

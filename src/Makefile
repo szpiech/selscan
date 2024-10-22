@@ -1,45 +1,60 @@
 # Makefile for selscan
 
-#debugging
-#G++FLAG = -g -Wall -Werror
-#For dynamic linking
-#LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
+#  -arch x86_64  # Compile for Intel (x86_64)
+#  -arch arm64 # Compile for Apple Silicon (ARM64)
+# lipo -create -output main_universal main_x86_64 main_arm64
+# # Compile for 32-bit ARM
+# Compile for 64-bit ARM
+
+#G++FLAG = -g -Wall -Werror   #debugging
 
 #for osx/macos-arm systems
-CC = g++
-G++FLAG = -O3 -m64 
-#-mmmx -msse -msse2
+CC = g++-14 -std=c++17
+G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize
+#-g 
+#-march=native
+#-Og -g
+# -fsanitize=address -static-libasan
+#-mmmx -msse -msse2 -Og
+LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
+#LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
 LINK_OPTS2 = -lpthread -lz
+# -fopenmp
+#-fopenmp 
 I_PATH = -I../include
-L_PATH = ../lib/macos-arm
-#L_PATH = ../lib/osx
+L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
-#for linux systems
-#CC = g++
-#G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/linux
+OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o
+# OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
+OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
-#for windows, using MinGW build environment
-#CC = g++.exe
-#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-#LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
-#I_PATH = -I../include -I../include/win32 
-#L_PATH = ../lib/win32
+all : selscan 
 
-#For static linking of norm program to gsl libs
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+#norm
+# build_and_cleanup
 
-all : selscan norm
+# build_and_cleanup: selscan norm
+# 	rm -rf *.o	
 
-selscan : selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
-
+selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
+	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
-selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h
+%.o: hapmap/%.cpp hapmap/%.h 
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+%.o: stats/%.cpp stats/%.h 
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+# %.o: filetype/%.cpp filetype/%.h 
+# 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+thread_pool.o : thread_pool.cpp thread_pool.h
+	$(CC) $(G++FLAG) -c thread_pool.cpp $(LINK_OPTS2)
+
+selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
 	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
 
 selscan-data.o : selscan-data.cpp selscan-data.h
@@ -47,9 +62,6 @@ selscan-data.o : selscan-data.cpp selscan-data.h
 
 selscan-cli.o : selscan-cli.cpp selscan-cli.h
 	$(CC) $(G++FLAG) -c selscan-cli.cpp $(I_PATH)
-
-selscan-pbar.o : selscan-pbar.cpp selscan-pbar.h
-	$(CC) $(G++FLAG) -c selscan-pbar.cpp $(I_PATH)
 
 binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
@@ -66,8 +78,11 @@ param_t.o : param_t.cpp param_t.h
 gzstream.o : gzstream.cpp gzstream.h
 	$(CC) $(G++FLAG) -c gzstream.cpp $(I_PATH)
 
-hamming_t.o : hamming_t.cpp hamming_t.h
-	$(CC) $(G++FLAG) -c hamming_t.cpp $(I_PATH)
+# $(BIN_DIR): # Create the binary directory if it does not exist
+# 	mkdir -p $(BIN_DIR)
+
+.PHONY: cleanup
+.PHONY: clean
 
 clean :
-	rm *.o
+	rm -rf *.o;  rm -rf selscan; rm -rf  norm; rm -rf outfile*
