@@ -143,8 +143,8 @@ public:
             else if (VCF) {
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
-                    hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
+                    hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+                    hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
 
                     hapData->readHapDataVCF(vcfFilename);
                     hapData2->readHapDataVCF(vcfFilename2);
@@ -159,7 +159,7 @@ public:
                         return 1;
                     }
                 }else{
-                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
                     hapData->readHapDataVCF(vcfFilename);
 
                     // handleData(vcfFilename, "VCF", *hapData);
@@ -176,8 +176,8 @@ public:
             {
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
-                    hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+                    hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
 
                     hapData->readHapData(hapFilename);
                     hapData2->readHapData(hapFilename2);
@@ -191,7 +191,7 @@ public:
                         return 1;
                     }
                 }else{
-                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM);
+                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
                     hapData->readHapData(hapFilename);
 
                     // handleData(hapFilename, "HAP", *hapData);
