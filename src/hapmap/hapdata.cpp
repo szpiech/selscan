@@ -867,7 +867,7 @@ void HapData::readHapDataVCFMissing(string filename)
             {
                 cerr << "ERROR: Alleles must be coded 0/1 only.\n";
                 cerr << allele1 << " " << allele2 << endl;
-                throw 0;
+                //throw 0;
             }
 
             //if(separator != '|'){
