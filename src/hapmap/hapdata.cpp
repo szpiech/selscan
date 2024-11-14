@@ -338,6 +338,10 @@ void HapData::readHapData(string filename)
 //tested-> unphased - lowmem, phased - lowmem
 void HapData::readHapDataVCF(string filename)
 {
+    if(MISSING){
+        readHapDataVCFMissing(filename);
+        return;
+    }
     //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
     
 
