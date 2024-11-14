@@ -1211,8 +1211,8 @@ pair<double, double> IHS::calc_ihh1(int locus){
      pair<double, double>  ihh1_ihh0_upstream;
     pair<double, double>  ihh1_ihh0_downstream;
 
-    pair<double, double>  ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false); // upstream
-    pair<double, double>  ihh1_ihh0_downstream = calc_ehh_unidirection(locus,  true); // downstream
+    // pair<double, double>  ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false); // upstream
+    // pair<double, double>  ihh1_ihh0_downstream = calc_ehh_unidirection(locus,  true); // downstream
 
     if(MISSING){
         ihh1_ihh0_upstream = calc_ehh_unidirection_missing(locus, false); // upstream
