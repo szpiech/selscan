@@ -918,8 +918,10 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         if(p.LOW_MEM){
             MyBitset* v2p = downstream? hm->hapData->hapEntries[i+1].hapbitset : hm->hapData->hapEntries[i].hapbitset;
             ACTION_ON_ALL_SET_BITS(v2p, {
-                int old_group_id = group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);
+                if(!isMissing[set_bit_pos]){
+                    int old_group_id = group_id[set_bit_pos];
+                    m[old_group_id].push_back(set_bit_pos);
+                }
             });
         }
 
@@ -927,13 +929,15 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         if(p.LOW_MEM){
             MyBitset* vmissing = hm->hapData->hapEntries[i].xorbitset;
             ACTION_ON_ALL_SET_BITS(vmissing, {
-                int old_group_id = group_id[set_bit_pos];
-                int biggroup_size = group_count[old_group_id]  ;
-                int newgroup_size = m[old_group_id].size() ;
-                int split_old_group_size = biggroup_size - newgroup_size;
+                if(!isMissing[set_bit_pos]){
+                    int old_group_id = group_id[set_bit_pos];
+                    int biggroup_size = group_count[old_group_id]  ;
+                    int newgroup_size = m[old_group_id].size() ;
+                    int split_old_group_size = biggroup_size - newgroup_size;
 
-                if(newgroup_size > split_old_group_size){
-                    m[old_group_id].push_back(set_bit_pos);
+                    if(newgroup_size > split_old_group_size){
+                        m[old_group_id].push_back(set_bit_pos);
+                    }
                 }
             });
         }
@@ -1204,8 +1208,20 @@ pair<double, double> IHS::calc_ihh1(int locus){
     double ihh1 = 0;
     double ihh0 = 0;
 
+     pair<double, double>  ihh1_ihh0_upstream;
+    pair<double, double>  ihh1_ihh0_downstream;
+
     pair<double, double>  ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false); // upstream
     pair<double, double>  ihh1_ihh0_downstream = calc_ehh_unidirection(locus,  true); // downstream
+
+    if(MISSING){
+        ihh1_ihh0_upstream = calc_ehh_unidirection_missing(locus, false); // upstream
+        ihh1_ihh0_downstream = calc_ehh_unidirection_missing(locus,  true); // downstream
+    }else{
+        ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false); // upstream
+        ihh1_ihh0_downstream = calc_ehh_unidirection(locus,  true); // downstream
+    }
+
     ihh1 = ihh1_ihh0_upstream.first + ihh1_ihh0_downstream.first;
     ihh0 = ihh1_ihh0_upstream.second + ihh1_ihh0_downstream.second;
 
