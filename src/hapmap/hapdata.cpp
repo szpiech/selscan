@@ -724,12 +724,12 @@ void HapData::readHapDataVCFMissing(string filename)
             allele2 = junk[2];
             if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
             {
-                if(allele1 == '.' || allele2 == '.'){
-                    continue;
-                }
-                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                // if(allele1 == '.' || allele2 == '.'){
+                //     continue;
+                // }
+                cerr << "ERROR XX: Alleles must be coded 0/1 only.\n";
                 cerr << allele1 << " " << allele2 << endl;
-                throw 0;
+                //throw 0;
             }
 
             //if(separator != '|'){
