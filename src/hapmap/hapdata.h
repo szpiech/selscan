@@ -22,6 +22,9 @@ struct HapEntry
     // for LOW_MEM
     MyBitset* hapbitset;
     MyBitset* xorbitset;
+
+    
+
 };
 
 class HapData
@@ -48,7 +51,11 @@ public:
     bool SKIP;
     int num_threads;
     bool LOW_MEM = false;
+    bool MISSING = false;
+
     queue<int> skipQueue;
+
+    int missing_count = 0;
     
     ofstream* flog;
 
@@ -68,17 +75,19 @@ public:
     void readHapData(string filename);
     void readHapDataTPED(string filename);
     void readHapDataVCF(string filename);
+    void readHapDataVCFMissing(string filename);
 
     // void readHapDataVCF_bitset(string filename);
     // void readHapData_bitset(string filename);
 
-    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog, bool LOW_MEM){
+    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog, bool LOW_MEM, bool MISSING){
         this->unphased = UNPHASED;
         this->SKIP = SKIP;
         this->MAF = MAF;
         this->num_threads = num_threads;
         this->flog = flog;
         this->LOW_MEM = LOW_MEM;
+        this->MISSING = MISSING;
     }
 
     pair<int, int> countFieldsAndOnes(const string &str)
@@ -210,7 +219,13 @@ public:
 
     inline int get_n_c0(int locus)
     {
-        return LOW_MEM? nhaps - hapEntries[locus].hapbitset->num_1s: nhaps - hapEntries[locus].positions.size();
+        if(MISSING){
+            return nhaps - hapEntries[locus].hapbitset->num_1s - hapEntries[locus].xorbitset->num_1s; //hapEntries[locus].xorbitset->num_1s is missing count
+            throw "not implemented";
+        }else{
+            return LOW_MEM? nhaps - hapEntries[locus].hapbitset->num_1s: nhaps - hapEntries[locus].positions.size();
+
+        }
         // // if flip was enabled
         // int non_flipped_1s = 0;
         // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
@@ -226,6 +241,14 @@ public:
         // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
         // int result = hapEntries[locus].flipped ? nhaps - non_flipped_1s : non_flipped_1s;
         // return result;
+    }
+
+    inline int get_n_c_missing(int locus)
+    {
+        if(!LOW_MEM || unphased){
+            throw "not implemented";
+        }
+        return hapEntries[locus].xorbitset->num_1s;
     }
 
 

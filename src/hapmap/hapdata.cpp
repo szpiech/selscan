@@ -338,6 +338,10 @@ void HapData::readHapData(string filename)
 //tested-> unphased - lowmem, phased - lowmem
 void HapData::readHapDataVCF(string filename)
 {
+    //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
+    
+
+
     igzstream fin;
 
     std::unique_ptr<std::vector<int> > vp1(new std::vector<int>());
@@ -582,6 +586,344 @@ void HapData::readHapDataVCF(string filename)
 
     // PHASE 3:  XOR
     xor_for_phased_and_unphased();
+    
+
+    // PHASE 4:  FLIP
+    // for (int locus = 0; locus < nloci_after_filtering; locus++){
+    //     if(hapEntries[locus].flipped){
+    //         vector<int> zero_positions(nhaps - hapEntries[locus].positions.size());
+    //         int j = 0;
+    //         int front_one = hapEntries[locus].positions[j++];
+    //         for(int i=0; i<nhaps; i++){
+    //             if(i==front_one){
+    //                 front_one = hapEntries[locus].positions[j++];
+    //             }else{
+    //                 zero_positions.push_back(i);
+    //             }   
+    //         }
+    //         hapEntries[locus].positions = zero_positions;
+    //     }
+    // }
+    // //PHASE 4: FLIP
+
+    /*
+    if(benchmark_flag == "XOR" || benchmark_flag == "FLIP_ONLY" ){
+        for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+            if(hapEntries[locus_after_filter].positions.size() > this->nhaps/2){
+                hapEntries[locus_after_filter].flipped = true;
+
+                vector<int> copy_pos;
+                copy_pos.reserve(this->nhaps - hapEntries[locus_after_filter].positions.size());
+                int cnt = 0;
+                for(int i = 0; i< this->nhaps; i++){
+                    int curr =  hapEntries[locus_after_filter].positions[cnt];
+                    if(i==curr){
+                        cnt++;
+                    }else{
+                        copy_pos.push_back(i);
+                    }
+                }
+                
+                this->hapEntries[locus_after_filter].positions = copy_pos;
+                copy_pos.clear();
+            }else{
+                this->hapEntries[locus_after_filter].flipped = false;
+            }
+        }
+    }
+    */
+
+    if(SKIP){
+        cerr << "Removed " << skipcount << " low frequency variants.\n";
+        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
+    }
+
+    fin.close();
+
+    // // // DEBUG
+    // for(int locus_after_filter = 0; locus_after_filter < 1; locus_after_filter++){
+    //     cout<<locus_after_filter<<"::: ";
+    //     for(int i=0; i< hapEntries[locus_after_filter].positions.size(); i++){
+    //         cout<<hapEntries[locus_after_filter].positions[i]<<" ";
+    //     }
+    //     cout<<endl;
+        
+    //     cout<<locus_after_filter<<":::*";
+    //     for(int i=0; i< hapEntries[locus_after_filter].positions2.size(); i++){
+    //         cout<<hapEntries[locus_after_filter].positions2[i]<<" ";
+    //     }
+    //     cout<<endl;
+    // }
+    //  exit(1);
+}
+
+
+
+//tested-> unphased - lowmem, phased - lowmem
+void HapData::readHapDataVCFMissing(string filename)
+{
+    float MISSING_PERCENTAGE = 0.05;
+    //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
+
+    igzstream fin;
+
+    std::unique_ptr<std::vector<int> > vp1(new std::vector<int>());
+    std::unique_ptr<std::vector<int> > vp2(new std::vector<int>());
+
+    vector<int>& number_of_1s_per_loci = *vp1;
+    vector<int>& number_of_2s_per_loci = *vp2;
+    queue<int> skiplist;
+
+    // PHASE 1: Counting so that inititalization is smooth
+    cerr << "Opening " << filename << "...\n";
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    int numMapCols = 9;
+    string line;
+    int nloci_before_filtering = 0;
+    int previous_nhaps = -1;
+    int current_nhaps = 0;
+
+    int skipcount = 0;
+
+    int num_meta_data_lines = 0;
+    while (getline(fin, line))  //Counts number of haps (cols) and number of loci (rows)
+    {
+        if (line[0] == '#') {
+            num_meta_data_lines++;
+            continue;
+        }
+        nloci_before_filtering++;
+        current_nhaps = countFields(line) - numMapCols;
+
+        /********/
+        string junk;
+        char allele1, allele2, separator;
+        std::stringstream ss(line);
+        int number_of_1s = 0;
+        int number_of_2s = 0;
+
+        for (int i = 0; i < numMapCols; i++) {
+            ss >> junk;
+        }
+        for (int field = 0; field < current_nhaps; field++)
+        {
+            ss >> junk;
+            allele1 = junk[0];
+            separator = junk[1];
+            allele2 = junk[2];
+            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
+            {
+                if(allele1 == '.' || allele2 == '.'){
+                    continue;
+                }
+                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                cerr << allele1 << " " << allele2 << endl;
+                throw 0;
+            }
+
+            //if(separator != '|'){
+            //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+            //    throw 0;
+            //}
+
+            if(unphased){
+                char allele = '0';
+                if (allele1 == '1' && allele2 == '1'){
+                    number_of_2s++;
+                }
+                else if (allele1 == '1' || allele2 == '1'){
+                    number_of_1s++;
+                }
+            }else{
+                if(allele1 == '1'){
+                    number_of_1s++;
+                }
+                if(allele2 == '1'){
+                    number_of_1s++;
+                }
+                if(allele1 == '.' || allele2 == '.'){
+                    missing_count++;
+                }
+            }
+        }
+
+        int derived_allele_count = (unphased? (number_of_1s + number_of_2s*2) : number_of_1s);
+
+        // --skip-low-freq filtering based on MAF
+        if ( SKIP && (derived_allele_count*1.0/((current_nhaps-missing_count)*2) < MAF || ((current_nhaps-derived_allele_count-missing_count)*1.0/((current_nhaps-missing_count)*2)) < MAF ) || 1.0*missing_count/current_nhaps > MISSING_PERCENTAGE ) {
+            skiplist.push(nloci_before_filtering-1);
+            skipcount++;
+        } else {
+            number_of_1s_per_loci.push_back(number_of_1s);
+            if(unphased){
+                number_of_2s_per_loci.push_back(number_of_2s);
+            }   
+        }
+
+        /*********/
+        if (previous_nhaps < 0)
+        {
+            previous_nhaps = current_nhaps;
+            continue;
+        }
+        else if (previous_nhaps != current_nhaps)
+        {
+            cerr << "ERROR: line " << nloci_before_filtering << " of " << filename << " has " << current_nhaps
+                 << " fields, but the previous line has " << previous_nhaps << " fields.\n";
+            throw 0;
+        }
+        previous_nhaps = current_nhaps;
+    }
+
+    fin.clear(); // clear error flags
+    //fin.seekg(fileStart);
+    fin.close();
+
+
+    //PHASE 2: Load according to first pass information
+    fin.open(filename.c_str());
+
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
+
+    if(SKIP){
+        cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+        (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+    }
+   
+    int nhaps = unphased ? (current_nhaps ) : (current_nhaps ) * 2;
+    cerr << "Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci...\n";
+    initHapData(nhaps, nloci_before_filtering-skipcount);
+
+    string junk;
+    char allele1, allele2, separator;
+    bool skipLine = false; // to skip metadata lines
+
+    skipQueue = skiplist; 
+    int nloci_after_filtering = 0;
+
+    for (int locus = 0; locus < nloci_before_filtering; locus++)
+    {
+        for (int i = 0; i < numMapCols; i++) {
+            fin >> junk;
+            if (i == 0 && junk[0] == '#') { // to skip metadata lines
+                skipLine = true;
+                break;
+            }
+        }
+
+        if (skipLine) { // to skip metadata lines
+            getline(fin, junk);
+            skipLine = false;
+            locus--;
+            continue;
+        }
+
+        if(!skiplist.empty()){
+            if(skiplist.front() == locus){
+                skiplist.pop();    
+                getline(fin, junk);
+                continue;
+            }
+        }
+        
+        if(unphased){
+            if(benchmark_flag == "XOR"){
+                hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]+number_of_2s_per_loci[nloci_after_filtering]);
+            }
+
+            hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            hapEntries[nloci_after_filtering].positions2.reserve(number_of_2s_per_loci[nloci_after_filtering]);
+        
+        }else{
+            if(benchmark_flag == "XOR"){
+                hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+            }
+            hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
+        }
+
+        for (int field = 0; field <  current_nhaps ; field++)
+        {
+            fin >> junk;
+            allele1 = junk[0];
+            separator = junk[1];
+
+            allele2 = junk[2];
+            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
+            {
+                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                cerr << allele1 << " " << allele2 << endl;
+                throw 0;
+            }
+
+            //if(separator != '|'){
+            //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
+            //    throw 0;
+            //}
+
+            if(unphased){
+                char allele = '0';
+                if (allele1 == '1' && allele2 == '1'){
+                    if(LOW_MEM){
+                        this->hapEntries[nloci_after_filtering].xorbitset->set_bit(field);
+                        this->hapEntries[nloci_after_filtering].xorbitset->num_1s++;
+                    }else{
+                        hapEntries[nloci_after_filtering].positions2.push_back(field);
+                        //hapEntries[nloci_after_filtering].count2++;
+                    }
+                }
+                else if (allele1 == '1' || allele2 == '1'){
+                    if(LOW_MEM){
+                        hapEntries[nloci_after_filtering].hapbitset->set_bit(field);
+                        hapEntries[nloci_after_filtering].hapbitset->num_1s++;
+                    }else{
+                        hapEntries[nloci_after_filtering].positions.push_back(field);
+                        //hapEntries[nloci_after_filtering].count1++;
+                    }
+                }
+            }else{ // phased
+                if(allele1 == '1'){
+                    if(LOW_MEM){
+                        hapEntries[nloci_after_filtering].hapbitset->set_bit(2 * field);
+                        hapEntries[nloci_after_filtering].hapbitset->num_1s++;
+                    }else{
+                        hapEntries[nloci_after_filtering].positions.push_back(2 * field);
+                    }
+                }
+                if(allele2 == '1'){
+                    if(LOW_MEM){
+                        hapEntries[nloci_after_filtering].hapbitset->set_bit(2 * field + 1);
+                        hapEntries[nloci_after_filtering].hapbitset->num_1s++;
+                    }else{
+                        hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
+                    }
+                }   
+                if(allele1 == '.' || allele2 == '.'){
+                    if(LOW_MEM){
+                        hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
+                        hapEntries[nloci_after_filtering].xorbitset->num_1s++;
+                    }else{
+                        throw 1;
+                    }
+                }
+            }
+        }
+        nloci_after_filtering++;
+    }
+
+    // PHASE 3:  XOR
+    if(!MISSING)
+        xor_for_phased_and_unphased();
     
 
     // PHASE 4:  FLIP

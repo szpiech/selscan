@@ -104,14 +104,19 @@ public:
         bool CALC_SOFT = p.CALC_SOFT;
         bool SINGLE_EHH = p.SINGLE_EHH;
         bool LOW_MEM = p.LOW_MEM;
+        // MISSING
+        // if(p.MISSING){
+        //     hapData->benchmark_flag = "MISSING";
+        // }
+
         
         mapData = std::make_unique<MapData>(); 
         hapData = std::make_unique<HapData>();
         
         if (CALC_XP || CALC_XPNSL){
             hapData2 = std::make_unique<HapData>();
-            hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
-            hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM);
+            hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+            hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
         }   
 
         auto start_reading = std::chrono::high_resolution_clock::now();
