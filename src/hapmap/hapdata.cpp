@@ -666,7 +666,7 @@ void HapData::readHapDataVCF(string filename)
 //tested-> unphased - lowmem, phased - lowmem
 void HapData::readHapDataVCFMissing(string filename)
 {
-    float MISSING_PERCENTAGE = 0.05;
+    float MISSING_PERCENTAGE = 1;
     //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
 
     igzstream fin;
@@ -752,8 +752,8 @@ void HapData::readHapDataVCFMissing(string filename)
                 if(allele2 == '1'){
                     number_of_1s++;
                 }
-                if(allele1 == '.' || allele2 == '.'){
-                    missing_count++;
+                if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
+                    missing_count+= 2;
                 }
             }
         }
@@ -761,7 +761,7 @@ void HapData::readHapDataVCFMissing(string filename)
         int derived_allele_count = (unphased? (number_of_1s + number_of_2s*2) : number_of_1s);
 
         // --skip-low-freq filtering based on MAF
-        if ( SKIP && (derived_allele_count*1.0/((current_nhaps-missing_count)*2) < MAF || ((current_nhaps-derived_allele_count-missing_count)*1.0/((current_nhaps-missing_count)*2)) < MAF ) || 1.0*missing_count/current_nhaps > MISSING_PERCENTAGE ) {
+        if ( SKIP && (derived_allele_count*1.0/((current_nhaps-missing_count)*2) < MAF || ((current_nhaps-derived_allele_count-missing_count)*1.0/((current_nhaps-missing_count)*2)) < MAF ) || 1.0*missing_count/(current_nhaps*2) <= MISSING_PERCENTAGE ) {
             skiplist.push(nloci_before_filtering-1);
             skipcount++;
         } else {
@@ -912,7 +912,7 @@ void HapData::readHapDataVCFMissing(string filename)
                         hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
                     }
                 }   
-                if(allele1 == '.' || allele2 == '.'){
+                if((allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') ){
                     if(LOW_MEM){
                         hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
                         hapEntries[nloci_after_filtering].xorbitset->num_1s++;
@@ -925,9 +925,6 @@ void HapData::readHapDataVCFMissing(string filename)
         nloci_after_filtering++;
     }
 
-    // PHASE 3:  XOR
-    if(!MISSING)
-        xor_for_phased_and_unphased();
     
 
     // PHASE 4:  FLIP
