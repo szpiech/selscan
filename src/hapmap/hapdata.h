@@ -50,7 +50,7 @@ public:
     double MAF;
     bool SKIP;
     int num_threads;
-    bool LOW_MEM = false;
+    bool LOW_MEM = true;
     bool MISSING = false;
 
     queue<int> skipQueue;
