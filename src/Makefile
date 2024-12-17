@@ -9,8 +9,8 @@
 #G++FLAG = -g -Wall -Werror   #debugging
 
 #for osx/macos-arm systems
-CC = g++-14 -std=c++17
-G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize
+CC = g++-14 -std=c++17 
+G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize -g
 #-g 
 #-march=native
 #-Og -g
@@ -85,4 +85,5 @@ gzstream.o : gzstream.cpp gzstream.h
 .PHONY: clean
 
 clean :
-	rm -rf *.o;  rm -rf selscan; rm -rf  norm; rm -rf outfile*
+	rm -rf *.o;  rm -rf selscan; rm -rf  norm; 
+#rm -rf outfile*

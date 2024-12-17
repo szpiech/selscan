@@ -209,7 +209,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
     
         
-        if(!p.CALC_NSL){
+        if(p.CALC_IHS && !p.CALC_NSL){
             if(curr_ehh_before_norm[2]*1.0/normalizer[2] <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/normalizer[0]  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
                 //std::cerr<<"Break reason for locus "<<locus<<":: EHH_CUTOFF."<<endl;
                 break;
@@ -249,7 +249,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
             throw 0;
         }
-        if(p.CALC_NSL){
+        if(p.CALC_NSL && !p.CALC_IHS){
             distance = 1;
         }
         double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, downstream) );
@@ -376,7 +376,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             }
         }
 
-        if(double(curr_ehh_before_norm[0]*1.0/normalizer[0]) > p.EHH_CUTOFF || p.CALC_NSL){
+        if(double(curr_ehh_before_norm[0]*1.0/normalizer[0]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS) ){
             curr_ehh_before_norm[0] = ehh0_before_norm;
             if( normalizer[0]!=0){
                 iHH[0] += ((curr_ehh_before_norm[0]/ normalizer[0])* 0.5 + (prev_ehh_before_norm[0]* 1.0/ normalizer[0]) * 0.5 ) *distance;
@@ -384,7 +384,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             prev_ehh_before_norm[0] = curr_ehh_before_norm[0];
         }
 
-        if(double(curr_ehh_before_norm[2]*1.0/normalizer[2]) > p.EHH_CUTOFF || p.CALC_NSL){
+        if(double(curr_ehh_before_norm[2]*1.0/normalizer[2]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS)){
             curr_ehh_before_norm[2] = ehh2_before_norm;
             if( normalizer[2]!=0){
                 iHH[2] += ((curr_ehh_before_norm[2] / normalizer[2]) * 0.5 + (prev_ehh_before_norm[2] / normalizer[2]) * 0.5 ) *distance;
@@ -423,8 +423,8 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             std::cerr<<"Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
             break;
         }
-        if (!p.CALC_NSL && physicalDistance_from_core(i, locus, downstream) >= max_extend) break;
-        if (p.CALC_NSL && abs(i-locus) >= max_extend) break;
+        if ((!p.CALC_NSL && p.CALC_IHS) && physicalDistance_from_core(i, locus, downstream) >= max_extend) break;
+        if ((p.CALC_NSL && !p.CALC_IHS) && abs(i-locus) >= max_extend) break;
 
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
@@ -565,7 +565,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     int i = locus;  
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
 
-        if(!p.CALC_NSL){
+        if(p. CALC_IHS && !p.CALC_NSL){
             if(curr_ehh1_before_norm*1.0/normalizer_1 <= p.EHH_CUTOFF and curr_ehh0_before_norm*1.0/normalizer_0  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
                 //std::cerr<<"Break reason for locus "<<locus<<":: EHH_CUTOFF."<<endl;
                 break;
@@ -605,7 +605,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
             throw 0;
         }
-        if(p.CALC_NSL){
+        if(p.CALC_NSL && !p.CALC_IHS){
             distance = 1;
         }
         double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, downstream) );
@@ -714,11 +714,11 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             //std::cerr<<"Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
             break;
         }
-        if(!p.CALC_NSL && physicalDistance_from_core(i,locus, downstream) >= max_extend) {
+        if(!p.CALC_NSL && p.CALC_IHS && physicalDistance_from_core(i,locus, downstream) >= max_extend) {
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
             break;
         }
-        if(p.CALC_NSL && abs(i-locus) >= max_extend) {
+        if(p.CALC_NSL && !p.CALC_IHS && abs(i-locus) >= max_extend) {
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl;
             break; 
         }
@@ -752,8 +752,8 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
     double prev_ehh0_before_norm = 0;
     double prev_ehh1_before_norm = 0;
 
-    const double& normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
-    const double& normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
+    double normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
+    double normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
 
     int numSnps = hm->hapData->nloci;
     int numHaps = hm->hapData->nhaps;
@@ -806,6 +806,11 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
     }else{  //so both n_c1 and n_c0 is non-0
         group_count[1] = n_c1;
         group_count[0] = n_c0;
+        bool assign_one = false;
+        if(n_c1> n_c0){
+            assign_one = true;
+        }
+
         if(p.LOW_MEM){
             ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
                 isDerived[set_bit_pos] = true;
@@ -813,8 +818,21 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
             });
             MyBitset* vmissing = hm->hapData->hapEntries[locus].xorbitset;
             ACTION_ON_ALL_SET_BITS(vmissing, {
-                isMissing[set_bit_pos] = true;
+                if(assign_one){
+                    isDerived[set_bit_pos] = true;
+                    group_id[set_bit_pos] = 1;
+                }
+                //isMissing[set_bit_pos] = true;
             });
+            if(assign_one){
+                n_c1 = n_c1 + n_c_missing;
+                 normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
+                 normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
+            }else{
+                 n_c0 = n_c0 + n_c_missing;
+                 normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
+                 normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
+            }
         }else{
         }
 
@@ -846,7 +864,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
     int i = locus;  
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
 
-        if(!p.CALC_NSL){
+        if(!p.CALC_NSL && p.CALC_IHS){
             if(curr_ehh1_before_norm*1.0/normalizer_1 <= p.EHH_CUTOFF and curr_ehh0_before_norm*1.0/normalizer_0  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
                 //std::cerr<<"Break reason for locus "<<locus<<":: EHH_CUTOFF."<<endl;
                 break;
@@ -886,7 +904,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
             throw 0;
         }
-        if(p.CALC_NSL){
+        if(p.CALC_NSL && !p.CALC_IHS){
             distance = 1;
         }
         double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, downstream) );
@@ -926,21 +944,33 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         }
 
         // missing
-        if(p.LOW_MEM){
-            MyBitset* vmissing = hm->hapData->hapEntries[i].xorbitset;
-            ACTION_ON_ALL_SET_BITS(vmissing, {
-                if(!isMissing[set_bit_pos]){
-                    int old_group_id = group_id[set_bit_pos];
-                    int biggroup_size = group_count[old_group_id]  ;
-                    int newgroup_size = m[old_group_id].size() ;
-                    int split_old_group_size = biggroup_size - newgroup_size;
+        if(hm->hapData->MISSING_MODE == "NO_IMPUTE"){
+            if(p.LOW_MEM){
+                unordered_map<int, vector<int> > mmiss;
+                MyBitset* vmissing = hm->hapData->hapEntries[i].xorbitset;
+                ACTION_ON_ALL_SET_BITS(vmissing, {
+                    //if(!isMissing[set_bit_pos]){
+                        {
+                            int old_group_id = group_id[set_bit_pos];
+                            int biggroup_size = group_count[old_group_id]  ;
+                            int newgroup_size = m[old_group_id].size() ;
+                            int split_old_group_size = biggroup_size - newgroup_size;
 
-                    if(newgroup_size > split_old_group_size){
-                        m[old_group_id].push_back(set_bit_pos);
-                    }
+                            if(newgroup_size > split_old_group_size){
+                               mmiss[old_group_id].push_back(set_bit_pos);
+                            }
+
+                        }
+                        
+                    //}
+                });
+
+                for (const auto &ele : mmiss) {
+                    m[ele.first] = ele.second;
                 }
-            });
+            }
         }
+        
 
         // PHASE 3: UPDATE EHH FROM SPLIT
 
@@ -994,14 +1024,14 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         }
 
         if(totgc == numHaps - n_c_missing) {
-            //std::cerr<<"Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
+            std::cerr<<"Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
             break;
         }
-        if(!p.CALC_NSL && physicalDistance_from_core(i,locus, downstream) >= max_extend) {
+        if(!p.CALC_NSL && p.CALC_IHS && physicalDistance_from_core(i,locus, downstream) >= max_extend) {
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
             break;
         }
-        if(p.CALC_NSL && abs(i-locus) >= max_extend) {
+        if(p.CALC_NSL && !p.CALC_IHS && abs(i-locus) >= max_extend) {
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl;
             break; 
         }
@@ -1031,6 +1061,9 @@ void IHS::thread_ihs(int tid, IHS* ehh_obj, double& iHH1, double& iHH0){
     (*(ehh_obj->flog))<<("Finishing thread # "+to_string(tid)+" at "+to_string(SelscanStats::readTimer())+"\n");
     pthread_mutex_unlock(&mutex_log);
 }
+
+
+
 
 void IHS::main() {
     int total_calc_to_be_done = hm->hapData->nloci;
@@ -1208,7 +1241,7 @@ pair<double, double> IHS::calc_ihh1(int locus){
     double ihh1 = 0;
     double ihh0 = 0;
 
-     pair<double, double>  ihh1_ihh0_upstream;
+    pair<double, double>  ihh1_ihh0_upstream;
     pair<double, double>  ihh1_ihh0_downstream;
 
     // pair<double, double>  ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false); // upstream

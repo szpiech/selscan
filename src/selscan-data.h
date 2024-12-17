@@ -60,17 +60,19 @@ public:
     std::unique_ptr<HapData> hapData;
     std::unique_ptr<HapData> hapData2;
 
-    ofstream* flog;
-    ofstream* fout;
+    // ofstream* flog;
+    // ofstream* fout;
 
     std::atomic<int> currentProcessed = 0;
 
     
 
-    HapMap(param_main &p, ofstream* flog, ofstream* fout){
+    HapMap(param_main &p){
         this->p = p;
-        this->flog = flog;
-        this->fout = fout;
+        // this->flog = flog;
+        // this->fout = fout;
+
+        
     }
 
     ~HapMap(){
@@ -115,8 +117,8 @@ public:
         
         if (CALC_XP || CALC_XPNSL){
             hapData2 = std::make_unique<HapData>();
-            hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
-            hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+            hapData->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
+            hapData2->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
         }   
 
         auto start_reading = std::chrono::high_resolution_clock::now();
@@ -143,8 +145,8 @@ public:
             else if (VCF) {
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
-                    hapData2->initParams(UNPHASED, false, 0, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+                    hapData->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
+                    hapData2->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
 
                     hapData->readHapDataVCF(vcfFilename);
                     hapData2->readHapDataVCF(vcfFilename2);
@@ -159,7 +161,7 @@ public:
                         return 1;
                     }
                 }else{
-                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
                     hapData->readHapDataVCF(vcfFilename);
 
                     // handleData(vcfFilename, "VCF", *hapData);
@@ -176,8 +178,8 @@ public:
             {
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
-                    hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+                    hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
+                    hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
 
                     hapData->readHapData(hapFilename);
                     hapData2->readHapData(hapFilename2);
@@ -191,7 +193,7 @@ public:
                         return 1;
                     }
                 }else{
-                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, flog, p.LOW_MEM, p.MISSING);
+                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
                     hapData->readHapData(hapFilename);
 
                     // handleData(hapFilename, "HAP", *hapData);
@@ -211,7 +213,7 @@ public:
         //FLOG
         cout<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
 
-        (*(flog))<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
+        cerr<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
         //mapData.print();
 
         // Check if map is in order

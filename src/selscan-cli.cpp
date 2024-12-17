@@ -50,8 +50,9 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
 
-    params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
+    //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
     params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
+    params.addFlag(ARG_MULTICHR_FLAG, DEFAULT_MULTICHR_FLAG, "", HELP_MULTICHR_FLAG);
 
 
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
@@ -133,18 +134,18 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
 
 
     cout<<  CALC_XPNSL << " " << CALC_IHS << " " << CALC_XP << " " << SINGLE_EHH << " " << CALC_PI << " " << CALC_NSL << " " << CALC_SOFT << endl;
-        if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
-    {
-        cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
-             << ")\n\tiHS (" << ARG_IHS
-             << ")\n\tXP-EHH (" << ARG_XP
-             << ")\n\tPI (" << ARG_PI
-             << ")\n\tnSL (" << ARG_NSL
-             << ")\n\tXP-nSL (" << ARG_XPNSL
-             << ")\n\tiHH12 (" << ARG_SOFT
-             << ")\n";
-        return 1;
-    }
+    //     if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
+    // {
+    //     cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
+    //          << ")\n\tiHS (" << ARG_IHS
+    //          << ")\n\tXP-EHH (" << ARG_XP
+    //          << ")\n\tPI (" << ARG_PI
+    //          << ")\n\tnSL (" << ARG_NSL
+    //          << ")\n\tXP-nSL (" << ARG_XPNSL
+    //          << ")\n\tiHH12 (" << ARG_SOFT
+    //          << ")\n";
+    //     return 1;
+    // }
 
     if (WRITE_DETAILED_IHS && !CALC_IHS) {
         cerr << "ERROR: The flag " << ARG_IHS_DETAILED << " must be used with " << ARG_IHS << " \n";
@@ -236,6 +237,15 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
     if (PI_WIN < 1)
     {
         cerr << "ERROR: pi window must be > 0.\n";
+        return 1;
+    }
+
+
+
+    bool MULTICHR = params.getBoolFlag(ARG_MULTICHR_FLAG);
+    if (MULTICHR && !VCF)
+    {
+        cerr << "ERROR: --multi-chr flag only works with VCF files.\n";
         return 1;
     }
 

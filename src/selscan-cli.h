@@ -223,13 +223,18 @@ const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
 
-const string ARG_LOW_MEM = "--low-mem";
+//const string ARG_LOW_MEM = "--low-mem";
 const bool DEFAULT_LOW_MEM  = true;
 const string HELP_LOW_MEM = "Switch to low memory bitset version.";
 
 const string ARG_MISSING_FLAG = "--missing";
 const bool DEFAULT_MISSING_FLAG = false;
 const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
+
+const string ARG_MULTICHR_FLAG = "--multi-chr";
+const bool DEFAULT_MULTICHR_FLAG = false;
+const string HELP_MULTICHR_FLAG = "Set this flag to allow reading multiple chromosomes from VCF.";
+
 
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
 bool checkParameters(param_t &params,int argc, char *argv[]);

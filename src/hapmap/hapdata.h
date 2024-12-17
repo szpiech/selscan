@@ -6,6 +6,7 @@
 #include "bitset.h"
 #include <queue>
 #include <iostream>
+#include <random>
 
 using namespace std;
 
@@ -19,9 +20,15 @@ struct HapEntry
     vector <int> g[3];
     vector <int> positions2; // 0-based indexing of allele "2"
 
+    
+   
+
     // for LOW_MEM
     MyBitset* hapbitset;
     MyBitset* xorbitset;
+
+    //for missing
+    MyBitset* missbitset = xorbitset;
 
     
 
@@ -36,8 +43,10 @@ public:
     int nloci;
     int nhaps;
 
-    string benchmark_flag = "XOR";
+    string benchmark_flag = "NO_XOR";//XOR
     string benchmark_flag2 = ""; //"FLIP";
+
+    string MISSING_MODE = "NO_IMPUTE"; //ONE_IMPUTE, ZERO_IMPUTE, NO_IMPUTE 
 
     //string benchmark_flag = "BITSET";
     //string benchmark_flag = "FLIP_ONLY";
@@ -51,13 +60,14 @@ public:
     bool SKIP;
     int num_threads;
     bool LOW_MEM = true;
-    bool MISSING = false;
+    bool MISSING_ALLOWED = false;
+    bool MULTI_CHR = false;
 
     queue<int> skipQueue;
 
     int missing_count = 0;
     
-    ofstream* flog;
+    //ofstream* flog;
 
     ~HapData();
 
@@ -80,14 +90,15 @@ public:
     // void readHapDataVCF_bitset(string filename);
     // void readHapData_bitset(string filename);
 
-    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, ofstream* flog, bool LOW_MEM, bool MISSING){
+
+    
+    void initParams(bool UNPHASED, bool SKIP, double MAF, int num_threads, bool LOW_MEM, bool MISSING){
         this->unphased = UNPHASED;
         this->SKIP = SKIP;
         this->MAF = MAF;
         this->num_threads = num_threads;
-        this->flog = flog;
         this->LOW_MEM = LOW_MEM;
-        this->MISSING = MISSING;
+        this->MISSING_ALLOWED = MISSING;
     }
 
     pair<int, int> countFieldsAndOnes(const string &str)
@@ -138,6 +149,25 @@ public:
         return numFields;
     }
 
+    char randomZeroOrOne() {
+        // Create a random device to seed the generator
+        std::random_device rd; 
+        
+        // Use a Mersenne Twister engine
+        std::mt19937 gen(rd()); 
+        
+        // Define a uniform distribution for integers between 0 and 1
+        std::uniform_int_distribution<int> dist(0, 1);
+        
+        // Return the random number
+        int randomNum  = dist(gen);
+
+         // Convert integer 0 or 1 to character '0' or '1'
+        char randomChar = static_cast<char>(randomNum + '0');
+        return randomChar;
+    }
+
+
 
     void print(){
         for(int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
@@ -180,7 +210,11 @@ public:
         */
     }
 
+    
 
+    /// @brief assumes no missing
+    /// @param locus 
+    /// @return 
     double calcFreq(int locus)
     {
         //assuming no flip
@@ -205,6 +239,15 @@ public:
         return (freq / total);
     }
 
+    double calcMissingFreq(int locus){
+        if(!MISSING_ALLOWED){
+            throw "missing not allowed";
+        }
+         if(!LOW_MEM){
+            throw "not implemented";
+         }
+        return hapEntries[locus].xorbitset->num_1s / (double) nhaps;
+    }
 
     inline int get_n_c2(int locus)
     {
@@ -219,7 +262,7 @@ public:
 
     inline int get_n_c0(int locus)
     {
-        if(MISSING){
+        if(MISSING_ALLOWED){
             return nhaps - hapEntries[locus].hapbitset->num_1s - hapEntries[locus].xorbitset->num_1s; //hapEntries[locus].xorbitset->num_1s is missing count
             throw "not implemented";
         }else{

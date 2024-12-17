@@ -93,7 +93,9 @@ class MainTools{
             p.CALC_PI = params.getBoolFlag(ARG_PI);
             p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
-            p.LOW_MEM = params.getBoolFlag(ARG_LOW_MEM);
+            p.LOW_MEM = true;
+            //params.getBoolFlag(ARG_LOW_MEM);
+
             p.MISSING = params.getBoolFlag(ARG_MISSING_FLAG);
 
             
@@ -111,50 +113,22 @@ class MainTools{
             //delete hm;
         }
 
-        int run(int argc, char *argv[]){  
+        int run(int argc, char *argv[])
+        {
             auto start = std::chrono::high_resolution_clock::now();
-            double time_start = (clock() / (double) CLOCKS_PER_SEC);
+            double time_start = (clock() / (double)CLOCKS_PER_SEC);
 
             char PI_WIN_str[50];
-            snprintf(PI_WIN_str,50, "%d", p.PI_WIN);
+            snprintf(PI_WIN_str, 50, "%d", p.PI_WIN);
 
-            if (p.query.compare(DEFAULT_EHH) != 0) p.SINGLE_EHH = true;
-
-            if (p.SINGLE_EHH) p.outFilename += ".ehh." + p.query;
-            else if (p.CALC_IHS) p.outFilename += ".ihs";
-            else if (p.CALC_NSL) p.outFilename += ".nsl";
-            else if (p.CALC_XPNSL) p.outFilename += ".xpnsl";
-            else if (p.CALC_XP) p.outFilename += ".xpehh";
-            else if (p.CALC_SOFT) p.outFilename += ".ihh12";
-            else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
-
-            if (p.ALT) p.outFilename += ".alt";
-
-            //Open stream for log file
-            ofstream flog;
-            string logFilename = p.outFilename + ".log";
-            flog.open(logFilename.c_str());
-            if (flog.fail())
-            {
-                cerr << "ERROR: could not open " << logFilename << " for writing.\n";
-                return 1;
-            }
-
-            //Open stream for output file
-            ofstream fout;
-            p.outFilename += ".out";
-            fout.open(p.outFilename.c_str());
-            if (fout.fail())
-            {
-                cerr << "ERROR: could not open " << p.outFilename << " for writing.\n";
-                return 1;
-            }
+            if (p.query.compare(DEFAULT_EHH) != 0)
+                p.SINGLE_EHH = true;
 
             // input data is loaded into HapMap object
-            //hm = new HapMap(p, &flog, &fout);
-            //std::unique_ptr<HapMap> 
+            // hm = new HapMap(p, &flog, &fout);
+            // std::unique_ptr<HapMap>
 
-            hm = std::make_unique<HapMap>(p, &flog, &fout);
+            hm = std::make_unique<HapMap>(p);
             bool ERROR = hm->loadHapMapData();
             if (ERROR)
             {
@@ -164,46 +138,24 @@ class MainTools{
 
             for (int i = 0; i < argc; i++)
             {
-                flog << argv[i] << " ";
+                // flog << argv[i] << " ";
+                cerr << argv[i] << " ";
             }
 
-            flog << "\nv" + VERSION + "\nCalculating ";
-            if (p.CALC_XP) flog << "XP-EHH.\n";
-            else if (p.CALC_PI) flog << "PI.\n";
-            else if (p.CALC_IHS) flog << " iHS.\n";
-            else if (p.CALC_NSL) flog << " nSL.\n";
-            else if (p.CALC_XPNSL) flog << " XP-nSL.\n";
-            else if (p.CALC_SOFT) flog << " iHH1K.\n";
-
-            if (p.TPED)
-            {
-                flog << "Input filename: " << p.tpedFilename << "\n";
-                if (p.CALC_XP || p.CALC_XPNSL) flog << "Reference input filename: " << p.tpedFilename2 << "\n";
-            }
-            else if (p.VCF) {
-                flog << "Input filename: " << p.vcfFilename << "\n";
-                if (p.CALC_XP || p.CALC_XPNSL) flog << "Reference input filename: " << p.vcfFilename2 << "\n";
-                flog << "Map filename: " << p.mapFilename << "\n";
-            }
-            else {
-                flog << "Input filename: " << p.hapFilename << "\n";
-                if (p.CALC_XP || p.CALC_XPNSL) flog << "Reference input filename: " << p.hapFilename2 << "\n";
-                flog << "Map filename: " << p.mapFilename << "\n";
-            }
-            flog << "Output file: " << p.outFilename << "\n";
-            flog << "Threads: " << p.numThreads << "\n";
-            flog << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
-            flog << "Max gap parameter: " << p.MAX_GAP << "\n";
-            flog << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
-            flog << "Missing value: " << p.MISSING << "\n";
-
-            flog << "Phased: ";
-            if(p.UNPHASED) flog << "no\n";
-            else flog << "yes\n";
-            flog << "Alt flag set: ";
-            if (p.ALT) flog << "yes\n";
-            else flog << "no\n";
-            flog.flush();
+            // flog << "\nv" + VERSION + "\nCalculating ";
+            cerr << "\nv" + VERSION + "\nCalculating ";
+            if (p.CALC_XP)
+                cerr << "XP-EHH.\n";
+            if (p.CALC_PI)
+                cerr << "PI.\n";
+            if (p.CALC_IHS)
+                cerr << " iHS.\n";
+            if (p.CALC_NSL)
+                cerr << " nSL.\n";
+            if (p.CALC_XPNSL)
+                cerr << " XP-nSL.\n";
+            if (p.CALC_SOFT)
+                cerr << " iHH1K.\n";
 
             if (hm->mapData->nloci < p.numThreads)
             {
@@ -211,6 +163,7 @@ class MainTools{
                 cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
             }
 
+            /*
             if (p.SINGLE_EHH)
             {
                 EHH ehhfinder(hm, p, &flog, &fout);
@@ -236,20 +189,76 @@ class MainTools{
                 PI pifinder(hm, p, &flog, &fout);
                 pifinder.main();
             }
-            flog.close();
-            fout.close();
+            */
 
-        // #ifdef PTW32_STATIC_LIB
-        //     pthread_win32_process_detach_np();
-        // #endif
+            // @@ EXPERIMENTAL: instead of else if allow all to run
+            if (p.SINGLE_EHH)
+            {
+                EHH ehhfinder(hm, p);
+                if (p.CALC_SOFT)
+                {
+                    throw("ERROR: Soft EHH not implemented yet.\n");
+                }
+                else
+                {
+                    ehhfinder.calc_single_ehh(p.query); // query_locus
+                }
+            }
+            if (p.CALC_IHS)
+            {
+                bool stored_calc_nsl = p.CALC_NSL;
+                p.CALC_NSL = false;
+                IHS ihsfinder(hm, p);
+                ihsfinder.main(); // thread pool
+                p.CALC_NSL = stored_calc_nsl;
+                p.CALC_IHS = false;
+            }
+            if (p.CALC_NSL)
+            {
+                IHS ihsfinder(hm, p);
+                ihsfinder.main(); // thread pool
+            }
 
-            double time_end = (clock() / (double) CLOCKS_PER_SEC);
+            if (p.CALC_XP)
+            {
+                bool stored_calc_xpnsl = p.CALC_XPNSL;
+                p.CALC_XPNSL = false;
+                XPIHH xpihhfinder(hm, p);
+                xpihhfinder.main();
+                p.CALC_XPNSL = stored_calc_xpnsl;
+                p.CALC_XP = false;
+            }
+
+            if (p.CALC_XPNSL)
+            {
+                XPIHH xpihhfinder(hm, p);
+                xpihhfinder.main();
+            }
+
+            if (p.CALC_SOFT)
+            {
+                IHH12 ihh12finder(hm, p);
+                ihh12finder.main();
+            }
+
+            if (p.CALC_PI)
+            {
+                PI pifinder(hm, p);
+                pifinder.main();
+            }
+
+            // #ifdef PTW32_STATIC_LIB
+            //     pthread_win32_process_detach_np();
+            // #endif
+
+            double time_end = (clock() / (double)CLOCKS_PER_SEC);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration = end - start;
-            std::cout<<("Total CPU time: "+to_string(time_end-time_start)+" s. \n");
+            std::cout << ("Total CPU time: " + to_string(time_end - time_start) + " s. \n");
             std::cout << "Program took " << duration.count() << " seconds to complete." << std::endl;
 
             return 0;
+            
         }
 };
 

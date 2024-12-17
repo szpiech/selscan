@@ -94,8 +94,16 @@ class IHH12_ehh_data{
 
 class IHH12 : public SelscanStats{
     public:
-        IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){
+        ofstream flog_obj;
+        ofstream fout_obj;
+
+        IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){
+            flog = &flog_obj;
+            fout = &fout_obj;
             max_extend = ( p.MAX_EXTEND <= 0) ? hm->mapData->mapEntries[hm->mapData->nloci-1].physicalPos -  hm->mapData->mapEntries[0].physicalPos : p.MAX_EXTEND  ;
+            init_flog_fout("ihh12");
+        }
+        ~IHH12(){
         }
         void main();
         void findMaxTwo(int* arr, int n, int &max1, int &max2);

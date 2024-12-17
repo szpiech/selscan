@@ -19,7 +19,6 @@ struct XPIHH_ehh_data{
     double normalizer;
     bool LOW_MEM;
 
-
     ~XPIHH_ehh_data();
     // inline int square_alt(int n);
     // inline double twice_num_pair(int n);
@@ -29,17 +28,24 @@ struct XPIHH_ehh_data{
     // void initialize_core_pooled(const vector <int>* v, const vector <int>* v2,  int nhaps_p1); 
 }; 
 
-
 class XPIHH : public SelscanStats{
     public:
-        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params, ofstream* flog, ofstream* fout) : SelscanStats(hm, params,  flog,  fout){
+        ofstream flog_obj;
+        ofstream fout_obj;
+        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){
+            flog = &flog_obj;
+            fout = &fout_obj;
             if(p.CALC_XPNSL){
                 this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
+                init_flog_fout("xpnsl");
             }else{
                 this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
+                init_flog_fout("xpihh");
             }
         }
         void main();
+        ~XPIHH(){
+        }
 
     private:
         static pthread_mutex_t mutex_log;

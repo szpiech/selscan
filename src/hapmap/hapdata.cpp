@@ -202,10 +202,10 @@ void HapData::readHapData(string filename)
 
     if(SKIP) { //prefilter all sites < MAF
         cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-        (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+        //(*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     }else{
         cerr << ARG_KEEP << " set. Not removing variants < " << MAF << ".\n";
-        (*flog) << ARG_KEEP << " set. Not removing variants < " << MAF << ".\n";
+        //(*flog) << ARG_KEEP << " set. Not removing variants < " << MAF << ".\n";
     }
     cerr << "Loading " << current_nhaps << " haplotypes and " << nloci_before_filter - skiplist.size()<< " loci...\n";
 
@@ -338,13 +338,20 @@ void HapData::readHapData(string filename)
 //tested-> unphased - lowmem, phased - lowmem
 void HapData::readHapDataVCF(string filename)
 {
-    if(MISSING){
+    if(MISSING_ALLOWED){
+        cerr<<"Missing allowed: doing missing read"<<endl;
         readHapDataVCFMissing(filename);
         return;
     }
     //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
     
+    if(MULTI_CHR == true){
+        // get number of multi chromosomes
+        vector<string> allowed_chrs = {"chr1","chr2"};
+        // skip if not in allowed chrs
 
+        // for all possible chromosomes add a new haplotype HapData
+    }
 
     igzstream fin;
 
@@ -399,11 +406,18 @@ void HapData::readHapDataVCF(string filename)
             allele1 = junk[0];
             separator = junk[1];
             allele2 = junk[2];
-            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-            {
-                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
-                cerr << allele1 << " " << allele2 << endl;
-                throw 0;
+
+            if(!MISSING_ALLOWED){
+                if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
+                {
+                    cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                    cerr << allele1 << " " << allele2 << endl;
+                    throw 0;
+                }
+            }
+
+            if(MISSING_ALLOWED){
+
             }
 
             //if(separator != '|'){
@@ -431,16 +445,20 @@ void HapData::readHapDataVCF(string filename)
 
         int derived_allele_count = (unphased? (number_of_1s + number_of_2s*2) : number_of_1s);
 
-        // --skip-low-freq filtering based on MAF
-        if ( SKIP && (derived_allele_count*1.0/(current_nhaps*2) < MAF || 1-(derived_allele_count*1.0/(current_nhaps*2)) < MAF ) ) {
-            skiplist.push(nloci_before_filtering-1);
-            skipcount++;
-        } else {
-            number_of_1s_per_loci.push_back(number_of_1s);
-            if(unphased){
-                number_of_2s_per_loci.push_back(number_of_2s);
-            }   
+        
+        if(!MISSING_ALLOWED){
+            // --skip-low-freq filtering based on MAF
+            if ( SKIP && (derived_allele_count*1.0/(current_nhaps*2) < MAF || 1-(derived_allele_count*1.0/(current_nhaps*2)) < MAF ) ) {
+                skiplist.push(nloci_before_filtering-1);
+                skipcount++;
+            } else {
+                number_of_1s_per_loci.push_back(number_of_1s);
+                if(unphased){
+                    number_of_2s_per_loci.push_back(number_of_2s);
+                }   
+            }
         }
+        
 
         /*********/
         if (previous_nhaps < 0)
@@ -473,7 +491,7 @@ void HapData::readHapDataVCF(string filename)
 
     if(SKIP){
         cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-        (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+        //(*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     }
    
     int nhaps = unphased ? (current_nhaps ) : (current_nhaps ) * 2;
@@ -536,9 +554,9 @@ void HapData::readHapDataVCF(string filename)
             allele2 = junk[2];
             if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
             {
-                cerr << "ERROR: Alleles must be coded 0/1 only.\n";
+                cerr << "WARNING: Missing entry.\n";
                 cerr << allele1 << " " << allele2 << endl;
-                throw 0;
+                //throw 0;
             }
 
             //if(separator != '|'){
@@ -639,7 +657,7 @@ void HapData::readHapDataVCF(string filename)
 
     if(SKIP){
         cerr << "Removed " << skipcount << " low frequency variants.\n";
-        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
+        //(*flog) << "Removed " << skipcount << " low frequency variants.\n";
     }
 
     fin.close();
@@ -663,10 +681,18 @@ void HapData::readHapDataVCF(string filename)
 
 
 
+
 //tested-> unphased - lowmem, phased - lowmem
 void HapData::readHapDataVCFMissing(string filename)
 {
-    float MISSING_PERCENTAGE = 1;
+    if(unphased){
+        throw "ERROR: Missing data not allowed for unphased data.";
+        exit(1);
+    }
+
+
+    
+    float ALLOWED_MISSING_PERC = 1;
     //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
 
     igzstream fin;
@@ -716,21 +742,15 @@ void HapData::readHapDataVCFMissing(string filename)
         for (int i = 0; i < numMapCols; i++) {
             ss >> junk;
         }
+
+        missing_count = 0;
         for (int field = 0; field < current_nhaps; field++)
         {
             ss >> junk;
             allele1 = junk[0];
             separator = junk[1];
             allele2 = junk[2];
-            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-            {
-                // if(allele1 == '.' || allele2 == '.'){
-                //     continue;
-                // }
-                cerr << "ERROR XX: Alleles must be coded 0/1 only.\n";
-                cerr << allele1 << " " << allele2 << endl;
-                //throw 0;
-            }
+            
 
             //if(separator != '|'){
             //    cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
@@ -745,13 +765,38 @@ void HapData::readHapDataVCFMissing(string filename)
                 else if (allele1 == '1' || allele2 == '1'){
                     number_of_1s++;
                 }
+                if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
+                {
+                    // if(allele1 == '.' || allele2 == '.'){
+                    //     continue;
+                    // }
+                    cerr << "ERROR: Alleles must be coded 0/1 only UP.\n";
+                    cerr << allele1 << " " << allele2 << endl;
+                    throw 0;
+                }
             }else{
+                if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
+                    if(MISSING_MODE=="RANDOM"){
+                        allele1 = randomZeroOrOne();
+                        allele2 = randomZeroOrOne();
+                    }else if(MISSING_MODE=="ONE_IMPUTE"){
+                        allele1 = '1';
+                        allele2 = '1';
+                    }else if(MISSING_MODE=="ZERO_IMPUTE"){
+                        allele1 = '0';
+                        allele2 = '0';
+                        missing_count = 0;
+                    }else if(MISSING_MODE=="NO_IMPUTE"){
+                        missing_count+= 2;
+                    }
+                }
                 if(allele1 == '1'){
                     number_of_1s++;
                 }
                 if(allele2 == '1'){
                     number_of_1s++;
                 }
+                
                 if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
                     missing_count+= 2;
                 }
@@ -759,11 +804,24 @@ void HapData::readHapDataVCFMissing(string filename)
         }
 
         int derived_allele_count = (unphased? (number_of_1s + number_of_2s*2) : number_of_1s);
-
+      
         // --skip-low-freq filtering based on MAF
-        if ( SKIP && (derived_allele_count*1.0/((current_nhaps-missing_count)*2) < MAF || ((current_nhaps-derived_allele_count-missing_count)*1.0/((current_nhaps-missing_count)*2)) < MAF ) || 1.0*missing_count/(current_nhaps*2) <= MISSING_PERCENTAGE ) {
-            skiplist.push(nloci_before_filtering-1);
-            skipcount++;
+        //missing filter, being on the safe side
+        if ( SKIP ){
+            int ancestral_allele_count = 0;
+            if(!unphased) {
+                ancestral_allele_count = current_nhaps*2 - derived_allele_count;
+            }else{
+                ancestral_allele_count = current_nhaps - derived_allele_count;
+            }
+            bool derived_lower = (derived_allele_count+missing_count)*1.0/(current_nhaps*2) < MAF;
+            bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(current_nhaps*2) < MAF;
+            bool missing_cutoff_crossed = 1.0*missing_count/(current_nhaps*2) > ALLOWED_MISSING_PERC;
+            if (derived_lower || ancestral_lower || missing_cutoff_crossed) {
+                cout<<"Skipping cause Derived "<<derived_allele_count<<" Missing "<<missing_count<<" Total "<<current_nhaps*2<<endl;
+                skiplist.push(nloci_before_filtering-1);
+                skipcount++;
+            }
         } else {
             number_of_1s_per_loci.push_back(number_of_1s);
             if(unphased){
@@ -802,11 +860,11 @@ void HapData::readHapDataVCFMissing(string filename)
 
     if(SKIP){
         cerr << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
-        (*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+        //(*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     }
    
     int nhaps = unphased ? (current_nhaps ) : (current_nhaps ) * 2;
-    cerr << "Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci...\n";
+    cerr << "Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci... skipped "<<skipcount << "loci \n";
     initHapData(nhaps, nloci_before_filtering-skipcount);
 
     string junk;
@@ -842,6 +900,7 @@ void HapData::readHapDataVCFMissing(string filename)
         }
         
         if(unphased){
+            cout<<"WHY AM I HERE?"<<endl;
             if(benchmark_flag == "XOR"){
                 hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]+number_of_2s_per_loci[nloci_after_filtering]);
             }
@@ -849,11 +908,6 @@ void HapData::readHapDataVCFMissing(string filename)
             hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
             hapEntries[nloci_after_filtering].positions2.reserve(number_of_2s_per_loci[nloci_after_filtering]);
         
-        }else{
-            if(benchmark_flag == "XOR"){
-                hapEntries[nloci_after_filtering].xors.reserve(number_of_1s_per_loci[nloci_after_filtering]);
-            }
-            hapEntries[nloci_after_filtering].positions.reserve(number_of_1s_per_loci[nloci_after_filtering]);
         }
 
         for (int field = 0; field <  current_nhaps ; field++)
@@ -867,6 +921,9 @@ void HapData::readHapDataVCFMissing(string filename)
             {
                 cerr << "ERROR: Alleles must be coded 0/1 only.\n";
                 cerr << allele1 << " " << allele2 << endl;
+
+                allele1 = '?';
+                allele2 = '?';
                 //throw 0;
             }
 
@@ -912,12 +969,31 @@ void HapData::readHapDataVCFMissing(string filename)
                         hapEntries[nloci_after_filtering].positions.push_back(2 * field + 1);
                     }
                 }   
-                if((allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') ){
+                if(allele1 == '?' || allele2 == '?'){
                     if(LOW_MEM){
-                        hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
-                        hapEntries[nloci_after_filtering].xorbitset->num_1s++;
+                        if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
+                            if(MISSING_MODE=="RANDOM"){
+                                allele1 = randomZeroOrOne();
+                                allele2 = randomZeroOrOne();
+                            }else if(MISSING_MODE=="ONE_IMPUTE"){
+                                allele1 = '1';
+                                allele2 = '1';
+                            }else if(MISSING_MODE=="ZERO_IMPUTE"){
+                                allele1 = '0';
+                                allele2 = '0';
+                            }else if(MISSING_MODE=="NO_IMPUTE"){
+                                hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field);
+
+                                hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
+                                hapEntries[nloci_after_filtering].xorbitset->num_1s+= 2;
+                            }
+                        }
+                        cout<<"WE EW HWE"<<endl;
+                        
                     }else{
-                        throw 1;
+                         cout<<"WE EW HWE"<<LOW_MEM<< endl;
+                        throw "ERROR: Missing data not allowed for non low mem";
+                        exit(1);
                     }
                 }
             }
@@ -974,7 +1050,7 @@ void HapData::readHapDataVCFMissing(string filename)
 
     if(SKIP){
         cerr << "Removed " << skipcount << " low frequency variants.\n";
-        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
+        //(*flog) << "Removed " << skipcount << " low frequency variants.\n";
     }
 
     fin.close();

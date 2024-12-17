@@ -8,7 +8,13 @@ using namespace std;
 
 class PI: public SelscanStats{
     public:
-        PI(const std::unique_ptr<HapMap>&  hm, param_main& params,  ofstream* flog,  ofstream* fout) : SelscanStats(hm, params,  flog,  fout){         
+        ofstream flog_obj;
+        ofstream fout_obj;
+        PI(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){  
+            flog = &flog_obj;
+            fout = &fout_obj;
+            init_flog_fout("pi");    
+               
             if(p.UNPHASED){
                 throw std::invalid_argument("Unphased data not supported for PI calculation");
                 exit(1);

@@ -24,14 +24,82 @@ class SelscanStats {
         ofstream* fout;
         int numThreads;
 
-        SelscanStats(const std::unique_ptr<HapMap>& hm, param_main& p,  ofstream* flog,  ofstream* fout): hm(hm), p(p){
-            this->flog = flog;
-            this->fout = fout; 
+    void init_flog_fout(string statname){
+        string outFilename = p.outFilename + "." + statname;
+        if(statname == "pi"){
+            outFilename += "." + to_string(p.PI_WIN) + "bp";
+            //else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
+        }
+
+        if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + p.query;
+
+        if (p.ALT) outFilename += ".alt";
+
+        (*flog).open(outFilename + ".log");
+        if ((*flog).fail())
+        {
+            cerr << "ERROR: could not open " << outFilename + ".log" << " for writing.\n";
+            exit(2);
+        }
+
+        (*fout).open(outFilename + ".out");
+        if ((*fout).fail())
+        {
+            cerr << "ERROR: could not open " << outFilename + ".out" << " for writing.\n";
+            exit(2);
+        }
+        (*flog) << "\nv" + VERSION + "\nCalculating ";
+        if (statname == "ihs") (*flog) << " iHS.\n";
+        else if (statname == "nsl") (*flog) << " nSL.\n";
+        else if (statname == "xpnsl") (*flog) << " XP-nSL.\n";
+        else if (statname == "xpehh") (*flog) << " XP-EHH.\n";
+        else if (statname == "ehh") (*flog) << " EHH.\n";
+        else if (statname == "pi") (*flog) << " PI.\n";
+        else if (statname == "ihh12") (*flog) << " iHH12.\n";
+
+        if (p.TPED)
+        {
+            (*flog) << "Input filename: " << p.tpedFilename << "\n";
+            if (p.CALC_XP || p.CALC_XPNSL) (*flog) << "Reference input filename: " << p.tpedFilename2 << "\n";
+        }
+        else if (p.VCF) {
+            (*flog) << "Input filename: " << p.vcfFilename << "\n";
+            if (p.CALC_XP || p.CALC_XPNSL) (*flog) << "Reference input filename: " << p.vcfFilename2 << "\n";
+            (*flog) << "Map filename: " << p.mapFilename << "\n";
+        }
+        else {
+            (*flog) << "Input filename: " << p.hapFilename << "\n";
+            if (p.CALC_XP || p.CALC_XPNSL) (*flog) << "Reference input filename: " << p.hapFilename2 << "\n";
+            (*flog) << "Map filename: " << p.mapFilename << "\n";
+        }
+
+        (*flog) << "Output file: " << p.outFilename << "\n";
+        (*flog) << "Threads: " << p.numThreads << "\n";
+        (*flog) << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
+        (*flog) << "Max gap parameter: " << p.MAX_GAP << "\n";
+        (*flog) << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
+        (*flog) << "Missing value: " << p.MISSING << "\n";
+
+        (*flog) << "Phased: ";
+        if(p.UNPHASED) (*flog) << "no\n";
+        else (*flog) << "yes\n";
+        (*flog) << "Alt flag set: ";
+        if (p.ALT) (*flog) << "yes\n";
+        else (*flog) << "no\n";
+        (*flog).flush();
+        
+    }
+        //SelscanStats(const std::unique_ptr<HapMap>& hm, param_main& p,  ofstream* flog,  ofstream* fout): hm(hm), p(p){
+        SelscanStats(const std::unique_ptr<HapMap>& hm, param_main& p): hm(hm), p(p){
             this->numThreads = p.numThreads;
+            string outFilename = p.outFilename;
         }
 
         ~SelscanStats(){
+            flog->close();
+            fout->close();
         }
+        
 
         double static readTimer() {
             return clock() / (double) CLOCKS_PER_SEC;

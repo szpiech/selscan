@@ -321,6 +321,9 @@ void EHH::calc_single_ehh(string query){
     int numHaps = hm->hapData->nhaps;
 
     int locus = this->queryFound(query);
+    if(locus == -1){
+        return;
+    }
 
     if(p.UNPHASED){
         throw "Unphased EHH not implemented yet";
