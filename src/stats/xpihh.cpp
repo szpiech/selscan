@@ -8,7 +8,6 @@
 
 pthread_mutex_t XPIHH::mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
-
 #define ACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
     for (int k = 0; k < (hapbitset->nwords); k++) {             \
         uint64_t bitset = (hapbitset->bits)[k];                 \
@@ -117,17 +116,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         pooled->group_id[p1->nhaps + i] = 0;
     }
 
-    vector<int>* v1 = &hm->hapData->hapEntries[locus].positions;
-    vector<int>* v2 = &hm->hapData2->hapEntries[locus].positions;
     MyBitset* vb1 = hm->hapData->hapEntries[locus].hapbitset;
     MyBitset* vb2 = hm->hapData2->hapEntries[locus].hapbitset;
 
     if(p.LOW_MEM){
         p1->n_c[1] = vb1->num_1s;
         p2->n_c[1] = vb2->num_1s;
-    }else{
-        p1->n_c[1] = (*v1).size();
-        p2->n_c[1] = (*v2).size();
     }
     
     p1->n_c[0] = p1->nhaps - p1->n_c[1];
@@ -163,10 +157,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             ACTION_ON_ALL_SET_BITS(vb1, {
                 p1->group_id[set_bit_pos] = 1;
             });
-        }else{
-            for (int set_bit_pos : *(v1)){
-                p1->group_id[set_bit_pos] = 1;
-            }
         }
     }
 
@@ -182,10 +172,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             ACTION_ON_ALL_SET_BITS(vb2, {
                 p2->group_id[set_bit_pos] = 1;
             });
-        }else{
-            for (int set_bit_pos : (*v2)){
-                p2->group_id[set_bit_pos] = 1;
-            }
         }
         
     }
@@ -205,18 +191,9 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             ACTION_ON_ALL_SET_BITS(vb2, {
                 pooled->group_id[set_bit_pos + p1->nhaps] = 1;
             });
-        }else{
-            for (int set_bit_pos : *(v1)){
-                pooled->group_id[set_bit_pos] = 1;
-            }
-            for (int set_bit_pos : (*v1)){
-                pooled->group_id[set_bit_pos + p1->nhaps] = 1;
-            }
         }
 
     }
-
-        
 
     if(p.ALT){
         p1->curr_ehh_before_norm = square_alt(p1->n_c[1])+square_alt(p1->n_c[0]);
@@ -291,10 +268,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             xor_size = hm->hapData->hapEntries[i_xor].xorbitset->num_1s;
             pos_size = hm->hapData->hapEntries[i].hapbitset->num_1s;
             vb =  (xor_size>pos_size) ? hm->hapData->hapEntries[i].hapbitset : hm->hapData->hapEntries[i_xor].xorbitset;
-        }else{
-            xor_size = hm->hapData->hapEntries[i_xor].xors.size();
-            pos_size = hm->hapData->hapEntries[i].positions.size();
-            v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
         }
 
         if(p1->totgc != p1->nhaps){
@@ -303,11 +276,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
                     int old_group_id = p1->group_id[set_bit_pos];
                     m[old_group_id].push_back(set_bit_pos);      
                 });
-            }else{
-                for (const int& set_bit_pos : *v){
-                    int old_group_id = p1->group_id[set_bit_pos];
-                    m[old_group_id].push_back(set_bit_pos);        
-                }
             }
             updateEHH_from_split(m, p1);
             ihh_p1 += 0.5*distance*(p1->curr_ehh_before_norm + p1->prev_ehh_before_norm)/p1->normalizer;
@@ -321,10 +289,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             xor_size = hm->hapData2->hapEntries[i_xor].xorbitset->num_1s;
             pos_size = hm->hapData2->hapEntries[i].hapbitset->num_1s;
             vb =  (xor_size>pos_size) ? hm->hapData2->hapEntries[i].hapbitset : hm->hapData2->hapEntries[i_xor].xorbitset;
-        }else{
-            xor_size = hm->hapData2->hapEntries[i_xor].xors.size();
-            pos_size = hm->hapData2->hapEntries[i].positions.size();
-            v =  (xor_size>pos_size) ? &(hm->hapData2->hapEntries[i].positions) : &(hm->hapData2->hapEntries[i_xor].xors);
         }
         
         if(p2->totgc != p2->nhaps){
@@ -350,9 +314,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         if(p.LOW_MEM){
             xor_size = hm->hapData2->hapEntries[i_xor].xorbitset->num_1s + hm->hapData->hapEntries[i_xor].xorbitset->num_1s;
             pos_size = hm->hapData2->hapEntries[i].hapbitset->num_1s + hm->hapData->hapEntries[i].hapbitset->num_1s;
-        }else{
-            xor_size = hm->hapData->hapEntries[i_xor].xors.size() + hm->hapData2->hapEntries[i_xor].xors.size();
-            pos_size =  hm->hapData->hapEntries[i].positions.size() + hm->hapData2->hapEntries[i].positions.size();
         }
 
         if(pooled->totgc != pooled->nhaps){
@@ -370,19 +331,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
                     m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
                 });
 
-            }else{
-                //NOW POOLED 1
-                v =  (xor_size>pos_size) ? &(hm->hapData->hapEntries[i].positions) : &(hm->hapData->hapEntries[i_xor].xors);
-                for (const int& set_bit_pos : *v){
-                    int old_group_id = pooled->group_id[set_bit_pos];
-                    m[old_group_id].push_back(set_bit_pos); 
-                }
-                //for pooled2
-                v =  (xor_size>pos_size) ? &(hm->hapData2->hapEntries[i].positions) : &(hm->hapData2->hapEntries[i_xor].xors);
-                for (const int& set_bit_pos : *v){
-                    int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
-                    m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
-                }
             }
             
             updateEHH_from_split(m, pooled);

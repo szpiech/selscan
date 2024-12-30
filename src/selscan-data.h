@@ -19,7 +19,6 @@
 #ifndef __DATA_H__
 #define __DATA_H__
 
-
 #include "selscan-cli.h"
 
 #include <sstream>
@@ -65,18 +64,107 @@ public:
 
     std::atomic<int> currentProcessed = 0;
 
-    
+    char randomZeroOrOne() {
+        // Create a random device to seed the generator
+        std::random_device rd; 
+        
+        // Use a Mersenne Twister engine
+        std::mt19937 gen(rd()); 
+        
+        // Define a uniform distribution for integers between 0 and 1
+        std::uniform_int_distribution<int> dist(0, 1);
+        
+        // Return the random number
+        int randomNum  = dist(gen);
+
+         // Convert integer 0 or 1 to character '0' or '1'
+        char randomChar = static_cast<char>(randomNum + '0');
+        return randomChar;
+    }
+
+    pair<int, int> countFieldsAndOnes(const string &str)
+    {
+        string::const_iterator it;
+        int ones = 0;
+        int result;
+        int numFields = 0;
+        int seenChar = 0;
+        for (it = str.begin() ; it < str.end(); it++)
+        {
+            if(*it == '1'){
+                ones++;
+            }
+            result = isspace(*it);
+            if (result == 0 && seenChar == 0)
+            {
+                numFields++;
+                seenChar = 1;
+            }
+            else if (result != 0)
+            {
+                seenChar = 0;
+            }
+        }
+        return make_pair(numFields, ones);
+    }
+
+    int countFields(const string &str)
+    {
+        string::const_iterator it;
+        int result;
+        int numFields = 0;
+        int seenChar = 0;
+        for (it = str.begin() ; it < str.end(); it++)
+        {
+            result = isspace(*it);
+            if (result == 0 && seenChar == 0)
+            {
+                numFields++;
+                seenChar = 1;
+            }
+            else if (result != 0)
+            {
+                seenChar = 0;
+            }
+        }
+        return numFields;
+    }
 
     HapMap(param_main &p){
         this->p = p;
         // this->flog = flog;
         // this->fout = fout;
 
-        
     }
 
     ~HapMap(){
     }
+
+    /**
+     * reads in haplotype data and also does basic checks on integrity of format
+     * returns a populated HaplotypeData structure if successful
+     * throws an exception otherwise
+     */ 
+    void initParamsInHap(HapData& hap);
+    void readHapData(string filename, HapData& hap);
+    void readHapDataTPED(string filename, HapData& hap);
+    void readHapDataVCF(string filename, HapData& hap);
+    void readHapDataVCFMissing(string filename, HapData& hap);
+    void readHapDataMSHap(string filename, HapData& hap);
+
+    // void initParamsInHap(HapData& hap){
+    //     //bool UNPHASED, bool SKIP, double MAF, int num_threads, bool LOW_MEM, bool MISSING, string MULTI_CHR_LIST
+    //     hap.unphased = p.UNPHASED;
+    //     hap.SKIP = p.SKIP;
+    //     hap.MAF = p.MAF;
+    //     hap.num_threads = p.numThreads;
+    //     hap.LOW_MEM = p.LOW_MEM;
+    //     hap.MISSING_ALLOWED = p.MISSING;
+
+
+    //     // for xp make sure to disable maf cutoff
+    //     //hap.MULTI_CHR_LIST= p.MULTI_CHR_LIST;
+    // }
 
     /// Returns 1 on error, Returns 0 on success
     bool loadHapMapData(){
@@ -106,34 +194,24 @@ public:
         bool CALC_SOFT = p.CALC_SOFT;
         bool SINGLE_EHH = p.SINGLE_EHH;
         bool LOW_MEM = p.LOW_MEM;
-        // MISSING
-        // if(p.MISSING){
-        //     hapData->benchmark_flag = "MISSING";
-        // }
-
         
         mapData = std::make_unique<MapData>(); 
         hapData = std::make_unique<HapData>();
         
-        if (CALC_XP || CALC_XPNSL){
-            hapData2 = std::make_unique<HapData>();
-            hapData->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
-            hapData2->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
-        }   
+        // if (CALC_XP || CALC_XPNSL){
+        //     hapData2 = std::make_unique<HapData>();
+        // }   
 
         auto start_reading = std::chrono::high_resolution_clock::now();
 
-        
         try
         {
             if (TPED)
             {
-                hapData->readHapDataTPED(tpedFilename);
-                //handleData(tpedFilename, "TPED", *hapData);
+                readHapDataTPED(tpedFilename, *hapData);
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData2->readHapDataTPED(tpedFilename);
-                    //handleData(tpedFilename2, "TPED", *hapData2);
+                    readHapDataTPED(tpedFilename, *hapData2);
                     if (hapData->nloci != hapData2->nloci)
                     {
                         std::cerr << "ERROR: Haplotypes from " << tpedFilename << " and " << tpedFilename2 << " do not have the same number of loci.\n";
@@ -145,27 +223,15 @@ public:
             else if (VCF) {
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
-                    hapData2->initParams(UNPHASED, false, 0, p.numThreads, p.LOW_MEM, p.MISSING);
-
-                    hapData->readHapDataVCF(vcfFilename);
-                    hapData2->readHapDataVCF(vcfFilename2);
-
-                    // handleData(vcfFilename, "VCF", *hapData);
-                    // handleData(vcfFilename2, "VCF", *hapData2);
-
-
+                    readHapDataVCF(vcfFilename, *hapData);
+                    readHapDataVCF(vcfFilename2, *hapData2);
                     if (hapData->nloci != hapData2->nloci)
                     {
                         std::cerr << "ERROR: Haplotypes from " << vcfFilename << " and " << vcfFilename2 << " do not have the same number of loci.\n";
                         return 1;
                     }
                 }else{
-                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
-                    hapData->readHapDataVCF(vcfFilename);
-
-                    // handleData(vcfFilename, "VCF", *hapData);
-
+                    readHapDataVCF(vcfFilename, *hapData);
                 }
                 if(!CALC_NSL && !CALC_XPNSL && !USE_PMAP) {
                     mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
@@ -178,25 +244,15 @@ public:
             {
                 if (CALC_XP || CALC_XPNSL)
                 {
-                    hapData->initParams(UNPHASED, false, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
-                    hapData2->initParams(UNPHASED, false, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
-
-                    hapData->readHapData(hapFilename);
-                    hapData2->readHapData(hapFilename2);
-
-                    // handleData(hapFilename, "HAP", *hapData);
-                    // handleData(hapFilename2, "HAP", *hapData2);
-
+                    readHapData(hapFilename, *hapData);
+                    readHapData(hapFilename2, *hapData2);
                     if (hapData->nloci != hapData2->nloci)
                     {
                         std::cerr << "ERROR: Haplotypes from " << hapFilename << " and " << hapFilename2 << " do not have the same number of loci.\n";
                         return 1;
                     }
                 }else{
-                    hapData->initParams(UNPHASED, p.SKIP, p.MAF, p.numThreads, p.LOW_MEM, p.MISSING);
-                    hapData->readHapData(hapFilename);
-
-                    // handleData(hapFilename, "HAP", *hapData);
+                    readHapData(hapFilename, *hapData);
                 }
                 mapData->readMapData(mapFilename, hapData->nloci, USE_PMAP, hapData->skipQueue);
             }
@@ -206,7 +262,6 @@ public:
             cerr << "ERROR: " << e.what() << endl;
             return 1;
         }
-        
 
         auto end_reading = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> read_duration =  end_reading - start_reading;
@@ -231,6 +286,7 @@ public:
                 return 1;
             }
         }
+        
         return 0;
     }
 
@@ -255,6 +311,7 @@ public:
     }
     */
 
+   
 
     /*
     void handleData(string filename, string EXT, HapData& hapData){

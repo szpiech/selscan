@@ -5,7 +5,17 @@
 #include <thread>
 #include <unordered_map>
 
-
+#define ACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
+    for (int k = 0; k < (hapbitset->nwords); k++) {             \
+        uint64_t bitset = (hapbitset->bits)[k];                 \
+        while (bitset != 0) {                        \
+            uint64_t t = bitset & -bitset;           \
+            int r = __builtin_ctzl(bitset);          \
+            int set_bit_pos = (k * 64 + r);          \
+            bitset ^= t;                             \
+            ACTION;                                  \
+        }                                            \
+    }
 
 using namespace std;
 
@@ -27,7 +37,7 @@ class IHH12_ehh_data{
     bool* isDerived;
     int* group_id;
 
-    vector<int> v;
+    MyBitset* v;
 
     ~IHH12_ehh_data(){
         delete[] group_count;
@@ -46,7 +56,7 @@ class IHH12_ehh_data{
         // return 2*nCk(n, 2);
         return 2*nCk(n, 2);
     }
-    void init(int nhaps, vector <int>& positions ){
+    void init(int nhaps, MyBitset* positions ){
         this->nhaps = nhaps;
         group_count = new int[nhaps];
         isDerived = new bool[nhaps];
@@ -61,8 +71,8 @@ class IHH12_ehh_data{
         v = positions;
 
         //updated in pooled
-        n_c[0] = nhaps - v.size();
-        n_c[1] = v.size();
+        n_c[0] = nhaps - v->num_1s;
+        n_c[1] =  v->num_1s;
     }
 
     void initialize_core(bool ALT){
@@ -73,10 +83,11 @@ class IHH12_ehh_data{
         group_count[1] = n_c[1];
         group_count[0] = n_c[0];
         totgc+=2;
-        for (int set_bit_pos : v){
+
+        ACTION_ON_ALL_SET_BITS(v, {
             isDerived[set_bit_pos] = true;
             group_id[set_bit_pos] = 1;
-        }
+        });
 
         curr_ehh_before_norm = (ALT?   square_alt(n_c[0]) +  square_alt(n_c[1]) :  twice_num_pair(n_c[0]) + twice_num_pair(n_c[1])); 
 

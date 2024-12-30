@@ -235,6 +235,9 @@ const string ARG_MULTICHR_FLAG = "--multi-chr";
 const bool DEFAULT_MULTICHR_FLAG = false;
 const string HELP_MULTICHR_FLAG = "Set this flag to allow reading multiple chromosomes from VCF.";
 
+const string ARG_CHR_LIST = "--chr";
+const string DEFAULT_CHR_LIST = ",";
+const string HELP_CHR_LIST = "Comma-separated list of chromosomes to include in the analysis.";
 
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
 bool checkParameters(param_t &params,int argc, char *argv[]);

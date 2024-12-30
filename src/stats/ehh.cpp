@@ -61,10 +61,6 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
             ACTION_ON_ALL_SET_BITS(vb, {
                 isDerived[set_bit_pos] = true;
             });
-        }else{
-            for (const int& set_bit_pos : hm->hapData->hapEntries[locus].positions){
-                isDerived[set_bit_pos] = true;
-            }
         }
         curr_ehh1_before_norm = normalizer_1;
         hm->mapData->mapEntries[locus].skipLocus = true;
@@ -76,11 +72,6 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
                 isDerived[set_bit_pos] = true;
                 group_id[set_bit_pos] = 1;
             });
-        }else{
-            for (const int& set_bit_pos : hm->hapData->hapEntries[locus].positions){
-                isDerived[set_bit_pos] = true;
-                group_id[set_bit_pos] = 1;
-            }
         }
 
         if(hm->mapData->mapEntries[locus].skipLocus){
@@ -197,7 +188,7 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
         if(p.LOW_MEM){
             MyBitset* v2p = downstream? hm->hapData->hapEntries[i+1].xorbitset : hm->hapData->hapEntries[i].xorbitset;
             // ensure that in boundary we don't do any xor calculation
-            if( (hm->hapData->hapEntries[i].hapbitset->num_1s < v2p->num_1s && i!=numHaps-1) ||  hm->hapData->benchmark_flag != "XOR"){ 
+            if( (hm->hapData->hapEntries[i].hapbitset->num_1s < v2p->num_1s && i!=numHaps-1) ||  hm->p.benchmark_flag != "XOR"){ 
                 v2p = hm->hapData->hapEntries[i].hapbitset;
             }
             //v2p =hm->hapData->hapEntries[i].hapbitset; // uncomment to disable xor
@@ -206,19 +197,6 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);
             });
-        }else{
-            vector<int> * v2p = downstream? &(hm->hapData->hapEntries[i+1].xors) : &(hm->hapData->hapEntries[i].xors);
-
-             // ensure that in boundary we don't do any xor calculation
-            if( (hm->hapData->hapEntries[i].positions.size() <(*v2p).size() && i!=numHaps-1) ||  hm->hapData->benchmark_flag != "XOR"){ 
-                v2p = &hm->hapData->hapEntries[i].positions;
-            }
-            //v2p = &hm->hapData->hapEntries[i].positions; // uncomment to disable xor
-
-            for (const int& set_bit_pos : (*v2p)){
-                int old_group_id = group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);
-            }
         }
 
         // PHASE 3: UPDATE EHH FROM SPLIT

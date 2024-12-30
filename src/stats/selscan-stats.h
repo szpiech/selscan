@@ -24,17 +24,31 @@ class SelscanStats {
         ofstream* fout;
         int numThreads;
 
-    void init_flog_fout(string statname){
+
+    string get_filename_base(string statname){
         string outFilename = p.outFilename + "." + statname;
         if(statname == "pi"){
             outFilename += "." + to_string(p.PI_WIN) + "bp";
             //else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
         }
-
         if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + p.query;
-
         if (p.ALT) outFilename += ".alt";
+        return outFilename;
+    }
 
+    void init_multi(){
+        //open multiple filestream for all item in chrlist
+        ofstream* fouts[hm->mapData->chr_list.size()];
+        cout<<"HAYHAY"  << endl;
+        for (const auto& [chr, i] : hm->mapData->chr_list){
+            cout<<chr<<" " <<i<<endl;
+            string filename = get_filename_base("ihs") + "." + chr ;
+            fouts[i] = new ofstream(filename);
+        }
+    }
+
+    void init_flog_fout(string statname){
+        string outFilename = get_filename_base(statname);
         (*flog).open(outFilename + ".log");
         if ((*flog).fail())
         {
@@ -240,6 +254,30 @@ class SelscanStats {
                 std::cout << "=";
             }
             std::cout << "] 100 % (" << total << "/" << total << ")" << std::endl;
+        }
+
+
+        bool nextLocOutOfBounds(int locus, bool downstream){
+            if(downstream){
+                if(locus+1 >= hm->hapData->nloci || hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
+                    if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
+                        cerr<<"Chroutofbounds: "<<locus<<endl;
+                    }
+                    return true;
+                }
+            }else{
+                if(locus-1 < 0 || hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
+                    if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
+                        cerr<<"Chroutofbounds: "<<locus<<endl;
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        int getChrIdxFromLoc(int locus){
+            return hm->mapData->chr_list[hm->mapData->mapEntries[locus].chr];
         }
 };
 

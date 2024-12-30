@@ -102,6 +102,7 @@ class MainTools{
             p.MAX_EXTEND_NSL = params.getIntFlag(ARG_MAX_EXTEND_NSL); //p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
             p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
             p.TRUNC = params.getBoolFlag(ARG_TRUNC);
+            p.CHR_LIST = params.getStringFlag(ARG_CHR_LIST);
 
             
             // this->hm = hm;

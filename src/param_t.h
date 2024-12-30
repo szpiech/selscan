@@ -48,6 +48,24 @@ struct param_main{
     bool LOW_MEM;
     int MISSING;
 
+    bool MULTI_CHR;
+    string CHR_LIST;
+
+    string benchmark_flag = "NO_XOR";//XOR
+    string benchmark_flag2 = ""; //"FLIP";
+
+    string MISSING_MODE = "ONE_IMPUTE";
+    //"NO_IMPUTE"; //ONE_IMPUTE, ZERO_IMPUTE, NO_IMPUTE 
+
+    //string benchmark_flag = "BITSET";
+    //string benchmark_flag = "FLIP_ONLY";
+    //string benchmark_flag = "BASIC";
+
+    string DEBUG_FLAG = "VCF";
+    //string DEBUG_FLAG = "";
+
+    bool MISSING_ALLOWED = false;
+
 };
 
 

@@ -1,5 +1,7 @@
 #include "ihh12.h"
 
+
+
 pthread_mutex_t IHH12::mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 // void IHH12::findMaxK(int* arr, int n, int K) {
@@ -80,10 +82,7 @@ void IHH12::findMaxTwo(int* arr, int n, int &max1, int &max2) {
         }
 
     }
-
 }
-
-
 
 void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* ehhdata){
     double sum_del_update = 0;
@@ -117,12 +116,9 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
         //     }
         // }
 
-
-
         ehhdata->group_count[old_group_id] -= newgroup_size;
         ehhdata->group_count[ehhdata->totgc] += newgroup_size;
         ehhdata->totgc += 1;
-
 
         // for(int g = 0; g<ehhdata->totgc ; g++){
         //     if(ehhdata->group_count[g] == 0){
@@ -132,16 +128,11 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
         //         break;
         //     }
         //}
-
-
         sum_del_update += del_update;
-
-
     }
     ehhdata->curr_ehh_before_norm += sum_del_update;
     int top1, top2;
     findMaxTwo(ehhdata->group_count, ehhdata->totgc, top1, top2);
-
 
     double firstFreq = (top1 > 1) ? twice_num_pair(top1) : 0;
     double secondFreq =(top2 > 1) ?  twice_num_pair(top2): 0;
@@ -150,7 +141,6 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
 
     ehhdata->curr_ehh12_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq - secondFreq + comboFreq;
     //ehhdata->curr_ehh12_before_norm *= normfac;
-
     //cout<<"t1 t2 "<<top1<<" "<<top2<<" "<<firstFreq/normfac<<" "<<secondFreq/normfac<<" "<< comboFreq/normfac<<endl;
 }
 
@@ -165,7 +155,7 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
         return;
     }
 
-    ehhdata.init(hm->hapData->nhaps, hm->hapData->hapEntries[locus].positions);
+    ehhdata.init(hm->hapData->nhaps, hm->hapData->hapEntries[locus].hapbitset);
     ehhdata.initialize_core(p.ALT);
     ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
     ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
@@ -258,7 +248,7 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
             pooled.v2 = hm->hapData2->hapEntries[i].xors;
         }
         */
-        ehhdata.v = hm->hapData->hapEntries[i].positions;
+        ehhdata.v = hm->hapData->hapEntries[i].hapbitset;
 
         // ensure that in boundary we don't do any calculation
         // if(hm->hapData->hapEntries[i].positions.size() < ones_p1.size() && i!=nhaps1-1 ){
@@ -272,10 +262,11 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
         // main faster algorithm for ehh
 
         //for p1
-        for (const int& set_bit_pos : ehhdata.v){
+        ACTION_ON_ALL_SET_BITS(ehhdata.v, {
             int old_group_id = ehhdata.group_id[set_bit_pos];
-            m[old_group_id].push_back(set_bit_pos);
-        }
+            m[old_group_id].push_back(set_bit_pos); 
+        });
+        
         updateEHH_from_split(m, &ehhdata);
         m.clear();
 
@@ -294,8 +285,6 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
 
         ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
         ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
-
-        
 
         if (physicalDistance_from_core(i, locus, downstream) >= max_extend) break;
         

@@ -53,6 +53,7 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
     params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
     params.addFlag(ARG_MULTICHR_FLAG, DEFAULT_MULTICHR_FLAG, "", HELP_MULTICHR_FLAG);
+    params.addFlag(ARG_CHR_LIST, DEFAULT_CHR_LIST, "", HELP_CHR_LIST);
 
 
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
@@ -249,6 +250,14 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
         return 1;
     }
 
+    //check that string is comma-separated list
+    string chrList = params.getStringFlag(ARG_CHR_LIST);
+    if (chrList.length()==0)
+    {
+        cerr << "ERROR: you must provide a comma-separated list after --chr flag. \n";
+        return 1;
+    }
+    
     return 0;
 }
 

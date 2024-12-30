@@ -6,7 +6,10 @@
 #include <iostream>
 #include <queue>
 
+
 using namespace std;
+
+
 
 struct MapEntry
 {
@@ -21,13 +24,20 @@ struct MapEntry
 class MapData
 {
 public:
+
+
     struct MapEntry* mapEntries = NULL; //vector of map entries
     int nloci;
+    map<string, int> chr_list;
+    
     //map<string, int> locus_query_map;
     
     ~MapData(){
         releaseMapData();
     }    
+    
+
+    
 
     //allocates the arrays and populates them with -9 or "--" depending on type
     void initMapData(int nloci);
