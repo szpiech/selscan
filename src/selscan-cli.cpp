@@ -385,10 +385,11 @@ bool jsonParse(param_main &base_p, vector<param_main> &multi_params){
     // Iterate over the array of params
     for (const auto& param : data["params"]) {
         param_main p(base_p); // make a copy of the base parameters
-        cout<<ARG_MAX_EXTEND<<" "<<ARG_MAF<<" "<<ARG_MAX_EXTEND_NSL<<endl;
+        //cout<<ARG_MAX_EXTEND<<" "<<ARG_MAF<<" "<<ARG_MAX_EXTEND_NSL<<endl;
         string MAX_EXTEND = ARG_MAX_EXTEND.substr(2);
         string MAF = ARG_MAF.substr(2);
         string MAX_EXTEND_NSL = ARG_MAX_EXTEND_NSL.substr(2);
+        string CUTOFF = ARG_CUTOFF.substr(2);
         // all other params are ignored
 
         string FILENAME_POP1 = ARG_FILENAME_POP1.substr(2);
@@ -396,17 +397,21 @@ bool jsonParse(param_main &base_p, vector<param_main> &multi_params){
 
         if (param.contains(MAF)) { // Check if the field exists and retrieve it if it does
             p.MAF = param[MAF];
-            cout<<p.MAF<<endl;
+            cout<<ARG_MAF<<" "<<p.MAF<<endl;
         }
 
         if (param.contains(MAX_EXTEND)) { // Check if the field exists and retrieve it if it does
             p.MAX_EXTEND = param[MAX_EXTEND];
-            cout<<p.MAX_EXTEND<<endl;
+            cout<<ARG_MAX_EXTEND<<" "<<p.MAX_EXTEND<<endl;
         }
 
         if (param.contains(MAX_EXTEND_NSL)) { // Check if the field exists and retrieve it if it does
             p.MAX_EXTEND_NSL = param[MAX_EXTEND_NSL];
-            cout<<p.MAX_EXTEND_NSL<<endl;
+            cout<<ARG_MAX_EXTEND_NSL<<" "<<p.MAX_EXTEND_NSL<<endl;
+        }
+        if(param.contains(CUTOFF)){
+            p.EHH_CUTOFF = param[CUTOFF];
+            cout<<ARG_CUTOFF<<" "<<p.EHH_CUTOFF<<endl;
         }
         checkParameters(p);
         multi_params.push_back(p);
