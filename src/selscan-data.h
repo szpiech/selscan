@@ -55,11 +55,13 @@ const char MISSING_CHAR = '9';  // TO_BE_DELETED
 class HapMap{
 public:
     param_main p;
+    vector<param_main> ps;
+
     std::unique_ptr<MapData> mapData;
     std::unique_ptr<HapData> hapData;
     std::unique_ptr<HapData> hapData2;
 
-    // ofstream* flog;
+    ofstream* flog;
     // ofstream* fout;
 
     std::atomic<int> currentProcessed = 0;
@@ -130,9 +132,17 @@ public:
         return numFields;
     }
 
-    HapMap(param_main &p){
+    HapMap(param_main &p, ofstream* flog){
         this->p = p;
-        // this->flog = flog;
+        this->flog = flog;
+        // this->fout = fout;
+
+    }
+
+    HapMap(param_main &p, vector<param_main>&ps, ofstream* flog){
+        this->p = p;
+        this->flog = flog;
+        this->ps = ps;
         // this->fout = fout;
 
     }
@@ -166,8 +176,138 @@ public:
     //     //hap.MULTI_CHR_LIST= p.MULTI_CHR_LIST;
     // }
 
-    /// Returns 1 on error, Returns 0 on success
+
+
     bool loadHapMapData(){
+        // const string& hapFilename = p.hapFilename;
+        // const string& hapFilename2 =  p.hapFilename2;
+        // const string& mapFilename = p.mapFilename;
+        // const string& tpedFilename = p.tpedFilename;
+        // const string& tpedFilename2 = p.tpedFilename2;
+        // const string& vcfFilename = p.vcfFilename;
+        // const string& vcfFilename2 = p.vcfFilename2;
+        
+        // bool TPED = false;
+        // if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+
+        // bool VCF = false;
+        // if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
+
+        // bool UNPHASED = p.UNPHASED;
+        // bool USE_PMAP = p.USE_PMAP;
+        // bool ALT = p.ALT;
+        // bool WAGH = p.WAGH;
+        // bool CALC_IHS = p.CALC_IHS;
+        // bool CALC_XPNSL = p.CALC_XPNSL;
+        // bool CALC_NSL = p.CALC_NSL;
+        // bool WRITE_DETAILED_IHS = p.WRITE_DETAILED_IHS;
+        // bool CALC_XP = p.CALC_XP;
+        // bool CALC_SOFT = p.CALC_SOFT;
+        // bool SINGLE_EHH = p.SINGLE_EHH;
+        // bool LOW_MEM = p.LOW_MEM;
+        
+        mapData = std::make_unique<MapData>(); 
+        hapData = std::make_unique<HapData>();
+        
+        // if (CALC_XP || CALC_XPNSL){
+        //     hapData2 = std::make_unique<HapData>();
+        // }   
+
+        auto start_reading = std::chrono::high_resolution_clock::now();
+
+        try
+        {
+            if (p.TPED)
+            {
+                readHapDataTPED(p.tpedFilename, *hapData);
+                if (p.CALC_XP || p.CALC_XPNSL)
+                {
+                    readHapDataTPED(p.tpedFilename, *hapData2);
+                    if (hapData->nloci != hapData2->nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << p.tpedFilename << " and " << p.tpedFilename2 << " do not have the same number of loci.\n";
+                        return 1;
+                    }
+                }
+                mapData->readMapDataTPED(p.tpedFilename, hapData->nloci, hapData->nhaps, p.USE_PMAP, hapData->skipQueue);
+            }
+            else if (p.VCF) {
+                if (p.CALC_XP || p.CALC_XPNSL)
+                {
+                    readHapDataVCF(p.vcfFilename, *hapData);
+                    readHapDataVCF(p.vcfFilename2, *hapData2);
+                    if (hapData->nloci != hapData2->nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << p.vcfFilename << " and " << p.vcfFilename2 << " do not have the same number of loci.\n";
+                        return 1;
+                    }
+                }else{
+                    readHapDataVCF(p.vcfFilename, *hapData);
+                }
+                if(!p.CALC_NSL && !p.CALC_XPNSL && !p.USE_PMAP) {
+                    mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
+                }
+                else{//Load physical positions
+                    mapData->readMapDataVCF(p.vcfFilename, hapData->nloci, hapData->skipQueue);
+                }
+            }
+            else
+            {
+                if (p.CALC_XP || p.CALC_XPNSL)
+                {
+                    readHapData(p.hapFilename, *hapData);
+                    readHapData(p.hapFilename2, *hapData2);
+                    if (hapData->nloci != hapData2->nloci)
+                    {
+                        std::cerr << "ERROR: Haplotypes from " << p.hapFilename << " and " << p.hapFilename2 << " do not have the same number of loci.\n";
+                        return 1;
+                    }
+                }else{
+                    readHapData(p.hapFilename, *hapData);
+                }
+                mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
+            }
+        }
+        catch (exception& e)
+        {
+            cerr << "ERROR: " << e.what() << endl;
+            return 1;
+        }
+
+        auto end_reading = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> read_duration =  end_reading - start_reading;
+        cout<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
+        (*flog)<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
+        
+        // DEBUG::: mapData.print();
+
+        // Check if map is in order
+        for (int i = 1; i < mapData->nloci; i++) {
+            if ( mapData->mapEntries[i].physicalPos <  mapData->mapEntries[i-1].physicalPos ) {
+                std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
+                std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].physicalPos << " appears after";
+                std::cerr << "\t" <<  mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].physicalPos << "\n";
+                return 1;
+            }
+            if ( !p.CALC_NSL && mapData->mapEntries[i].geneticPos  < mapData->mapEntries[i-1].geneticPos  ) {
+                std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
+                std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].geneticPos << " appears after";
+                std::cerr << "\t" << mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].geneticPos << "\n";
+                return 1;
+            }
+        }
+        
+        return 0;
+    }
+
+
+    /// Returns 1 on error, Returns 0 on success
+    bool loadHapMapDataMulti(){
+
+        vector<double> multi_mafs;
+        //find the lowest maf
+        // then add checks
+
         const string& hapFilename = p.hapFilename;
         const string& hapFilename2 =  p.hapFilename2;
         const string& mapFilename = p.mapFilename;

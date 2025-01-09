@@ -39,7 +39,6 @@ class SelscanStats {
     void init_multi(){
         //open multiple filestream for all item in chrlist
         ofstream* fouts[hm->mapData->chr_list.size()];
-        cout<<"HAYHAY"  << endl;
         for (const auto& [chr, i] : hm->mapData->chr_list){
             cout<<chr<<" " <<i<<endl;
             string filename = get_filename_base("ihs") + "." + chr ;
@@ -49,19 +48,19 @@ class SelscanStats {
 
     void init_flog_fout(string statname){
         string outFilename = get_filename_base(statname);
-        (*flog).open(outFilename + ".log");
-        if ((*flog).fail())
-        {
-            cerr << "ERROR: could not open " << outFilename + ".log" << " for writing.\n";
-            exit(2);
-        }
+        // (*flog).open(outFilename + ".log");
+        // if ((*flog).fail())
+        // {
+        //     cerr << "ERROR: could not open " << outFilename + ".log" << " for writing.\n";
+        //     exit(2);
+        // }
 
-        (*fout).open(outFilename + ".out");
-        if ((*fout).fail())
-        {
-            cerr << "ERROR: could not open " << outFilename + ".out" << " for writing.\n";
-            exit(2);
-        }
+        // (*fout).open(outFilename + ".out");
+        // if ((*fout).fail())
+        // {
+        //     cerr << "ERROR: could not open " << outFilename + ".out" << " for writing.\n";
+        //     exit(2);
+        // }
         (*flog) << "\nv" + VERSION + "\nCalculating ";
         if (statname == "ihs") (*flog) << " iHS.\n";
         else if (statname == "nsl") (*flog) << " nSL.\n";
@@ -92,7 +91,8 @@ class SelscanStats {
         (*flog) << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
         (*flog) << "Max gap parameter: " << p.MAX_GAP << "\n";
         (*flog) << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
-        (*flog) << "Missing value: " << p.MISSING << "\n";
+                (*flog) << "Minimum maf cutoff: " << p.MAF << "\n";
+        (*flog) << "Missing value: " << p.MISSING_ALLOWED << "\n";
 
         (*flog) << "Phased: ";
         if(p.UNPHASED) (*flog) << "no\n";
@@ -100,6 +100,10 @@ class SelscanStats {
         (*flog) << "Alt flag set: ";
         if (p.ALT) (*flog) << "yes\n";
         else (*flog) << "no\n";
+
+
+        if (p.ALT) (*flog) << "Missing handle mode: \n";
+        else (*flog) << p.MISSING_MODE << "\n";
         (*flog).flush();
         
     }
@@ -107,11 +111,11 @@ class SelscanStats {
         SelscanStats(const std::unique_ptr<HapMap>& hm, param_main& p): hm(hm), p(p){
             this->numThreads = p.numThreads;
             string outFilename = p.outFilename;
+            this->flog = hm->flog;
         }
 
         ~SelscanStats(){
-            flog->close();
-            fout->close();
+            //flog->close();
         }
         
 
@@ -256,20 +260,21 @@ class SelscanStats {
             std::cout << "] 100 % (" << total << "/" << total << ")" << std::endl;
         }
 
-
         bool nextLocOutOfBounds(int locus, bool downstream){
-            if(downstream){
-                if(locus+1 >= hm->hapData->nloci || hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
-                    if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
-                        cerr<<"Chroutofbounds: "<<locus<<endl;
-                    }
+            if(!downstream){
+                if(locus+1 >= hm->hapData->nloci){
+                    return true;
+                }
+                if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
+                    cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
                     return true;
                 }
             }else{
-                if(locus-1 < 0 || hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
-                    if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
-                        cerr<<"Chroutofbounds: "<<locus<<endl;
-                    }
+                if(locus-1 < 0){
+                    return true;
+                }
+                if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
+                    cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
                     return true;
                 }
             }

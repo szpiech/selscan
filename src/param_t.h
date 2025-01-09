@@ -16,6 +16,7 @@ struct param_main{
     string mapFilename;
     string tpedFilename, tpedFilename2;
     string vcfFilename, vcfFilename2 ;
+    string jsonFilename;
 
     string outFilename;
     string query;
@@ -46,7 +47,6 @@ struct param_main{
     int PI_WIN;
 
     bool LOW_MEM;
-    int MISSING;
 
     bool MULTI_CHR;
     string CHR_LIST;
@@ -65,6 +65,8 @@ struct param_main{
     //string DEBUG_FLAG = "";
 
     bool MISSING_ALLOWED = false;
+    bool MULTI_MAF = false;
+    bool MULTI_PARAMS = false;
 
 };
 

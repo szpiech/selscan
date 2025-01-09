@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "v3_Jul26_Optimized";
+const string VERSION = "v2.1_Jan8_Multistat";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -222,7 +222,6 @@ const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
-
 //const string ARG_LOW_MEM = "--low-mem";
 const bool DEFAULT_LOW_MEM  = true;
 const string HELP_LOW_MEM = "Switch to low memory bitset version.";
@@ -239,7 +238,20 @@ const string ARG_CHR_LIST = "--chr";
 const string DEFAULT_CHR_LIST = ",";
 const string HELP_CHR_LIST = "Comma-separated list of chromosomes to include in the analysis.";
 
+const string ARG_IMPUTE_FLAG = "--impute";
+const bool DEFAULT_IMPUTE_FLAG = false;
+const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
+
+
+const string ARG_MULTI_PARAMS = "--multi-param";
+const string DEFAULT_MULTI_PARAMS = "__jsonFile";
+const string HELP_MULTI_PARAMS = "For all parameter combination in this file, separate output files will be generated.";
+
+
 bool initalizeParameters(param_t &params,int argc, char *argv[]);
-bool checkParameters(param_t &params,int argc, char *argv[]);
+bool checkParameters(param_main &params);
+void getBaseParamFromCmdLine(param_t& params, param_main &p);
+ bool jsonParse(param_main &base_p, vector<param_main> &multi_params);
+//bool checkParameters(param_t &params,int argc, char *argv[]);
 
 #endif

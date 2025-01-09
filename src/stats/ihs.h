@@ -11,12 +11,13 @@ using namespace std;
 
 class IHS: public SelscanStats{
     public:
-        ofstream flog_obj;
-        ofstream fout_obj;
+        //ofstream flog_obj;
+        // ofstream fout_obj;
 
         IHS(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){  
-            flog = &flog_obj;
-            fout = &fout_obj;
+            flog = hm->flog;
+            // &flog_obj;
+            // fout = &fout_obj;
             if(p.CALC_NSL && !p.CALC_IHS){
                 this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
                 init_flog_fout("nsl");

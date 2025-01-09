@@ -14,6 +14,9 @@
 */
 
 #include "selscan-cli.h"
+#include "json.hpp"
+#include <fstream>
+
 
 //Returns 1 if error
 bool initalizeParameters(param_t &params,int argc, char *argv[]){
@@ -52,12 +55,16 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
 
     //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
     params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
+    params.addFlag(ARG_IMPUTE_FLAG, DEFAULT_IMPUTE_FLAG, "", HELP_IMPUTE_FLAG);
+
     params.addFlag(ARG_MULTICHR_FLAG, DEFAULT_MULTICHR_FLAG, "", HELP_MULTICHR_FLAG);
     params.addFlag(ARG_CHR_LIST, DEFAULT_CHR_LIST, "", HELP_CHR_LIST);
 
-
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
+
+    params.addFlag(ARG_MULTI_PARAMS, DEFAULT_MULTI_PARAMS, "", HELP_MULTI_PARAMS);
+
 
     try
     {
@@ -71,22 +78,102 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     return 0;
 }
 
+
+void getBaseParamFromCmdLine(param_t& params, param_main &p){
+    p.hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
+    p.hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
+    p.mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
+    p.tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
+    p.tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
+    p.vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
+    p.vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
+    p.jsonFilename = params.getStringFlag(ARG_MULTI_PARAMS);
+    
+    p.TPED = false;
+    if (p.tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) p.TPED = true;
+
+    p.VCF = false;
+    if (p.vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) p.VCF = true;
+
+    p.outFilename = params.getStringFlag(ARG_OUTFILE);
+    p.query = params.getStringFlag(ARG_EHH);
+
+    p.numThreads = params.getIntFlag(ARG_THREAD);
+    p.SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
+    p.MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
+
+    p.EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
+    p.MAF = params.getDoubleFlag(ARG_MAF);
+
+    p.UNPHASED = params.getBoolFlag(ARG_UNPHASED);
+    p.USE_PMAP = params.getBoolFlag(ARG_PMAP);
+    p.ALT = params.getBoolFlag(ARG_ALT);
+    p.WAGH = params.getBoolFlag(ARG_WAGH);
+    p.CALC_IHS = params.getBoolFlag(ARG_IHS);
+    p.CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
+    p.CALC_NSL = params.getBoolFlag(ARG_NSL);
+    p.WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+    p.CALC_XP = params.getBoolFlag(ARG_XP);
+    p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
+    p.SINGLE_EHH = false;
+
+    p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
+    if(params.getBoolFlag(ARG_SKIP)){
+        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    }
+    
+    // p.EHH1K = params.getIntFlag(ARG_SOFT_K);
+    p.QWIN = params.getIntFlag(ARG_QWIN);
+
+    p.CALC_PI = params.getBoolFlag(ARG_PI);
+    p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
+
+    p.LOW_MEM = true;
+    //params.getBoolFlag(ARG_LOW_MEM);
+
+    p.MISSING_ALLOWED = params.getBoolFlag(ARG_MISSING_FLAG);
+
+    p.MAX_EXTEND_NSL = params.getIntFlag(ARG_MAX_EXTEND_NSL); //p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
+    p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
+    p.TRUNC = params.getBoolFlag(ARG_TRUNC);
+    p.CHR_LIST = params.getStringFlag(ARG_CHR_LIST);
+
+    p.MULTI_CHR = (p.CHR_LIST==",")?false:true;
+    //bool MULTICHR = params.getBoolFlag(ARG_MULTICHR_FLAG);
+
+    if(params.getBoolFlag(ARG_IMPUTE_FLAG)){
+        p.MISSING_MODE = "NO_IMPUTE";
+    }else{
+        p.MISSING_MODE = "ONE_IMPUTE";
+    }
+
+
+    p.MULTI_MAF = false;
+    p.MULTI_PARAMS = false;
+    if (p.jsonFilename.compare(DEFAULT_MULTI_PARAMS) != 0) {
+        p.MULTI_PARAMS = true;
+    }
+}
+
 //Returns 1 if error
-bool checkParameters(param_t &params,int argc, char *argv[]){
+//bool checkParameters(param_t &params,int argc, char *argv[]){
+bool checkParameters(param_main &p){
 
-    string hapFilename = params.getStringFlag(ARG_FILENAME_POP1);
-    string hapFilename2 = params.getStringFlag(ARG_FILENAME_POP2);
-    string mapFilename = params.getStringFlag(ARG_FILENAME_MAP);
-    string tpedFilename = params.getStringFlag(ARG_FILENAME_POP1_TPED);
-    string tpedFilename2 = params.getStringFlag(ARG_FILENAME_POP2_TPED);
-    string vcfFilename = params.getStringFlag(ARG_FILENAME_POP1_VCF);
-    string vcfFilename2 = params.getStringFlag(ARG_FILENAME_POP2_VCF);
+    string hapFilename = p.hapFilename;
+    string hapFilename2 = p.hapFilename2;
+    string mapFilename = p.mapFilename;
+    string tpedFilename = p.tpedFilename;
+    string tpedFilename2 = p.tpedFilename2;
+    string vcfFilename = p.vcfFilename;
+    string vcfFilename2 = p.vcfFilename2;
+    bool TPED = p.TPED;
+    bool VCF = p.VCF;
 
-    bool TPED = false;
-    if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
+    // bool TPED = false;
+    // if (tpedFilename.compare(DEFAULT_FILENAME_POP1_TPED) != 0) TPED = true;
 
-    bool VCF = false;
-    if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
+    // bool VCF = false;
+    // if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
     if (VCF && TPED) {
         cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
@@ -98,40 +185,55 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
         return 1;
     }
 
-	string outFilename = params.getStringFlag(ARG_OUTFILE);
-    string query = params.getStringFlag(ARG_EHH);
+    string outFilename = p.outFilename;
+    string query = p.query;
+
+
+	// string outFilename = params.getStringFlag(ARG_OUTFILE);
+    // string query = params.getStringFlag(ARG_EHH);
 
     int queryLoc = -1;
-    int numThreads = params.getIntFlag(ARG_THREAD);
-    int SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
-    int MAX_GAP = params.getIntFlag(ARG_MAX_GAP);
 
-    double EHH_CUTOFF = params.getDoubleFlag(ARG_CUTOFF);
-    double MAF = params.getDoubleFlag(ARG_MAF);
+    int numThreads = p.numThreads;
+    int SCALE_PARAMETER = p.SCALE_PARAMETER;
+    int MAX_GAP = p.MAX_GAP;
 
-    bool UNPHASED = params.getBoolFlag(ARG_UNPHASED);
-    bool USE_PMAP = params.getBoolFlag(ARG_PMAP);
-    bool ALT = params.getBoolFlag(ARG_ALT);
-    bool WAGH = params.getBoolFlag(ARG_WAGH);
-    bool CALC_IHS = params.getBoolFlag(ARG_IHS);
-    bool CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
-    bool CALC_NSL = params.getBoolFlag(ARG_NSL);
-    bool WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
-    bool CALC_XP = params.getBoolFlag(ARG_XP);
-    bool CALC_SOFT = params.getBoolFlag(ARG_SOFT);
+    double EHH_CUTOFF = p.EHH_CUTOFF;
+    double MAF = p.MAF;
+
+    bool UNPHASED = p.UNPHASED;
+    bool USE_PMAP = p.USE_PMAP;
+    bool ALT = p.ALT;
+    bool WAGH = p.WAGH;
+    bool CALC_IHS = p.CALC_IHS;
+    bool CALC_XPNSL = p.CALC_XPNSL;
+    bool CALC_NSL = p.CALC_NSL;
+    bool WRITE_DETAILED_IHS = p.WRITE_DETAILED_IHS;
+    bool CALC_XP = p.CALC_XP;
+    bool CALC_SOFT = p.CALC_SOFT;
     bool SINGLE_EHH =  false;
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
-    bool SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
-    if(params.getBoolFlag(ARG_SKIP)){
+    bool SKIP = p.SKIP;
+    if(p.SKIP){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
+
     //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
     // int EHH1K = params.getIntFlag(ARG_SOFT_K);
 
-    bool CALC_PI = params.getBoolFlag(ARG_PI);
-    int PI_WIN = params.getIntFlag(ARG_PI_WIN);
+
+    bool TRUNC = p.TRUNC;
+    int EHH1K = 2; //params.getIntFlag(ARG_SOFT_K);
+    int QWIN = p.QWIN;
+
+    bool CALC_PI = p.CALC_PI;
+    int PI_WIN = p.PI_WIN;
+
+    //TODON
+    char PI_WIN_str[50];
+    snprintf(PI_WIN_str, 50, "%d", p.PI_WIN);
 
 
     cout<<  CALC_XPNSL << " " << CALC_IHS << " " << CALC_XP << " " << SINGLE_EHH << " " << CALC_PI << " " << CALC_NSL << " " << CALC_SOFT << endl;
@@ -241,25 +343,73 @@ bool checkParameters(param_t &params,int argc, char *argv[]){
         return 1;
     }
 
+    bool MULTI_CHR = p.MULTI_CHR;
 
-
-    bool MULTICHR = params.getBoolFlag(ARG_MULTICHR_FLAG);
-    if (MULTICHR && !VCF)
+    //bool MULTICHR = params.getBoolFlag(ARG_MULTICHR_FLAG);
+    if (MULTI_CHR && !VCF)
     {
         cerr << "ERROR: --multi-chr flag only works with VCF files.\n";
         return 1;
     }
 
     //check that string is comma-separated list
-    string chrList = params.getStringFlag(ARG_CHR_LIST);
-    if (chrList.length()==0)
+    string CHR_LIST = p.CHR_LIST;
+    //params.getStringFlag(ARG_CHR_LIST);
+    if (CHR_LIST.length()==0)
     {
         cerr << "ERROR: you must provide a comma-separated list after --chr flag. \n";
         return 1;
     }
+
+    if (p.MULTI_MAF && p.jsonFilename.compare(DEFAULT_MULTI_PARAMS) == 0) {
+        cerr << "ERROR: Must provide a JSON file.\n";
+        return 1;
+    }
+    
     
     return 0;
 }
 
+bool jsonParse(param_main &base_p, vector<param_main> &multi_params){
+    std::ifstream inputFile(base_p.jsonFilename);
+    // if (!inputFile.is_open()) {
+    //     std::cerr << "Failed to open json file.\n";
+    //     return 1;
+    // }
 
 
+    nlohmann::json data;
+    inputFile >> data;
+    inputFile.close();
+    
+    // Iterate over the array of params
+    for (const auto& param : data["params"]) {
+        param_main p(base_p); // make a copy of the base parameters
+        cout<<ARG_MAX_EXTEND<<" "<<ARG_MAF<<" "<<ARG_MAX_EXTEND_NSL<<endl;
+        string MAX_EXTEND = ARG_MAX_EXTEND.substr(2);
+        string MAF = ARG_MAF.substr(2);
+        string MAX_EXTEND_NSL = ARG_MAX_EXTEND_NSL.substr(2);
+        // all other params are ignored
+
+        string FILENAME_POP1 = ARG_FILENAME_POP1.substr(2);
+        string FILENAME_POP2 = ARG_FILENAME_POP2.substr(2);
+
+        if (param.contains(MAF)) { // Check if the field exists and retrieve it if it does
+            p.MAF = param[MAF];
+            cout<<p.MAF<<endl;
+        }
+
+        if (param.contains(MAX_EXTEND)) { // Check if the field exists and retrieve it if it does
+            p.MAX_EXTEND = param[MAX_EXTEND];
+            cout<<p.MAX_EXTEND<<endl;
+        }
+
+        if (param.contains(MAX_EXTEND_NSL)) { // Check if the field exists and retrieve it if it does
+            p.MAX_EXTEND_NSL = param[MAX_EXTEND_NSL];
+            cout<<p.MAX_EXTEND_NSL<<endl;
+        }
+        checkParameters(p);
+        multi_params.push_back(p);
+    }
+    return true;
+}

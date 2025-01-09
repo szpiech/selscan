@@ -5,7 +5,10 @@
 
 void HapMap::initParamsInHap(HapData &hapData){
     hapData.MISSING_ALLOWED = p.MISSING_ALLOWED;
+    cerr<<"MISSING_ALLOWED: "<<hapData.MISSING_ALLOWED<<endl;
     hapData.unphased = p.UNPHASED;
+    hapData.MULTI_CHR = p.MULTI_CHR;
+    hapData.MULTI_MAF = p.MULTI_MAF;
 }
 
 void HapMap::readHapDataMSHap(string filename, HapData &hapData)
@@ -176,16 +179,22 @@ void HapMap::readHapData(string filename, HapData& hapData)
 void HapMap::readHapDataVCF(string filename, HapData& hapData)
 {
     initParamsInHap(hapData);
-    // MULTI-chromosome support added
+
     set<string> chr_set;
-    if(p.CHR_LIST!=""){
-        std::stringstream ss(p.CHR_LIST);
-        std::string item;
-        while (std::getline(ss, item, ',')) { // Split the input string by commas
-            if(item!="")
-                chr_set.insert(item);
+    if(p.MULTI_CHR){
+        cerr<<"Multi-chromosome support enabled"<<endl;
+        // MULTI-chromosome support added
+        
+        if(p.CHR_LIST!=""){
+            std::stringstream ss(p.CHR_LIST);
+            std::string item;
+            while (std::getline(ss, item, ',')) { // Split the input string by commas
+                if(item!="")
+                    chr_set.insert(item);
+            }
         }
     }
+    
 
     if(p.MISSING_ALLOWED){
         cerr<<"Missing entries allowed: will impute missing entries if less than threshold"<<endl;
@@ -237,10 +246,10 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
         for (int i = 0; i < numMapCols; i++) {
             ss >> junk;
-            if(i==0){
-                chr = junk;
-                cout<<chr<<endl;
-            }
+            // if(i==0){
+            //     chr = junk;
+            //     cout<<chr<<endl;
+            // }
         }
         for (int field = 0; field < current_nhaps; field++)
         {
@@ -285,15 +294,29 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
         int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
 
-        if(!p.MISSING_ALLOWED){
-            // --skip-low-freq filtering based on MAF
-            bool skipreason1 = (p.SKIP && (derived_allele_count*1.0/(current_nhaps*2) < p.MAF || 1-(derived_allele_count*1.0/(current_nhaps*2)) < p.MAF ));
-            bool skipreason2 = (chr_set.find(chr) != chr_set.end() && !chr_set.empty());
-            if ( skipreason1 ||  skipreason2) {
-                skiplist.push(nloci_before_filtering-1);
-                skipcount++;
-            } 
+        if(p.MISSING_ALLOWED){
+            throw "missing should not enter here";
+            exit(2);
         }
+
+        double MIN_MAF_CUTOFF = p.MAF;
+        if(p.MULTI_MAF){
+            for (const auto& param : ps) {
+                if(param.MAF < MIN_MAF_CUTOFF){
+                    MIN_MAF_CUTOFF = param.MAF;
+                }
+            }
+        }
+
+        // --skip-low-freq filtering based on MAF
+        bool skipreason1 = (p.SKIP && (derived_allele_count*1.0/(current_nhaps*2) <= MIN_MAF_CUTOFF || 1-(derived_allele_count*1.0/(current_nhaps*2)) <= MIN_MAF_CUTOFF));
+        bool skipreason2 = ( p.MULTI_CHR && (chr_set.find(chr) != chr_set.end() && !chr_set.empty())) ? true: false;
+        
+        if ( skipreason1 ||  skipreason2) {
+            skiplist.push(nloci_before_filtering-1);
+            skipcount++;
+        } 
+        
         
         /*********/
         if (previous_nhaps < 0)
@@ -382,29 +405,17 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             if(p.UNPHASED){
                 char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(field);
-                        hapData.hapEntries[nloci_after_filtering].xorbitset->num_1s++;
-                    }
+                    hapData.addAllele2(nloci_after_filtering, field);
                 }
                 else if (allele1 == '1' || allele2 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->set_bit(field);
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(nloci_after_filtering, field);
                 }
             }else{ // phased
                 if(allele1 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->set_bit(2 * field);
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(nloci_after_filtering, 2*field);
                 }
                 if(allele2 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->set_bit(2 * field + 1);
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(nloci_after_filtering, 2*field+1);
                 }   
             }
         }
@@ -415,11 +426,9 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     hapData.xor_for_phased_and_unphased();
     
 
-    
-
     if(p.SKIP){
         cerr << "Removed " << skipcount << " low frequency variants.\n";
-        //(*flog) << "Removed " << skipcount << " low frequency variants.\n";
+        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
     }
 
     fin.close();
@@ -620,7 +629,7 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
 
     if(p.SKIP){
         cerr << ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n";
-        //(*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
+        (*flog)  << ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n";
     }
    
     int nhaps = p.UNPHASED ? (current_nhaps ) : (current_nhaps ) * 2;
@@ -685,65 +694,50 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
             if(p.UNPHASED){
                 char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(field);
-                        hapData.hapEntries[nloci_after_filtering].xorbitset->num_1s++;
-                    }
+                    hapData.addAllele2(nloci_after_filtering, field);
                 }
                 else if ((allele1 == '1' && allele2 == '0') || (allele2 == '1' && allele1 == '0')){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->set_bit(field);
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(nloci_after_filtering, field);
                 }else if(allele1 == '?' || allele2 == '?'){
-                    if(p.LOW_MEM){
-                        if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
-                            if(p.MISSING_MODE=="RANDOM"){
-                                allele1 = randomZeroOrOne();
-                                allele2 = randomZeroOrOne();
-                            }else if(p.MISSING_MODE=="ONE_IMPUTE"){
-                                allele1 = '1';
-                                allele2 = '1';
-                            }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
-                                allele1 = '0';
-                                allele2 = '0';
-                            }else if(p.MISSING_MODE=="NO_IMPUTE"){
-                                hapData.hapEntries[nloci_after_filtering].missbitset->set_bit(field);
-                                hapData.hapEntries[nloci_after_filtering].missbitset->num_1s+= 1;
-                            }
+                    if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
+                        if(p.MISSING_MODE=="RANDOM"){
+                            allele1 = randomZeroOrOne();
+                            allele2 = randomZeroOrOne();
+                        }else if(p.MISSING_MODE=="ONE_IMPUTE"){
+                            allele1 = '1';
+                            allele2 = '1';
+                        }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
+                            allele1 = '0';
+                            allele2 = '0';
+                        }else if(p.MISSING_MODE=="NO_IMPUTE"){
+                            hapData.addAlleleMissing(nloci_after_filtering, field);
                         }
                     }
                 }
             }else{ // phased
                 if(allele1 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->set_bit(2 * field);
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(nloci_after_filtering, 2*field);
                 }
                 if(allele2 == '1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->set_bit(2 * field + 1);
-                        hapData.hapEntries[nloci_after_filtering].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(nloci_after_filtering, 2*field + 1);
                 }   
                 if(allele1 == '?' || allele2 == '?'){
-                    if(p.LOW_MEM){
-                        if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
-                            if(p.MISSING_MODE=="RANDOM"){
-                                allele1 = randomZeroOrOne();
-                                allele2 = randomZeroOrOne();
-                            }else if(p.MISSING_MODE=="ONE_IMPUTE"){
-                                allele1 = '1';
-                                allele2 = '1';
-                            }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
-                                allele1 = '0';
-                                allele2 = '0';
-                            }else if(p.MISSING_MODE=="NO_IMPUTE"){
-                                hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field);
-                                hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
-                                hapData.hapEntries[nloci_after_filtering].xorbitset->num_1s+= 2;
-                            }
+                    if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
+                        if(p.MISSING_MODE=="RANDOM"){
+                            allele1 = randomZeroOrOne();
+                            allele2 = randomZeroOrOne();
+                        }else if(p.MISSING_MODE=="ONE_IMPUTE"){
+                            allele1 = '1';
+                            allele2 = '1';
+                        }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
+                            allele1 = '0';
+                            allele2 = '0';
+                        }else if(p.MISSING_MODE=="NO_IMPUTE"){
+                            hapData.addAlleleMissing(nloci_after_filtering, 2*field);
+                            hapData.addAlleleMissing(nloci_after_filtering, 2*field+1);
+                            // hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field);
+                            // hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
+                            // hapData.hapEntries[nloci_after_filtering].xorbitset->num_1s+= 2;
                         }
                     }
                 }
@@ -754,7 +748,7 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
 
     if(p.SKIP){
         cerr << "Removed " << skipcount << " low frequency variants.\n";
-        //(*flog) << "Removed " << skipcount << " low frequency variants.\n";
+        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
     }
 
     fin.close();
@@ -912,7 +906,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
 
     cerr << "Loading " << current_nhaps << " haplotypes and " << nloci_after_filter << " loci...\n";
     if(p.SKIP){
-        cerr << "Removed " << hapData.skipQueue.size() << " low frequency sites.\n";
+        cerr << "Removed " << hapData.skipQueue.size() << " low frequency variants.\n";
     }
 
     string junk;
