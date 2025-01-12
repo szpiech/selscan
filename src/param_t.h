@@ -46,8 +46,6 @@ struct param_main{
     bool CALC_PI;
     int PI_WIN;
 
-    bool LOW_MEM;
-
     bool MULTI_CHR;
     string CHR_LIST;
 

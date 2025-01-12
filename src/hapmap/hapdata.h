@@ -12,6 +12,7 @@
 #include<mutex>
 #include <thread>
 #include<optional>
+#include <fstream>
 
 using namespace std;
 
@@ -248,6 +249,14 @@ public:
 
 
     void print(int nloci=0){
+
+        //open filestream
+        ofstream happrintFile("happrint.txt");
+        if(!happrintFile.is_open()){
+            cerr<<"ERROR: Debug log file (happrint.txt) could not be opened."<<endl;
+            exit(1);
+        }
+
         if(nloci==0){
             nloci = this->nloci;
         }
@@ -255,9 +264,11 @@ public:
         for(int locus_after_filter = 0; locus_after_filter < nloci; locus_after_filter++){
             // cout<<locus_after_filter<<"::: ";
             // hapEntries[locus_after_filter].hapbitset->print_pos();
-            cout<<locus_after_filter<<"::: ";
-            hapEntries[locus_after_filter].hapbitset->print_pos();
+            happrintFile<<locus_after_filter<<"::: ";
+            hapEntries[locus_after_filter].hapbitset->print_pos_to_file(&happrintFile);
         }
+
+        happrintFile.close();
 
         /*
         for (int i = 0; i < 3; i++)

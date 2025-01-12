@@ -24,7 +24,6 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         throw 0;
     }
 
-    //int fileStart = fin.tellg();
     string line;
     int nloci_before_filter = 0;
     int num_cols = 4;
@@ -48,10 +47,10 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
     }
 
     fin.clear(); // clear error flags
-    //fin.seekg(fileStart);
     fin.close();
-    fin.open(filename.c_str());
 
+
+    fin.open(filename.c_str());
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
@@ -87,9 +86,9 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         mapEntries[locus_after_filter].locId = locus_before_filter;
 
         double Mb = 1000000.0;
-        //if (USE_PMAP) 
-        mapEntries[locus_after_filter].geneticPos = (long double)(mapEntries[locus_after_filter].physicalPos/Mb);
-        //if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos);
+
+       // mapEntries[locus_after_filter].geneticPos = (long double)(mapEntries[locus_after_filter].physicalPos/Mb);
+        if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos/Mb);
 
         locus_after_filter++;
         getline(fin, line);
@@ -110,7 +109,6 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
         throw 0;
     }
 
-    //int fileStart = fin.tellg();
     string line;
     int nloci = 0;
     int num_cols = 4;
@@ -134,8 +132,10 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     }
 
     fin.clear(); // clear error flags
-    //fin.seekg(fileStart);
     fin.close();
+
+
+
     fin.open(filename.c_str());
 
     if (fin.fail())
@@ -169,9 +169,6 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
         ss >> mapEntries[locus_after_filter].locusName;
         ss >> mapEntries[locus_after_filter].geneticPos;
         ss >> mapEntries[locus_after_filter].physicalPos;
-
-        cout<<mapEntries[locus_after_filter].chr<<"\t" << mapEntries[locus_after_filter].locusName << "\t" << mapEntries[locus_after_filter].physicalPos << endl;
-        //locus_query_map[mapEntries[locus_after_filter].locusName] = locus_after_filter;
 
         if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
         //getline(fin, line);
@@ -272,10 +269,14 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
         locus_after_filter++;
     }
 
+    if(chr_list.size() == 0){
+        cerr<<"ERROR: No chromosomes found in map file.\n";
+        throw 0;
+    }
+    
     fin.close();
 }
 
-//allocates the arrays and populates them with MISSING or "--" depending on type
 void MapData::initMapData(int nloci)
 {
     if (nloci < 1)

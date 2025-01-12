@@ -56,23 +56,23 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
     }else if (n_c1==numHaps){ // all 1s
         group_count[0] = numHaps;
         totgc+=1;
-        if(p.LOW_MEM){
-            MyBitset* vb = hm->hapData->hapEntries[locus].hapbitset;
-            ACTION_ON_ALL_SET_BITS(vb, {
-                isDerived[set_bit_pos] = true;
-            });
-        }
+        
+        MyBitset* vb = hm->hapData->hapEntries[locus].hapbitset;
+        ACTION_ON_ALL_SET_BITS(vb, {
+            isDerived[set_bit_pos] = true;
+        });
+        
         curr_ehh1_before_norm = normalizer_1;
         hm->mapData->mapEntries[locus].skipLocus = true;
     }else{  //so both n_c1 and n_c0 is non-0
         group_count[1] = n_c1;
         group_count[0] = n_c0;
-        if(p.LOW_MEM){
-            ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
-                isDerived[set_bit_pos] = true;
-                group_id[set_bit_pos] = 1;
-            });
-        }
+        
+        ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
+            isDerived[set_bit_pos] = true;
+            group_id[set_bit_pos] = 1;
+        });
+        
 
         if(hm->mapData->mapEntries[locus].skipLocus){
             (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
@@ -185,19 +185,19 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
         std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
         unordered_map<int, vector<int> >& m = (* mp);
 
-        if(p.LOW_MEM){
-            MyBitset* v2p = downstream? hm->hapData->hapEntries[i+1].xorbitset : hm->hapData->hapEntries[i].xorbitset;
-            // ensure that in boundary we don't do any xor calculation
-            if( (hm->hapData->hapEntries[i].hapbitset->num_1s < v2p->num_1s && i!=numHaps-1) ||  hm->p.benchmark_flag != "XOR"){ 
-                v2p = hm->hapData->hapEntries[i].hapbitset;
-            }
-            //v2p =hm->hapData->hapEntries[i].hapbitset; // uncomment to disable xor
-
-            ACTION_ON_ALL_SET_BITS(v2p, {
-                int old_group_id = group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);
-            });
+        
+        MyBitset* v2p = downstream? hm->hapData->hapEntries[i+1].xorbitset : hm->hapData->hapEntries[i].xorbitset;
+        // ensure that in boundary we don't do any xor calculation
+        if( (hm->hapData->hapEntries[i].hapbitset->num_1s < v2p->num_1s && i!=numHaps-1) ||  hm->p.benchmark_flag != "XOR"){ 
+            v2p = hm->hapData->hapEntries[i].hapbitset;
         }
+        //v2p =hm->hapData->hapEntries[i].hapbitset; // uncomment to disable xor
+
+        ACTION_ON_ALL_SET_BITS(v2p, {
+            int old_group_id = group_id[set_bit_pos];
+            m[old_group_id].push_back(set_bit_pos);
+        });
+        
 
         // PHASE 3: UPDATE EHH FROM SPLIT
 

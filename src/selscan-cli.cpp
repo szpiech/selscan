@@ -18,8 +18,7 @@
 #include <fstream>
 
 
-//Returns 1 if error
-bool initalizeParameters(param_t &params,int argc, char *argv[]){
+void initalizeParameters(param_t &params,int argc, char *argv[]){
 	params.setPreamble(PREAMBLE);
     params.addFlag(ARG_THREAD, DEFAULT_THREAD, "", HELP_THREAD);
     params.addFlag(ARG_FILENAME_POP1, DEFAULT_FILENAME_POP1, "", HELP_FILENAME_POP1);
@@ -57,8 +56,7 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
     params.addFlag(ARG_IMPUTE_FLAG, DEFAULT_IMPUTE_FLAG, "", HELP_IMPUTE_FLAG);
 
-    params.addFlag(ARG_MULTICHR_FLAG, DEFAULT_MULTICHR_FLAG, "", HELP_MULTICHR_FLAG);
-    params.addFlag(ARG_CHR_LIST, DEFAULT_CHR_LIST, "", HELP_CHR_LIST);
+    params.addFlag(ARG_MULTI_CHR, DEFAULT_MULTI_CHR, "", HELP_MULTI_CHR);
 
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
@@ -72,10 +70,8 @@ bool initalizeParameters(param_t &params,int argc, char *argv[]){
     }
     catch (...)
     {
-        return 1;
+        throw runtime_error("ERROR: Could not parse command line arguments.\n");
     }
-
-    return 0;
 }
 
 
@@ -128,7 +124,6 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.CALC_PI = params.getBoolFlag(ARG_PI);
     p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
-    p.LOW_MEM = true;
     //params.getBoolFlag(ARG_LOW_MEM);
 
     p.MISSING_ALLOWED = params.getBoolFlag(ARG_MISSING_FLAG);
@@ -136,11 +131,12 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.MAX_EXTEND_NSL = params.getIntFlag(ARG_MAX_EXTEND_NSL); //p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
     p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
     p.TRUNC = params.getBoolFlag(ARG_TRUNC);
-    p.CHR_LIST = params.getStringFlag(ARG_CHR_LIST);
+    p.CHR_LIST = params.getStringFlag(ARG_MULTI_CHR);
 
-    p.MULTI_CHR = (p.CHR_LIST==",")?false:true;
-    //bool MULTICHR = params.getBoolFlag(ARG_MULTICHR_FLAG);
+    p.MULTI_CHR = false;
+    if (p.CHR_LIST.compare(DEFAULT_MULTI_CHR) != 0) p.MULTI_CHR = true;
 
+ 
     if(params.getBoolFlag(ARG_IMPUTE_FLAG)){
         p.MISSING_MODE = "NO_IMPUTE";
     }else{
@@ -157,7 +153,7 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
 
 //Returns 1 if error
 //bool checkParameters(param_t &params,int argc, char *argv[]){
-bool checkParameters(param_main &p){
+void checkParameters(param_main &p){
 
     string hapFilename = p.hapFilename;
     string hapFilename2 = p.hapFilename2;
@@ -176,13 +172,11 @@ bool checkParameters(param_main &p){
     // if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
     if (VCF && TPED) {
-        cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
-        return 1;
+        throw runtime_error("Please choose only one of TPED, VCF, or HAP formatted files.\n");
     }
 
     if ( (VCF || TPED) && (hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ) {
-        cerr << "ERROR: Please choose only one of TPED, VCF, or HAP formatted files.\n";
-        return 1;
+        throw runtime_error("Please choose only one of TPED, VCF, or HAP formatted files.\n");
     }
 
     string outFilename = p.outFilename;
@@ -236,7 +230,8 @@ bool checkParameters(param_main &p){
     snprintf(PI_WIN_str, 50, "%d", p.PI_WIN);
 
 
-    cout<<  CALC_XPNSL << " " << CALC_IHS << " " << CALC_XP << " " << SINGLE_EHH << " " << CALC_PI << " " << CALC_NSL << " " << CALC_SOFT << endl;
+    //DEBUG::: cout<<  CALC_XPNSL << " " << CALC_IHS << " " << CALC_XP << " " << SINGLE_EHH << " " << CALC_PI << " " << CALC_NSL << " " << CALC_SOFT << endl;
+    
     //     if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT != 1)
     // {
     //     cerr << "ERROR: Must specify one and only one of \n\tEHH (" << ARG_EHH
@@ -251,8 +246,7 @@ bool checkParameters(param_main &p){
     // }
 
     if (WRITE_DETAILED_IHS && !CALC_IHS) {
-        cerr << "ERROR: The flag " << ARG_IHS_DETAILED << " must be used with " << ARG_IHS << " \n";
-        return 1;
+        throw runtime_error("The flag " + ARG_IHS_DETAILED + " must be used with " + ARG_IHS + " \n");
     }
 
     /*
@@ -264,70 +258,59 @@ bool checkParameters(param_main &p){
     */
 
     if (WAGH && UNPHASED){
-        cerr << "ERROR: --wagh and --unphased currently incompatible.\n\t\
+        string error_msg = "--wagh and --unphased currently incompatible.\n\t\
         Consider --xpehh or --xpnsl with --unphased for two population selection statistics.\n";
-        return 1;
+        throw runtime_error(error_msg);
     }
 
     if (CALC_PI && UNPHASED){
-        cerr << "ERROR: --pi and --unphased currently incompatible.\n";
-        return 1;
+        throw runtime_error("--pi and --unphased currently incompatible.\n");
     }
 
     if (CALC_SOFT && UNPHASED){
-        cerr << "ERROR: --ihh12 and --unphased currently incompatible.\n";
-        return 1;
+        throw runtime_error("--ihh12 and --unphased currently incompatible.\n");
     }
     if (numThreads < 1)
     {
-        cerr << "ERROR: Must run with one or more threads.\n";
-        return 1;
+        throw runtime_error("Must run with one or more threads.\n");
     }
     if (SCALE_PARAMETER < 1)
     {
-        cerr << "ERROR: Scale parameter must be positive.\n";
-        return 1;
+        throw runtime_error("Scale parameter must be positive.\n");
     }
     if (MAX_GAP < 1)
     {
-        cerr << "ERROR: Max gap parameter must be positive.\n";
-        return 1;
+        throw runtime_error("Max gap parameter must be positive.\n");
     }
     if (EHH_CUTOFF <= 0 || EHH_CUTOFF >= 1)
     {
-        cerr << "ERROR: EHH cut off must be > 0 and < 1.\n";
-        return 1;
+        throw runtime_error("EHH cut off must be > 0 and < 1.\n");
     }
     if (TPED)
     {
         if ((!CALC_XP && !CALC_XPNSL) && tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
         {
-            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << tpedFilename2 << ").\n";
-            return 1;
+            throw runtime_error("You are not calculating XP stats but have given a second data file (" + tpedFilename2 + ").\n");
         }
     }
     else if (VCF) {
         if ((!CALC_XP && !CALC_XPNSL) && vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
         {
-            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << vcfFilename2 << ").\n";
-            return 1;
+            throw runtime_error("You are not calculating XP stats but have given a second data file (" + vcfFilename2 + ").\n");
         }
 
         if ((!CALC_NSL && !CALC_XPNSL) && (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0 && !USE_PMAP)) {
-            cerr << "ERROR: Must also provide a mapfile.\n";
-            return 1;
+            throw runtime_error("Must also provide a mapfile.\n");
         }
     }
     else
     {
         if ((!CALC_XP && !CALC_XPNSL) && hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
         {
-            cerr << "ERROR: You are not calculating XP stats but have given a second data file (" << hapFilename2 << ").\n";
-            return 1;
+            throw runtime_error("You are not calculating XP stats but have given a second data file (" + hapFilename2 + ").\n");
         }
         if (mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
-            cerr << "ERROR: Must also provide a mapfile.\n";
-            return 1;
+            throw ("Must also provide a mapfile.\n");
         }
 
     }
@@ -339,44 +322,37 @@ bool checkParameters(param_main &p){
 
     if (PI_WIN < 1)
     {
-        cerr << "ERROR: pi window must be > 0.\n";
-        return 1;
+        throw runtime_error("pi window must be > 0.\n");
     }
 
-    bool MULTI_CHR = p.MULTI_CHR;
-
-    //bool MULTICHR = params.getBoolFlag(ARG_MULTICHR_FLAG);
-    if (MULTI_CHR && !VCF)
+    if (p.MULTI_CHR && !VCF)
     {
-        cerr << "ERROR: --multi-chr flag only works with VCF files.\n";
-        return 1;
+        throw runtime_error("--multi-chr flag only works with VCF files.\n");
     }
 
     //check that string is comma-separated list
-    string CHR_LIST = p.CHR_LIST;
-    //params.getStringFlag(ARG_CHR_LIST);
-    if (CHR_LIST.length()==0)
-    {
-        cerr << "ERROR: you must provide a comma-separated list after --chr flag. \n";
-        return 1;
-    }
-
-    if (p.MULTI_MAF && p.jsonFilename.compare(DEFAULT_MULTI_PARAMS) == 0) {
-        cerr << "ERROR: Must provide a JSON file.\n";
-        return 1;
-    }
-    
-    
-    return 0;
-}
-
-bool jsonParse(param_main &base_p, vector<param_main> &multi_params){
-    std::ifstream inputFile(base_p.jsonFilename);
-    // if (!inputFile.is_open()) {
-    //     std::cerr << "Failed to open json file.\n";
+    // string CHR_LIST = p.CHR_LIST;
+    // if (CHR_LIST.length()==0)
+    // {
+    //     cerr << "ERROR: you must provide a comma-separated list after --chr flag. \n";
     //     return 1;
     // }
 
+    if (p.MULTI_MAF && p.jsonFilename.compare(DEFAULT_MULTI_PARAMS) == 0) {
+        throw runtime_error("Must provide a JSON file.\n");
+    }
+    
+    
+    //return 0;
+}
+
+void jsonParse(param_main &base_p, vector<param_main> &multi_params){
+    std::ifstream inputFile(base_p.jsonFilename);
+
+    if (!inputFile.is_open()) {
+        cerr<<("ERROR: Failed to open json file containing parameters.\n");
+        exit(1);
+    }
 
     nlohmann::json data;
     inputFile >> data;
@@ -416,5 +392,4 @@ bool jsonParse(param_main &base_p, vector<param_main> &multi_params){
         checkParameters(p);
         multi_params.push_back(p);
     }
-    return true;
 }

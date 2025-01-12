@@ -285,7 +285,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             continue; 
         }
 
-        if(p.LOW_MEM){
+        
             ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[i].xorbitset, {
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);
@@ -300,7 +300,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
             m.clear();
 
-        }
+        
 
         // equivalent to calcHomozoygosity (without the normalization)
         double cehh2_before_norm = 0;
@@ -998,8 +998,10 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         });
 
         if(hm->mapData->mapEntries[locus].skipLocus){
+            pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                     << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
+            pthread_mutex_unlock(&mutex_log);
             return make_pair(0,0);
         }
         
@@ -1266,18 +1268,18 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
     }else if (n_c0==0){ // all 1s
         group_count[0] = numHaps;
         totgc+=1;
-        if(p.LOW_MEM){
-            MyBitset* vb = hm->hapData->hapEntries[locus].hapbitset;
-            ACTION_ON_ALL_SET_BITS(vb, {
-                isDerived[set_bit_pos] = true;
-            });
+        
+        MyBitset* vb = hm->hapData->hapEntries[locus].hapbitset;
+        ACTION_ON_ALL_SET_BITS(vb, {
+            isDerived[set_bit_pos] = true;
+        });
 
-            MyBitset* vmissing = hm->hapData->hapEntries[locus].xorbitset;
-            ACTION_ON_ALL_SET_BITS(vmissing, {
-                isMissing[set_bit_pos] = true;
-                skipHap[set_bit_pos] = true;
-            });
-        }
+        MyBitset* vmissing = hm->hapData->hapEntries[locus].xorbitset;
+        ACTION_ON_ALL_SET_BITS(vmissing, {
+            isMissing[set_bit_pos] = true;
+            skipHap[set_bit_pos] = true;
+        });
+        
         curr_ehh1_before_norm = normalizer_1;
         hm->mapData->mapEntries[locus].skipLocus = true;
     }else{  //so both n_c1 and n_c0 is non-0
@@ -1288,35 +1290,36 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         //     assign_one = true;
         // }
 
-        if(p.LOW_MEM){
-            ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
-                isDerived[set_bit_pos] = true;
-                group_id[set_bit_pos] = 1;
-            });
-            MyBitset* vmissing = hm->hapData->hapEntries[locus].xorbitset;
-            ACTION_ON_ALL_SET_BITS(vmissing, {
-                //if(assign_one){
-                    // isDerived[set_bit_pos] = true;
-                    // group_id[set_bit_pos] = 1;
-                //}
-                skipHap[set_bit_pos] = true;
-                isMissing[set_bit_pos] = true;
-            });
-            if(false){//if(assign_one){
-                n_c1 = n_c1 + n_c_missing;
-                 normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
-                 normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
-            }else{
-                 //n_c0 = n_c0 + n_c_missing;
-                 normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
-                 normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
-            }
+        
+        ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[locus].hapbitset, {
+            isDerived[set_bit_pos] = true;
+            group_id[set_bit_pos] = 1;
+        });
+        MyBitset* vmissing = hm->hapData->hapEntries[locus].xorbitset;
+        ACTION_ON_ALL_SET_BITS(vmissing, {
+            //if(assign_one){
+                // isDerived[set_bit_pos] = true;
+                // group_id[set_bit_pos] = 1;
+            //}
+            skipHap[set_bit_pos] = true;
+            isMissing[set_bit_pos] = true;
+        });
+        if(false){//if(assign_one){
+            n_c1 = n_c1 + n_c_missing;
+                normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
+                normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
         }else{
+                //n_c0 = n_c0 + n_c_missing;
+                normalizer_0 = twice_num_pair_or_square(n_c0, p.ALT);
+                normalizer_1 = twice_num_pair_or_square(n_c1, p.ALT);
         }
+        
 
         if(hm->mapData->mapEntries[locus].skipLocus){
+            pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                     << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
+            pthread_mutex_unlock(&mutex_log);
             return make_pair(0,0);
         }
         
@@ -1411,7 +1414,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
         unordered_map<int, vector<int> >& m = (* mp);
         
-        if(p.LOW_MEM){
+        
             MyBitset* v2p = hm->hapData->hapEntries[i].hapbitset;
             ACTION_ON_ALL_SET_BITS(v2p, {
                 if(!skipHap[set_bit_pos]){
@@ -1419,11 +1422,11 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
                     m[old_group_id].push_back(set_bit_pos);
                 }
             });
-        }
+        
 
         // missing
         if(p.MISSING_MODE == "NO_IMPUTE"){
-            if(p.LOW_MEM){
+            
                 unordered_map<int, vector<int> > mmiss;
                 MyBitset* vmissing = hm->hapData->hapEntries[i].xorbitset;
                 ACTION_ON_ALL_SET_BITS(vmissing, {
@@ -1461,7 +1464,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
                 //     m[ele.first] = ele.second;
                 // }
                 mmiss.clear();
-            }
+            
         }
         
 
@@ -1696,7 +1699,9 @@ void IHS::main() {
         // }
         
     }
-    cout<<"PRINTING"<<endl;
+
+
+    //DEBUG:::
     if(hm->p.MISSING_ALLOWED){
         hm->hapData->printMissingMatrix();
     }else{
@@ -1730,7 +1735,6 @@ pair<double, double> IHS::calc_ihh1(int locus){
         hm->mapData->mapEntries[locus].skipLocus = true;
         return make_pair(-100,-100);
     }
-
 
     int numSnps = hm->mapData->nloci;
     int numHaps = hm->hapData->nhaps;

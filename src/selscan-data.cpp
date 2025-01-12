@@ -2,13 +2,39 @@
 #include "selscan-data.h"
 #include <set>
 
-
 void HapMap::initParamsInHap(HapData &hapData){
     hapData.MISSING_ALLOWED = p.MISSING_ALLOWED;
-    cerr<<"MISSING_ALLOWED: "<<hapData.MISSING_ALLOWED<<endl;
     hapData.unphased = p.UNPHASED;
     hapData.MULTI_CHR = p.MULTI_CHR;
     hapData.MULTI_MAF = p.MULTI_MAF;
+
+    if(p.MULTI_CHR){
+        cerr<<"Multi-chromosome support enabled."<<endl;
+        // MULTI-chromosome support added
+        
+        if(p.CHR_LIST!=""){
+            std::stringstream ss(p.CHR_LIST);
+            std::string item;
+            while (std::getline(ss, item, ',')) { // Split the input string by commas
+                if(item!="")
+                    chr_set.insert(item);
+            }
+        }
+
+        if(chr_set.empty()){
+            cerr<<"ERROR: No valid chromosome list provided.\n";
+            throw 1;
+        }
+    }
+
+    this->MIN_MAF_CUTOFF = p.MAF;
+    if(p.MULTI_MAF){
+        for (const auto& param : ps) {
+            if(param.MAF < MIN_MAF_CUTOFF){
+                this->MIN_MAF_CUTOFF = param.MAF;
+            }
+        }
+    }
 }
 
 void HapMap::readHapDataMSHap(string filename, HapData &hapData)
@@ -26,7 +52,8 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
 void HapMap::readHapData(string filename, HapData& hapData)
 {
     initParamsInHap(hapData);
-    //PHASE 1: Read VCF File to get "nloci", "nhaps" and "skiplist"
+
+    //PHASE 1: Read input file to get "nloci", "nhaps" and "skiplist"
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
     fin.open(filename.c_str());
@@ -49,11 +76,26 @@ void HapMap::readHapData(string filename, HapData& hapData)
     while (getline(fin, line))
     {
         nloci_before_filter++;
+        current_nhaps = countFields(line);
+        int number_of_2s = 0;
+        int number_of_1s = 0;
+        for (int hap = 0; hap < current_nhaps; hap++){ 
+            if(p.UNPHASED){
+                if (hap % 2 == 0){
+                    if(line[hap]=='1'  && line[hap+1]=='1'){
+                        number_of_2s++;
+                    }else if ( (line[hap]=='1' && line[hap+1]=='0') || (line[hap]=='0' && line[hap+1]=='1') ){ // ==1
+                        number_of_1s++;
+                    }
+                }
+            }else{
+                if(line[hap]=='1'){
+                    number_of_1s++;
+                }
+            }
+        }
 
-        pair<int, int> fo = countFieldsAndOnes(line);
-        current_nhaps = fo.first;
-        //fo.secons is the number of 1s in the line (in locus)
-        if( p.SKIP && (fo.second*1.0/current_nhaps < p.MAF || 1-(fo.second*1.0/current_nhaps) < p.MAF ) ) {
+        if(skipThisLocus(number_of_1s, number_of_2s, current_nhaps)){
             skiplist.push(nloci_before_filter-1);
         }
     
@@ -70,17 +112,8 @@ void HapMap::readHapData(string filename, HapData& hapData)
         }
         previous_nhaps = current_nhaps;
     }
-
     fin.clear(); // clear error flags
     fin.close();
-
-    //PHASE 2: Open VCF File To Load into Data Structure
-    fin.open(filename.c_str());
-    if (fin.fail())
-    {
-        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
-    }
 
     if(p.SKIP) { //prefilter all sites < MAF
         cerr << ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n";
@@ -89,16 +122,21 @@ void HapMap::readHapData(string filename, HapData& hapData)
         cerr << ARG_KEEP << " set. Not removing variants < " << p.MAF << ".\n";
         //(*flog) << ARG_KEEP << " set. Not removing variants < " << MAF << ".\n";
     }
-    cerr << "Loading " << current_nhaps << " haplotypes and " << nloci_before_filter - skiplist.size()<< " loci...\n";
-
-    if (p.UNPHASED){
-        hapData.initHapData(current_nhaps/2, nloci_before_filter-skiplist.size());
-    }else{
-        hapData.initHapData(current_nhaps, nloci_before_filter-skiplist.size());
-    }
-
-    hapData.skipQueue = queue<int>();
     
+
+    current_nhaps = (p.UNPHASED) ? current_nhaps/2 : current_nhaps;
+    cerr << "Loading " << current_nhaps << " haplotypes and " << nloci_before_filter - skiplist.size()<< " loci...\n";
+    hapData.initHapData(current_nhaps, nloci_before_filter-skiplist.size());
+    hapData.skipQueue = queue<int>();
+
+
+    //PHASE 2: Open input File 2nd time To Load into Data Structure
+    fin.open(filename.c_str());
+    if (fin.fail())
+    {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 0;
+    }
     getline(fin, line);
     stringstream ss;
     char allele1;
@@ -115,35 +153,23 @@ void HapMap::readHapData(string filename, HapData& hapData)
         }
 
         ss.str(line);
-        if (p.UNPHASED){
-            line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
+        line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
                 return std::isspace(static_cast<unsigned char>(c));
             }), line.end());
 
+        if (p.UNPHASED){
             if (current_nhaps % 2 != 0)
             {
                 cerr << "ERROR:  Number of haplotypes must be even for unphased.\n";
                 throw 0;
             }
-
-            if(p.LOW_MEM){
-                hapData.hapEntries[locus_after_filter].xorbitset->num_1s = 0;
-                hapData.hapEntries[locus_after_filter].hapbitset->num_1s = 0;
-            }
             
             for (int hap = 0; hap < current_nhaps; hap++){ 
-                //xorbitset holds both 1 and 2
                 if (hap % 2 == 0){
                     if(line[hap]=='1'  && line[hap+1]=='1'){
-                        if(p.LOW_MEM){
-                            hapData.hapEntries[locus_after_filter].xorbitset->set_bit(hap/2); // 2
-                            hapData.hapEntries[locus_after_filter].xorbitset->num_1s += 1;
-                        }
+                        hapData.addAllele2(locus_after_filter, hap/2);
                     }else if ( (line[hap]=='1' && line[hap+1]=='0') || (line[hap]=='0' && line[hap+1]=='1') ){ // ==1
-                        if(p.LOW_MEM){
-                            hapData.hapEntries[locus_after_filter].hapbitset->set_bit(hap/2); // 1
-                            hapData.hapEntries[locus_after_filter].hapbitset->num_1s += 1;
-                        }
+                        hapData.addAllele1(locus_after_filter, hap/2);
                     }
                 }
             }
@@ -157,10 +183,7 @@ void HapMap::readHapData(string filename, HapData& hapData)
                     throw 0;
                 }
                 if(allele1=='1'){
-                    if(p.LOW_MEM){
-                        hapData.hapEntries[locus_after_filter].hapbitset->set_bit(hap);
-                        hapData.hapEntries[locus_after_filter].hapbitset->num_1s++;
-                    }
+                    hapData.addAllele1(locus_after_filter, hap);
                 }
             }
         }
@@ -171,7 +194,7 @@ void HapMap::readHapData(string filename, HapData& hapData)
     fin.close();
 
     //PHASE 3: XOR and FLIP (flip disabled)
-    hapData.xor_for_phased_and_unphased();
+    if(!p.MISSING_ALLOWED) hapData.xor_for_phased_and_unphased();
 }
 
 
@@ -179,22 +202,6 @@ void HapMap::readHapData(string filename, HapData& hapData)
 void HapMap::readHapDataVCF(string filename, HapData& hapData)
 {
     initParamsInHap(hapData);
-
-    set<string> chr_set;
-    if(p.MULTI_CHR){
-        cerr<<"Multi-chromosome support enabled"<<endl;
-        // MULTI-chromosome support added
-        
-        if(p.CHR_LIST!=""){
-            std::stringstream ss(p.CHR_LIST);
-            std::string item;
-            while (std::getline(ss, item, ',')) { // Split the input string by commas
-                if(item!="")
-                    chr_set.insert(item);
-            }
-        }
-    }
-    
 
     if(p.MISSING_ALLOWED){
         cerr<<"Missing entries allowed: will impute missing entries if less than threshold"<<endl;
@@ -246,10 +253,9 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
         for (int i = 0; i < numMapCols; i++) {
             ss >> junk;
-            // if(i==0){
-            //     chr = junk;
-            //     cout<<chr<<endl;
-            // }
+            if(i==0){
+                chr = junk;
+            }
         }
         for (int field = 0; field < current_nhaps; field++)
         {
@@ -261,21 +267,18 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             if(!p.MISSING_ALLOWED){
                 if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
                 {
-                    cerr << "ERROR: Alleles must be coded 0/1 only.\n";
-                    cerr << allele1 << " " << allele2 << endl;
+                    cerr << "ERROR: Alleles must be coded 0/1 only. Found alleles \n";
+                    cerr << allele1 << separator << allele2 << endl;
                     throw 0;
-                    exit(1);
                 }
             }
 
-
             if(separator != '|' && !p.UNPHASED){
-               cerr << "WARNING: Unphased entries detected. Make sure you run with --unphased flag for correct results.\n";
+               cerr << "ERROR: Unphased entries detected. Make sure you run with --unphased flag for correct results.\n";
                throw 0;
             }
 
             if(p.UNPHASED){
-                char allele = '0';
                 if (allele1 == '1' && allele2 == '1'){
                     number_of_2s++;
                 }
@@ -292,26 +295,17 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             }
         }
 
-        int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
-
-        if(p.MISSING_ALLOWED){
-            throw "missing should not enter here";
-            exit(2);
-        }
-
-        double MIN_MAF_CUTOFF = p.MAF;
-        if(p.MULTI_MAF){
-            for (const auto& param : ps) {
-                if(param.MAF < MIN_MAF_CUTOFF){
-                    MIN_MAF_CUTOFF = param.MAF;
-                }
+        bool skipreason1 = skipThisLocus(number_of_1s, number_of_2s, current_nhaps);
+        bool skipreason2 = false;
+        
+        if(p.MULTI_CHR){ 
+            if(chr_set.empty()){
+                //cerr<<"WARNING: No chromosome list provided. Running analysis on all chromosomes.\n";
+            }else{
+                skipreason2 = (chr_set.find(chr) != chr_set.end());
             }
         }
 
-        // --skip-low-freq filtering based on MAF
-        bool skipreason1 = (p.SKIP && (derived_allele_count*1.0/(current_nhaps*2) <= MIN_MAF_CUTOFF || 1-(derived_allele_count*1.0/(current_nhaps*2)) <= MIN_MAF_CUTOFF));
-        bool skipreason2 = ( p.MULTI_CHR && (chr_set.find(chr) != chr_set.end() && !chr_set.empty())) ? true: false;
-        
         if ( skipreason1 ||  skipreason2) {
             skiplist.push(nloci_before_filtering-1);
             skipcount++;
@@ -771,6 +765,36 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
 }
 
 
+
+bool HapMap::skipThisLocus(int number_of_1s, int number_of_2s, int nalleles, int missing_count){ 
+    //nalleles same for phased and unphased, tot n of columns
+    int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
+    
+    bool skipreason1 = false; // --skip-low-freq filtering based on MAF
+    bool skipreason2 = false; // missing
+
+    double ALLOWED_MISSING_PERC = 1;
+    
+    if(p.MISSING_ALLOWED){
+        int ancestral_allele_count = nalleles - derived_allele_count;
+        bool derived_lower = (derived_allele_count+missing_count)*1.0/(nalleles) < p.MAF;
+        bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(nalleles) < p.MAF;
+        if(p.SKIP){
+                skipreason2 = (derived_lower || ancestral_lower);
+        }
+
+        bool missing_cutoff_crossed = 1.0*missing_count/nalleles > ALLOWED_MISSING_PERC;
+        skipreason2 = (skipreason2 || missing_cutoff_crossed);
+        // if (missing_cutoff_crossed) {
+        //     //cout<<"Skipping cause Derived "<<derived_allele_count<<" Missing "<<missing_count<<" Total "<<current_nhaps*2<<endl;
+        //     skipreason2 = true;
+        // }
+    }else{
+        skipreason1 = (p.SKIP && (derived_allele_count*1.0/(nalleles) < this->MIN_MAF_CUTOFF || 1-(derived_allele_count*1.0/(nalleles)) < this->MIN_MAF_CUTOFF ));
+
+    }
+    return (skipreason1 ||  skipreason2 );
+}
 // TPED format description
 // 1. Chromosome (string)
 // 2. SNP ID (rs number: string)
@@ -840,7 +864,6 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
             ss >> junk;
         }
 
-        current_nhaps = p.UNPHASED? current_nhaps/2: current_nhaps; // each haplotype is represented by 2 columns
         for (int hap = 0; hap < current_nhaps; hap++)
         {
             if(p.UNPHASED){
@@ -873,18 +896,8 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
                 }
             }
         }
-        int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
-        int total_allele_count = current_nhaps; // num rows
-        current_nhaps = (p.UNPHASED? (current_nhaps/2) : (current_nhaps));
-        if(!p.MISSING_ALLOWED){
-            // --skip-low-freq filtering based on MAF
-            bool skipreason1 = (p.SKIP && (derived_allele_count*1.0/(total_allele_count) < p.MAF || 1-(derived_allele_count*1.0/(total_allele_count)) < p.MAF ));
-            bool skipreason2 = false;
-            bool skipreason3 = false; //if(MISSING_ALLOWED){add here
-            //bool skipreason2 = (chr_set.find(chr) != chr_set.end() && !chr_set.empty());
-            if ( skipreason1 ||  skipreason2) {
-                skipQueue_local.push(nloci_before_filter-1);
-            }
+        if(skipThisLocus(number_of_1s, number_of_2s, current_nhaps)){
+            skipQueue_local.push(nloci_before_filter-1);
         }
     }
 
@@ -893,8 +906,10 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     fin.close();
 
     int nloci_after_filter = nloci_before_filter-skipQueue_local.size();
+    current_nhaps = p.UNPHASED? current_nhaps/2: current_nhaps; // each haplotype is represented by 2 columns
     hapData.initHapData(current_nhaps, nloci_after_filter); // works for both phased and unphased
-    cout<<"init by"<<hapData.nloci<<" "<<hapData.nhaps<<endl;
+    
+    
     // PHASE 2: Open again and load the data to HapData: now that we gathered some idea about the format of the file
     fin.open(filename.c_str());
 
@@ -932,27 +947,123 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
                 fin >> allele2;
                 
                 if (allele1 == '1' && allele2 == '1'){ //allele = '2';
-                    hapData.hapEntries[locus].xorbitset->set_bit(hap); 
-                    hapData.hapEntries[locus].xorbitset->num_1s++;
+                    hapData.addAllele2(locus, hap);
                 }
                 else if (allele1 == '1' || allele2 == '1'){ //allele = '1';
-                    hapData.hapEntries[locus].hapbitset->set_bit(hap);
-                    hapData.hapEntries[locus].hapbitset->num_1s++;
+                    hapData.addAllele1(locus, hap);
                 }
             }else{
                 char allele;
                 fin >> allele;
                 
                 if(allele=='1'){
-                    hapData.hapEntries[locus].hapbitset->set_bit(hap);
-                    hapData.hapEntries[locus].hapbitset->num_1s++;
+                    hapData.addAllele1(locus, hap);
                 }
             }
         }
     }
 
     fin.close();
-
-    //print(5);
 }
 
+
+
+void HapMap::loadHapMapData(){
+        
+    mapData = std::make_unique<MapData>(); 
+    hapData = std::make_unique<HapData>();
+    
+    if (p.CALC_XP || p.CALC_XPNSL){
+        hapData2 = std::make_unique<HapData>();
+    }   
+
+    auto start_reading = std::chrono::high_resolution_clock::now();
+
+    try
+    {
+        if (p.TPED)
+        {
+            readHapDataTPED(p.tpedFilename, *hapData);
+            if (p.CALC_XP || p.CALC_XPNSL)
+            {
+                readHapDataTPED(p.tpedFilename, *hapData2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    std::cerr << "ERROR: Haplotypes from " << p.tpedFilename << " and " << p.tpedFilename2 << " do not have the same number of loci.\n";
+                    throw 1;
+                }
+            }
+            mapData->readMapDataTPED(p.tpedFilename, hapData->nloci, hapData->nhaps, p.USE_PMAP, hapData->skipQueue);
+        }
+        else if (p.VCF) {
+            if (p.CALC_XP || p.CALC_XPNSL)
+            {
+                readHapDataVCF(p.vcfFilename, *hapData);
+                readHapDataVCF(p.vcfFilename2, *hapData2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    std::cerr << "ERROR: Haplotypes from " << p.vcfFilename << " and " << p.vcfFilename2 << " do not have the same number of loci.\n";
+                    throw 1;
+                }
+            }else{
+                readHapDataVCF(p.vcfFilename, *hapData);
+            }
+            if(!p.CALC_NSL && !p.CALC_XPNSL && !p.USE_PMAP) {
+                mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
+            }
+            else{//Load physical positions
+                mapData->readMapDataVCF(p.vcfFilename, hapData->nloci, hapData->skipQueue);
+            }
+        }
+        else
+        {
+            if (p.CALC_XP || p.CALC_XPNSL)
+            {
+                readHapData(p.hapFilename, *hapData);
+                readHapData(p.hapFilename2, *hapData2);
+                if (hapData->nloci != hapData2->nloci)
+                {
+                    std::cerr << "ERROR: Haplotypes from " << p.hapFilename << " and " << p.hapFilename2 << " do not have the same number of loci.\n";
+                    throw 1;
+                }
+            }else{
+                readHapData(p.hapFilename, *hapData);
+            }
+            mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
+        }
+    }
+    catch (exception& e)
+    {
+        cerr << "ERROR: " << e.what() << endl;
+        throw 1;
+    }
+
+    auto end_reading = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> read_duration =  end_reading - start_reading;
+    cout<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
+    (*flog)<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
+    
+    // DEBUG::: mapData.print();
+
+    if(mapData->chr_list.size() > 1 && p.MULTI_CHR == false){
+        cerr<<"ERROR: Input file contains multiple chromosomes, but no chromosome list is provided.\n";
+        throw 0;
+    }
+
+    // Check if map is in order
+    for (int i = 1; i < mapData->nloci; i++) {
+        if ( mapData->mapEntries[i].physicalPos <  mapData->mapEntries[i-1].physicalPos ) {
+            std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
+            std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].physicalPos << " appears after";
+            std::cerr << "\t" <<  mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].physicalPos << "\n";
+            throw 0;
+        }
+        if ( !p.CALC_NSL && mapData->mapEntries[i].geneticPos  < mapData->mapEntries[i-1].geneticPos  ) {
+            std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
+            std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].geneticPos << " appears after";
+            std::cerr << "\t" << mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].geneticPos << "\n";
+            throw 0;
+        }
+    }
+    
+}

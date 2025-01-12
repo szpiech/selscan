@@ -50,11 +50,8 @@
 
 using namespace std;
 
-param_main p;
-std::unique_ptr<HapMap> hm; 
-ofstream* flog;
 
-string getLogFileName(){
+string getLogFileName(param_main &p){
     string statname = "";
     if(p.SINGLE_EHH){
         statname = "ehh";
@@ -82,13 +79,14 @@ string getLogFileName(){
 
 
 
-int runStat(std::unique_ptr<HapMap>& hm, param_main &p)
+/// @brief Run the stats requested by the user, here p is the stat specific parameters (different from base p)
+void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
 {            
     if (hm->mapData->nloci < p.numThreads)
     {
         p.numThreads = 1;
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
-        *flog << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
+        *(hm->flog) << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
     }
 
     /*
@@ -126,6 +124,7 @@ int runStat(std::unique_ptr<HapMap>& hm, param_main &p)
         if (p.CALC_SOFT)
         {
             throw("ERROR: Soft EHH not implemented yet.\n");
+            exit(1);
         }
         else
         {
@@ -174,14 +173,6 @@ int runStat(std::unique_ptr<HapMap>& hm, param_main &p)
         PI pifinder(hm, p);
         pifinder.main();
     }
-
-
-
-    //flog.open(logFilename, ios::app);
-    
-    
-    return 0;
-    
 }
 
 int main(int argc, char *argv[])
@@ -189,27 +180,43 @@ int main(int argc, char *argv[])
     auto start = std::chrono::high_resolution_clock::now();
     double time_start = (clock() / (double)CLOCKS_PER_SEC);
  
-    cout<<"Max threads supported: "<<std::thread::hardware_concurrency()<<endl;
-   
     cerr << "selscan v" + VERSION + "\n";
+    cout<<"Max threads supported by hardware: "<<std::thread::hardware_concurrency()<<endl;
+
 // #ifdef PTW32_STATIC_LIB
 //     pthread_win32_process_attach_np();
 // #endif
 
-    param_t params;
-    bool ERROR = initalizeParameters(params,argc,argv);
-    if (ERROR) return 1;
+    std::unique_ptr<HapMap> hm; 
+    ofstream* flog;
 
-    //param_main p;
+    param_t params;
+
+    try{
+        initalizeParameters(params,argc,argv);
+    }catch(const std::exception& e){
+        //cerr<<"ERROR: "<<e.what()<<endl;
+        cerr<<e.what()<<endl;
+        return 1;
+    }
+    
+
+    param_main p;
     getBaseParamFromCmdLine(params, p);
-    //param_main p = getParamStruct(params);
-    ERROR = checkParameters(p);
+
+    try{
+        checkParameters(p);
+    }catch(const std::exception& e){
+        cerr<<"ERROR: "<<e.what()<<endl;
+        return 1;
+    }
+    
 
     ofstream flog_fs;
     flog = &flog_fs;
 
     // start logging
-    string logFilename = getLogFileName();
+    string logFilename = getLogFileName(p);
     (*flog).open(logFilename);
     if ((*flog).fail())
     {
@@ -230,9 +237,7 @@ int main(int argc, char *argv[])
     if(p.MULTI_CHR){
         (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
         cerr << "WARNING: Running in multi-chromosome mode.\n";
-        throw 1;
     }
-
 
     if(p.MULTI_PARAMS){
         //TODON
@@ -269,7 +274,7 @@ int main(int argc, char *argv[])
     *flog << "Program took " << duration.count() << " seconds to complete." << std::endl;
     
     //end logging
-    (*flog).close();
+    flog->close();
 
 
     // #ifdef PTW32_STATIC_LIB

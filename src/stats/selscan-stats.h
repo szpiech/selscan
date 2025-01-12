@@ -24,7 +24,6 @@ class SelscanStats {
         ofstream* fout;
         int numThreads;
 
-
     string get_filename_base(string statname){
         string outFilename = p.outFilename + "." + statname;
         if(statname == "pi"){
@@ -48,19 +47,6 @@ class SelscanStats {
 
     void init_flog_fout(string statname){
         string outFilename = get_filename_base(statname);
-        // (*flog).open(outFilename + ".log");
-        // if ((*flog).fail())
-        // {
-        //     cerr << "ERROR: could not open " << outFilename + ".log" << " for writing.\n";
-        //     exit(2);
-        // }
-
-        // (*fout).open(outFilename + ".out");
-        // if ((*fout).fail())
-        // {
-        //     cerr << "ERROR: could not open " << outFilename + ".out" << " for writing.\n";
-        //     exit(2);
-        // }
         (*flog) << "\nv" + VERSION + "\nCalculating ";
         if (statname == "ihs") (*flog) << " iHS.\n";
         else if (statname == "nsl") (*flog) << " nSL.\n";
