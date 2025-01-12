@@ -92,7 +92,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
     
     if(n_c[1] + n_c[2] + n_c[0] != numHaps){
         cerr<<"ERROR: n_c1 + n_c2 + n_c0 != numHaps"<<endl;
-        throw 1;
+        exit(2);
     }
 
     string orderStr = getOrder(n_c[2], n_c[1], n_c[0]);
@@ -140,7 +140,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
     }else if(group_count[2] == 0 ){ //second clause is redundant
         if(group_count[0] + group_count[1] != numHaps){
             cerr<<"ERROR: gc2==0 locus"<<locus<<endl;
-            throw 1;
+            exit(2);
         }
         totgc+=2;
     }else{
@@ -218,7 +218,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         if (distance < 0) // this should not be needed as we already did integrity check previously
         {
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
-            throw 0;
+            exit(2);
         }
         if(p.CALC_NSL && !p.CALC_IHS){
             distance = 1;
@@ -455,7 +455,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
 
     if(n_c[1] + n_c[2] + n_c[0] + n_c_missing!= numHaps){
         cerr<<"ERROR: n_c1 + n_c2 + n_c0 != numHaps"<<endl;
-        throw 1;
+        exit(2);
     }
 
     string orderStr = getOrder(n_c[2], n_c[1], n_c[0]);
@@ -511,7 +511,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
     }else if(group_count[2] == 0 ){ //second clause is redundant
         if(group_count[0] + group_count[1] != numHaps - n_c_missing){
             cerr<<"ERROR: gc2==0 locus"<<locus<<endl;
-            throw 1;
+            exit(2);
         }
         totgc+=2;
     }else{
@@ -589,7 +589,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
         if (distance < 0) // this should not be needed as we already did integrity check previously
         {
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
-            throw 0;
+            exit(2);
         }
         if(p.CALC_NSL && !p.CALC_IHS){
             distance = 1;
@@ -706,8 +706,8 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
 
                 //int split_old_group_size = biggroup_size - newgroup_size - missing_count_at_i; // ones assign to 0, rest are missing
                 if(split_old_group_size < 0){
-                    cout<<"ncs" << hm->hapData->get_n_c0(i)<<" "<<hm->hapData->get_n_c1(i)<<" "<<hm->hapData->get_n_c2(i)<<" "<<hm->hapData->get_n_c_missing(i)<<endl;
-                    cout<<set_bit_pos<<" "<<i<<" "<<locus<<" "<<old_group_id<<" "<<biggroup_size<<" "<<newgroup_size<<" "<<newgroup_size2<<" "<<missing_count_at_i<<endl;
+                    cout<<"DEBUG::: ncs" << hm->hapData->get_n_c0(i)<<" "<<hm->hapData->get_n_c1(i)<<" "<<hm->hapData->get_n_c2(i)<<" "<<hm->hapData->get_n_c_missing(i)<<endl;
+                    cout<<"DEBUG::: "<<set_bit_pos<<" "<<i<<" "<<locus<<" "<<old_group_id<<" "<<biggroup_size<<" "<<newgroup_size<<" "<<newgroup_size2<<" "<<missing_count_at_i<<endl;
                 }
                 assert(split_old_group_size >= 0);
                 int num_samples = newgroup_size  + newgroup_size2 + split_old_group_size; // non missing samples to take decision on
@@ -1052,6 +1052,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         
         //update i 
         i = (downstream)? i-1 : i+1;
+        assert(i>=0 and i<numSnps);
 
         if(p.MULTI_MAF){
             if(hm->hapData->get_maf(i) < p.MAF){
@@ -1084,7 +1085,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         if (distance < 0) // this should not be needed as we already did integrity check previously
         {
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
-            throw 0;
+            exit(2);
         }
         double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, downstream) );
         
@@ -1383,7 +1384,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         if (distance < 0) // this should not be needed as we already did integrity check previously
         {
             std::cerr << "ERROR: physical position not in ascending order.\n"; 
-            throw 0;
+            exit(2);
         }
         if(p.CALC_NSL && !p.CALC_IHS){
             distance = 1;
@@ -1543,7 +1544,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
 
 void IHS::main() {
     int total_calc_to_be_done = hm->hapData->nloci;
-    cout<<"Total number of loci: "<<total_calc_to_be_done<<endl;
+    cerr<<"DEBUG::: Total number of loci: "<<total_calc_to_be_done<<endl;
     
     // // DEBUGGING CODE
     /*
@@ -1606,6 +1607,7 @@ void IHS::main() {
             );
         }
 
+        cerr<<"DEBUG::: IHS calc compute, now printing."<<endl;   
         //progressBarThread.join(); // Join the progress bar thread
 
         //open multiple filestream for different chromosomes and put in array
@@ -1622,7 +1624,7 @@ void IHS::main() {
         if(p.MULTI_CHR){
             for (const auto& [chr, i] : hm->mapData->chr_list){
                 string filename = get_filename_base("ihs") + "." + chr + ".out" ;
-                cout<<chr<<" "<<i<<" "<<filename<<endl;
+                cerr<<"DEBUG::: "<<chr<<" "<<i<<" "<<filename<<endl;
                 fouts[i] = new ofstream(filename);
             }
         }else{
@@ -1708,6 +1710,7 @@ void IHS::main() {
         hm->hapData->print(5);
         //hm->hapData->print_by_ij();
     }
+    cerr<<"DEBUG::: IHS done."<<endl;   
     
     //hm->mapData->printMissingMatrix();
 }

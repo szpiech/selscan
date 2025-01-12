@@ -181,7 +181,15 @@ int main(int argc, char *argv[])
     double time_start = (clock() / (double)CLOCKS_PER_SEC);
  
     cerr << "selscan v" + VERSION + "\n";
-    cout<<"Max threads supported by hardware: "<<std::thread::hardware_concurrency()<<endl;
+   
+    for (int i = 0; i < argc; i++)
+    {
+        cerr << argv[i] << " ";
+    }
+    cerr << "\n";
+
+    cerr << "Max threads supported by hardware: "<<std::thread::hardware_concurrency()<<endl;
+
 
 // #ifdef PTW32_STATIC_LIB
 //     pthread_win32_process_attach_np();
@@ -195,11 +203,9 @@ int main(int argc, char *argv[])
     try{
         initalizeParameters(params,argc,argv);
     }catch(const std::exception& e){
-        //cerr<<"ERROR: "<<e.what()<<endl;
-        cerr<<e.what()<<endl;
+        cerr<<"ERROR: "<<e.what()<<endl;
         return 1;
     }
-    
 
     param_main p;
     getBaseParamFromCmdLine(params, p);
@@ -211,7 +217,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-
     ofstream flog_fs;
     flog = &flog_fs;
 
@@ -228,10 +233,8 @@ int main(int argc, char *argv[])
     for (int i = 0; i < argc; i++)
     {
         (*flog) << argv[i] << " ";
-        cerr << argv[i] << " ";
     }
     (*flog) << "\n";
-    cerr << "\n";
 
 
     if(p.MULTI_CHR){
@@ -249,21 +252,20 @@ int main(int argc, char *argv[])
         hm = std::make_unique<HapMap>(p, multi_params, flog);
         hm->loadHapMapData();
 
-        //index based iteration
+        // run for all param combinations
+        cerr<<"DEBUG::: Running for all param combinations. "<<multi_params.size()<<"\n";
         for(int i = 0; i< multi_params.size(); i++){
             param_main p = multi_params[i];
             p.outFilename = p.outFilename + ".pconfig" + to_string(i);
             runStat(hm, p); // run the main program
+            (*flog)<<"DEBUG::: Finished "<<p.outFilename<<".\n";
+            cerr<<"DEBUG::: Finished "<<p.outFilename<<".\n";
         }
-        // for(auto &param: multi_params){
-        //     runStat(hm, param); // run the main program
-        // }
     }else{
         hm = std::make_unique<HapMap>(p, flog);
         hm->loadHapMapData();
         runStat(hm, p); // run the main program
     }
-
 
     double time_end = (clock() / (double)CLOCKS_PER_SEC);
     auto end = std::chrono::high_resolution_clock::now();

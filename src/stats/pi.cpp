@@ -9,7 +9,7 @@ void PI::main()
 
     int max_physpos = hm->mapData->mapEntries[hm->mapData->nloci - 1].physicalPos;
     int num_entries = ceil((max_physpos+1) / winsize);
-    cout<<num_entries<<endl;
+    cout<<"DEBUG::: "<<"num entries"<<num_entries<<endl;
 
 //    vector<double> index_by_start(num_entries+1);
     int site_counter;

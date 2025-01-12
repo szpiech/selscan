@@ -816,7 +816,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(2);
     }
 
     int numMapCols = 4;
@@ -847,7 +847,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         {
             cerr << "ERROR: line " << nloci_before_filter << " of " << filename << " has " << current_nhaps
                  << " fields, but the previous line has " << previous_nhaps << " fields.\n";
-            throw 0;
+            exit(2);
         }
         previous_nhaps = current_nhaps;
 
@@ -873,7 +873,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
                 if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') ){
                     cerr << "ERROR: Alleles must be coded 0/1 only. (Missing support not included for TPED)\n";
                     cerr << allele1 << " " << allele2 << endl;
-                    throw 0;
+                    exit(2);
                 }
                 
                 if (allele1 == '1' && allele2 == '1'){
@@ -889,7 +889,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
                 {
                     cerr << "ERROR:  Alleles must be coded 0/1 only.\n";
                     cerr << "Allele "<<allele << endl;
-                    throw 0;
+                    exit(2);
                 }
                 if(allele=='1'){
                     number_of_1s++;
@@ -916,7 +916,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(2);
     }
 
     cerr << "Loading " << current_nhaps << " haplotypes and " << nloci_after_filter << " loci...\n";
@@ -979,75 +979,68 @@ void HapMap::loadHapMapData(){
 
     auto start_reading = std::chrono::high_resolution_clock::now();
 
-    try
+    if (p.TPED)
     {
-        if (p.TPED)
+        readHapDataTPED(p.tpedFilename, *hapData);
+        if (p.CALC_XP || p.CALC_XPNSL)
         {
-            readHapDataTPED(p.tpedFilename, *hapData);
-            if (p.CALC_XP || p.CALC_XPNSL)
+            readHapDataTPED(p.tpedFilename, *hapData2);
+            if (hapData->nloci != hapData2->nloci)
             {
-                readHapDataTPED(p.tpedFilename, *hapData2);
-                if (hapData->nloci != hapData2->nloci)
-                {
-                    std::cerr << "ERROR: Haplotypes from " << p.tpedFilename << " and " << p.tpedFilename2 << " do not have the same number of loci.\n";
-                    throw 1;
-                }
-            }
-            mapData->readMapDataTPED(p.tpedFilename, hapData->nloci, hapData->nhaps, p.USE_PMAP, hapData->skipQueue);
-        }
-        else if (p.VCF) {
-            if (p.CALC_XP || p.CALC_XPNSL)
-            {
-                readHapDataVCF(p.vcfFilename, *hapData);
-                readHapDataVCF(p.vcfFilename2, *hapData2);
-                if (hapData->nloci != hapData2->nloci)
-                {
-                    std::cerr << "ERROR: Haplotypes from " << p.vcfFilename << " and " << p.vcfFilename2 << " do not have the same number of loci.\n";
-                    throw 1;
-                }
-            }else{
-                readHapDataVCF(p.vcfFilename, *hapData);
-            }
-            if(!p.CALC_NSL && !p.CALC_XPNSL && !p.USE_PMAP) {
-                mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
-            }
-            else{//Load physical positions
-                mapData->readMapDataVCF(p.vcfFilename, hapData->nloci, hapData->skipQueue);
+                std::cerr << "ERROR: Haplotypes from " << p.tpedFilename << " and " << p.tpedFilename2 << " do not have the same number of loci.\n";
+                exit(2);
             }
         }
-        else
+        mapData->readMapDataTPED(p.tpedFilename, hapData->nloci, hapData->nhaps, p.USE_PMAP, hapData->skipQueue);
+    }
+    else if (p.VCF) {
+        if (p.CALC_XP || p.CALC_XPNSL)
         {
-            if (p.CALC_XP || p.CALC_XPNSL)
+            readHapDataVCF(p.vcfFilename, *hapData);
+            readHapDataVCF(p.vcfFilename2, *hapData2);
+            if (hapData->nloci != hapData2->nloci)
             {
-                readHapData(p.hapFilename, *hapData);
-                readHapData(p.hapFilename2, *hapData2);
-                if (hapData->nloci != hapData2->nloci)
-                {
-                    std::cerr << "ERROR: Haplotypes from " << p.hapFilename << " and " << p.hapFilename2 << " do not have the same number of loci.\n";
-                    throw 1;
-                }
-            }else{
-                readHapData(p.hapFilename, *hapData);
+                std::cerr << "ERROR: Haplotypes from " << p.vcfFilename << " and " << p.vcfFilename2 << " do not have the same number of loci.\n";
+                exit(2);
             }
+        }else{
+            readHapDataVCF(p.vcfFilename, *hapData);
+        }
+        if(!p.CALC_NSL && !p.CALC_XPNSL && !p.USE_PMAP) {
             mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
         }
+        else{//Load physical positions
+            mapData->readMapDataVCF(p.vcfFilename, hapData->nloci, hapData->skipQueue);
+        }
     }
-    catch (exception& e)
+    else
     {
-        cerr << "ERROR: " << e.what() << endl;
-        throw 1;
+        if (p.CALC_XP || p.CALC_XPNSL)
+        {
+            readHapData(p.hapFilename, *hapData);
+            readHapData(p.hapFilename2, *hapData2);
+            if (hapData->nloci != hapData2->nloci)
+            {
+                std::cerr << "ERROR: Haplotypes from " << p.hapFilename << " and " << p.hapFilename2 << " do not have the same number of loci.\n";
+                exit(2);
+            }
+        }else{
+            readHapData(p.hapFilename, *hapData);
+        }
+        mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
     }
+    
 
     auto end_reading = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> read_duration =  end_reading - start_reading;
-    cout<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
+    std::cerr<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
     (*flog)<<("Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
     
     // DEBUG::: mapData.print();
 
     if(mapData->chr_list.size() > 1 && p.MULTI_CHR == false){
         cerr<<"ERROR: Input file contains multiple chromosomes, but no chromosome list is provided.\n";
-        throw 0;
+        exit(2);
     }
 
     // Check if map is in order
@@ -1056,13 +1049,13 @@ void HapMap::loadHapMapData(){
             std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
             std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].physicalPos << " appears after";
             std::cerr << "\t" <<  mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].physicalPos << "\n";
-            throw 0;
+            exit(2);
         }
         if ( !p.CALC_NSL && mapData->mapEntries[i].geneticPos  < mapData->mapEntries[i-1].geneticPos  ) {
             std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
             std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].geneticPos << " appears after";
             std::cerr << "\t" << mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].geneticPos << "\n";
-            throw 0;
+            exit(2);
         }
     }
     

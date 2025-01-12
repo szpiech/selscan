@@ -16,12 +16,12 @@ class PI: public SelscanStats{
             init_flog_fout("pi");    
                
             if(p.UNPHASED){
-                throw std::invalid_argument("Unphased data not supported for PI calculation");
+                cerr<<("ERROR: Unphased data not supported for PI calculation");
                 exit(1);
             } 
             this->winsize = p.PI_WIN;    
             if(this->winsize <= 0 ){
-                throw std::invalid_argument("Invalid window size for PI calculation");
+                cerr<<("ERROR: Invalid window size for PI calculation");
                 exit(1);
             }
             if(this->winsize > (hm->mapData->mapEntries[ hm->mapData->nloci-1].physicalPos)){

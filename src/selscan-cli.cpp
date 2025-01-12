@@ -70,7 +70,7 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
     }
     catch (...)
     {
-        throw runtime_error("ERROR: Could not parse command line arguments.\n");
+        throw runtime_error("Could not parse command line arguments.\n");
     }
 }
 
@@ -113,10 +113,7 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     p.SINGLE_EHH = false;
 
-    p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
-    if(params.getBoolFlag(ARG_SKIP)){
-        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
-    }
+    
     
     // p.EHH1K = params.getIntFlag(ARG_SOFT_K);
     p.QWIN = params.getIntFlag(ARG_QWIN);
@@ -148,6 +145,11 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.MULTI_PARAMS = false;
     if (p.jsonFilename.compare(DEFAULT_MULTI_PARAMS) != 0) {
         p.MULTI_PARAMS = true;
+    }
+
+    p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
+    if(params.getBoolFlag(ARG_SKIP)){
+        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
 }
 
@@ -208,10 +210,7 @@ void checkParameters(param_main &p){
     bool SINGLE_EHH =  false;
     if (query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
-    bool SKIP = p.SKIP;
-    if(p.SKIP){
-        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
-    }
+    
 
     //bool TRUNC = params.getBoolFlag(ARG_TRUNC);
 
@@ -244,6 +243,19 @@ void checkParameters(param_main &p){
     //          << ")\n";
     //     return 1;
     // }
+
+        if (CALC_XPNSL + CALC_IHS + CALC_XP + SINGLE_EHH + CALC_PI + CALC_NSL + CALC_SOFT < 1)
+    {
+        // cerr << "ERROR: Must specify one of \n\tEHH (" << ARG_EHH
+        //      << ")\n\tiHS (" << ARG_IHS
+        //      << ")\n\tXP-EHH (" << ARG_XP
+        //      << ")\n\tPI (" << ARG_PI
+        //      << ")\n\tnSL (" << ARG_NSL
+        //      << ")\n\tXP-nSL (" << ARG_XPNSL
+        //      << ")\n\tiHH12 (" << ARG_SOFT
+        //      << ")\n";
+        throw runtime_error("Must specify one of \n\tEHH (" + ARG_EHH + ")\n\tiHS (" + ARG_IHS + ")\n\tXP-EHH (" + ARG_XP + ")\n\tPI (" + ARG_PI + ")\n\tnSL (" + ARG_NSL + ")\n\tXP-nSL (" + ARG_XPNSL + ")\n\tiHH12 (" + ARG_SOFT + ")\n");
+    }
 
     if (WRITE_DETAILED_IHS && !CALC_IHS) {
         throw runtime_error("The flag " + ARG_IHS_DETAILED + " must be used with " + ARG_IHS + " \n");
@@ -342,7 +354,10 @@ void checkParameters(param_main &p){
         throw runtime_error("Must provide a JSON file.\n");
     }
     
-    
+    bool SKIP = p.SKIP;
+    if(p.SKIP){
+        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    }
     //return 0;
 }
 
@@ -373,21 +388,21 @@ void jsonParse(param_main &base_p, vector<param_main> &multi_params){
 
         if (param.contains(MAF)) { // Check if the field exists and retrieve it if it does
             p.MAF = param[MAF];
-            cout<<ARG_MAF<<" "<<p.MAF<<endl;
+            cout<<"DEBUG:::"<<ARG_MAF<<" "<<p.MAF<<endl;
         }
 
         if (param.contains(MAX_EXTEND)) { // Check if the field exists and retrieve it if it does
             p.MAX_EXTEND = param[MAX_EXTEND];
-            cout<<ARG_MAX_EXTEND<<" "<<p.MAX_EXTEND<<endl;
+            cout<<"DEBUG:::"<<ARG_MAX_EXTEND<<" "<<p.MAX_EXTEND<<endl;
         }
 
         if (param.contains(MAX_EXTEND_NSL)) { // Check if the field exists and retrieve it if it does
             p.MAX_EXTEND_NSL = param[MAX_EXTEND_NSL];
-            cout<<ARG_MAX_EXTEND_NSL<<" "<<p.MAX_EXTEND_NSL<<endl;
+            cout<<"DEBUG:::"<<ARG_MAX_EXTEND_NSL<<" "<<p.MAX_EXTEND_NSL<<endl;
         }
         if(param.contains(CUTOFF)){
             p.EHH_CUTOFF = param[CUTOFF];
-            cout<<ARG_CUTOFF<<" "<<p.EHH_CUTOFF<<endl;
+            cout<<"DEBUG:::"<<ARG_CUTOFF<<" "<<p.EHH_CUTOFF<<endl;
         }
         checkParameters(p);
         multi_params.push_back(p);
