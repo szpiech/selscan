@@ -1091,6 +1091,12 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         
         if(p.MULTI_MAF){
             curr_index = i;
+
+            if(downstream){
+                assert(curr_index < prev_index);
+            }else{
+                assert(curr_index > prev_index);
+            }
             distance= abs(hm->mapData->mapEntries[prev_index].geneticPos - hm->mapData->mapEntries[curr_index].geneticPos);
             int phys_distance= abs(hm->mapData->mapEntries[prev_index].physicalPos - hm->mapData->mapEntries[curr_index].physicalPos);
             scale = double(p.SCALE_PARAMETER) / double(phys_distance);
@@ -1617,7 +1623,7 @@ void IHS::main() {
         //open multiple filestream for all item in chrlist
 
 
-        p.MULTI_CHR = false;
+        assert(p.MULTI_CHR == false);
 
         ofstream* fouts[hm->mapData->chr_list.size()];
 
@@ -1631,6 +1637,8 @@ void IHS::main() {
             fout = new ofstream(get_filename_base("ihs") + ".out");
             fouts[0] = fout;
         }
+        cerr<<"DEBUG::: IHS calc compute, now printing."<<endl;   
+
 
         //      std::stringstream ss(p.CHR_LIST);
         // std::string item;
@@ -1640,6 +1648,8 @@ void IHS::main() {
         // }
         
         int locus = 0;
+        cerr<<"DEBUG::: Checkpoint results."<<results.size()<< endl;   
+
     
         //if(p.MULTI_CHR){
             for(auto && result: results){ // this is a blocking call
@@ -1704,6 +1714,8 @@ void IHS::main() {
 
 
     //DEBUG:::
+    cerr<<"DEBUG::: Checkpoint before print."<<endl;   
+
     if(hm->p.MISSING_ALLOWED){
         hm->hapData->printMissingMatrix();
     }else{

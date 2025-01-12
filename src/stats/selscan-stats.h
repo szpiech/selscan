@@ -19,7 +19,7 @@
 class SelscanStats {
     public:
         const std::unique_ptr<HapMap>& hm;
-        param_main p;
+        const param_main p;
         ofstream* flog;
         ofstream* fout;
         int numThreads;

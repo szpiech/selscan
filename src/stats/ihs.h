@@ -20,10 +20,10 @@ class IHS: public SelscanStats{
             // fout = &fout_obj;
             if(p.CALC_NSL && !p.CALC_IHS){
                 this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
-                init_flog_fout("nsl");
+                //init_flog_fout("nsl");
             }else{
                 this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
-                init_flog_fout("ihs");
+                //init_flog_fout("ihs");
             }
         }
         void main(); //thread_ihs
