@@ -304,15 +304,6 @@ void IHH12::main()
     int nloci = hm->mapData->nloci;
     ihh12 = new double[nloci];
 
-    //load params
-    // int SCALE_PARAMETER = p->params->getIntFlag(ARG_GAP_SCALE);
-    // int MAX_GAP = p->params->getIntFlag(ARG_MAX_GAP);
-    // double EHH_CUTOFF = p->params->getDoubleFlag(ARG_CUTOFF);
-    // int numThreads = p->params->getIntFlag(ARG_THREAD);
-    // bool TRUNC = p->params->getBoolFlag(ARG_TRUNC);
-    // int MAX_EXTEND = ( p->params->getIntFlag(ARG_MAX_EXTEND) <= 0 ) ? physicalPos[nloci - 1] - physicalPos[0] : p->params->getIntFlag(ARG_MAX_EXTEND);
-
-
     std::cerr << "Starting iHH12 calculations."<<endl;
     std::unordered_map<int, std::vector<int> >* map_per_thread = new std::unordered_map<int, std::vector<int> > [numThreads];
 

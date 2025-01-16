@@ -172,8 +172,8 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
                 << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
         pthread_mutex_unlock(&mutex_log);
-        hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(0,0);
+        //hm->mapData->mapEntries[locus].skipLocus = true;
+        return make_pair(-9999,-9999);
     }
 
     int i = locus;  // locus == core_locus
@@ -531,8 +531,8 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
                 << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
         pthread_mutex_unlock(&mutex_log);
-        hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(0,0);
+        //hm->mapData->mapEntries[locus].skipLocus = true;
+        return make_pair(-9999,-9999);
     }
 
     // double freqHetGT = n_c[1]*1.0/numHaps;
@@ -942,7 +942,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 
     if(hm->hapData->get_maf(locus) <= p.MAF){
         //hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(-1,-1);
+        return make_pair(-9999,-9999);
     }
     double ihh1=0;
     double ihh0=0;
@@ -1056,7 +1056,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             (*flog) << endl;
             pthread_mutex_unlock(&mutex_log);
             if (!p.TRUNC){
-                return make_pair(-1,-1);
+                return make_pair(-9999,-9999);
             }
             break;
         }
@@ -1276,7 +1276,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         totgc+=1;
         curr_ehh0_before_norm = normalizer_0;
 //        hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(-1,-1);
+        //return make_pair(-9999,-9999);
 
         MyBitset* vmissing = hm->hapData->hapEntries[locus].xorbitset;
         ACTION_ON_ALL_SET_BITS(vmissing, {
@@ -1520,9 +1520,6 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         }
 
         m.clear(); // CLEAR THE MAP //unordered_map<int, vector<int> >().swap(m);
-        
-
-
 
         if(curr_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){
             if(normalizer_1!=0){
@@ -1605,12 +1602,12 @@ void IHS::main() {
 
     if(p.MISSING_ALLOWED){ // do imputation
     // TODO: make multithreaded
-            if(hm->p.MISSING_MODE == "NO_IMPUTE"){
-                for(int locus = 0; locus <  hm->mapData->nloci; locus++) {
-                    pair<double, double> ihh1_ihh0 = calc_ihh1_missing(locus);
-                }
-                hm->hapData->assignVerdict();
+        if(hm->p.MISSING_MODE == "NO_IMPUTE"){
+            for(int locus = 0; locus <  hm->mapData->nloci; locus++) {
+                pair<double, double> ihh1_ihh0 = infer_missing(locus);
             }
+            hm->hapData->assignVerdict();
+        }
     }
 
     if(true){
@@ -1671,8 +1668,8 @@ void IHS::main() {
                 double ihh1 = ihh1_ihh0.first;
                 double ihh0 = ihh1_ihh0.second;
 
-                if(hm->mapData->mapEntries[locus].skipLocus == false){
-                //if(ihh1!=-1){
+                //if(hm->mapData->mapEntries[locus].skipLocus == false){
+                if(ihh1 != -9999){
                     if(hm->hapData->unphased){
                         const double& iHS2 = ihh1;
                         const double& iHS0 = ihh0;
@@ -1743,7 +1740,7 @@ void IHS::main() {
     //hm->mapData->printMissingMatrix();
 }
 
-    pair<double, double> IHS::calc_ihh1_missing(int locus){
+    pair<double, double> IHS::infer_missing(int locus){
         if(hm->p.UNPHASED){
             double a, b;
             pair<double, double>  downstream = calc_ehh_unidirection_unphased_missing(locus, true, a, b); // downstream
@@ -1835,6 +1832,6 @@ pair<double, double> IHS::calc_ihh1(int locus){
         return make_pair(ihh1, ihh0);
     }
     
-    return make_pair(-100,-100);
+    return make_pair(-9999,-9999);
     
 }

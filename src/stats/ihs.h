@@ -35,7 +35,7 @@ class IHS: public SelscanStats{
         
         pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
         pair<double, double> calc_ihh1(int locus);  
-        pair<double, double> calc_ihh1_missing(int locus);  
+        pair<double, double> infer_missing(int locus);  
 
         
     private:
