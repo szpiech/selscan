@@ -38,15 +38,19 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 
 From MacOS:   
 ```
-git clone https://github.com/amatur/selscan/
-cd selscan/src/
+git clone https://github.com/szpiech/selscan/
+cd selscan
+git checkout speedup
+cd src/
 make
 ```
 
 From linux:   
 ```
-git clone https://github.com/amatur/selscan/
-cd selscan/src/
+git clone https://github.com/szpiech/selscan/
+cd selscan
+git checkout speedup
+cd src/
 make -f Makefile_linux
 ```
 
