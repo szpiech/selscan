@@ -1,6 +1,5 @@
 #include "ihh12.h"
-
-
+#include <cassert>
 
 pthread_mutex_t IHH12::mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
@@ -147,13 +146,13 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream){
+double IHH12::calc_ehh_unidirection(int locus, bool downstream){
+
+    double ihh12 = 0;
+    unordered_map<int, vector<int> > m;
+
     IHH12_ehh_data ehhdata;
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
-    bool &skipLocus = hm->mapData->mapEntries[locus].skipLocus;
-    if(skipLocus){ // from downstream
-        return;
-    }
 
     ehhdata.init(hm->hapData->nhaps, hm->hapData->hapEntries[locus].hapbitset);
     ehhdata.initialize_core(p.ALT);
@@ -187,13 +186,15 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
         breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
         if(breakReachedEdge){ //nextLocus < 0 || nextLocus >= numSnps to avoid going to negative
             pthread_mutex_lock(&mutex_log);
-            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". ";
-            if (p.TRUNC == false){
-                skipLocus = true;
-                (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[i].physicalPos << " id: " << hm->mapData->mapEntries[i].locusName;
-            }
-            (*flog) << "\n";
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
             pthread_mutex_unlock(&mutex_log);
+
+            if (p.TRUNC == false){
+                pthread_mutex_lock(&mutex_log);
+                (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[i].physicalPos << " id: " << hm->mapData->mapEntries[i].locusName <<endl;
+                pthread_mutex_unlock(&mutex_log);
+                return skipLocusDouble();
+            }
             break;
         }
 
@@ -205,7 +206,7 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
             pthread_mutex_lock(&mutex_log);
             (*flog) << "WARNING: Reached a gap of " << physicalDistance_old << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " <<  hm->mapData->mapEntries[i].physicalPos << " id: " <<  hm->mapData->mapEntries[i].locusName << "\n";
             pthread_mutex_unlock(&mutex_log);
-            skipLocus = true;
+            return skipLocusDouble();
             break;
         }
 
@@ -235,33 +236,8 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
         // }
         //distance = 1; // for testing
 
-        /*
-        if(downstream){
-            p1.v = hm->hapData->hapEntries[i+1].xors;
-            p2.v = hm->hapData->hapEntries[i+1].xors;
-            pooled.v = hm->hapData->hapEntries[i+1].xors;
-            pooled.v2 = hm->hapData2->hapEntries[i+1].xors;
-        }else{
-            p1.v = hm->hapData->hapEntries[i].xors;
-            p2.v = hm->hapData->hapEntries[i].xors;
-            pooled.v = hm->hapData->hapEntries[i].xors;
-            pooled.v2 = hm->hapData2->hapEntries[i].xors;
-        }
-        */
+
         ehhdata.v = hm->hapData->hapEntries[i].hapbitset;
-
-        // ensure that in boundary we don't do any calculation
-        // if(hm->hapData->hapEntries[i].positions.size() < ones_p1.size() && i!=nhaps1-1 ){
-        //     ones_p1 = hm->hapData->hapEntries[i].positions;
-        //     if(ones_p1.size()==0 or ones_p1.size()==nhaps1){ // integrity check
-        //         std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
-        //         throw 0;
-        //     }
-        // }
-
-        // main faster algorithm for ehh
-
-        //for p1
         ACTION_ON_ALL_SET_BITS(ehhdata.v, {
             int old_group_id = ehhdata.group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos); 
@@ -272,10 +248,9 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
 
         //DEBUG:: if(!downstream) cout<<"before ihh12"<<ihh12[locus]<<endl;
         if(p.ALT){
-            ihh12[locus] += 0.5 * (ehhdata.curr_ehh12_before_norm + ehhdata.prev_ehh12_before_norm)/square_alt(ehhdata.nhaps) * scale * distance ;
+            ihh12 += 0.5 * (ehhdata.curr_ehh12_before_norm + ehhdata.prev_ehh12_before_norm)/square_alt(ehhdata.nhaps) * scale * distance ;
         }else{
-            ihh12[locus] += 0.5  * (ehhdata.curr_ehh12_before_norm/twice_num_pair(ehhdata.nhaps) + ehhdata.prev_ehh12_before_norm/twice_num_pair(ehhdata.nhaps)) * scale * distance;
-
+            ihh12 += 0.5  * (ehhdata.curr_ehh12_before_norm/twice_num_pair(ehhdata.nhaps) + ehhdata.prev_ehh12_before_norm/twice_num_pair(ehhdata.nhaps)) * scale * distance;
         }
         double current_ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
         double previous_ehh1 = ehhdata.prev_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
@@ -289,92 +264,73 @@ void IHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & 
         if (physicalDistance_from_core(i, locus, downstream) >= max_extend) break;
         
     }
-    if(skipLocus==true){
-        ihh12[locus] = MISSING;
-    }
+    return ihh12;
 }
 
 
 void IHH12::main()
 {
     if(p.UNPHASED){
-        throw std::invalid_argument("Unphased analysis not yet supported for iHH12 calculations.");
+        throw std::invalid_argument("ERROR: Unphased analysis not supported for iHH12 calculations.");
+        exit(2);
     }
 
     int nloci = hm->mapData->nloci;
-    ihh12 = new double[nloci];
 
     std::cerr << "Starting iHH12 calculations."<<endl;
-    std::unordered_map<int, std::vector<int> >* map_per_thread = new std::unordered_map<int, std::vector<int> > [numThreads];
 
-    bool openmp_enabled = false; // two different ways to parallelize: first block does pthread, second block does openmp
-    if (!openmp_enabled)
-    {
-        //int total_calc_to_be_done = numSnps;
-        std::thread *myThreads = new std::thread[numThreads];
-        for (int i = 0; i < numThreads; i++)
-        {
-            myThreads[i] = std::thread(thread_main, i, std::ref(map_per_thread[i]), this);
-        }
-        for (int i = 0; i < numThreads; i++)
-        {
-            myThreads[i].join(); // Join will block our main thread, and so the program won't exit until all finish
-        }
-        delete[] myThreads;
 
-        (*flog)<<("All threads finished. Now printing xpihh...\n");
+    ThreadPool pool(p.numThreads);
+    std::vector< std::future<double> > results;
+    for(int i = 0; i <  hm->mapData->nloci; ++i) {
+        results.emplace_back(
+            pool.enqueue([i,this] {
+                return this->calc_stat_at_locus(i);
+            })
+        );
     }
 
-    std::cerr << "\nFinished.\n";
-
-    delete[] map_per_thread; // free memory
-
+    int i = 0;
     (*fout) << "id\tpos\tp1\tihh12\n";
-    for (int i = 0; i < hm->mapData->nloci; i++)
-    {
-        if (ihh12[i] != MISSING ) // !hm->mapData->mapEntries[i].skipLocus
-        {
+    for(auto && result: results){ // this is a blocking call
+        double ihh12 = result.get(); 
+
+        if(ihh12 != skipLocusDouble()){
             (*fout) << hm->mapData->mapEntries[i].locusName << "\t"
                     << hm->mapData->mapEntries[i].physicalPos << "\t"
                     //<< hm->mapData->mapEntries[i].geneticPos << "\t"
                     << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"
-                    << ihh12[i]  << endl;
+                    << ihh12  << endl;     
         }
-    }
 
+        i++;
+        assert(i <= hm->mapData->nloci);
+    }
+    //close fouts
+    fout->close();
     // hm->hapData->releaseHapData();
     // hm->hapData2->releaseHapData();
     // hm->mapData->releaseMapData();
-    delete[] ihh12;
+
 }
 
 /**
  * populate ihh_p1 and ihh_p2 at the end with correct values
 */
-void IHH12::calc_stat_at_locus(int locus, unordered_map<int, vector<int> >& m)
+double IHH12::calc_stat_at_locus(int locus)
 {
     //DEBUG: if(locus==239){
-    ihh12[locus] = 0;
-    calc_ehh_unidirection(locus, m, true);
-    // ihh12[locus] = 0;
-    calc_ehh_unidirection(locus, m, false);
-}
 
-void IHH12::thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj){
-    int numSnps = obj->hm->hapData->nloci;
-    int elem_per_block = floor(numSnps/obj->numThreads);
-    int start = tid*elem_per_block ;
-    int end = start + elem_per_block  ;
-    if(tid == obj->numThreads-1 ){
-        end = numSnps;
+    double ihh12_down = calc_ehh_unidirection(locus, true);
+    if(ihh12_down == skipLocusDouble()){
+        return skipLocusDouble();
     }
 
-    for(int locus = start; locus< end; locus++){
-        obj->calc_stat_at_locus(locus, m);
+    double ihh12_up = calc_ehh_unidirection(locus, false);
+    if(ihh12_up == skipLocusDouble()){
+        return skipLocusDouble();
     }
 
-    pthread_mutex_lock(&mutex_log);
-    (*(obj->flog))<<("finishing thread # "+to_string(tid)+" at "+to_string(SelscanStats::readTimer())+"\n");
-    pthread_mutex_unlock(&mutex_log);
+    return ihh12_down + ihh12_up;
 }
 

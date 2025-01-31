@@ -38,8 +38,6 @@ class EHHOutput{
 
 class EHH : public SelscanStats{
     public:
-        ofstream flog_obj;
-        ofstream fout_obj;
         EHH(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){    
             output.resize(hm->mapData->nloci);
             //iterate over all loci
@@ -47,10 +45,7 @@ class EHH : public SelscanStats{
                 locus_query_map[hm->mapData->mapEntries[i].locusName] = i;
                 locus_query_map[to_string(hm->mapData->mapEntries[i].physicalPos)] = i;
             }
-
-            flog = &flog_obj;
-            fout = &fout_obj;
-            init_flog_fout("ehh");
+            init_global_fout("ehh");
         }
         ~EHH(){
         }
@@ -74,7 +69,7 @@ class EHH : public SelscanStats{
             if (queryLoc < 0)
             {
                 cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-                cerr << "(WARNING: We filtered all sites below MAF cutoff. If you wish to calculate EHH for all sites, either change --maf or set --keep-low-freq.)" << endl;
+                //cerr << "WARNING: We filtered all sites below MAF cutoff. If you wish to calculate EHH for all sites, either change --maf or set --keep-low-freq." << endl;
                 return -1;
                 //throw 1;
             }else{

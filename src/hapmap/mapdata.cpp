@@ -231,7 +231,7 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
     
     string chr;
 
-    int n_chromosomes_included = 0;
+    //int n_chromosomes_included = 0;
     unsigned int locus_after_filter = 0;
     for (unsigned  int locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
     {
@@ -247,8 +247,6 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
             }
         }
         
-        
-        
         fin >> mapEntries[locus_after_filter].chr;
         fin >> mapEntries[locus_after_filter].physicalPos;
         fin >> mapEntries[locus_after_filter].locusName;
@@ -256,12 +254,10 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
         //locus_query_map[to_string(mapEntries[locus_after_filter].physicalPos)] = locus_after_filter;
         mapEntries[locus_after_filter].locId = locus_before_filter;
 
-
         //if exists in map do nothing else insert
-        if(chr_list.find(mapEntries[locus_after_filter].chr) == chr_list.end()){
-            chr_list[mapEntries[locus_after_filter].chr] = n_chromosomes_included++;
-        }
-
+        // if(chr_list.find(mapEntries[locus_after_filter].chr) == chr_list.end()){
+        //     chr_list[mapEntries[locus_after_filter].chr] = n_chromosomes_included++;
+        // }
 
         mapEntries[locus_after_filter].geneticPos = (long double)(mapEntries[locus_after_filter].physicalPos)/Mb;
         //cout<<mapEntries[locus_after_filter].geneticPos<<" "<<mapEntries[locus_after_filter].physicalPos<<endl;
@@ -269,10 +265,10 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
         locus_after_filter++;
     }
 
-    if(chr_list.size() == 0){
-        cerr<<"ERROR: No chromosomes found in map file.\n";
-        throw 0;
-    }
+    // if(chr_list.size() == 0){
+    //     cerr<<"ERROR: No chromosomes found in map file.\n";
+    //     throw 0;
+    // }
     
     fin.close();
 }

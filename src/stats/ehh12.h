@@ -5,12 +5,8 @@
 
 class EHH12 : public SelscanStats{
     public:
-        ofstream flog_obj;
-        ofstream fout_obj;
         EHH12(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){    
-            flog = &flog_obj;
-            fout = &fout_obj;
-            init_flog_fout("ehh12");
+            init_global_fout("ehh12");
         }
         void calc_single_ehh(string query);
         

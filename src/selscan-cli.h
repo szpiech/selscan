@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "v2.1_Jan12_Multistat";
+const string VERSION = "2.1_Jan30_working_on_xp";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -103,6 +103,19 @@ const string DEFAULT_FILENAME_POP2 = "__hapfile2";
 const string HELP_FILENAME_POP2 = "A hapfile with one row per haplotype, and one column per\n\
 \tvariant. Variants should be coded 0/1. This is the 'reference'\n\
 \tpopulation for XP calculations.  Ignored otherwise.";
+
+
+const string ARG_FILENAME_POP1_THAP = "--thap";
+const string DEFAULT_FILENAME_POP1_THAP = "__thapfile1";
+const string HELP_FILENAME_POP1_THAP = "A hapfile in IMPUTE hap format with one column per haplotype, and one row per\n\
+\tvariant. Variants should be coded 0/1";
+
+const string ARG_FILENAME_POP2_THAP = "--thap-ref";
+const string DEFAULT_FILENAME_POP2_THAP = "__thapfile2";
+const string HELP_FILENAME_POP2_THAP = "A hapfile in IMPUTE hap format with one column per haplotype, and row per\n\
+\tvariant. Variants should be coded 0/1. This is the 'reference'\n\
+\tpopulation for XP calculations.  Ignored otherwise.";
+
 
 const string ARG_FILENAME_MAP = "--map";
 const string DEFAULT_FILENAME_MAP = "__mapfile";
@@ -190,7 +203,7 @@ const string HELP_QWIN = "When calculating EHH, this is the length of the window
 \tin each direction from the query locus.";
 
 const string ARG_MAX_EXTEND = "--max-extend";
-const int DEFAULT_MAX_EXTEND = 1000000;//1000000
+const int DEFAULT_MAX_EXTEND = 1000000;         //1000000
 const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
 \tSet <= 0 for no restriction.";
 
@@ -200,7 +213,7 @@ const string HELP_MAX_EXTEND_NSL = "The maximum distance an nSL haplotype is all
 \tSet <= 0 for no restriction.";
 
 const string ARG_SKIP = "--skip-low-freq";
-const bool DEFAULT_SKIP = false;
+const bool DEFAULT_SKIP = true;
 const string HELP_SKIP = "**This flag is now on by default. If you want to include low frequency variants\n\
 in the construction of your haplotypes please use the --keep-low-freq flag.";
 
@@ -230,14 +243,13 @@ const string ARG_MISSING_FLAG = "--missing";
 const bool DEFAULT_MISSING_FLAG = false;
 const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
-const string ARG_MULTI_CHR = "--multi-chr";
-const string DEFAULT_MULTI_CHR = "__NO_CHR__";
-const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
+// const string ARG_MULTI_CHR = "--multi-chr";
+// const string DEFAULT_MULTI_CHR = "__NO_CHR__";
+// const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
 
 const string ARG_IMPUTE_FLAG = "--impute";
 const bool DEFAULT_IMPUTE_FLAG = false;
 const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
-
 
 const string ARG_MULTI_PARAMS = "--multi-param";
 const string DEFAULT_MULTI_PARAMS = "__jsonFile";

@@ -15,7 +15,7 @@ struct MapEntry
     string locusName;
     string chr;
     int locId;
-    bool skipLocus = false;
+    //bool skipLocus = false;
 };
 
 class MapData
@@ -23,7 +23,8 @@ class MapData
 public:
     struct MapEntry* mapEntries = NULL; //vector of map entries
     int nloci;
-    map<string, int> chr_list;
+    
+    //map<string, int> chr_list;
     
     //map<string, int> locus_query_map;
     

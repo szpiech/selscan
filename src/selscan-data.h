@@ -161,7 +161,7 @@ public:
      * throws an exception otherwise
      */ 
     void initParamsInHap(HapData& hap);
-    void readHapData(string filename, HapData& hap);
+    void readHapDataTHAP(string filename, HapData& hap);
     void readHapDataTPED(string filename, HapData& hap);
     void readHapDataVCF(string filename, HapData& hap);
     void readHapDataVCFMissing(string filename, HapData& hap);

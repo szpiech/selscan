@@ -13,6 +13,7 @@ const string ARG_HELP = "--help";
 
 struct param_main{
     string hapFilename, hapFilename2 ;
+    string thapFilename, thapFilename2 ;
     string mapFilename;
     string tpedFilename, tpedFilename2;
     string vcfFilename, vcfFilename2 ;
@@ -21,7 +22,7 @@ struct param_main{
     string outFilename;
     string query;
 
-    bool TPED, VCF;
+    bool TPED, VCF, THAP;
 
     int SCALE_PARAMETER, MAX_GAP;
     double EHH_CUTOFF;
@@ -46,8 +47,8 @@ struct param_main{
     bool CALC_PI;
     int PI_WIN;
 
-    bool MULTI_CHR;
-    string CHR_LIST;
+    // bool MULTI_CHR;
+    // string CHR_LIST;
 
     string benchmark_flag = "NO_XOR";//XOR
     string benchmark_flag2 = ""; //"FLIP";

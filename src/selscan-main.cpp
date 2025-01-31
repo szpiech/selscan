@@ -84,9 +84,15 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
 {            
     if (hm->mapData->nloci < p.numThreads)
     {
-        p.numThreads = 1;
+        p.numThreads = hm->mapData->nloci; // p.numThreads = 1;
         cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
         *(hm->flog) << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
+    }
+
+    int max_supported_thread = std::thread::hardware_concurrency();
+    if(p.numThreads > max_supported_thread){
+        cerr << "WARNING: Requested "<< p.numThreads<<" threads, but maximum number of threads supported by hardware is "<< max_supported_thread <<"."<<endl;
+        *(hm->flog) << "WARNING: Requested "<< p.numThreads<<" threads, but maximum number of threads supported by hardware is "<< max_supported_thread <<"."<<endl;
     }
 
     /*
@@ -123,7 +129,7 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
         EHH ehhfinder(hm, p);
         if (p.CALC_SOFT)
         {
-            throw("ERROR: Soft EHH not implemented yet.\n");
+            throw runtime_error("ERROR: Soft EHH not implemented yet.\n");
             exit(1);
         }
         else
@@ -188,7 +194,7 @@ int main(int argc, char *argv[])
     }
     cerr << "\n";
 
-    cerr << "Max threads supported by hardware: "<<std::thread::hardware_concurrency()<<endl;
+    
 
 
 // #ifdef PTW32_STATIC_LIB
@@ -199,18 +205,10 @@ int main(int argc, char *argv[])
     ofstream* flog;
 
     param_t params;
-
+    param_main p;
     try{
         initalizeParameters(params,argc,argv);
-    }catch(const std::exception& e){
-        cerr<<"ERROR: "<<e.what()<<endl;
-        return 1;
-    }
-
-    param_main p;
-    getBaseParamFromCmdLine(params, p);
-
-    try{
+        getBaseParamFromCmdLine(params, p);
         checkParameters(p);
     }catch(const std::exception& e){
         cerr<<"ERROR: "<<e.what()<<endl;
@@ -219,7 +217,6 @@ int main(int argc, char *argv[])
     
     ofstream flog_fs;
     flog = &flog_fs;
-
     // start logging
     string logFilename = getLogFileName(p);
     (*flog).open(logFilename);
@@ -237,10 +234,10 @@ int main(int argc, char *argv[])
     (*flog) << "\n";
 
 
-    if(p.MULTI_CHR){
-        (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
-        cerr << "WARNING: Running in multi-chromosome mode.\n";
-    }
+    // if(p.MULTI_CHR){
+    //     (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
+    //     cerr << "WARNING: Running in multi-chromosome mode.\n";
+    // }
 
     if(p.MULTI_PARAMS){
         //TODON
@@ -275,7 +272,7 @@ int main(int argc, char *argv[])
     *flog << ("Total CPU time: " + to_string(time_end - time_start) + " s. \n");
     *flog << "Program took " << duration.count() << " seconds to complete." << std::endl;
     
-    //end logging
+    // // END LOGGING
     flog->close();
 
 

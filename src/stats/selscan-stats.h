@@ -17,11 +17,29 @@
 
 /// @brief Class to hold common stuff required to compute all statistics for selscan
 class SelscanStats {
+    protected:
+        bool inline skipLocus(pair<double, double> p){
+            return (p.first == -9999 || p.second ==  -9999 );
+        }
+
+        pair<double, double> inline skipLocusPair(){
+            return make_pair(-9999,-9999);
+        }
+        int inline skipLocusInt(){
+            return -9999;
+        }
+
+        double inline skipLocusDouble(){
+            return -9999;
+        }
+
     public:
         const std::unique_ptr<HapMap>& hm;
         const param_main p;
         ofstream* flog;
         ofstream* fout;
+        ofstream fout_obj;
+
         int numThreads;
 
     string get_filename_base(string statname){
@@ -35,18 +53,21 @@ class SelscanStats {
         return outFilename;
     }
 
-    void init_multi(){
-        //open multiple filestream for all item in chrlist
-        ofstream* fouts[hm->mapData->chr_list.size()];
-        for (const auto& [chr, i] : hm->mapData->chr_list){
-            cout<<chr<<" " <<i<<endl;
-            string filename = get_filename_base("ihs") + "." + chr ;
-            fouts[i] = new ofstream(filename);
-        }
-    }
+    // void init_multi(){
+    //     //open multiple filestream for all item in chrlist
+    //     ofstream* fouts[hm->mapData->chr_list.size()];
+    //     for (const auto& [chr, i] : hm->mapData->chr_list){
+    //         cout<<chr<<" " <<i<<endl;
+    //         string filename = get_filename_base("ihs") + "." + chr ;
+    //         fouts[i] = new ofstream(filename);
+    //     }
+    // }
 
-    void init_flog_fout(string statname){
+    void init_global_fout(string statname){
         string outFilename = get_filename_base(statname);
+        fout_obj.open(outFilename+".out");
+        fout = &fout_obj;
+
         (*flog) << "\nv" + VERSION + "\nCalculating ";
         if (statname == "ihs") (*flog) << " iHS.\n";
         else if (statname == "nsl") (*flog) << " nSL.\n";
@@ -78,7 +99,8 @@ class SelscanStats {
         (*flog) << "Max gap parameter: " << p.MAX_GAP << "\n";
         (*flog) << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
                 (*flog) << "Minimum maf cutoff: " << p.MAF << "\n";
-        (*flog) << "Missing value: " << p.MISSING_ALLOWED << "\n";
+        
+        //(*flog) << "Missing value: " << p.MISSING_ALLOWED << "\n";
 
         (*flog) << "Phased: ";
         if(p.UNPHASED) (*flog) << "no\n";
@@ -87,12 +109,10 @@ class SelscanStats {
         if (p.ALT) (*flog) << "yes\n";
         else (*flog) << "no\n";
 
-
-        if (p.ALT) (*flog) << "Missing handle mode: \n";
-        else (*flog) << p.MISSING_MODE << "\n";
         (*flog).flush();
         
     }
+        
         //SelscanStats(const std::unique_ptr<HapMap>& hm, param_main& p,  ofstream* flog,  ofstream* fout): hm(hm), p(p){
         SelscanStats(const std::unique_ptr<HapMap>& hm, param_main& p): hm(hm), p(p){
             this->numThreads = p.numThreads;
@@ -101,6 +121,7 @@ class SelscanStats {
         }
 
         ~SelscanStats(){
+            fout->close();
             //flog->close();
         }
         
@@ -251,24 +272,47 @@ class SelscanStats {
                 if(locus+1 >= hm->hapData->nloci){
                     return true;
                 }
-                if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
-                    cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
-                    return true;
-                }
+                // when hm->p.MULTI_CHR is enabled
+                // if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
+                //     cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
+                //     return true;
+                // }
             }else{
                 if(locus-1 < 0){
                     return true;
                 }
-                if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
-                    cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
-                    return true;
-                }
+                // if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
+                //     cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
+                //     return true;
+                // }
             }
             return false;
         }
 
-        int getChrIdxFromLoc(int locus){
-            return hm->mapData->chr_list[hm->mapData->mapEntries[locus].chr];
+        // // hm->p.MULTI_CHR
+        // int getChrIdxFromLoc(int locus){
+        //     return hm->mapData->chr_list[hm->mapData->mapEntries[locus].chr];
+        // }
+
+        inline MyBitset* get_all_1s(int locus, bool downstream = false){
+            if(p.benchmark_flag == "XOR" && !p.UNPHASED){
+                return hm->hapData->hapEntries[locus].xorbitset;
+                MyBitset* v2p = downstream? hm->hapData->hapEntries[locus+1].xorbitset : hm->hapData->hapEntries[locus].xorbitset;
+                if( (hm->hapData->hapEntries[locus].hapbitset->num_1s < v2p->num_1s && locus!=hm->hapData->nhaps-1)){ // ensure that in boundary we don't do any xor calculation
+                    return v2p;
+                }       
+            }
+            return hm->hapData->hapEntries[locus].hapbitset;
+        }
+        inline MyBitset* get_all_2s(int locus, bool downstream = false){
+            return hm->hapData->hapEntries[locus].xorbitset;
+        }
+
+        inline MyBitset* get_all_1s_pop2(int locus, bool downstream = false){
+            return hm->hapData2->hapEntries[locus].hapbitset;
+        }
+        inline MyBitset* get_all_2s_pop2(int locus, bool downstream = false){
+            return hm->hapData2->hapEntries[locus].xorbitset;
         }
 };
 

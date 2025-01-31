@@ -59,6 +59,7 @@ void HapData::releaseHapData()
 }
 
 void HapData::xor_for_phased_and_unphased(){
+    // disabling XOR for now
     if(!unphased){
         if(MISSING_ALLOWED){
             return;

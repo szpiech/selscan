@@ -10,7 +10,7 @@
 
 #for osx/macos-arm systems
 CC = g++-14 -std=c++17 
-G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize -g
+G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize -g -Wno-psabi 
 #-g 
 #-march=native
 #-Og -g

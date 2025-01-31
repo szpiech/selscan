@@ -2,6 +2,8 @@
 #define __IHH12_H__
 
 #include "selscan-stats.h"
+#include "../thread_pool.h"
+
 #include <thread>
 #include <unordered_map>
 
@@ -105,16 +107,9 @@ class IHH12_ehh_data{
 
 class IHH12 : public SelscanStats{
     public:
-        ofstream flog_obj;
-        ofstream fout_obj;
-
         IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){
-            flog = &flog_obj;
-            fout = &fout_obj;
             max_extend = ( p.MAX_EXTEND <= 0) ? hm->mapData->mapEntries[hm->mapData->nloci-1].physicalPos -  hm->mapData->mapEntries[0].physicalPos : p.MAX_EXTEND  ;
-            init_flog_fout("ihh12");
-        }
-        ~IHH12(){
+            init_global_fout("ihh12");
         }
         void main();
         void findMaxTwo(int* arr, int n, int &max1, int &max2);
@@ -122,13 +117,11 @@ class IHH12 : public SelscanStats{
 
     private:
         static pthread_mutex_t mutex_log;
-        double* ihh12;
-
         int max_extend;
 
-        void calc_stat_at_locus(int locus, unordered_map<int, vector<int> >& m);
-        void calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream);
-        void static thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj);
+        double calc_stat_at_locus(int locus);
+        double calc_ehh_unidirection(int locus, bool downstream);
+        //void static thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj);
 
         void updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* p);
 };

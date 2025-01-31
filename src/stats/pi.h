@@ -8,15 +8,11 @@ using namespace std;
 
 class PI: public SelscanStats{
     public:
-        ofstream flog_obj;
-        ofstream fout_obj;
         PI(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){  
-            flog = &flog_obj;
-            fout = &fout_obj;
-            init_flog_fout("pi");    
+            init_global_fout("pi");    
                
             if(p.UNPHASED){
-                cerr<<("ERROR: Unphased data not supported for PI calculation");
+                cerr<<("ERROR: --pi and --unphased currently incompatible.");
                 exit(1);
             } 
             this->winsize = p.PI_WIN;    

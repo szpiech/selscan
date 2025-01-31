@@ -52,7 +52,11 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
         group_count[0] = numHaps;
         totgc+=1;
         curr_ehh0_before_norm = normalizer_0;
-        hm->mapData->mapEntries[locus].skipLocus = true;
+
+        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "<<endl;
+        output[locus].print = false;
+        return;
     }else if (n_c1==numHaps){ // all 1s
         group_count[0] = numHaps;
         totgc+=1;
@@ -63,7 +67,12 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
         });
         
         curr_ehh1_before_norm = normalizer_1;
-        hm->mapData->mapEntries[locus].skipLocus = true;
+
+
+        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "<<endl;
+        output[locus].print = false;
+        return;
     }else{  //so both n_c1 and n_c0 is non-0
         group_count[1] = n_c1;
         group_count[0] = n_c0;
@@ -72,12 +81,6 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
             isDerived[set_bit_pos] = true;
             group_id[set_bit_pos] = 1;
         });
-        
-
-        if(hm->mapData->mapEntries[locus].skipLocus){
-            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-                    << " (number " << locus << ") is monomorphic. \n";
-        }
         
         totgc+=2;
         curr_ehh0_before_norm = normalizer_0;

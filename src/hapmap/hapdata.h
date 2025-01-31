@@ -98,7 +98,7 @@ public:
     int nhaps;
     bool unphased = false;
     bool MISSING_ALLOWED = false;
-    bool MULTI_CHR = false;
+    // bool MULTI_CHR = false;
     bool MULTI_MAF = false;
 
     // string MULTI_CHR_LIST = "";
