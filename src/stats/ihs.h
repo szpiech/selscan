@@ -10,17 +10,15 @@ using namespace std;
 class IHS: public SelscanStats{
     public:
         IHS(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){  
-            if(p.CALC_NSL && !p.CALC_IHS){
-                this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
-                init_global_fout("nsl");
-            }else{
-                this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
-                init_global_fout("ihs");
-            }
+
         }
         void main(); 
         pair<double, double> calc_ihh1(int locus);  
         pair<double, double> infer_missing(int locus);  
+
+    protected:
+        void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core);
+        string getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0);
 
     private:
         static pthread_mutex_t mutex_log;
@@ -31,8 +29,6 @@ class IHS: public SelscanStats{
 
         //unphased_ihs  
         pair<double, double> calc_ehh_unidirection_unphased(int locus, bool downstream, double& cihh2, double& cihh0);
-        void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core);
-        string getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0);
 
         // missing support
         pair<double, double> calc_ehh_unidirection_missing(int locus, bool downstream);

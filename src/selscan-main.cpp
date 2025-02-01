@@ -40,6 +40,7 @@
 #include "stats/xpihh.h"
 #include "stats/ihh12.h"
 #include "stats/pi.h"
+#include "stats/ehh12.h"
 
 
 #include <unordered_map>
@@ -127,15 +128,11 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     if (p.SINGLE_EHH)
     {
         EHH ehhfinder(hm, p);
-        if (p.CALC_SOFT)
-        {
-            throw runtime_error("ERROR: Soft EHH not implemented yet.\n");
-            exit(1);
-        }
-        else
-        {
-            ehhfinder.calc_single_ehh(p.query); // query_locus
-        }
+        ehhfinder.main(p.query); // query_locus
+    }
+    if (p.SINGLE_EHH12){
+        EHH12 ehh12finder(hm, p);
+        ehh12finder.main(p.query); // query_locus
     }
     if (p.CALC_IHS)
     {

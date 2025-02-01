@@ -1,254 +1,157 @@
-// #include "ehh12.h"
+#include "ehh12.h"
 
 
-// /**
-//  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
-// */
-// void EHH12::calc_ehh_unidirection(int locus, unordered_map<int, vector<int> > & m, bool downstream){
-//     int numHaps = hm.hapData.nhaps;
-//     int numSnps = hm.mapData.nloci;
-//     bool unphased = p.UNPHASED;
 
-//     int total_iteration_of_m = 0;
-//     double ehh_before_norm = 0;
-//     double ehh0_before_norm = 0;
-//     double ehh1_before_norm = 0;
 
-//     bool gap_skip = false;
+/**
+ * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
+*/
+void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
-//     uint64_t n_c0=0;
-//     uint64_t n_c1=0;
+    double ihh12 = 0;
+    unordered_map<int, vector<int> > m;
 
-//     uint64_t &ancestralCount = n_c0;
-//     uint64_t &derivedCount = n_c1;
+    EHH12_ehh_data ehhdata;
+    int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
 
-//     uint64_t core_n_c0=0;
-//     uint64_t core_n_c1=0;
+    ehhdata.init(hm->hapData->nhaps, get_all_1s(locus));
+    ehhdata.initialize_core(p.ALT);
 
-//     int group_count[numHaps];
-//     int group_id[numHaps];
-//     bool isDerived[numHaps];
-//     bool isAncestral[numHaps];
 
-//     //will be vectorized with compile time flags
-//     for(int i = 0; i<numHaps; i++){
-//         group_count[i] = 0;
-//         group_id[i] = 0;
-//         isDerived[i] = false;
-//         isAncestral[i] = false;
-//     }
+    output[locus].ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
+    output[locus].ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
+    output[locus].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / twice_num_pair(ehhdata.nhaps);
 
-//     int totgc=0;
-//     vector<int> v = hm.hapData.hapEntries[locus].positions;
+    int i = locus;
+    while(true){
+
+        if(physicalDistance_from_core(i, locus, downstream) >= p.QWIN){ //check if currentLocus is beyond 1Mb
+            break;
+        }
+
+        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
+        if(breaking_ehh <= p.EHH_CUTOFF){
+            /*DEBUG :
+            if(downstream){
+                cout<<"breaking ehh down: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
+            }else{
+                cout<<"breaking ehh up: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
+            }
+             */
+            break;
+        }
+
+        bool breakReachedEdge = false;
+        breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
+        if(breakReachedEdge){ //nextLocus < 0 || nextLocus >= numSnps to avoid going to negative
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
+            break;
+        }
+
+        //at this point we ensured that nextLocus (i-1 or i+1) is within bounds
+        i = downstream? i-1 : i+1; //proceed to next locus
+        // int physicalDistance_old = physicalDistance(i,downstream); //double check if i or nextlocus
+        // if (physicalDistance_old > p.MAX_GAP)
+        // {
+        //     (*flog) << "WARNING: Reached a gap of " << physicalDistance_old << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " <<  hm->mapData->mapEntries[i].physicalPos << " id: " <<  hm->mapData->mapEntries[i].locusName << "\n";
+        //     return;
+        // }
+
+        ehhdata.v = get_all_1s(i);
+        ACTION_ON_ALL_SET_BITS(ehhdata.v, {
+            int old_group_id = ehhdata.group_id[set_bit_pos];
+            m[old_group_id].push_back(set_bit_pos); 
+        });
+        
+        updateEHH_from_split(m, &ehhdata);
+        m.clear();
+
+        //if(!downstream) cout<<current_ehh1<<" "<<previous_ehh1<<" "<<current_ehh12<<" "<<previous_ehh12<<" "<<ihh12[locus] <<" "<<scale * distance<< endl;
+
+        output[i].ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
+        output[i].ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
+        output[i].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / twice_num_pair(ehhdata.nhaps);
+
+        if (physicalDistance_from_core(i, locus, downstream) >= p.QWIN) break;
+        
+    }
+}
+
+void EHH12::main(string query){
+    init_global_fout("ehh12");
     
-//     if(v.size() == 0 or  v.size() == numHaps){
-//         std::cerr<<"ERROR: Monomorphic site should not exist";
-//         throw 0;
-//     }
+    int numSnps = hm->mapData->nloci;
+    int numHaps = hm->hapData->nhaps;
 
-//     hm.hapData.hapEntries[locus].flipped = false;
-//     if(hm.hapData.hapEntries[locus].flipped){
-//         group_count[1] = v.size();
-//         group_count[0] = numHaps - v.size();
-//         n_c0 = v.size();
-//         n_c1 = numHaps - v.size();
+    int locus = this->queryFound(query);
+    if(locus == -1){
+        return;
+    }
 
-//         for (int set_bit_pos : v){
-//             isAncestral[set_bit_pos] = true;
-//             group_id[set_bit_pos] = 1;
-//         }
-//     }else{
-//         group_count[1] = v.size();
-//         group_count[0] = numHaps - v.size();
-//         n_c1 = v.size();
-//         n_c0 = numHaps - v.size();
+    if(p.UNPHASED){
+        throw "ERROR: --unphased and --ehh12 not compatible";
+        exit(EXIT_FAILURE);
+    }else{
+        calc_ehh12_unidirection(locus, true); // downstream
+        calc_ehh12_unidirection(locus, false); // upstream
 
-//         for (int set_bit_pos : v){
-//             isDerived[set_bit_pos] = true;
-//             group_id[set_bit_pos] = 1;
-//         }
-//     }        
-//     totgc+=2;
-//     ehh0_before_norm = twice_num_pair(n_c0);
-//     ehh1_before_norm = twice_num_pair(n_c1);
-//     ehh_before_norm = (twice_num_pair(n_c0)+twice_num_pair(n_c1));
-//     //twice_num_pair(n_c1+n_c0);
+        (*fout) << std::fixed <<   "pdist\tgdist\tehh1\tehh12\tehh2d1" << "\n";
+        for (int i = 0; i < numSnps; i++){
+            if(!output[i].print){
+                continue;
+            }
 
-    
-//     int i = locus;  
-//     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
-//         if(downstream){
-//             if (--i < 0) break;
-//             //if (hm.mentries[locus].phyPos - hm.mentries[i].phyPos > max_extend) break;
-//         }else{
-//             if (++i >= numSnps) break;
-//             //if (hm.mentries[i].phyPos -hm.mentries[locus].phyPos > max_extend) break;
-//         }
-        
-        
-//         //if(curr_ehh1_before_norm*1.0/n_c1_squared_minus < cutoff and curr_ehh0_before_norm*1.0/n_c0_squared_minus < cutoff){
-        
-//         ///*
-//         if(ehh1_before_norm*1.0/twice_num_pair(n_c1) <= p.EHH_CUTOFF or ehh0_before_norm*1.0/twice_num_pair(n_c0)  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
-//             //std::cout<<"breaking"<<endl;
-//             break;
-//         }
-//         //*/
-//         double distance;
-        
-//         if(downstream){
-//             distance = hm.mapData.mapEntries[i+1].physicalPos - hm.mapData.mapEntries[i].physicalPos;
-//         }else{
-//             distance = hm.mapData.mapEntries[i].physicalPos - hm.mapData.mapEntries[i-1].physicalPos;
-//         }
-
-//         // this should not happen as we already did integrity check previously
-//         if (distance < 0)
-//         {
-//             std::cerr << "ERROR: physical position not in ascending order.\n"; 
-//             throw 0;
-//         }
-        
-        
-//         if(downstream){
-//             v = hm.hapData.hapEntries[i+1].xors;
-//         }else{
-//             v = hm.hapData.hapEntries[i].xors;
-//         }
-
-//         if(hm.hapData.hapEntries[i].positions.size() < v.size() && i!=numHaps-1 ){ //  dont do in boundary
-//             v = hm.hapData.hapEntries[i].positions;
-//         }
-        
-//         for (const int& set_bit_pos : v){
-//             int old_group_id = group_id[set_bit_pos];
-//             m[old_group_id].push_back(set_bit_pos);
-//         }
-
-//         for (const auto &ele : m) {
-            
-//             int old_group_id = ele.first;
-//             int newgroup_size = ele.second.size() ;
-                            
-//             total_iteration_of_m += newgroup_size;
-                            
-//             if(group_count[old_group_id] == newgroup_size || newgroup_size == 0){
-//                 continue;
-//             }
-
-//             for(int v: ele.second){
-//                 group_id[v] = totgc;
-//             }
-            
-//             double del_update = -twice_num_pair(group_count[old_group_id]) + twice_num_pair(newgroup_size) + twice_num_pair(group_count[old_group_id] - newgroup_size);
-//             if(p.ALT){
-//                 del_update = -square_alt(group_count[old_group_id]) +   square_alt(newgroup_size) + square_alt(group_count[old_group_id] - newgroup_size);
-//             }
-            
-//             group_count[old_group_id] -= newgroup_size;
-//             group_count[totgc] += newgroup_size;
-            
-//             totgc+=1;
-            
-//             ehh_before_norm += del_update;
-
-//             //bool isDerivedGroup =  (!hm.hapData.hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm.hapData.hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
-//                 bool isDerivedGroup = isDerived[ele.second[0]];
-//             if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
-//             {
-//                 ehh1_before_norm += del_update;
-//             }else{
-//                 ehh0_before_norm += del_update;
-//             }
-//         }
-//         m.clear();
-        
-
-//         //printing 
-
-//         double current_derived_ehh; 
-//         double current_ancestral_ehh;
-//         double current_ehh;
-        
-//         if(p.ALT){
-//             current_ehh = ehh_before_norm*1.0/square_alt(n_c1+n_c0);
-//             current_derived_ehh = ehh1_before_norm*1.0/square_alt(n_c1);
-//             current_ancestral_ehh  = ehh0_before_norm*1.0/square_alt(n_c0);
-            
-//         }else{
-//             current_ehh = ehh_before_norm*1.0/twice_num_pair(n_c1+n_c0);
-//             current_derived_ehh = ehh1_before_norm*1.0/twice_num_pair(n_c1);
-//             current_ancestral_ehh  = ehh0_before_norm*1.0/twice_num_pair(n_c0);
-            
-//         }
-
-//         if(downstream){
-//             (*fout) << std::fixed <<   -int(hm.mapData.mapEntries[locus].physicalPos -  hm.mapData.mapEntries[i].physicalPos)  << "\t"
-//             <<  -(hm.mapData.mapEntries[locus].geneticPos -  hm.mapData.mapEntries[i].geneticPos)<< "\t"
-//             << current_derived_ehh << "\t"
-//             << current_ancestral_ehh << "\t";
-//         }else{
-//             (*fout) << std::fixed <<   hm.mapData.mapEntries[i].physicalPos -  hm.mapData.mapEntries[locus].physicalPos  << "\t"
-//             <<  hm.mapData.mapEntries[i].geneticPos -  hm.mapData.mapEntries[locus].geneticPos<< "\t"
-//             << current_derived_ehh << "\t"
-//             << current_ancestral_ehh << "\t";
-//         }
-
-//         /*
-//         cout<<"Iter "<<i-locus<<": EHH1["<<locus<<","<<i<<"]=";
-
-//         for (int x = 0 ; x < totgc;  x++){
-//             cout<<group_count[x]<<"("<<x<<")";
-//         }
-
-//         //print all elements of vector v
-//         for (int x = 0 ; x < v.size();  x++){
-//             cout<<v[x]<<" ";
-//         }
-        
-//         cout<<endl;
-//         */
-
-            
-//         if(unphased){
-//             //(*fout) << current_notAncestral_ehh << "\t"
-//             //        << current_notDerived_ehh << "\t";
-//         }
-//         (*fout) << current_ehh << endl;
-//     }
-// }
+            fout->precision(6);
+            (*fout) << std::fixed <<   output[i].pdist  << "\t"
+            <<  output[i].gdist << "\t"
+            << output[i].ehh1 << "\t"
+            << output[i].ehh12  << "\t"
+            << output[i].ehh2d1  << "";
+            (*fout) << endl;
+        }
+    }
+}
 
 
-// /**
-//  * @brief Calculate the EHH for a single locus
-//  * @param query The query locus name
-// */
-// void EHH::calc_single_ehh(string query){
-//     int numSnps = hm.mapData.nloci;
-//     int numHaps = hm.hapData.nhaps;
 
-//     //TODO
-//     int locus = hm.queryFound(query);
+void EHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, EHH12_ehh_data* ehhdata){
+    double sum_del_update = 0;
+    for (const auto &ele : m) {
+        int old_group_id = ele.first;
+        int newgroup_size = ele.second.size() ;
 
-//     unordered_map<int, vector<int> > m;
-    
-//     //calc_ehh_unidirection(locus, m, true); // downstream
-//     calc_ehh_unidirection(locus, m, false); // upstream
-// }
+        if(ehhdata->group_count[old_group_id] == newgroup_size || newgroup_size == 0){ //if a group becomes empty, we don't increment num_groups, we just reuse that group
+            continue;
+        }
 
-// // /**
-// //  * @brief Calculate the EHH for a single locus
-// //  * @param query The query locus phys pos
-// // */
-// // void EHH::calc_single_ehh(int query){
-// //     int numSnps = hm.mapData.nloci;
-// //     int numHaps = hm.hapData.nhaps;
+        for(int v: ele.second){
+            ehhdata->group_id[v] = ehhdata->totgc;
+        }
 
-// //     //TODO
-// //     int locus = hm.queryFound(query);
-    
-// //     unordered_map<int, vector<int> > m;
-// //     calc_ehh_unidirection(locus, m, false); // upstream
-// //     calc_ehh_unidirection(locus, m, true); // downstream
-    
-// // }
+        double del_update = -twice_num_pair(ehhdata->group_count[old_group_id]) + twice_num_pair(newgroup_size) + twice_num_pair(ehhdata->group_count[old_group_id] - newgroup_size);
+        if(p.ALT){
+            del_update = -square_alt(ehhdata->group_count[old_group_id]) +   square_alt(newgroup_size) + square_alt(ehhdata->group_count[old_group_id] - newgroup_size);
+        }
+
+        ehhdata->group_count[old_group_id] -= newgroup_size;
+        ehhdata->group_count[ehhdata->totgc] += newgroup_size;
+        ehhdata->totgc += 1;
+
+        sum_del_update += del_update;
+    }
+    ehhdata->curr_ehh_before_norm += sum_del_update;
+    int top1, top2;
+    findMaxTwo(ehhdata->group_count, ehhdata->totgc, top1, top2);
+
+    double firstFreq = (top1 > 1) ? twice_num_pair(top1) : 0;
+    double secondFreq =(top2 > 1) ?  twice_num_pair(top2): 0;
+    double comboFreq = ((top1 + top2) > 1) ? twice_num_pair((top1 + top2)) : 0;
+    double normfac = twice_num_pair(ehhdata->nhaps);
+
+    ehhdata->curr_ehh12_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq - secondFreq + comboFreq;
+
+    ehhdata->curr_ehh12d1_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq;
+
+    //ehhdata->curr_ehh12_before_norm *= normfac;
+    //cout<<"t1 t2 "<<top1<<" "<<top2<<" "<<firstFreq/normfac<<" "<<secondFreq/normfac<<" "<< comboFreq/normfac<<endl;
+}

@@ -139,22 +139,9 @@ class XPIHH_ehh_data_unphased: public XPIHH_ehh_data{
 
 class XPIHH : public SelscanStats{
     public:
-        ofstream flog_obj;
-        ofstream fout_obj;
-        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){
-            flog = &flog_obj;
-            fout = &fout_obj;
-            if(p.CALC_XPNSL){
-                this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
-                init_global_fout("xpnsl");
-            }else{
-                this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
-                init_global_fout("xpihh");
-            }
-        }
+        XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){}
         void main();
-        ~XPIHH(){
-        }
+        ~XPIHH(){}
 
     private:
         static pthread_mutex_t mutex_log;

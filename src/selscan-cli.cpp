@@ -47,6 +47,9 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_ALT, DEFAULT_ALT, "", HELP_ALT);
     params.addFlag(ARG_MAF, DEFAULT_MAF, "", HELP_MAF);
     params.addFlag(ARG_EHH, DEFAULT_EHH, "", HELP_EHH);
+
+    params.addFlag(ARG_EHH12, DEFAULT_EHH12, "", HELP_EHH12);
+
     params.addFlag(ARG_QWIN, DEFAULT_QWIN, "", HELP_QWIN);
     //params.addFlag(ARG_SOFT_K, DEFAULT_SOFT_K, "SILENT", HELP_SOFT_K);
     params.addFlag(ARG_MAX_EXTEND, DEFAULT_MAX_EXTEND, "", HELP_MAX_EXTEND);
@@ -230,7 +233,7 @@ void checkParameters(param_main &p){
     //     return 1;
     // }
 
-        if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT < 1)
+        if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12 < 1)
     {
         // cerr << "ERROR: Must specify one of \n\tEHH (" << ARG_EHH
         //      << ")\n\tiHS (" << ARG_IHS
@@ -240,7 +243,7 @@ void checkParameters(param_main &p){
         //      << ")\n\tXP-nSL (" << ARG_XPNSL
         //      << ")\n\tiHH12 (" << ARG_SOFT
         //      << ")\n";
-        throw runtime_error("Must specify one of \n\tEHH (" + ARG_EHH + ")\n\tiHS (" + ARG_IHS + ")\n\tXP-EHH (" + ARG_XP + ")\n\tPI (" + ARG_PI + ")\n\tnSL (" + ARG_NSL + ")\n\tXP-nSL (" + ARG_XPNSL + ")\n\tiHH12 (" + ARG_SOFT + ")\n");
+        throw runtime_error("Must specify one of \n\tEHH (" + ARG_EHH + ")\n\tiHS (" + ARG_IHS + ")\n\tXP-EHH (" + ARG_XP + ")\n\tPI (" + ARG_PI + ")\n\tnSL (" + ARG_NSL + ")\n\tXP-nSL (" + ARG_XPNSL + ")\n\tiHH12 (" + ARG_SOFT + ")\n\tEHH12 (" + ARG_EHH12 + ")\n");
     }
 
     if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT > 1)

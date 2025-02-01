@@ -1560,6 +1560,15 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
 
 
 void IHS::main() {
+    if(p.CALC_NSL && !p.CALC_IHS){
+        this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
+        init_global_fout("nsl");
+    }else{
+        this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
+        init_global_fout("ihs");
+    }
+
+    
     int total_calc_to_be_done = hm->hapData->nloci;
     cerr<<"DEBUG::: Total number of loci: "<<total_calc_to_be_done<<endl;
     

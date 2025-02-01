@@ -197,6 +197,11 @@ const string DEFAULT_EHH = "__NO_LOCUS__";
 const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
 \tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
 
+const string ARG_EHH12 = "--ehh12";
+const string DEFAULT_EHH12 = "__NO_LOCUS__";
+const string HELP_EHH12 = "Calculate EHH12 of the '1' and '0' haplotypes at the specified\n\
+\tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+
 const string ARG_QWIN = "--ehh-win";
 const int DEFAULT_QWIN = 100000;
 const string HELP_QWIN = "When calculating EHH, this is the length of the window in bp\n\

@@ -382,18 +382,23 @@ public:
 
     inline int get_n_c0(int locus)
     {
-        if(MISSING_ALLOWED){
-            return nhaps - hapEntries[locus].hapbitset->num_1s - hapEntries[locus].xorbitset->num_1s; //hapEntries[locus].xorbitset->num_1s is missing count
-            throw "not implemented";
+        if(unphased){
+            return nhaps - hapEntries[locus].hapbitset->num_1s - hapEntries[locus].xorbitset->num_1s;
         }else{
-            return nhaps - hapEntries[locus].hapbitset->num_1s;
+            if(MISSING_ALLOWED){
+                return nhaps - hapEntries[locus].hapbitset->num_1s - hapEntries[locus].xorbitset->num_1s; //hapEntries[locus].xorbitset->num_1s is missing count
+                throw "not implemented";
+            }else{
+                return nhaps - hapEntries[locus].hapbitset->num_1s;
 
+            }
+            // // if flip was enabled
+            // int non_flipped_1s = 0;
+            // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
+            // int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
+            // return result;
         }
-        // // if flip was enabled
-        // int non_flipped_1s = 0;
-        // non_flipped_1s = LOW_MEM? hapEntries[locus].hapbitset->num_1s: hapEntries[locus].positions.size();
-        // int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
-        // return result;
+        
     }
 
     inline int get_n_c1(int locus)

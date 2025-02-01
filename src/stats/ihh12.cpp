@@ -270,6 +270,8 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
 void IHH12::main()
 {
+    init_global_fout("ihh12");
+
     if(p.UNPHASED){
         throw std::invalid_argument("ERROR: Unphased analysis not supported for iHH12 calculations.");
         exit(2);
@@ -285,7 +287,7 @@ void IHH12::main()
     for(int i = 0; i <  hm->mapData->nloci; ++i) {
         results.emplace_back(
             pool.enqueue([i,this] {
-                return this->calc_stat_at_locus(i);
+                return this->calc_ihh12_at_locus(i);
             })
         );
     }
@@ -317,7 +319,7 @@ void IHH12::main()
 /**
  * populate ihh_p1 and ihh_p2 at the end with correct values
 */
-double IHH12::calc_stat_at_locus(int locus)
+double IHH12::calc_ihh12_at_locus(int locus)
 {
     //DEBUG: if(locus==239){
 

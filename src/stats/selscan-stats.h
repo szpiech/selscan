@@ -294,7 +294,8 @@ class SelscanStats {
         //     return hm->mapData->chr_list[hm->mapData->mapEntries[locus].chr];
         // }
 
-        inline MyBitset* get_all_1s(int locus, bool downstream = false){
+
+        inline MyBitset* get_all_1s(int locus, bool downstream){
             if(p.benchmark_flag == "XOR" && !p.UNPHASED){
                 return hm->hapData->hapEntries[locus].xorbitset;
                 MyBitset* v2p = downstream? hm->hapData->hapEntries[locus+1].xorbitset : hm->hapData->hapEntries[locus].xorbitset;
@@ -304,14 +305,29 @@ class SelscanStats {
             }
             return hm->hapData->hapEntries[locus].hapbitset;
         }
-        inline MyBitset* get_all_2s(int locus, bool downstream = false){
+
+        inline MyBitset* get_all_1s_pop2(int locus, bool downstream){
+            if(p.benchmark_flag == "XOR" && !p.UNPHASED){
+                return hm->hapData2->hapEntries[locus].xorbitset;
+                MyBitset* v2p = downstream? hm->hapData2->hapEntries[locus+1].xorbitset : hm->hapData2->hapEntries[locus].xorbitset;
+                if( (hm->hapData2->hapEntries[locus].hapbitset->num_1s < v2p->num_1s && locus!=hm->hapData2->nhaps-1)){ // ensure that in boundary we don't do any xor calculation
+                    return v2p;
+                }       
+            }
+            return hm->hapData2->hapEntries[locus].hapbitset;
+        }
+
+        inline MyBitset* get_all_1s(int locus){
+            return hm->hapData->hapEntries[locus].hapbitset;
+        }
+        inline MyBitset* get_all_2s(int locus){
             return hm->hapData->hapEntries[locus].xorbitset;
         }
 
-        inline MyBitset* get_all_1s_pop2(int locus, bool downstream = false){
+        inline MyBitset* get_all_1s_pop2(int locus){
             return hm->hapData2->hapEntries[locus].hapbitset;
         }
-        inline MyBitset* get_all_2s_pop2(int locus, bool downstream = false){
+        inline MyBitset* get_all_2s_pop2(int locus){
             return hm->hapData2->hapEntries[locus].xorbitset;
         }
 };

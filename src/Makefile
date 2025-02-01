@@ -24,7 +24,7 @@ LINK_OPTS2 = -lpthread -lz
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
-OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o
+OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 # OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 

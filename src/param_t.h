@@ -33,6 +33,7 @@ struct param_main{
     bool SKIP, WRITE_DETAILED_IHS;
     bool CALC_XPNSL, CALC_XP;
     bool SINGLE_EHH;
+    bool SINGLE_EHH12;
 
     bool CALC_NSL, CALC_IHS, CALC_SOFT;
 

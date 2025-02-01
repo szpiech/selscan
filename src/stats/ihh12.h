@@ -109,21 +109,20 @@ class IHH12 : public SelscanStats{
     public:
         IHH12(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){
             max_extend = ( p.MAX_EXTEND <= 0) ? hm->mapData->mapEntries[hm->mapData->nloci-1].physicalPos -  hm->mapData->mapEntries[0].physicalPos : p.MAX_EXTEND  ;
-            init_global_fout("ihh12");
         }
         void main();
         void findMaxTwo(int* arr, int n, int &max1, int &max2);
         //void findMaxK(int* arr, int n, int &max1, int &max2, int k);
 
-    private:
+    protected:
         static pthread_mutex_t mutex_log;
         int max_extend;
-
-        double calc_stat_at_locus(int locus);
-        double calc_ehh_unidirection(int locus, bool downstream);
         //void static thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj);
-
         void updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* p);
+    
+    private:
+        double calc_ihh12_at_locus(int locus);
+        double calc_ehh_unidirection(int locus, bool downstream);
 };
 
 
