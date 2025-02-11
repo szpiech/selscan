@@ -133,6 +133,9 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     bool SINGLE_EHH =  false;
     if (p.query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
 
+    bool SINGLE_EHH12 =  false;
+    if (p.query.compare(DEFAULT_EHH12) != 0) SINGLE_EHH12 = true;
+
 
     p.QWIN = params.getIntFlag(ARG_QWIN);
 
@@ -246,7 +249,7 @@ void checkParameters(param_main &p){
         throw runtime_error("Must specify one of \n\tEHH (" + ARG_EHH + ")\n\tiHS (" + ARG_IHS + ")\n\tXP-EHH (" + ARG_XP + ")\n\tPI (" + ARG_PI + ")\n\tnSL (" + ARG_NSL + ")\n\tXP-nSL (" + ARG_XPNSL + ")\n\tiHH12 (" + ARG_SOFT + ")\n\tEHH12 (" + ARG_EHH12 + ")\n");
     }
 
-    if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT > 1)
+    if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12> 1)
     {
         cerr<<"WARNING: Running multiple statistics at once. Make sure parameters are consistent across runs.\n";
         p.MULTI_MAF = true;
