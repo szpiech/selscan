@@ -9,8 +9,10 @@
 #G++FLAG = -g -Wall -Werror   #debugging
 
 #for osx/macos-arm systems
+
 CC = g++ -std=c++17
 G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize
+
 #-g 
 #-march=native
 #-Og -g
@@ -24,7 +26,7 @@ LINK_OPTS2 = -lpthread -lz
 I_PATH = -I../include
 L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
 
-OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o
+OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 # OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
@@ -36,8 +38,8 @@ all : selscan
 # build_and_cleanup: selscan norm
 # 	rm -rf *.o	
 
-selscan : selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
-	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
+selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
+	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
 	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
@@ -53,9 +55,6 @@ selscan-main.o : selscan-main.cpp
 
 thread_pool.o : thread_pool.cpp thread_pool.h
 	$(CC) $(G++FLAG) -c thread_pool.cpp $(LINK_OPTS2)
-
-selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h 
-	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
 
 selscan-data.o : selscan-data.cpp selscan-data.h
 	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
@@ -85,4 +84,5 @@ gzstream.o : gzstream.cpp gzstream.h
 .PHONY: clean
 
 clean :
-	rm -rf *.o;  rm -rf selscan; rm -rf  norm; rm -rf outfile*
+	rm -rf *.o;  rm -rf selscan; rm -rf  norm; 
+#rm -rf outfile*

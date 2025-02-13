@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdlib>   // For std::aligned_alloc
 #include <cstring>   // For std::memset
+#include <fstream>
 
 constexpr size_t alignment = alignof(uint64_t); // Alignment boundary
 
@@ -200,6 +201,16 @@ class MyBitset{
         }
         cout << endl;
     }
+
+    void print_pos_to_file(ofstream* fout){
+        for (int i = 0; i < nbits; i++)
+        {
+            if(get_bit(i)==1)
+                (*fout) << i << " ";
+        }
+        (*fout) << endl;
+    }
+
 
     ~MyBitset(){
         delete [] bits;

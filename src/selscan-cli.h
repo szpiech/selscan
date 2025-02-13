@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "v3_Jul26_Optimized";
+const string VERSION = "2.1_Jan30_working_on_xp";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -104,6 +104,19 @@ const string HELP_FILENAME_POP2 = "A hapfile with one row per haplotype, and one
 \tvariant. Variants should be coded 0/1. This is the 'reference'\n\
 \tpopulation for XP calculations.  Ignored otherwise.";
 
+
+const string ARG_FILENAME_POP1_THAP = "--thap";
+const string DEFAULT_FILENAME_POP1_THAP = "__thapfile1";
+const string HELP_FILENAME_POP1_THAP = "A hapfile in IMPUTE hap format with one column per haplotype, and one row per\n\
+\tvariant. Variants should be coded 0/1";
+
+const string ARG_FILENAME_POP2_THAP = "--thap-ref";
+const string DEFAULT_FILENAME_POP2_THAP = "__thapfile2";
+const string HELP_FILENAME_POP2_THAP = "A hapfile in IMPUTE hap format with one column per haplotype, and row per\n\
+\tvariant. Variants should be coded 0/1. This is the 'reference'\n\
+\tpopulation for XP calculations.  Ignored otherwise.";
+
+
 const string ARG_FILENAME_MAP = "--map";
 const string DEFAULT_FILENAME_MAP = "__mapfile";
 const string HELP_FILENAME_MAP = "A mapfile with one row per variant site.\n\
@@ -184,13 +197,18 @@ const string DEFAULT_EHH = "__NO_LOCUS__";
 const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
 \tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
 
+const string ARG_EHH12 = "--ehh12";
+const string DEFAULT_EHH12 = "__NO_LOCUS__";
+const string HELP_EHH12 = "Calculate EHH12 of the '1' and '0' haplotypes at the specified\n\
+\tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+
 const string ARG_QWIN = "--ehh-win";
 const int DEFAULT_QWIN = 100000;
 const string HELP_QWIN = "When calculating EHH, this is the length of the window in bp\n\
 \tin each direction from the query locus.";
 
 const string ARG_MAX_EXTEND = "--max-extend";
-const int DEFAULT_MAX_EXTEND = 1000000;//1000000
+const int DEFAULT_MAX_EXTEND = 1000000;         //1000000
 const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
 \tSet <= 0 for no restriction.";
 
@@ -200,7 +218,7 @@ const string HELP_MAX_EXTEND_NSL = "The maximum distance an nSL haplotype is all
 \tSet <= 0 for no restriction.";
 
 const string ARG_SKIP = "--skip-low-freq";
-const bool DEFAULT_SKIP = false;
+const bool DEFAULT_SKIP = true;
 const string HELP_SKIP = "**This flag is now on by default. If you want to include low frequency variants\n\
 in the construction of your haplotypes please use the --keep-low-freq flag.";
 
@@ -222,16 +240,31 @@ const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
-
-const string ARG_LOW_MEM = "--low-mem";
-const bool DEFAULT_LOW_MEM  = true;
-const string HELP_LOW_MEM = "Switch to low memory bitset version.";
+//const string ARG_LOW_MEM = "--low-mem";
+// const bool DEFAULT_LOW_MEM  = true;
+// const string HELP_LOW_MEM = "Switch to low memory bitset version.";
 
 const string ARG_MISSING_FLAG = "--missing";
 const bool DEFAULT_MISSING_FLAG = false;
 const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
-bool initalizeParameters(param_t &params,int argc, char *argv[]);
-bool checkParameters(param_t &params,int argc, char *argv[]);
+// const string ARG_MULTI_CHR = "--multi-chr";
+// const string DEFAULT_MULTI_CHR = "__NO_CHR__";
+// const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
+
+const string ARG_IMPUTE_FLAG = "--impute";
+const bool DEFAULT_IMPUTE_FLAG = false;
+const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
+
+const string ARG_MULTI_PARAMS = "--multi-param";
+const string DEFAULT_MULTI_PARAMS = "__jsonFile";
+const string HELP_MULTI_PARAMS = "For all parameter combination in this file, separate output files will be generated.";
+
+
+void initalizeParameters(param_t &params,int argc, char *argv[]);
+void checkParameters(param_main &params);
+void getBaseParamFromCmdLine(param_t& params, param_main &p);
+void jsonParse(param_main &base_p, vector<param_main> &multi_params);
+//bool checkParameters(param_t &params,int argc, char *argv[]);
 
 #endif

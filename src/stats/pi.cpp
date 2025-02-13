@@ -1,17 +1,17 @@
-
-
 #include "pi.h"
 
 void PI::main()
 {
-     double denominator = (hm->hapData->nhaps) * (hm->hapData->nhaps - 1) * 0.5;
+    double denominator = (hm->hapData->nhaps) * (hm->hapData->nhaps - 1) * 0.5;
     double pi = 0;
 
     int max_physpos = hm->mapData->mapEntries[hm->mapData->nloci - 1].physicalPos;
     int num_entries = ceil((max_physpos+1) / winsize);
-    cout<<num_entries<<endl;
+    
+    
+    // cerr<<"DEBUG::: "<<"num entries"<<num_entries<<endl;
 
-//    vector<double> index_by_start(num_entries+1);
+    // vector<double> index_by_start(num_entries+1);
     int site_counter;
 
     int locus = 0;
@@ -42,9 +42,11 @@ void PI::main()
 
         (*fout) << pi / denominator   << endl;
     }
+    fout->close();
+    // // // // // exit(0);
 
-    
-    exit(0);
+
+
     // for(int i = 1; i< mapData->nloci; i++){
     //     index_by_start.push_back(mapData->mapEntries[i].physicalPos);
     // }
