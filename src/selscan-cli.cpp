@@ -108,6 +108,7 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
 
     p.outFilename = params.getStringFlag(ARG_OUTFILE);
     p.query = params.getStringFlag(ARG_EHH);
+    p.query_ehh12 = params.getStringFlag(ARG_EHH12);
 
     p.numThreads = params.getIntFlag(ARG_THREAD);
     p.SCALE_PARAMETER = params.getIntFlag(ARG_GAP_SCALE);
@@ -127,14 +128,13 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.CALC_XP = params.getBoolFlag(ARG_XP);
     p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     p.SINGLE_EHH = false;
+    p.SINGLE_EHH12 = false;
+
     // p.EHH1K = params.getIntFlag(ARG_SOFT_K);
 
     int queryLoc = -1;
-    bool SINGLE_EHH =  false;
-    if (p.query.compare(DEFAULT_EHH) != 0) SINGLE_EHH = true;
-
-    bool SINGLE_EHH12 =  false;
-    if (p.query.compare(DEFAULT_EHH12) != 0) SINGLE_EHH12 = true;
+    if (p.query.compare(DEFAULT_EHH) != 0) p.SINGLE_EHH = true;
+    if (p.query_ehh12.compare(DEFAULT_EHH12) != 0) p.SINGLE_EHH12 = true;
 
 
     p.QWIN = params.getIntFlag(ARG_QWIN);

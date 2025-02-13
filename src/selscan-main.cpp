@@ -132,7 +132,7 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     }
     if (p.SINGLE_EHH12){
         EHH12 ehh12finder(hm, p);
-        ehh12finder.main(p.query); // query_locus
+        ehh12finder.main(p.query_ehh12); // query_locus
     }
     if (p.CALC_IHS)
     {

@@ -79,6 +79,7 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
 void EHH12::main(string query){
     init_global_fout("ehh12");
+    init_output_and_querymap();
     
     int numSnps = hm->mapData->nloci;
     int numHaps = hm->hapData->nhaps;

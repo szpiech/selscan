@@ -21,6 +21,7 @@ struct param_main{
 
     string outFilename;
     string query;
+    string query_ehh12;
 
     bool TPED, VCF, THAP;
 

@@ -37,6 +37,7 @@ class EHH : public IHS{
             for(int i = 0; i < hm->mapData->nloci; i++){
                 this->locus_query_map[hm->mapData->mapEntries[i].locusName] = i;
                 this->locus_query_map[to_string(hm->mapData->mapEntries[i].physicalPos)] = i;
+                //cout<<hm->mapData->mapEntries[i].locusName<<" "<<hm->mapData->mapEntries[i].physicalPos<<endl;
             }
         }
         
@@ -52,7 +53,14 @@ class EHH : public IHS{
 
             if (queryLoc < 0)
             {
-                cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
+                cerr << "ERROR: Could not find specific locus query, " << query << ", in data. \n";
+                // cerr << "Available locus queries are: ";
+                // //iterate over locus_query_map and print
+                // for(auto const& x : locus_query_map){
+                //     cerr << x.first  // string (key)
+                //               << ',' ;
+                // }
+                // cerr<<endl;
                 return -1;
             }else{
                 cerr << "Found " << query << " in data.\n";
