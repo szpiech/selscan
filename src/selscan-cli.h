@@ -240,21 +240,19 @@ const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
-//const string ARG_LOW_MEM = "--low-mem";
-// const bool DEFAULT_LOW_MEM  = true;
-// const string HELP_LOW_MEM = "Switch to low memory bitset version.";
-
-const string ARG_MISSING_FLAG = "--missing";
-const bool DEFAULT_MISSING_FLAG = false;
-const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
+// @UNCOMMENT
+// const string ARG_MISSING_FLAG = "--missing";
+// const bool DEFAULT_MISSING_FLAG = false;
+// const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
 // const string ARG_MULTI_CHR = "--multi-chr";
 // const string DEFAULT_MULTI_CHR = "__NO_CHR__";
 // const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
 
-const string ARG_IMPUTE_FLAG = "--impute";
-const bool DEFAULT_IMPUTE_FLAG = false;
-const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
+// @UNCOMMENT
+// const string ARG_IMPUTE_FLAG = "--impute";
+// const bool DEFAULT_IMPUTE_FLAG = false;
+// const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
 
 const string ARG_MULTI_PARAMS = "--multi-param";
 const string DEFAULT_MULTI_PARAMS = "__jsonFile";
