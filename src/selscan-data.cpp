@@ -904,8 +904,12 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
 
 bool HapMap::skipThisLocus(int number_of_1s, int number_of_2s, int nalleles_per_loc, int missing_count){ 
     //nalleles same for phased and unphased, tot n of columns
+
     int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
     
+    return (derived_allele_count)*1.0/(nalleles_per_loc) == 0 ;
+    return 1-(derived_allele_count*1.0/(nalleles_per_loc)) == 0;
+
     bool skipreason1 = false; // --skip-low-freq filtering based on MAF
     bool skipreason2 = false; // missing
 
