@@ -79,11 +79,7 @@ void XPIHH::updateEHH_from_split(const unordered_map<int, vector<int> > & m, XPI
 
 
 pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool downstream){
-    if(hm->mapData->mapEntries[locus].physicalPos == 1866134){
-        cout<<"here printing"<<endl;
-    }
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
-
 
     double ihh_p1 = 0;
     double ihh_p2 = 0;

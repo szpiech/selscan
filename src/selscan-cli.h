@@ -218,7 +218,7 @@ const string HELP_MAX_EXTEND_NSL = "The maximum distance an nSL haplotype is all
 \tSet <= 0 for no restriction.";
 
 const string ARG_SKIP = "--skip-low-freq";
-const bool DEFAULT_SKIP = true;
+const bool DEFAULT_SKIP = false;
 const string HELP_SKIP = "**This flag is now on by default. If you want to include low frequency variants\n\
 in the construction of your haplotypes please use the --keep-low-freq flag.";
 

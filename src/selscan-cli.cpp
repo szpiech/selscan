@@ -171,6 +171,7 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     if(params.getBoolFlag(ARG_SKIP)){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
+
     
 }
 
