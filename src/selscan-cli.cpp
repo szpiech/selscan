@@ -168,6 +168,9 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     }
 
     p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
+    if(params.getBoolFlag(ARG_SKIP)){
+        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    }
     
 }
 
@@ -362,9 +365,11 @@ void checkParameters(param_main &p){
     //     throw runtime_error("Must provide a JSON file.\n");
     // }
     
-    if(p.SKIP){
-        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
-    }
+    // if(p.SKIP){
+    //     cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    // }
+
+
     // if(params.getBoolFlag(ARG_SKIP)){
     //     cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     // }

@@ -183,10 +183,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
     int i = locus;     
     while(true){
         double pooled_ehh = (p.ALT ? pooled->curr_ehh_before_norm / square_alt(pooled->nhaps) : pooled->curr_ehh_before_norm/twice_num_pair(pooled->nhaps));
-        if(hm->mapData->mapEntries[locus].physicalPos == 1866134){
-            cout<<"here printing"<<endl;
-            cout<<"pooled ehh" << pooled_ehh << " "<<locus<<endl;
-        }
+
         // TODO: should i do for WAGH as well?
         if(pooled_ehh <= p.EHH_CUTOFF){
             break;
@@ -242,17 +239,13 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
         unordered_map<int, vector<int> >& m_pooled = (* mp_pooled);
 
         if(p1->totgc != p1->nhaps){
-            //cout<<"i is"<<i<<endl;
             ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
                 int old_group_id = p1->group_id[set_bit_pos];
-                m[old_group_id].push_back(set_bit_pos);      
-                //m_pooled[old_group_id].push_back(set_bit_pos);      
+                m[old_group_id].push_back(set_bit_pos);         
             });
             updateGroup_from_split_unphased(m, p1->group_count, p1->group_id, p1->totgc);
             m.clear();
 
-            //updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
-            //m_pooled.clear();
 
             ACTION_ON_ALL_SET_BITS(get_all_2s(i), {
                 int old_group_id = p1->group_id[set_bit_pos];
@@ -261,33 +254,22 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             });
             updateGroup_from_split_unphased(m, p1->group_count, p1->group_id, p1->totgc);
             m.clear();
-
-            //updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
-            //m_pooled.clear();
         }
         
         if(p2->totgc != p2->nhaps){
             ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(i), {
                 int old_group_id = p2->group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);  
-                //m_pooled[old_group_id].push_back(set_bit_pos + p1->nhaps);  
             });
             updateGroup_from_split_unphased(m, p2->group_count, p2->group_id, p2->totgc);
             m.clear();
-
-            //updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
-            //m_pooled.clear();
 
             ACTION_ON_ALL_SET_BITS(get_all_2s_pop2(i), {
                 int old_group_id = p2->group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);  
-                //m_pooled[old_group_id].push_back(set_bit_pos + p1->nhaps);
             });
             updateGroup_from_split_unphased(m, p2->group_count, p2->group_id, p2->totgc);
             m.clear();
-
-            //updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
-            //m_pooled.clear();
         }
 
         if(pooled->totgc != pooled->nhaps){
@@ -315,9 +297,8 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
                 m_pooled[old_group_id].push_back(set_bit_pos + p1->nhaps);
             });
 
-            //updateEHH_from_split(m_pooled, pooled);
             updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
-            //pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
+
             // no need to update pooled ihh as we are not interested in it
             m_pooled.clear(); 
         }
@@ -330,26 +311,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
         }
         pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm; // no need to update pooled ihh as we are not interested in it
         
-        
-
-        // if(pooled->totgc != pooled->nhaps){
-        //     //NOW POOLED 1
-        //     ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
-        //         int old_group_id = pooled->group_id[set_bit_pos];
-        //         m[old_group_id].push_back(set_bit_pos); 
-        //     });
-        //     //for pooled2
-        //     ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(i), {
-        //         int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
-        //         m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
-        //     });
-
-        //     updateEHH_from_split(m, pooled);
-        //     pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm; // no need to update pooled ihh as we are not interested in it
-        //     m.clear(); 
-        // }
-
-
         ///. NOW UPDATE EHH COUNT
         // equivalent to calcHomozoygosity (without the normalization)
         // DO IT FOR p1

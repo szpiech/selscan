@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "2.1_Jan30_working_on_xp";
+const string VERSION = "2.1_Mar14_fixed_unphased_xp";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\

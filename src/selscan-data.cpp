@@ -481,7 +481,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         throw 0;
     }
 
-    if(p.SKIP){
+    if(p.SKIP && !p.CALC_XP &&  !p.CALC_XPNSL){
         cerr << ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n";
         //(*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     }
