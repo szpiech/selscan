@@ -131,7 +131,7 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
     //getline(fin, line);
     stringstream ss;
@@ -270,7 +270,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
     getline(fin, line);
     stringstream ss;

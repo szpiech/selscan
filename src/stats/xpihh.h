@@ -3,6 +3,7 @@
 
 #include "selscan-stats.h"
 #include <unordered_map>
+#include <cassert>
 
 using namespace std;
 #define ACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
@@ -41,6 +42,17 @@ class XPIHH_ehh_data{
 
 class XPIHH_ehh_data_unphased: public XPIHH_ehh_data{
     public:
+    // double prev_ehh_before_norm = 0;
+    // double curr_ehh_before_norm = 0;
+
+    // int totgc = 0;
+    // int* group_count;
+    // // bool* is1;
+    // int* group_id;
+    // double normalizer;
+
+    // ~XPIHH_ehh_data_unphased();
+
     int n_c[3] = {0,0,0}; //  overriden
 
     string getOrder(int n_c2, int n_c1, int n_c0){
@@ -80,22 +92,25 @@ class XPIHH_ehh_data_unphased: public XPIHH_ehh_data{
             pos_of_012[orderStr[i]-'0'] = i ;
         }
 
-        for (int i = 0; i<nhaps; i++){
-            group_id[i] = pos_of_012[0];
-        }
-
-        ACTION_ON_ALL_SET_BITS(all1s, {
-            //is1[set_bit_pos] = true;
-            group_id[set_bit_pos] = pos_of_012[1];   
-        });
-
-        ACTION_ON_ALL_SET_BITS(all2s, {
-            //is2[set_bit_pos] = true;
-            group_id[set_bit_pos] = pos_of_012[2]; 
-        });
-
+       
 
         if(nhaps_first != -1){ // pooled
+            assert(nhaps>nhaps_first);
+            for (int i = 0; i<nhaps; i++){
+                group_id[i] = pos_of_012[0];
+            }
+
+            ACTION_ON_ALL_SET_BITS(all1s, {
+                //is1[set_bit_pos] = true;
+                group_id[set_bit_pos] = pos_of_012[1];   
+            });
+
+            ACTION_ON_ALL_SET_BITS(all2s, {
+                //is2[set_bit_pos] = true;
+                group_id[set_bit_pos] = pos_of_012[2]; 
+            });
+
+
             ACTION_ON_ALL_SET_BITS(second_all1s, {
                 group_id[set_bit_pos  + nhaps_first] = pos_of_012[1];   
             });
@@ -103,6 +118,21 @@ class XPIHH_ehh_data_unphased: public XPIHH_ehh_data{
             ACTION_ON_ALL_SET_BITS(second_all2s, {
                 group_id[set_bit_pos + nhaps_first] = pos_of_012[2]; 
             });
+        }else{
+             for (int i = 0; i<nhaps; i++){
+                group_id[i] = pos_of_012[0];
+            }
+
+            ACTION_ON_ALL_SET_BITS(all1s, {
+                //is1[set_bit_pos] = true;
+                group_id[set_bit_pos] = pos_of_012[1];   
+            });
+
+            ACTION_ON_ALL_SET_BITS(all2s, {
+                //is2[set_bit_pos] = true;
+                group_id[set_bit_pos] = pos_of_012[2]; 
+            });
+
         }
 
         if(group_count[0] == nhaps){ //monomorphic site
