@@ -907,32 +907,37 @@ bool HapMap::skipThisLocus(int number_of_1s, int number_of_2s, int nalleles_per_
 
     int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
     
-    return (derived_allele_count)*1.0/(nalleles_per_loc) == 0 ;
-    return 1-(derived_allele_count*1.0/(nalleles_per_loc)) == 0;
+    if ((derived_allele_count)*1.0/(nalleles_per_loc) == 0){
+        return true;
+    }
+
+    if( 1-(derived_allele_count*1.0/(nalleles_per_loc)) == 0 ){
+        return true;
+    }
 
     bool skipreason1 = false; // --skip-low-freq filtering based on MAF
     bool skipreason2 = false; // missing
 
-    double ALLOWED_MISSING_PERC = 1;
+    // double ALLOWED_MISSING_PERC = 1;
+    // if(p.MISSING_ALLOWED){
+    //     int ancestral_allele_count = nalleles_per_loc - derived_allele_count;
+    //     bool derived_lower = (derived_allele_count+missing_count)*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF ;
+    //     bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF ;
+    //     if(p.SKIP){
+    //             skipreason2 = (derived_lower || ancestral_lower);
+    //     }
+
+    //     bool missing_cutoff_crossed = 1.0*missing_count/nalleles_per_loc > ALLOWED_MISSING_PERC;
+    //     skipreason2 = (skipreason2 || missing_cutoff_crossed);
+    //     // if (missing_cutoff_crossed) {
+    //     //     //cout<<"Skipping cause Derived "<<derived_allele_count<<" Missing "<<missing_count<<" Total "<<current_nhaps*2<<endl;
+    //     //     skipreason2 = true;
+    //     // }
+    // }
     
-    if(p.MISSING_ALLOWED){
-        int ancestral_allele_count = nalleles_per_loc - derived_allele_count;
-        bool derived_lower = (derived_allele_count+missing_count)*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF ;
-        bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF ;
-        if(p.SKIP){
-                skipreason2 = (derived_lower || ancestral_lower);
-        }
-
-        bool missing_cutoff_crossed = 1.0*missing_count/nalleles_per_loc > ALLOWED_MISSING_PERC;
-        skipreason2 = (skipreason2 || missing_cutoff_crossed);
-        // if (missing_cutoff_crossed) {
-        //     //cout<<"Skipping cause Derived "<<derived_allele_count<<" Missing "<<missing_count<<" Total "<<current_nhaps*2<<endl;
-        //     skipreason2 = true;
-        // }
-    }else{
-        skipreason1 = (p.SKIP && (derived_allele_count*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF || 1-(derived_allele_count*1.0/(nalleles_per_loc)) < this->MIN_MAF_CUTOFF ));
-
-    }
+    //if(!p.MISSING_ALLOWED){
+        skipreason1 = (p.SKIP && (derived_allele_count*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF || 1-(derived_allele_count*1.0/(nalleles_per_loc)) < this->MIN_MAF_CUTOFF ));    
+    //}
     return (skipreason1 ||  skipreason2 );
 }
 // TPED format description
@@ -1153,26 +1158,26 @@ void HapMap::loadHapMapData(){
             mapData->readMapDataVCF(p.vcfFilename, hapData->nloci, hapData->skipQueue);
         }
     }else if(p.THAP){
-        readHapDataTHAP(p.hapFilename, *hapData);
+        readHapDataTHAP(p.thapFilename, *hapData);
         if (p.CALC_XP || p.CALC_XPNSL)
         {
-            readHapDataTHAP(p.hapFilename2, *hapData2);
+            readHapDataTHAP(p.thapFilename2, *hapData2);
             if (hapData->nloci != hapData2->nloci)
             {
-                std::cerr << "ERROR: Haplotypes from " << p.hapFilename << " and " << p.hapFilename2 << " do not have the same number of loci.\n";
+                std::cerr << "ERROR: Haplotypes from " << p.thapFilename << " and " << p.thapFilename2 << " do not have the same number of loci.\n";
                 exit(2);
             }
         }
         mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
     }else
     {
-        readHapDataMSHap(p.thapFilename, *hapData);
+        readHapDataMSHap(p.hapFilename, *hapData);
         if (p.CALC_XP || p.CALC_XPNSL)
         {
-            readHapDataMSHap(p.thapFilename2, *hapData2);
+            readHapDataMSHap(p.hapFilename2, *hapData2);
             if (hapData->nloci != hapData2->nloci)
             {
-                std::cerr << "ERROR: Haplotypes from " << p.thapFilename << " and " << p.thapFilename2 << " do not have the same number of loci.\n";
+                std::cerr << "ERROR: Haplotypes from " << p.hapFilename << " and " << p.hapFilename2 << " do not have the same number of loci.\n";
                 exit(2);
             }
         }
