@@ -907,13 +907,13 @@ bool HapMap::skipThisLocus(int number_of_1s, int number_of_2s, int nalleles_per_
 
     int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
     
-    if ((derived_allele_count)*1.0/(nalleles_per_loc) == 0){
-        return true;
-    }
+    // if ((derived_allele_count)*1.0/(nalleles_per_loc) == 0){
+    //     return true;
+    // }
 
-    if( 1-(derived_allele_count*1.0/(nalleles_per_loc)) == 0 ){
-        return true;
-    }
+    // if( 1-(derived_allele_count*1.0/(nalleles_per_loc)) == 0 ){
+    //     return true;
+    // }
 
     bool skipreason1 = false; // --skip-low-freq filtering based on MAF
     bool skipreason2 = false; // missing
