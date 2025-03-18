@@ -321,8 +321,6 @@ void IHH12::main()
 */
 double IHH12::calc_ihh12_at_locus(int locus)
 {
-    //DEBUG: if(locus==239){
-
     double ihh12_down = calc_ehh_unidirection(locus, true);
     if(ihh12_down == skipLocusDouble()){
         return skipLocusDouble();

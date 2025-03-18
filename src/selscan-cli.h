@@ -20,7 +20,7 @@
 
 using namespace std;
 
-const string VERSION = "2.1_Jan30_working_on_xp";
+const string VERSION = "2.1_Mar14_fixed_unphased_xp";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -218,7 +218,7 @@ const string HELP_MAX_EXTEND_NSL = "The maximum distance an nSL haplotype is all
 \tSet <= 0 for no restriction.";
 
 const string ARG_SKIP = "--skip-low-freq";
-const bool DEFAULT_SKIP = true;
+const bool DEFAULT_SKIP = false;
 const string HELP_SKIP = "**This flag is now on by default. If you want to include low frequency variants\n\
 in the construction of your haplotypes please use the --keep-low-freq flag.";
 
@@ -240,21 +240,19 @@ const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
 const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
-//const string ARG_LOW_MEM = "--low-mem";
-// const bool DEFAULT_LOW_MEM  = true;
-// const string HELP_LOW_MEM = "Switch to low memory bitset version.";
-
-const string ARG_MISSING_FLAG = "--missing";
-const bool DEFAULT_MISSING_FLAG = false;
-const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
+// @UNCOMMENT
+// const string ARG_MISSING_FLAG = "--missing";
+// const bool DEFAULT_MISSING_FLAG = false;
+// const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
 // const string ARG_MULTI_CHR = "--multi-chr";
 // const string DEFAULT_MULTI_CHR = "__NO_CHR__";
 // const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
 
-const string ARG_IMPUTE_FLAG = "--impute";
-const bool DEFAULT_IMPUTE_FLAG = false;
-const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
+// @UNCOMMENT
+// const string ARG_IMPUTE_FLAG = "--impute";
+// const bool DEFAULT_IMPUTE_FLAG = false;
+// const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
 
 const string ARG_MULTI_PARAMS = "--multi-param";
 const string DEFAULT_MULTI_PARAMS = "__jsonFile";

@@ -131,7 +131,7 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
     //getline(fin, line);
     stringstream ss;
@@ -270,7 +270,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
     getline(fin, line);
     stringstream ss;
@@ -444,10 +444,13 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         //     }
         // }
 
-        if ( skipreason1 ||  skipreason2) {
-            skiplist.push(nloci_before_filtering-1);
-            skipcount++;
-        } 
+        if(!p.CALC_XP &&  !p.CALC_XPNSL){
+            if ( skipreason1 ||  skipreason2) {
+                skiplist.push(nloci_before_filtering-1);
+                skipcount++;
+            } 
+        }
+        
         
         /*********/
         if (prev_ngts < 0)
@@ -478,7 +481,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         throw 0;
     }
 
-    if(p.SKIP){
+    if(p.SKIP && !p.CALC_XP &&  !p.CALC_XPNSL){
         cerr << ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n";
         //(*flog)  << ARG_SKIP << " set. Removing all variants < " << MAF << ".\n";
     }
@@ -901,8 +904,12 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
 
 bool HapMap::skipThisLocus(int number_of_1s, int number_of_2s, int nalleles_per_loc, int missing_count){ 
     //nalleles same for phased and unphased, tot n of columns
+
     int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
     
+    return (derived_allele_count)*1.0/(nalleles_per_loc) == 0 ;
+    return 1-(derived_allele_count*1.0/(nalleles_per_loc)) == 0;
+
     bool skipreason1 = false; // --skip-low-freq filtering based on MAF
     bool skipreason2 = false; // missing
 
@@ -910,8 +917,8 @@ bool HapMap::skipThisLocus(int number_of_1s, int number_of_2s, int nalleles_per_
     
     if(p.MISSING_ALLOWED){
         int ancestral_allele_count = nalleles_per_loc - derived_allele_count;
-        bool derived_lower = (derived_allele_count+missing_count)*1.0/(nalleles_per_loc) < p.MAF;
-        bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(nalleles_per_loc) < p.MAF;
+        bool derived_lower = (derived_allele_count+missing_count)*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF ;
+        bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(nalleles_per_loc) < this->MIN_MAF_CUTOFF ;
         if(p.SKIP){
                 skipreason2 = (derived_lower || ancestral_lower);
         }

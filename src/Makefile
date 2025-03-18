@@ -10,7 +10,7 @@
 
 #for osx/macos-arm systems
 
-CC = g++ -std=c++17
+CC = g++-14 -std=c++17 -g -W
 G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize
 
 #-g 

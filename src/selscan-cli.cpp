@@ -59,10 +59,12 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
 
-    //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
-    params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
-    params.addFlag(ARG_IMPUTE_FLAG, DEFAULT_IMPUTE_FLAG, "", HELP_IMPUTE_FLAG);
 
+    // params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
+    // params.addFlag(ARG_IMPUTE_FLAG, DEFAULT_IMPUTE_FLAG, "", HELP_IMPUTE_FLAG);
+
+
+    //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
     //params.addFlag(ARG_MULTI_CHR, DEFAULT_MULTI_CHR, "", HELP_MULTI_CHR);
 
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
@@ -142,25 +144,22 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.CALC_PI = params.getBoolFlag(ARG_PI);
     p.PI_WIN = params.getIntFlag(ARG_PI_WIN);
 
-    //params.getBoolFlag(ARG_LOW_MEM);
-
-    p.MISSING_ALLOWED = params.getBoolFlag(ARG_MISSING_FLAG);
-
+    
     p.MAX_EXTEND_NSL = params.getIntFlag(ARG_MAX_EXTEND_NSL); //p.MAX_EXTEND_NSL = ( params.getIntFlag(ARG_MAX_EXTEND_NSL) <= 0 ) ? hm.mapData.nloci : params.getIntFlag(ARG_MAX_EXTEND_NSL);
     p.MAX_EXTEND =  params.getIntFlag(ARG_MAX_EXTEND);
     p.TRUNC = params.getBoolFlag(ARG_TRUNC);
 
+    // @UNCOMMENT
+    //p.MISSING_ALLOWED = params.getBoolFlag(ARG_MISSING_FLAG);
+    // if(params.getBoolFlag(ARG_IMPUTE_FLAG)){
+    //     p.MISSING_MODE = "NO_IMPUTE";
+    // }else{
+    //     p.MISSING_MODE = "ONE_IMPUTE";
+    // }
 
     // p.CHR_LIST = params.getStringFlag(ARG_MULTI_CHR);
     // p.MULTI_CHR = false;
     // if (p.CHR_LIST.compare(DEFAULT_MULTI_CHR) != 0) p.MULTI_CHR = true;
-
- 
-    if(params.getBoolFlag(ARG_IMPUTE_FLAG)){
-        p.MISSING_MODE = "NO_IMPUTE";
-    }else{
-        p.MISSING_MODE = "ONE_IMPUTE";
-    }
 
     p.MULTI_MAF = false;
     p.MULTI_PARAMS = false;
@@ -169,6 +168,10 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     }
 
     p.SKIP = !params.getBoolFlag(ARG_KEEP);//params.getBoolFlag(ARG_SKIP);
+    if(params.getBoolFlag(ARG_SKIP)){
+        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    }
+
     
 }
 
@@ -363,9 +366,11 @@ void checkParameters(param_main &p){
     //     throw runtime_error("Must provide a JSON file.\n");
     // }
     
-    if(p.SKIP){
-        cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
-    }
+    // if(p.SKIP){
+    //     cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
+    // }
+
+
     // if(params.getBoolFlag(ARG_SKIP)){
     //     cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     // }

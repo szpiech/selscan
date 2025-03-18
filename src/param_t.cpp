@@ -379,7 +379,8 @@ bool param_t::parseCommandLine(int argc, char *argv[])
     if (getBoolFlag(ARG_HELP))
     {
         this->printHelp();
-        throw 0;
+        exit(EXIT_SUCCESS);
+        //throw 0;
     }
 
     if (badFlags) throw 0;

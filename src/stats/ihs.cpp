@@ -172,7 +172,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
         pthread_mutex_unlock(&mutex_log);
         //hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(-9999,-9999);
+        return skipLocusPair();
     }
 
     int i = locus;  // locus == core_locus
@@ -531,7 +531,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
         pthread_mutex_unlock(&mutex_log);
         //hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(-9999,-9999);
+        return skipLocusPair();
     }
 
     // double freqHetGT = n_c[1]*1.0/numHaps;
@@ -985,7 +985,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         totgc+=1;
         curr_ehh0_before_norm = normalizer_0;
         //hm->mapData->mapEntries[locus].skipLocus = true;
-        return make_pair(-1,-1);
+        return skipLocusPair();
     }else if (n_c1==numHaps){ // all 1s
         group_count[0] = numHaps;
         totgc+=1;
@@ -994,7 +994,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             isDerived[set_bit_pos] = true;
         });
         curr_ehh1_before_norm = normalizer_1;
-        return make_pair(-1,-1);
+        return skipLocusPair();
         //hm->mapData->mapEntries[locus].skipLocus = true;
     }else{  //so both n_c1 and n_c0 is non-0
         group_count[1] = n_c1;
