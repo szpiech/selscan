@@ -105,7 +105,7 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     if (p.vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) p.VCF = true;
 
     p.THAP = false;
-    if (p.hapFilename.compare(DEFAULT_FILENAME_POP1_THAP) != 0) p.THAP = true;
+    if (p.thapFilename.compare(DEFAULT_FILENAME_POP1_THAP) != 0) p.THAP = true;
 
 
     p.outFilename = params.getStringFlag(ARG_OUTFILE);
@@ -255,6 +255,7 @@ void checkParameters(param_main &p){
     if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12> 1)
     {
         cerr<<"WARNING: Running multiple statistics at once. Make sure parameters are consistent across runs.\n";
+        cerr<<"===="<<endl;
         p.MULTI_MAF = true;
     }
 

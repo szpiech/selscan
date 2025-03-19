@@ -15,13 +15,13 @@ using namespace std;
 void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, queue<int>& skip_queue)
 {
     igzstream fin;
-    cerr << "Opening " << filename << "...\n";
+    cerr << "Opening " << filename << " to read map data...\n";
     fin.open(filename.c_str());
 
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     string line;
@@ -36,14 +36,14 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         {
             cerr << "ERROR: line " << nloci_before_filter << " of " << filename << " has " << current_cols
                  << ", but expected " << num_cols << ".\n";
-            throw 0;
+            exit(EXIT_FAILURE);
         }
     }
 
     if (nloci_before_filter-skip_queue.size() != expected_loci)
     {
         cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci_before_filter-skip_queue.size() << ".\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     fin.clear(); // clear error flags
@@ -54,7 +54,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     cerr << "Loading map data for " << nloci_before_filter-skip_queue.size() << " loci\n";
@@ -106,7 +106,7 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     string line;
@@ -121,14 +121,14 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
         {
             cerr << "ERROR: line " << nloci << " of " << filename << " has " << current_cols
                  << ", but expected " << num_cols + expected_haps << ".\n";
-            throw 0;
+            exit(EXIT_FAILURE);
         }
     }
 
     if (nloci - skip_queue.size() != expected_loci)
     {
         cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci - skip_queue.size()  << ".\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     fin.clear(); // clear error flags
@@ -141,7 +141,7 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     cerr << "Loading map data for " << nloci-skip_queue.size() << " loci\n";
@@ -180,13 +180,13 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
 
 void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& skip_queue) {
     igzstream fin;
-    cerr << "Opening " << filename << "...\n";
+    cerr << "Opening " << filename << " to read map data...\n";
     fin.open(filename.c_str());
 
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     string line;
@@ -205,7 +205,7 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
     if (nloci_before_filter-skip_queue.size() != expected_loci)
     {
         cerr << "ERROR: Expected " << expected_loci << " loci in file but found " << nloci_before_filter-skip_queue.size() << ".\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     fin.clear(); // clear error flags
@@ -216,7 +216,7 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     cerr << "Loading map data for " << nloci_before_filter-skip_queue.size() << " loci\n";
@@ -278,7 +278,7 @@ void MapData::initMapData(int nloci)
     if (nloci < 1)
     {
         cerr << "ERROR: number of loci (" << nloci << ") must be positive.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     mapEntries = new struct MapEntry[nloci];

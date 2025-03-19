@@ -49,6 +49,7 @@ class SelscanStats {
             //else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
         }
         if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + p.query;
+        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + p.query;
         if (p.ALT) outFilename += ".alt";
         return outFilename;
     }

@@ -17,11 +17,18 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
     ehhdata.init(hm->hapData->nhaps, get_all_1s(locus));
     ehhdata.initialize_core(p.ALT);
 
+    if(downstream){
+        if(ehhdata.n_c[1] == 0 || ehhdata.n_c[0] == 0){
+            cerr<<"WARNING: monomorphic site is being used as core."<<endl;
+        }
+    }
 
     output[locus].ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
     output[locus].ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
     output[locus].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / twice_num_pair(ehhdata.nhaps);
-
+    output[locus].pdist = 0;
+    output[locus].gdist = 0;
+    output[locus].print = true;
     int i = locus;
     while(true){
 
@@ -29,17 +36,17 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
             break;
         }
 
-        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
-        if(breaking_ehh <= p.EHH_CUTOFF){
-            /*DEBUG :
-            if(downstream){
-                cout<<"breaking ehh down: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
-            }else{
-                cout<<"breaking ehh up: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
-            }
-             */
-            break;
-        }
+        // double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
+        // if(breaking_ehh <= p.EHH_CUTOFF){
+        //     /*DEBUG :
+        //     if(downstream){
+        //         cout<<"breaking ehh down: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
+        //     }else{
+        //         cout<<"breaking ehh up: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
+        //     }
+        //      */
+        //     break;
+        // }
 
         bool breakReachedEdge = false;
         breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
@@ -71,7 +78,9 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
         output[i].ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
         output[i].ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
         output[i].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / twice_num_pair(ehhdata.nhaps);
-
+        output[i].pdist = downstream? -physicalDistance_from_core(i,locus, downstream): physicalDistance_from_core(i,locus, downstream);
+        output[i].gdist = downstream? -geneticDistance_from_core(i,locus, downstream): geneticDistance_from_core(i,locus, downstream);
+        output[i].print = true;
         if (physicalDistance_from_core(i, locus, downstream) >= p.QWIN) break;
         
     }
