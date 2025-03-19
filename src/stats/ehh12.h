@@ -67,7 +67,7 @@ class EHH12_ehh_data{
 
     void initialize_core(bool ALT){
         if(n_c[1] == 0 || n_c[0] == 0){
-            cout<<"WARNING: cannot use this as core"<<endl;
+            //cerr<<"WARNING: monomorphic site"<<endl;
         }
 
         group_count[1] = n_c[1];
@@ -133,7 +133,7 @@ class EHH12 : public SelscanStats{
                 cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
                 return -1;
             }else{
-                cerr << "Found " << query << " in data.\n";
+                cerr << "Found " << query << " in data. Computing EHH12...\n";
             }
             return  queryLoc;
         }

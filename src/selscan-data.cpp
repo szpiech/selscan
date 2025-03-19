@@ -348,8 +348,8 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     queue<int> skiplist;
 
     // PHASE 1: Counting so that inititalization is smooth
-    cerr << "Opening " << filename << "...\n";
-    *flog << "Opening " << filename << "...\n";
+    cerr << "Opening " << filename << " to count number of haplotypes and loci...\n";
+    *flog << "Opening " << filename << " to count number of haplotypes and loci...\n";
 
     fin.open(filename.c_str());
 
@@ -404,14 +404,12 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                 {
                     cerr << "ERROR: Alleles must be coded 0 or 1 only. Found alleles "<< allele1 << separator << allele2 << endl;
                     *flog << "ERROR: Alleles must be coded 0 or 1 only. Found alleles "<< allele1 << separator << allele2 << endl;
-                    throw 0;
                     exit(EXIT_FAILURE);
                 }
             }
 
             if(separator != '|' && !p.UNPHASED){
                cerr << "ERROR: Unphased entries detected (| is used). Make sure you run with --unphased flag for correct results.\n";
-               throw 0;
                exit(EXIT_FAILURE);
             }
 
@@ -462,7 +460,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         {
             cerr << "ERROR: line " << nloci_before_filtering << " of " << filename << " has " << current_ngts
                  << " fields, but the previous line has " << prev_ngts << " fields.\n";
-            throw 0;
+            exit(EXIT_FAILURE);
         }
         prev_ngts = current_ngts;
     }
@@ -478,7 +476,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     if (fin.fail())
     {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
-        throw 0;
+        exit(EXIT_FAILURE);
     }
 
     if(p.SKIP && !p.CALC_XP &&  !p.CALC_XPNSL){
@@ -557,9 +555,10 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     
 
     if(p.SKIP){
-        cerr << "Removed " << skipcount << " low frequency variants.\n";
-        (*flog) << "Removed " << skipcount << " low frequency variants.\n";
+        cerr << "Removed " << skipcount << " low frequency variants from haplotype data.\n";
+        (*flog) << "Removed " << skipcount << " low frequency variants from haplotype data.\n";
     }
+    cout<<"===="<<endl;
 
     fin.close();
 
@@ -1115,7 +1114,6 @@ void HapMap::loadHapMapData(){
         
     mapData = std::make_unique<MapData>(); 
     hapData = std::make_unique<HapData>();
-    
 
     // PHASE 2:  Load data to HapData and MapData
     if (p.CALC_XP || p.CALC_XPNSL){
@@ -1184,17 +1182,17 @@ void HapMap::loadHapMapData(){
         mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
     }
 
-
     // PHASE 2:  XOR
-    if(p.benchmark_flag=="XOR")
-        hapData->xor_for_phased_and_unphased();
-
+    // if(p.benchmark_flag=="XOR")
+    //     hapData->xor_for_phased_and_unphased();
 
     auto end_reading = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> read_duration =  end_reading - start_reading;
-    std::cerr<<("LOG: Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
-    (*flog)<<("LOG: Input file loaded in "+to_string(read_duration.count())+" s.\n")<<endl;;
-    
+    std::cerr<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
+    (*flog)<<("Input file loaded in "+to_string(read_duration.count())+" s.")<<endl;
+
+    std::cerr<<"====="<<endl;
+    (*flog)<<"====="<<endl;
     // DEBUG::: mapData.print();
 
     // if(mapData->chr_list.size() > 1 && p.MULTI_CHR == false){
@@ -1208,13 +1206,13 @@ void HapMap::loadHapMapData(){
             std::cerr << "ERROR: Variant physical position must be monotonically increasing.\n";
             std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].physicalPos << " appears after";
             std::cerr << "\t" <<  mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].physicalPos << "\n";
-            exit(2);
+            exit(EXIT_FAILURE);
         }
         if ( !p.CALC_NSL && mapData->mapEntries[i].geneticPos  < mapData->mapEntries[i-1].geneticPos  ) {
             std::cerr << "ERROR: Variant genetic position must be monotonically increasing.\n";
             std::cerr << "\t" << mapData->mapEntries[i].locusName << " " << mapData->mapEntries[i].geneticPos << " appears after";
             std::cerr << "\t" << mapData->mapEntries[i-1].locusName << " " << mapData->mapEntries[i-1].geneticPos << "\n";
-            exit(2);
+            exit(EXIT_FAILURE);
         }
     }
     

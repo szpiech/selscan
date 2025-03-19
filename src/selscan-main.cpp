@@ -53,9 +53,18 @@ using namespace std;
 
 
 string getLogFileName(param_main &p){
+    if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12> 1)
+    {
+        // cerr<<"WARNING: Running multiple statistics at once. Make sure parameters are consistent across runs.\n";
+        // p.MULTI_MAF = true;
+        return p.outFilename + "." + "multi" + ".log";
+    }
     string statname = "";
     if(p.SINGLE_EHH){
         statname = "ehh";
+    }
+    if(p.SINGLE_EHH12){
+        statname = "ehh12";
     }
     if (p.CALC_XP){
         statname = "xpehh";
@@ -74,6 +83,9 @@ string getLogFileName(param_main &p){
     }
     if (p.CALC_SOFT){
         statname = "ihh12";
+    }
+    if(p.SINGLE_EHH12 || p.SINGLE_EHH){
+        statname = statname + "." + p.query;
     }
     return p.outFilename + "." + statname + ".log";
 }
@@ -184,12 +196,12 @@ int main(int argc, char *argv[])
     double time_start = (clock() / (double)CLOCKS_PER_SEC);
  
     cerr << "selscan v" + VERSION + "\n";
-   
     for (int i = 0; i < argc; i++)
     {
         cerr << argv[i] << " ";
     }
     cerr << "\n";
+    cerr<<"===="<<endl;
 
     
 
@@ -264,10 +276,8 @@ int main(int argc, char *argv[])
     double time_end = (clock() / (double)CLOCKS_PER_SEC);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    std::cerr << ("Total CPU time: " + to_string(time_end - time_start) + " s. \n");
-    std::cerr << "Program took " << duration.count() << " seconds to complete." << std::endl;
-    *flog << ("Total CPU time: " + to_string(time_end - time_start) + " s. \n");
-    *flog << "Program took " << duration.count() << " seconds to complete." << std::endl;
+    std::cerr << "Program took " << duration.count() << " seconds to complete." << (" Total CPU time: " + to_string(time_end - time_start) + " s. \n");
+    *flog << "Program took " << duration.count() << " seconds to complete." << (" Total CPU time: " + to_string(time_end - time_start) + " s. \n");
     
     // // END LOGGING
     flog->close();

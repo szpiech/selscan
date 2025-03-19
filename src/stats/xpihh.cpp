@@ -692,14 +692,11 @@ pair<double, double> XPIHH::calc_xpihh(int locus)
     //works for both phased and unphased
     pair<double, double> right = calc_ehh_unidirection(locus, false);
     if(skipLocus(right)){
-        cout<<"skipping locus right"<<locus<<endl;
         return skipLocusPair();
     }
 
     pair<double, double> left = calc_ehh_unidirection(locus, true); 
     if(skipLocus(left)){
-        cout<<"skipping locus left"<<locus<<endl;
-
         return skipLocusPair();
     }
 
