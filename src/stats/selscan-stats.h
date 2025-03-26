@@ -6,13 +6,13 @@
 #include "../binom.h"
 #include "../selscan-data.h"
 
-#ifdef __APPLE__
-#include <TargetConditionals.h>
-#if TARGET_OS_MAC
-    #define IS_MACOS
-    #include "../../../../../../Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/pthread/pthread.h"
-#endif
-#endif
+// #ifdef __APPLE__
+// #include <TargetConditionals.h>
+// #if TARGET_OS_MAC
+//     #define IS_MACOS
+//     #include "../../../../../../Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/pthread/pthread.h"
+// #endif
+// #endif
 
 
 /// @brief Class to hold common stuff required to compute all statistics for selscan
