@@ -1710,10 +1710,10 @@ void IHS::main() {
     //cerr<<"DEBUG::: Checkpoint before print."<<endl;   
 
     if(hm->p.MISSING_ALLOWED){
-        hm->hapData->printMissingMatrix();
+        //DEBUG::: hm->hapData->printMissingMatrix();
     }else{
-        hm->hapData->print(5);
-        //hm->hapData->print_by_ij();
+        //DEBUG::: hm->hapData->print(5);
+        //DEBUG::: hm->hapData->print_by_ij();
     }
     //cerr<<"DEBUG::: IHS done."<<endl;   
     
