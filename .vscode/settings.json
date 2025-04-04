@@ -1,8 +1,11 @@
 {
     "files.associations": {
+        "*.Snakefile": "snakemake",
         "vector": "cpp",
         "array": "cpp",
         "string": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp"
     }
 }
