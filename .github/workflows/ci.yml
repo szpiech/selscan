@@ -18,6 +18,9 @@ jobs:
       with:
         ref: speedup
 
+    - name: install dependencies
+      run: sudo apt install -y zlib1g:
+
     - name: Build
       working-directory: src/
       run: make -f Makefile_linux
