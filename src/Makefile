@@ -10,8 +10,9 @@
 
 #for osx/macos-arm systems
 
-CC = g++-14 -std=c++17 -g -W
-G++FLAG = -O3 -m64  -arch arm64  -lm -ftree-vectorize
+CC = g++ -std=c++17  -w -Wno-psabi
+G++FLAG = -O3 -m64  -arch arm64  -ftree-vectorize
+# -lm
 
 #-g 
 #-march=native
@@ -30,7 +31,7 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 # OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
-all : selscan 
+all : selscan norm
 
 #norm
 # build_and_cleanup

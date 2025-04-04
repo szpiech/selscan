@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <iostream>
-#include <omp.h>
+// #include <omp.h>
 #include <vector>
 #include <cstdlib>   // For std::aligned_alloc
 #include <cstring>   // For std::memset

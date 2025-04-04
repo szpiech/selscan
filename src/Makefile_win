@@ -29,13 +29,25 @@ L_PATH = ../lib/win32
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
 
+
+OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
+# OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
+OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
+
+
 all : selscan norm
 
-selscan : selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
+selscan : selscan-main.o selscan-maintools.o selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
+	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o $(OBJ_STATS) selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
 
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
+
+%.o: hapmap/%.cpp hapmap/%.h 
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+%.o: stats/%.cpp stats/%.h 
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
 
 selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h
 	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)

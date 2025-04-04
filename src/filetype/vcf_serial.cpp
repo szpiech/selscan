@@ -5,7 +5,7 @@
 #include <algorithm>
 #include<cmath>
 #include <set>
-#include <omp.h>
+// #include <omp.h>
 using namespace std;
 
  VCFSerialReader::VCFSerialReader(std::string filename, HapData* hapData)

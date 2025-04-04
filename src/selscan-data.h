@@ -27,7 +27,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <omp.h>
+// #include <omp.h>
 #include "gzstream.h"
 #include "param_t.h"
 
