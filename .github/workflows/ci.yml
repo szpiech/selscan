@@ -23,7 +23,7 @@ jobs:
 
     - name: Build
       working-directory: src/
-      run: make -f Makefile_linux
+      run: make -f Makefile_linux -j
 
     - name: Test
       working-directory: src/
