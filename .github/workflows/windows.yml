@@ -4,10 +4,10 @@ name: C++ CI Windows
 on:
   push:
     branches:
-      - speedup
+      - master
   pull_request:
     branches:
-      - speedup
+      - master
 
 jobs:
   build:
@@ -19,6 +19,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+
+    - name: Set up Git credentials
+      if: contains(github.event.head_commit.message, '[binary]')
+      run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          
     # - name: Set Up MSVC Environment ## works
     #   uses: ilammy/msvc-dev-cmd@v1
 
@@ -35,13 +43,22 @@ jobs:
     - name: Verify GCC/Clang Installation
       run: gcc --version; clang++ --version
 
-    - name: Build Project
+    - name: Build selscan
       shell: msys2 {0}
       working-directory: src/
       run: make -f Makefile_win
 #      shell: bash
 
-    - name: Test
+    - name: Test selscan installation
       shell: msys2 {0}
       working-directory: src/
       run: ./selscan.exe --help
+
+
+    - name: Commit and push binary
+      if: contains(github.event.head_commit.message, '[binary]')
+      run: |
+        mkdir -p bin/win; cp src/selscan.exe bin/win/
+        git add bin/win
+        git commit -m "Adding bin to bin/win" || echo "No changes to commit"
+        git push

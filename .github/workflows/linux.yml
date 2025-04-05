@@ -3,10 +3,10 @@ name: C++ CI Linux
 on:
   push:
     branches:
-      - speedup
+      - master
   pull_request:
     branches:
-      - speedup
+      - master
 
 jobs:
   build:
@@ -16,16 +16,27 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-      with:
-        ref: speedup
 
-    # - name: Install dependencies
-    #   run: sudo apt-get update && sudo apt-get install -y zlib1g zlib1g-dev
-
-    - name: Build
+    - name: Set up Git credentials
+      if: contains(github.event.head_commit.message, '[binary]')
+      run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          
+    - name: Build selscan
       working-directory: src/
       run: make -f Makefile_linux -j
 
-    - name: Test
+    - name: Test selscan installation
       working-directory: src/
       run: ./selscan --help
+
+    - name: Commit and push binary
+      if: contains(github.event.head_commit.message, '[binary]')
+      run: |
+        mkdir -p bin/linux; cp src/selscan bin/linux/
+        git add bin/linux
+        git commit -m "Adding bin to bin/linux" || echo "No changes to commit"
+        git push
+
