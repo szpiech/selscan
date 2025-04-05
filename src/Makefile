@@ -31,13 +31,9 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 # OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
-all : selscan norm
-
+all : selscan 
 #norm
-# build_and_cleanup
 
-# build_and_cleanup: selscan norm
-# 	rm -rf *.o	
 
 selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
 	$(CC) $(G++FLAG) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)
