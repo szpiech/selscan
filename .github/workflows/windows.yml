@@ -19,20 +19,8 @@ jobs:
     - name: Configure Git to Handle Line Endings
       run: git config --global core.autocrlf input
 
-
     - name: Checkout code
       uses: actions/checkout@v3
-      with:
-        ref: speedup
-
-    # - name: Set Up MSYS2
-    #   uses: msys2/setup-msys2@v2
-    #   with:
-    #     msystem: MINGW64
-    #     install: >-
-    #       mingw-w64-x86_64-gcc
-    #       make
-    #     update: true
 
     - name: Set Up MSYS2 Environment
       uses: msys2/setup-msys2@v2
@@ -40,18 +28,14 @@ jobs:
         msystem: MINGW64
         update: true
         install: >-
+          mingw-w64-x86_64-toolchain
+          base-devel
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-winpthreads-git
-    # mingw-w64-x86_64-pthreads
 
-    - name: Add MSYS2 MinGW64 to PATH
-      run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-
-
-    # - name: Install Dependencies
-    #     shell: msys2 {0}
-    #     run: pacman -Syu --noconfirm zlib zlib-devel
+    - name: Verify make Installation
+      run: which make
+      shell: msys2 {0}
 
     - name: Build
       shell: msys2 {0}
