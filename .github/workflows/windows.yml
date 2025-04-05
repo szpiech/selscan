@@ -36,10 +36,11 @@ jobs:
         msystem: clang64
         update: true
         install: >-
-          git
-          base-devel
           mingw-w64-clang-x86_64-toolchain
-       
+      
+#          git
+#base-devel          
+
     # - name: Verify GCC/Clang Installation
     #   run: gcc --version; clang++ --version
     - name: GSL
