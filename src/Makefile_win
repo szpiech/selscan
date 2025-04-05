@@ -22,7 +22,7 @@
 #for windows, using MinGW build environment
 CC = clang++  
 G++FLAG=-std=c++17 
-G++FLAG_NORM= -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+G++FLAG_NORM= -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++  -m32
 #-fuse-ld=bfd
 
 #-pthread
@@ -93,13 +93,13 @@ binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm : norm.o param_t.o
-	g++ $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
+	gcc $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
 
 norm.o : norm.cpp
-	g++ $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
+	gcc $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
 
 param_t.o : param_t.cpp param_t.h
-	$(CC) $(G++FLAG) -c param_t.cpp
+	gcc $(G++FLAG) -c param_t.cpp
 
 gzstream.o : gzstream.cpp gzstream.h
 	$(CC) $(G++FLAG) -c gzstream.cpp $(I_PATH)
