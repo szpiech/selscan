@@ -20,7 +20,10 @@
 #L_PATH = ../lib/linux
 
 #for windows, using MinGW build environment
-CC = clang++  -std=c++17 -pthread
+CC = clang++  
+G++FLAG=-std=c++17 
+
+#-pthread
 # G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
 
 #G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
@@ -29,13 +32,23 @@ CC = clang++  -std=c++17 -pthread
 
 LINK_OPTS2=-lpthread -lz
 #I_PATH = -I../include -I../include/win32 
-I_PATH = -I../include/win32  -I../include
+
+
+I_PATH = -I../include/win32  
+#-I../include
+I_PATH_NORM = -I../include
+
 L_PATH = 
 L_PATH = ../lib/win32
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a  #For static linking of norm program to gsl libs
-LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
+LINK_OPTS =  -lgsl -lgslcblas -L$(L_PATH) #For dynamic linking
+
+
+
+
+
 #LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a  
 
 
@@ -74,7 +87,7 @@ norm : norm.o param_t.o
 	$(CC) $(G++FLAG) -o norm norm.o param_t.o $(LINK_OPTS)
 
 norm.o : norm.cpp
-	$(CC) $(G++FLAG) -c norm.cpp $(I_PATH)
+	$(CC) $(G++FLAG) -c norm.cpp $(I_PATH_NORM)
 
 param_t.o : param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c param_t.cpp
