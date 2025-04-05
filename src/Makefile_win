@@ -93,13 +93,13 @@ binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm : norm.o param_t.o
-	gcc $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
+	$(CC) $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
 
 norm.o : norm.cpp
-	gcc $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
+	$(CC) $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
 
 param_t.o : param_t.cpp param_t.h
-	gcc $(G++FLAG) -c param_t.cpp
+	$(CC) $(G++FLAG) -c param_t.cpp
 
 gzstream.o : gzstream.cpp gzstream.h
 	$(CC) $(G++FLAG) -c gzstream.cpp $(I_PATH)
