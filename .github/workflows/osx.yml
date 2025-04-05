@@ -26,7 +26,7 @@ jobs:
             
       - name: Build selscan
         working-directory: src/
-        run: make -f Makefile -j
+        run: make -f Makefile_osx -j
 
       - name: Test selscan installation
         working-directory: src/
