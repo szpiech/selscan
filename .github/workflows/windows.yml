@@ -47,6 +47,10 @@ jobs:
       if: contains(github.event.head_commit.message, '[gsl]') 
       run: |
         pacman -S mingw-w64-x86_64-gsl --noconfirm 
+        cp /mingw64/lib/libgsl.a ${{ github.workspace }}/lib/win32
+        cp /mingw64/lib/libgslcblas.a ${{ github.workspace }}/lib/win32
+        cp -r /mingw64/include/gsl/ ${{ github.workspace }}/include/gsl
+
     # mkdir -p gsl-install
     # cd gsl-2.8   # Replace with actual version folder
     # ./configure --prefix="${{ github.workspace }}/gsl-install"
