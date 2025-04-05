@@ -42,7 +42,14 @@ jobs:
        
     # - name: Verify GCC/Clang Installation
     #   run: gcc --version; clang++ --version
-
+    - name: Build selscan
+      shell: msys2 {0}
+      working-directory: src/
+      run: |
+        cd gsl-2.8   # Replace with actual version folder
+        ./configure --prefix=../
+        make
+        make install
     - name: Build selscan
       shell: msys2 {0}
       working-directory: src/
