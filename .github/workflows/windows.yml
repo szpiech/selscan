@@ -30,15 +30,15 @@ jobs:
     # - name: Set Up MSVC Environment ## works
     #   uses: ilammy/msvc-dev-cmd@v1
 
-    # - name: Set Up MSYS2 Environment
-    #   uses: msys2/setup-msys2@v2
-    #   with:
-    #     msystem: clang64
-    #     update: true
-    #     install: >-
-    #       git
-    #       base-devel
-    #       mingw-w64-clang-x86_64-toolchain
+    - name: Set Up MSYS2 Environment
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: clang64
+        update: true
+        install: >-
+          git
+          base-devel
+          mingw-w64-clang-x86_64-toolchain
        
     # - name: Verify GCC/Clang Installation
     #   run: gcc --version; clang++ --version
