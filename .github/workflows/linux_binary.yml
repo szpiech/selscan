@@ -18,7 +18,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-
     - name: Set up Git credentials
       if: contains(github.event.head_commit.message, '[binary]')
       run: |
@@ -37,7 +36,7 @@ jobs:
     - name: Commit and push binary
       if: contains(github.event.head_commit.message, '[binary]')
       run: |
-        cp src/selscan bin/linux/
+        mkdir -p bin/linux; cp src/selscan bin/linux/
         git add bin/linux
         git commit -m "Adding bin to bin/linux" || echo "No changes to commit"
         git push
