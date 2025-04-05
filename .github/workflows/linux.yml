@@ -1,0 +1,31 @@
+name: C++ CI Linux
+
+on:
+  push:
+    branches:
+      - speedup
+  pull_request:
+    branches:
+      - speedup
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[run ci]')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: speedup
+
+    # - name: Install dependencies
+    #   run: sudo apt-get update && sudo apt-get install -y zlib1g zlib1g-dev
+
+    - name: Build
+      working-directory: src/
+      run: make -f Makefile_linux -j
+
+    - name: Test
+      working-directory: src/
+      run: ./selscan --help

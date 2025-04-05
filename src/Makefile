@@ -40,7 +40,7 @@ all : selscan norm
 # 	rm -rf *.o	
 
 selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
-	$(CC) $(G++FLAG) $(LINK_OPTS2) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
+	$(CC) $(G++FLAG) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)
 	
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)

@@ -1,4 +1,5 @@
-name: C++ CI
+name: C++ CI Mac
+# This workflow will build and test the C++ code on macOS using GitHub Actions.
 
 on:
   push:
@@ -10,7 +11,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
+    if: contains(github.event.head_commit.message, '[run ci]')
 
     steps:
     - name: Checkout code
@@ -20,8 +22,8 @@ jobs:
 
     - name: Build
       working-directory: src/
-      run: make -f Makefile_linux
+      run: make -f Makefile -j
 
     - name: Test
       working-directory: src/
-      run: ./selscan
+      run: ./selscan --help
