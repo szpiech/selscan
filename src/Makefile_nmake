@@ -6,10 +6,11 @@ CFLAGS = /O2 /W4 /WX /std:c++17 /EHsc
 
 # Include and Library Paths
 I_PATH = /I"..\include" /I"..\include\win32"
-L_PATH = /LIBPATH:"..\lib\win32"
+L_PATH = ""
+#/LIBPATH:"..\lib\win32"
 
 # Libraries
-# LIBS = zlib.lib
+LIBS = zlib.lib
 
 
 # Source and Object Files
@@ -22,10 +23,10 @@ OBJS = $(SRCS:.cpp=.obj)
 all: selscan.exe norm.exe
 
 selscan.exe: $(OBJS)
-    $(CC) $(CFLAGS) $(OBJS) /Fe:selscan.exe $(L_PATH)
+    $(CC) $(CFLAGS) $(OBJS) /Fe:selscan.exe $(L_PATH) $(LIBS)
 
 norm.exe: norm.obj param_t.obj
-    $(CC) $(CFLAGS) norm.obj param_t.obj /Fe:norm.exe $(L_PATH)
+    $(CC) $(CFLAGS) norm.obj param_t.obj /Fe:norm.exe $(L_PATH) $(LIBS)
 
 # Compilation Rules
 .cpp.obj:
