@@ -10,34 +10,34 @@ on:
 
 jobs:
     build:
-        runs-on: macos-13
-        if: contains(github.event.head_commit.message, '[run ci]')
+      runs-on: macos-13
+      if: contains(github.event.head_commit.message, '[run ci]')
 
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v3
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-          - name: Set up Git credentials
-            if: contains(github.event.head_commit.message, '[binary]')
-            run: |
-                git config --global user.name "GitHub Actions"
-                git config --global user.email "actions@github.com"
-                git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-                
-          - name: Build selscan
-            working-directory: src/
-            run: make -f Makefile -j
-
-          - name: Test selscan installation
-            working-directory: src/
-            run: ./selscan --help
-
-          - name: Commit and push binary
-            if: contains(github.event.head_commit.message, '[binary]')
-            run: |
-                mkdir -p bin/osx; cp src/selscan bin/osx/
-                git add bin/osx
-                git commit -m "Adding bin to bin/osx" || echo "No changes to commit"
-                git push
-
+      - name: Set up Git credentials
+        if: contains(github.event.head_commit.message, '[binary_osx]')
+        run: |
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
             
+      - name: Build selscan
+        working-directory: src/
+        run: make -f Makefile -j
+
+      - name: Test selscan installation
+        working-directory: src/
+        run: ./selscan --help
+
+      - name: Commit and push binary
+        if: contains(github.event.head_commit.message, '[binary_osx]')
+        run: |
+            mkdir -p bin/osx; cp src/selscan bin/osx/
+            git add bin/osx
+            git commit -m "Adding bin to bin/osx" || echo "No changes to commit"
+            git push
+
+        
