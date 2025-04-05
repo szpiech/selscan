@@ -49,7 +49,7 @@ LINK_OPTS =  -lgsl -lgslcblas -L$(L_PATH) #For dynamic linking
 LINK_OPTS =  -lgsl -lgslcblas -lm
 LINK_OPTS_LATER =  -L../lib/win32 
 
-G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+G++FLAG = -O3
 LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
 I_PATH = -I../include -I../include/win32 
 L_PATH = ../lib/win32

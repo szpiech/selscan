@@ -46,18 +46,19 @@ jobs:
       shell: msys2 {0}
       if: contains(github.event.head_commit.message, '[gsl]') 
       run: |
-        mkdir -p gsl-install
-        cd gsl-2.8   # Replace with actual version folder
-        ./configure --prefix="${{ github.workspace }}/gsl-install"
-        make
-        make install
+        pacman -S mingw-w64-x86_64-gsl
+    # mkdir -p gsl-install
+    # cd gsl-2.8   # Replace with actual version folder
+    # ./configure --prefix="${{ github.workspace }}/gsl-install"
+    # make
+    # make install
 
-    - name: Commit and push binary
-      if: contains(github.event.head_commit.message, '[gsl]') 
-      run: |
-        git add gsl-install
-        git commit -m "Adding gsl" || echo "No changes to commit"
-        git push
+    # - name: Commit and push binary
+    #   if: contains(github.event.head_commit.message, '[gsl]') 
+    #   run: |
+    #     git add gsl-install
+    #     git commit -m "Adding gsl" || echo "No changes to commit"
+    #     git push
 
     - name: Build selscan
       shell: msys2 {0}
