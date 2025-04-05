@@ -17,7 +17,7 @@ jobs:
     steps:
 
     - name: Configure Git to Handle Line Endings
-        run: git config --global core.autocrlf input
+      run: git config --global core.autocrlf input
 
 
     - name: Checkout code
