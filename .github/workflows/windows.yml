@@ -22,8 +22,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set Up MSVC Environment
-      uses: ilammy/msvc-dev-cmd@v1
+      # works
+    # - name: Set Up MSVC Environment
+    #   uses: ilammy/msvc-dev-cmd@v1
 
 
     # - name: Set up vcpkg
@@ -34,9 +35,9 @@ jobs:
     #     runVcpkgInstall: false
 
 
-    - name: Build with nmake
-      run: nmake /f Makefile_nmake
-      working-directory: src/
+    # - name: Build with nmake
+    #   run: nmake /f Makefile_nmake
+    #   working-directory: src/
 
     # - name: Download and Build zlib
     #   run: |
