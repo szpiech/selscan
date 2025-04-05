@@ -40,8 +40,8 @@
    in the public header files as
 
         INLINE_DECL double gsl_foo (double x);
-	#ifdef HAVE_INLINE
-	INLINE_FUN double gsl_foo (double x) { return x+1.0; } ;
+        #ifdef HAVE_INLINE
+        INLINE_FUN double gsl_foo (double x) { return x+1.0; } ;
         #endif
    
 */

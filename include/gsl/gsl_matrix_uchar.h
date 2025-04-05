@@ -26,6 +26,7 @@
 #include <gsl/gsl_inline.h>
 #include <gsl/gsl_check_range.h>
 #include <gsl/gsl_vector_uchar.h>
+#include <gsl/gsl_blas_types.h>
 
 #undef __BEGIN_DECLS
 #undef __END_DECLS
@@ -216,12 +217,14 @@ int gsl_matrix_uchar_fprintf (FILE * stream, const gsl_matrix_uchar * m, const c
  
 int gsl_matrix_uchar_memcpy(gsl_matrix_uchar * dest, const gsl_matrix_uchar * src);
 int gsl_matrix_uchar_swap(gsl_matrix_uchar * m1, gsl_matrix_uchar * m2);
+int gsl_matrix_uchar_tricpy(CBLAS_UPLO_t Uplo, CBLAS_DIAG_t Diag, gsl_matrix_uchar * dest, const gsl_matrix_uchar * src);
 
 int gsl_matrix_uchar_swap_rows(gsl_matrix_uchar * m, const size_t i, const size_t j);
 int gsl_matrix_uchar_swap_columns(gsl_matrix_uchar * m, const size_t i, const size_t j);
 int gsl_matrix_uchar_swap_rowcol(gsl_matrix_uchar * m, const size_t i, const size_t j);
 int gsl_matrix_uchar_transpose (gsl_matrix_uchar * m);
 int gsl_matrix_uchar_transpose_memcpy (gsl_matrix_uchar * dest, const gsl_matrix_uchar * src);
+int gsl_matrix_uchar_transpose_tricpy (CBLAS_UPLO_t Uplo_src, CBLAS_DIAG_t Diag, gsl_matrix_uchar * dest, const gsl_matrix_uchar * src);
 
 unsigned char gsl_matrix_uchar_max (const gsl_matrix_uchar * m);
 unsigned char gsl_matrix_uchar_min (const gsl_matrix_uchar * m);
@@ -238,13 +241,17 @@ int gsl_matrix_uchar_ispos (const gsl_matrix_uchar * m);
 int gsl_matrix_uchar_isneg (const gsl_matrix_uchar * m);
 int gsl_matrix_uchar_isnonneg (const gsl_matrix_uchar * m);
 
+unsigned char gsl_matrix_uchar_norm1 (const gsl_matrix_uchar * m);
+
 int gsl_matrix_uchar_add (gsl_matrix_uchar * a, const gsl_matrix_uchar * b);
 int gsl_matrix_uchar_sub (gsl_matrix_uchar * a, const gsl_matrix_uchar * b);
 int gsl_matrix_uchar_mul_elements (gsl_matrix_uchar * a, const gsl_matrix_uchar * b);
 int gsl_matrix_uchar_div_elements (gsl_matrix_uchar * a, const gsl_matrix_uchar * b);
-int gsl_matrix_uchar_scale (gsl_matrix_uchar * a, const double x);
-int gsl_matrix_uchar_add_constant (gsl_matrix_uchar * a, const double x);
-int gsl_matrix_uchar_add_diagonal (gsl_matrix_uchar * a, const double x);
+int gsl_matrix_uchar_scale (gsl_matrix_uchar * a, const unsigned char x);
+int gsl_matrix_uchar_scale_rows (gsl_matrix_uchar * a, const gsl_vector_uchar * x);
+int gsl_matrix_uchar_scale_columns (gsl_matrix_uchar * a, const gsl_vector_uchar * x);
+int gsl_matrix_uchar_add_constant (gsl_matrix_uchar * a, const unsigned char x);
+int gsl_matrix_uchar_add_diagonal (gsl_matrix_uchar * a, const unsigned char x);
 
 /***********************************************************************/
 /* The functions below are obsolete                                    */

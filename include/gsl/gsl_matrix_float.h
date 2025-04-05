@@ -26,6 +26,7 @@
 #include <gsl/gsl_inline.h>
 #include <gsl/gsl_check_range.h>
 #include <gsl/gsl_vector_float.h>
+#include <gsl/gsl_blas_types.h>
 
 #undef __BEGIN_DECLS
 #undef __END_DECLS
@@ -216,12 +217,14 @@ int gsl_matrix_float_fprintf (FILE * stream, const gsl_matrix_float * m, const c
  
 int gsl_matrix_float_memcpy(gsl_matrix_float * dest, const gsl_matrix_float * src);
 int gsl_matrix_float_swap(gsl_matrix_float * m1, gsl_matrix_float * m2);
+int gsl_matrix_float_tricpy(CBLAS_UPLO_t Uplo, CBLAS_DIAG_t Diag, gsl_matrix_float * dest, const gsl_matrix_float * src);
 
 int gsl_matrix_float_swap_rows(gsl_matrix_float * m, const size_t i, const size_t j);
 int gsl_matrix_float_swap_columns(gsl_matrix_float * m, const size_t i, const size_t j);
 int gsl_matrix_float_swap_rowcol(gsl_matrix_float * m, const size_t i, const size_t j);
 int gsl_matrix_float_transpose (gsl_matrix_float * m);
 int gsl_matrix_float_transpose_memcpy (gsl_matrix_float * dest, const gsl_matrix_float * src);
+int gsl_matrix_float_transpose_tricpy (CBLAS_UPLO_t Uplo_src, CBLAS_DIAG_t Diag, gsl_matrix_float * dest, const gsl_matrix_float * src);
 
 float gsl_matrix_float_max (const gsl_matrix_float * m);
 float gsl_matrix_float_min (const gsl_matrix_float * m);
@@ -238,13 +241,17 @@ int gsl_matrix_float_ispos (const gsl_matrix_float * m);
 int gsl_matrix_float_isneg (const gsl_matrix_float * m);
 int gsl_matrix_float_isnonneg (const gsl_matrix_float * m);
 
+float gsl_matrix_float_norm1 (const gsl_matrix_float * m);
+
 int gsl_matrix_float_add (gsl_matrix_float * a, const gsl_matrix_float * b);
 int gsl_matrix_float_sub (gsl_matrix_float * a, const gsl_matrix_float * b);
 int gsl_matrix_float_mul_elements (gsl_matrix_float * a, const gsl_matrix_float * b);
 int gsl_matrix_float_div_elements (gsl_matrix_float * a, const gsl_matrix_float * b);
-int gsl_matrix_float_scale (gsl_matrix_float * a, const double x);
-int gsl_matrix_float_add_constant (gsl_matrix_float * a, const double x);
-int gsl_matrix_float_add_diagonal (gsl_matrix_float * a, const double x);
+int gsl_matrix_float_scale (gsl_matrix_float * a, const float x);
+int gsl_matrix_float_scale_rows (gsl_matrix_float * a, const gsl_vector_float * x);
+int gsl_matrix_float_scale_columns (gsl_matrix_float * a, const gsl_vector_float * x);
+int gsl_matrix_float_add_constant (gsl_matrix_float * a, const float x);
+int gsl_matrix_float_add_diagonal (gsl_matrix_float * a, const float x);
 
 /***********************************************************************/
 /* The functions below are obsolete                                    */
