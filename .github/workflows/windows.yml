@@ -148,11 +148,15 @@ jobs:
 #      shell: bash
 
 
+    # - name: Test
+    #   shell: msys2 {0}
+    #   working-directory: src/
+    #   run: ls ; ./selscan.exe 
+
     - name: Test
       shell: msys2 {0}
       working-directory: src/
-      run: ls ; ./selscan.exe 
-
+      run: .\selscan.exe
 
 
 
