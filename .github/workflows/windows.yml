@@ -22,17 +22,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set Up MSYS2 Environment
-      uses: msys2/setup-msys2@v2
+    # - name: Set Up MSYS2 Environment
+    #   uses: msys2/setup-msys2@v2
+    #   with:
+    #     msystem: MINGW64
+    #     update: true
+    #     install: >-
+    #       mingw-w64-x86_64-toolchain
+    #       base-devel
+    #       mingw-w64-x86_64-gcc
+    #       mingw-w64-x86_64-winpthreads-git
+    - name: Set up MinGW-w64
+      uses: egor-tensin/setup-mingw@v2
       with:
-        msystem: MINGW64
-        update: true
-        install: >-
-          mingw-w64-x86_64-toolchain
-          base-devel
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-winpthreads-git
-
+        platform: x64
+        
     - name: Verify make Installation
       run: which make
       shell: msys2 {0}

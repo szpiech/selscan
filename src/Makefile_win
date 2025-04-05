@@ -20,7 +20,7 @@
 #L_PATH = ../lib/linux
 
 #for windows, using MinGW build environment
-CC = g++.exe  -std=c++17
+CC = g++.exe  -std=c++17 -pthread
 G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
 LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a -lpthread -lz
 I_PATH = -I../include -I../include/win32 
