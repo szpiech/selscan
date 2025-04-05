@@ -11,8 +11,8 @@
 
 #ifdef _WIN32
     #include <intrin.h> // For __popcnt64 and _tzcnt_u64
-#else
-    #include <x86intrin.h> // For __builtin_popcountll and __builtin_ctzl
+// #else
+//     #include <x86intrin.h> // For __builtin_popcountll and __builtin_ctzl
 #endif
 
 constexpr size_t alignment = alignof(uint64_t); // Alignment boundary
