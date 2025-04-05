@@ -6,8 +6,7 @@ CFLAGS = /O2 /W4 /WX /std:c++17 /EHsc
 
 # Include and Library Paths
 I_PATH = /I"..\include" /I"..\include\win32"
-L_PATH = ""
-#/LIBPATH:"..\lib\win32"
+L_PATH = /LIBPATH:"..\lib\win32"
 
 # Libraries
 LIBS = zlib.lib
