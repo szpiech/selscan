@@ -4,10 +4,10 @@ name: C++ CI Windows
 on:
   push:
     branches:
-      - speedup
+      - main
   pull_request:
     branches:
-      - speedup
+      - main
 
 jobs:
   build:
