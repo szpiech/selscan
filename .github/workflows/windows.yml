@@ -46,7 +46,7 @@ jobs:
       shell: msys2 {0}
       if: contains(github.event.head_commit.message, '[gsl]') 
       run: |
-        pacman -S mingw-w64-x86_64-gsl
+        pacman -S mingw-w64-x86_64-gsl --noconfirm 
     # mkdir -p gsl-install
     # cd gsl-2.8   # Replace with actual version folder
     # ./configure --prefix="${{ github.workspace }}/gsl-install"
