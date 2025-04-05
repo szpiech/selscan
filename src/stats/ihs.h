@@ -15,13 +15,17 @@ class IHS: public SelscanStats{
         void main(); 
         pair<double, double> calc_ihh1(int locus);  
         pair<double, double> infer_missing(int locus);  
+        std::mutex mutex_log;
 
     protected:
         void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core);
         string getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0);
 
     private:
-        static pthread_mutex_t mutex_log;
+        //static pthread_mutex_t mutex_log;
+
+        
+
         int max_extend;
 
         //phased_ihs

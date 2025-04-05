@@ -17,7 +17,7 @@
         }                                            \
     }
 
-pthread_mutex_t IHS::mutex_log = PTHREAD_MUTEX_INITIALIZER;
+// pthread_mutex_t IHS::mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core){
     for (const auto &ele : m) {
@@ -155,22 +155,26 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
     }
 
     if(n_c[1] == numHaps || n_c[0] == numHaps || n_c[2] == numHaps){ 
-        pthread_mutex_lock(&mutex_log);
-        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-                << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
-                << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-        pthread_mutex_unlock(&mutex_log);
+        //{std::lock_guard<std::mutex> lock(mutex_log);
+        {
+            std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+            << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
+            << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
+        }
+        //}//unlock
         return skipLocusPair();
     }
 
     double freqHetGT = n_c[1]*1.0/numHaps;
     if (  freqHetGT > 1-p.MAF ) 
     {
-        pthread_mutex_lock(&mutex_log);
-        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+        {//{std::lock_guard<std::mutex> lock(mutex_log);
+            std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-        pthread_mutex_unlock(&mutex_log);
+        }//}//unlock
         //hm->mapData->mapEntries[locus].skipLocus = true;
         return skipLocusPair();
     }
@@ -188,14 +192,17 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         bool edgeBreak = false;
         edgeBreak = nextLocOutOfBounds(i, downstream);
         if(edgeBreak) {
-            pthread_mutex_lock(&mutex_log);
-            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
+            {
+                std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
                     << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
-            pthread_mutex_unlock(&mutex_log);
+            }
+            
             if (!p.TRUNC){
-                pthread_mutex_lock(&mutex_log);
-                (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
-                pthread_mutex_unlock(&mutex_log);
+                {
+                    std::lock_guard<std::mutex> lock(mutex_log);
+                     (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
+                }
                 return skipLocusPair();
             }
             break;
@@ -236,20 +243,21 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
 
         if (physicalDistance(i,downstream) > p.MAX_GAP)
         {
-            pthread_mutex_lock(&mutex_log);
-            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
-                    << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-            pthread_mutex_unlock(&mutex_log);
+            {
+                std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
+                        << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }
             return skipLocusPair();
         }
 
         /*
         if( at i it is monomorphic){
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
             //         << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
             //         << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // hm->mapData->mapEntries[locus].skipLocus = true;
             // break;
             // if you wish to continue
@@ -266,11 +274,11 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         */
 
        if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, do not compute unnecessarily
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
             // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
             // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // throw 0;
             
             //if you wish to continue anyway
@@ -355,10 +363,10 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
         // //This probably isn't necessary any more
         // if ( !unphased && (numDerived == 0 || numAncestral == 0) ) 
         // {
-        //     pthread_mutex_lock(&mutex_log);
+        //     {std::lock_guard<std::mutex> lock(mutex_log);
         //     (*flog) << "WARNING: locus " << locusName[locus]
         //             << " (number " << locus + 1 << ") is monomorphic. Skipping calculation at this locus.\n";
-        //     pthread_mutex_unlock(&mutex_log);
+        //     }//unlock
         //     skipLocus = 1;
         //     break;
         // }
@@ -525,11 +533,12 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
     }
 
     if(n_c[1] == numHaps || n_c[0] == numHaps || n_c[2] == numHaps){ 
-        pthread_mutex_lock(&mutex_log);
-        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+        {
+            std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-        pthread_mutex_unlock(&mutex_log);
+        }
         //hm->mapData->mapEntries[locus].skipLocus = true;
         return skipLocusPair();
     }
@@ -537,11 +546,11 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
     // double freqHetGT = n_c[1]*1.0/numHaps;
     // if (  freqHetGT > 1-p.MAF ) 
     // {
-    //     pthread_mutex_lock(&mutex_log);
+    //     {std::lock_guard<std::mutex> lock(mutex_log);
     //     (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
     //             << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
     //             << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-    //     pthread_mutex_unlock(&mutex_log);
+    //     }//unlock
     //     hm->mapData->mapEntries[locus].skipLocus = true;
     //     return make_pair(0,0);
     // }
@@ -560,14 +569,16 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
         bool edgeBreak = false;
         edgeBreak = nextLocOutOfBounds(i, downstream); //(downstream)? (i-1 < 0) : (i+1 >= numSnps);
         if(edgeBreak) {
-            pthread_mutex_lock(&mutex_log);
+            {
+                std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
                     << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
-            pthread_mutex_unlock(&mutex_log);
+            }
             if (!p.TRUNC){
-                pthread_mutex_lock(&mutex_log);
+                {
+                std::lock_guard<std::mutex> lock(mutex_log);
                 (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
-                pthread_mutex_unlock(&mutex_log);
+                }
                 return skipLocusPair();
             }
             break;
@@ -608,10 +619,10 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
 
         if (physicalDistance(i,downstream) > p.MAX_GAP)
         {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
                     << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-            pthread_mutex_unlock(&mutex_log);
+            }
             return skipLocusPair();
             //break;
         }
@@ -619,11 +630,11 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
 
         /*
         if( at i it is monomorphic){
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
             //         << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
             //         << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // hm->mapData->mapEntries[locus].skipLocus = true;
             // break;
             // if you wish to continue
@@ -639,11 +650,11 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
         }
         */
        if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, do not compute unnecessarily
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
             // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
             // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // throw 0;
             
             //if you wish to continue anyway
@@ -879,10 +890,10 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased_missing(int locus, bool
         // //This probably isn't necessary any more
         // if ( !unphased && (numDerived == 0 || numAncestral == 0) ) 
         // {
-        //     pthread_mutex_lock(&mutex_log);
+        //     {std::lock_guard<std::mutex> lock(mutex_log);
         //     (*flog) << "WARNING: locus " << locusName[locus]
         //             << " (number " << locus + 1 << ") is monomorphic. Skipping calculation at this locus.\n";
-        //     pthread_mutex_unlock(&mutex_log);
+        //     }//unlock
         //     skipLocus = 1;
         //     break;
         // }
@@ -986,10 +997,10 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         curr_ehh0_before_norm = normalizer_0;
         //hm->mapData->mapEntries[locus].skipLocus = true;
 
-        pthread_mutex_lock(&mutex_log);
+        {std::lock_guard<std::mutex> lock(mutex_log);
         (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
-        pthread_mutex_unlock(&mutex_log);
+        }//unlock
         
         return skipLocusPair();
     }else if (n_c1==numHaps){ // all 1s
@@ -1001,10 +1012,10 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         });
         curr_ehh1_before_norm = normalizer_1;
 
-        pthread_mutex_lock(&mutex_log);
+        {std::lock_guard<std::mutex> lock(mutex_log);
         (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
-        pthread_mutex_unlock(&mutex_log);
+        }//unlock
         return skipLocusPair();
         //hm->mapData->mapEntries[locus].skipLocus = true;
     }else{  //so both n_c1 and n_c0 is non-0
@@ -1016,10 +1027,10 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         });
 
         // if(hm->mapData->mapEntries[locus].skipLocus){
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
             //         << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // return make_pair(0,0);
         // }
         
@@ -1056,7 +1067,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         edgeBreak = (downstream)? (i-1 < 0) : (i+1 >= numSnps);
         //edgeBreak = nextLocOutOfBounds(i, downstream);
         if(edgeBreak) {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
                     << ". ";
             if (!p.TRUNC){
@@ -1065,7 +1076,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
             }
             (*flog) << endl;
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
             if (!p.TRUNC){
                 return skipLocusPair();
             }
@@ -1132,11 +1143,11 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         distance *= scale;
 
         if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ // monomorphic check, do not compute unnecessarily
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
             // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
             // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // throw 0;
             
             //if you wish to continue anyway
@@ -1348,10 +1359,10 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         
 
         // if(hm->mapData->mapEntries[locus].skipLocus){
-        //     pthread_mutex_lock(&mutex_log);
+        //     {std::lock_guard<std::mutex> lock(mutex_log);
         //     (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
         //             << " (number " << locus << ") is monomorphic. Skipping calculation at this locus.\n";
-        //     pthread_mutex_unlock(&mutex_log);
+        //     }//unlock
         //     return make_pair(0,0);
         // }
         
@@ -1387,7 +1398,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         bool edgeBreak = false;
         edgeBreak = nextLocOutOfBounds(i, downstream);
         if(edgeBreak) {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
                     << ". ";
             if (!p.TRUNC){
@@ -1395,7 +1406,7 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
                 (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
             }
             (*flog) << endl;
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
             //break;
         }
         i= (downstream)? i-1 : i+1;
@@ -1425,11 +1436,11 @@ pair<double, double> IHS::calc_ehh_unidirection_missing(int locus, bool downstre
         distance *= scale;
 
         if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ // monomorphic check, do not compute unnecessarily
-            // pthread_mutex_lock(&mutex_log);
+            // {std::lock_guard<std::mutex> lock(mutex_log);
             // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
             // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
             // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
-            // pthread_mutex_unlock(&mutex_log);
+            // }//unlock
             // throw 0;
             
             //if you wish to continue anyway
@@ -1739,14 +1750,14 @@ void IHS::main() {
  * @param locus The locus 
 */
 pair<double, double> IHS::calc_ihh1(int locus){
-    //pthread_mutex_lock(&mutex_log);
+    //{std::lock_guard<std::mutex> lock(mutex_log);
     // if(hm->hapData->get_maf(locus) <= p.MAF){
     //     hm->mapData->mapEntries[locus].skipLocus = true;
     //     return make_pair(-100,-100);
     // }else{
     //     hm->mapData->mapEntries[locus].skipLocus = false;
     // }
-    //pthread_mutex_unlock(&mutex_log);
+    //}//unlock
 
     int numSnps = hm->mapData->nloci;
     int numHaps = hm->hapData->nhaps;

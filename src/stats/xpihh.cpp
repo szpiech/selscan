@@ -1,8 +1,6 @@
 #include "xpihh.h"
 #include "../thread_pool.h"
 
-pthread_mutex_t XPIHH::mutex_log = PTHREAD_MUTEX_INITIALIZER;
-
 XPIHH_ehh_data::~XPIHH_ehh_data(){
     delete[] group_count;
     delete[] group_id;
@@ -187,15 +185,15 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
         {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
                     << ". \n";
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
             if (!p.TRUNC){
                 //hm->mapData->mapEntries[locus].skipLocus = true;
-                pthread_mutex_lock(&mutex_log);
+                {std::lock_guard<std::mutex> lock(mutex_log);
                 (*flog) << ARG_TRUNC << "set. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-                pthread_mutex_unlock(&mutex_log);
+                }//unlock
                 return skipLocusPair();
             }
             break;
@@ -209,10 +207,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         if (physicalDistance(i,downstream) > p.MAX_GAP)
         {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
                     << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
             return skipLocusPair();
             //hm->mapData->mapEntries[locus].skipLocus = true;
             //break;
@@ -488,16 +486,16 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
         if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
         {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
                     << ". \n";
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
 
             if (!p.TRUNC){
-                pthread_mutex_lock(&mutex_log);
+                {std::lock_guard<std::mutex> lock(mutex_log);
                 (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
                 (*flog) << "\n";
-                pthread_mutex_unlock(&mutex_log);
+                }//unlock
                 return skipLocusPair();
             }
             break;
@@ -511,10 +509,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
         if (physicalDistance(i,downstream) > p.MAX_GAP)
         {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
                     << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
             
             return skipLocusPair();
             //hm->mapData->mapEntries[locus].skipLocus = true;

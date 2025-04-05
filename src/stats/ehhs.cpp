@@ -1,7 +1,6 @@
 #include "ehhs.h"
 #include "../thread_pool.h"
 
-pthread_mutex_t EHHS::mutex_log = PTHREAD_MUTEX_INITIALIZER;
 
 EHHS_ehh_data::~EHHS_ehh_data(){
     delete[] group_count;

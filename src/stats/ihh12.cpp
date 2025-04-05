@@ -1,8 +1,6 @@
 #include "ihh12.h"
 #include <cassert>
 
-pthread_mutex_t IHH12::mutex_log = PTHREAD_MUTEX_INITIALIZER;
-
 // void IHH12::findMaxK(int* arr, int n, int K) {
 //     /// Function to find the Kth largest element in the array
 //     // using binary search
@@ -185,14 +183,14 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         bool breakReachedEdge = false;
         breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
         if(breakReachedEdge){ //nextLocus < 0 || nextLocus >= numSnps to avoid going to negative
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
 
             if (p.TRUNC == false){
-                pthread_mutex_lock(&mutex_log);
+                {std::lock_guard<std::mutex> lock(mutex_log);
                 (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[i].physicalPos << " id: " << hm->mapData->mapEntries[i].locusName <<endl;
-                pthread_mutex_unlock(&mutex_log);
+                }//unlock
                 return skipLocusDouble();
             }
             break;
@@ -203,9 +201,9 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         int physicalDistance_old = physicalDistance(i,downstream); //double check if i or nextlocus
         if (physicalDistance_old > p.MAX_GAP)
         {
-            pthread_mutex_lock(&mutex_log);
+            {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached a gap of " << physicalDistance_old << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " <<  hm->mapData->mapEntries[i].physicalPos << " id: " <<  hm->mapData->mapEntries[i].locusName << "\n";
-            pthread_mutex_unlock(&mutex_log);
+            }//unlock
             return skipLocusDouble();
             break;
         }
