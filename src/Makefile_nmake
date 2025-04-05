@@ -9,7 +9,8 @@ I_PATH = /I"..\include" /I"..\include\win32"
 L_PATH = /LIBPATH:"..\lib\win32"
 
 # Libraries
-LIBS = zlib.lib
+# LIBS = zlib.lib
+
 
 # Source and Object Files
 SRCS = selscan-main.cpp xpihh.cpp ehh.cpp ihs.cpp ihh12.cpp pi.cpp ehh12.cpp \
@@ -21,10 +22,10 @@ OBJS = $(SRCS:.cpp=.obj)
 all: selscan.exe norm.exe
 
 selscan.exe: $(OBJS)
-    $(CC) $(CFLAGS) $(OBJS) /Fe:selscan.exe $(L_PATH) $(LIBS)
+    $(CC) $(CFLAGS) $(OBJS) /Fe:selscan.exe $(L_PATH)
 
 norm.exe: norm.obj param_t.obj
-    $(CC) $(CFLAGS) norm.obj param_t.obj /Fe:norm.exe $(L_PATH) $(LIBS)
+    $(CC) $(CFLAGS) norm.obj param_t.obj /Fe:norm.exe $(L_PATH)
 
 # Compilation Rules
 .cpp.obj:
