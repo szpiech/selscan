@@ -151,7 +151,7 @@ jobs:
     - name: Test
       # shell: msys2 {0}
       working-directory: src/
-      run: ls -lh; ./selscan.exe --help
+      run: ls ; ./selscan.exe 
 
 
 
