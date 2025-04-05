@@ -47,15 +47,17 @@ jobs:
     - name: Configure PATH
       run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+  #     - name: Install Make
+  # run: pacman -S --noconfirm mingw-w64-x86_64-make
 
-    - name: Verify make Installation
-      run: which make
-      shell: msys2 {0}
+    # - name: Verify make Installation
+    #   run: which make
+    #   shell: msys2 {0}
 
     - name: Build
       shell: msys2 {0}
       working-directory: src/
-      run: make -f Makefile_win
+      run: mingw32-make -f Makefile_win
 
     - name: Test
       shell: msys2 {0}
