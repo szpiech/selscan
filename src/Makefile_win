@@ -28,8 +28,10 @@ CC = clang++  -std=c++17 -pthread
 
 
 LINK_OPTS2=-lpthread -lz
-I_PATH = -I../include -I../include/win32 
-L_PATH = ../lib/win32
+#I_PATH = -I../include -I../include/win32 
+I_PATH = -I../include/win32 
+L_PATH = 
+#L_PATH = ../lib/win32
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a

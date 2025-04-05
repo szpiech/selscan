@@ -16,6 +16,8 @@ class IHS: public SelscanStats{
         pair<double, double> calc_ihh1(int locus);  
         pair<double, double> infer_missing(int locus);  
         std::mutex mutex_log;
+        //std::unique_ptr<std::mutex> mutex_log = std::make_unique<std::mutex>();
+
 
     protected:
         void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core);
