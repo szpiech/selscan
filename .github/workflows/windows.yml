@@ -32,11 +32,22 @@ jobs:
     #       base-devel
     #       mingw-w64-x86_64-gcc
     #       mingw-w64-x86_64-winpthreads-git
-    - name: Set up MinGW-w64
-      uses: egor-tensin/setup-mingw@v2
+
+
+    - name: Set up MSYS2
+      uses: msys2/setup-msys2@v2
       with:
-        platform: x64
-        
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-toolchain
+  # mingw-w64-x86_64-cmake
+  # mingw-w64-x86_64-ninja
+
+    - name: Configure PATH
+      run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+
     - name: Verify make Installation
       run: which make
       shell: msys2 {0}
@@ -44,7 +55,7 @@ jobs:
     - name: Build
       shell: msys2 {0}
       working-directory: src/
-      run: make -f Makefile_win -j
+      run: make -f Makefile_win
 
     - name: Test
       shell: msys2 {0}
