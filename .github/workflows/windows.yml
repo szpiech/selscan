@@ -49,6 +49,7 @@ jobs:
         pacman -S mingw-w64-x86_64-gsl --noconfirm 
         cp /mingw64/lib/libgsl.a "${{ github.workspace }}"/lib/win32/
         cp /mingw64/lib/libgslcblas.a "${{ github.workspace }}"/lib/win32/
+        mkdir -p "${{ github.workspace }}"/include/gsl
         cp /mingw64/include/gsl/* "${{ github.workspace }}"/include/gsl/
 
     - name: Commit and push binary
