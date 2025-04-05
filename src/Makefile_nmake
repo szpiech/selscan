@@ -28,7 +28,7 @@ norm.exe: norm.obj param_t.obj
 
 # Compilation Rules
 .cpp.obj:
-    $(CC) $(CFLAGS) $(I_PATH) /c $< /Fo$@
+    $(CC) $(CFLAGS) /c $< /Fo$@
     # $(CC) $(CFLAGS) $(I_PATH) /c $< /Fo$@
 
 # Clean Rule
