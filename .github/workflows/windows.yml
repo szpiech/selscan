@@ -16,77 +16,11 @@ jobs:
 
     steps:
 
-    # - name: Configure Git to Handle Line Endings
-    #   run: git config --global core.autocrlf input
-
     - name: Checkout code
       uses: actions/checkout@v4
 
-      # works
-    # - name: Set Up MSVC Environment
+    # - name: Set Up MSVC Environment ## works
     #   uses: ilammy/msvc-dev-cmd@v1
-
-
-    # - name: Set up vcpkg
-    #   uses: lukka/run-vcpkg@v11
-    #   with:
-    #     vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-    #     vcpkgGitCommitId: '5b1214315250939257ef5d62ecdcbca18cf4fb1c' # Replace with the desired commit ID
-    #     runVcpkgInstall: false
-
-
-    # - name: Build with nmake
-    #   run: nmake /f Makefile_nmake
-    #   working-directory: src/
-
-    # - name: Download and Build zlib
-    #   run: |
-    #     # Define zlib version and download URL
-    #     $ZLIB_VERSION = "1.3.1"
-    #     $ZLIB_URL = "https://zlib.net/zlib-${ZLIB_VERSION}.zip"
-
-    #     # Create a temporary directory for zlib
-    #     $ZLIB_TEMP_DIR = "${{ runner.temp }}\zlib"
-    #     New-Item -ItemType Directory -Path $ZLIB_TEMP_DIR
-
-    #     # Download zlib source code
-    #     Invoke-WebRequest -Uri $ZLIB_URL -OutFile "$ZLIB_TEMP_DIR\zlib.zip"
-
-    #     # Extract the downloaded zip file
-    #     Expand-Archive -Path "$ZLIB_TEMP_DIR\zlib.zip" -DestinationPath $ZLIB_TEMP_DIR
-
-    #     # Navigate to the zlib source directory
-    #     $ZLIB_SRC_DIR = "$ZLIB_TEMP_DIR\zlib-$ZLIB_VERSION"
-    #     cd $ZLIB_SRC_DIR
-
-    #     # Set up the Visual Studio environment
-    #     $VS_PATH = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-    #     Import-Module "$VS_PATH\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
-    #     Enter-VsDevShell -VsInstallPath $VS_PATH -SkipAutomaticLocation
-
-    #     # Build zlib using nmake
-    #     nmake -f win32\Makefile.msc
-
-    #     # Install zlib (copy headers and libraries to a known location)
-    #     $INSTALL_DIR = "C:\zlib"
-    #     New-Item -ItemType Directory -Path "$INSTALL_DIR\include"
-    #     New-Item -ItemType Directory -Path "$INSTALL_DIR\lib"
-    #     Copy-Item -Path "zlib.h", "zconf.h" -Destination "$INSTALL_DIR\include"
-    #     Copy-Item -Path "zlib.lib" -Destination "$INSTALL_DIR\lib"
-
-
-
-    # - name: Build with Makefile
-    #   run: |
-    #     # Set environment variables for include and library paths
-    #     $env:INCLUDE = "C:\zlib\include;$env:INCLUDE"
-    #     $env:LIB = "C:\zlib\lib;$env:LIB"
-    #     nmake /f Makefile_nmake
-    #   # # Navigate to the project directory
-    #   # cd ${{ github.workspace }}
-    #   working-directory: src/
-    #   shell: cmd
-
 
     - name: Set Up MSYS2 Environment
       uses: msys2/setup-msys2@v2
@@ -97,49 +31,9 @@ jobs:
           git
           base-devel
           mingw-w64-clang-x86_64-toolchain
-        # mingw-w64-clang-x86_64-cmake
-        # mingw-w64-clang-x86_64-ninja
-
-
-    # - name: Set up MSYS2
-    #   uses: msys2/setup-msys2@v2
-    #   with:
-    #     msystem: MINGW64
-    #     update: true
-    #     install: >-
-    #       mingw-w64-x86_64-toolchain
-  # mingw-w64-x86_64-cmake
-  # mingw-w64-x86_64-ninja
-
-
-  # pacman -S mingw-w64-x86_64-toolchain
-
-
-    # - name: Configure PATH
-    #   run: pacman -S mingw-w64-x86_64-toolchain; 
-  #echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-  #     - name: Install Make
-  # run: pacman -S --noconfirm mingw-w64-x86_64-make
-
-    # - name: Verify make Installation
-    #   run: which make
-    #   shell: msys2 {0}
-
-    # - name: Build
-    #   # shell: msys2 {0}
-    #   working-directory: src/
-    #   run: mingw32-make -f Makefile_win
-
-    # - name: Install MinGW with POSIX Threads
-    #   run: |
-    #     choco install mingw --params "/threads:posix"
-
-    # - name: Update PATH
-    #   run: echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
-
-    - name: Verify GCC Installation
-      run: gcc --version
+       
+    - name: Verify GCC/Clang Installation
+      run: gcc --version; clang++ --version
 
     - name: Build Project
       shell: msys2 {0}
@@ -147,18 +41,7 @@ jobs:
       run: make -f Makefile_win
 #      shell: bash
 
-
-    # - name: Test
-    #   shell: msys2 {0}
-    #   working-directory: src/
-    #   run: ls ; ./selscan.exe 
-
     - name: Test
       shell: msys2 {0}
       working-directory: src/
-      run: .\selscan.exe
-
-
-
-
-      
+      run: ./selscan.exe --help
