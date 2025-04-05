@@ -41,7 +41,8 @@ jobs:
         update: true
         install: >-
           mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-pthreads
+          mingw-w64-x86_64-winpthreads-git
+    # mingw-w64-x86_64-pthreads
 
     - name: Add MSYS2 MinGW64 to PATH
       run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
