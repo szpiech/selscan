@@ -1,39 +1,25 @@
 # Makefile for selscan
 
-#  -arch x86_64  # Compile for Intel (x86_64)
-#  -arch arm64 # Compile for Apple Silicon (ARM64)
-# lipo -create -output main_universal main_x86_64 main_arm64
-# # Compile for 32-bit ARM
-# Compile for 64-bit ARM
-
-#G++FLAG = -g -Wall -Werror   #debugging
-
-#for osx/macos-arm systems
-
 CC = g++ -std=c++17  -w -Wno-psabi
 G++FLAG = -O3 -m64  -arch arm64  -ftree-vectorize
-# -lm
 
-#-g 
-#-march=native
-#-Og -g
-# -fsanitize=address -static-libasan
-#-mmmx -msse -msse2 -Og
+#-march=native -Og -g  -Wall -Werror   #debugging
+#-mmmx -msse -msse2 -Og -lm
+
+
+LINK_OPTS2 = -lpthread -lz
+I_PATH = -I../include
+
+L_PATH = ../lib/macos-arm 
 LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
 #LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
-LINK_OPTS2 = -lpthread -lz
-# -fopenmp
-#-fopenmp 
-I_PATH = -I../include
-L_PATH = ../lib/macos-arm #L_PATH = ../lib/osx
+
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 # OBJ_FILETYPE = hap.o vcf.o vcf_serial.o hap_serial.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
-all : selscan 
-#norm
-
+all : selscan norm
 
 selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
 	$(CC) $(G++FLAG) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)
@@ -82,4 +68,4 @@ gzstream.o : gzstream.cpp gzstream.h
 
 clean :
 	rm -rf *.o;  rm -rf selscan; rm -rf  norm; 
-#rm -rf outfile*
+# rm -rf outfile*

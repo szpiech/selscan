@@ -29,9 +29,9 @@ CC = clang++  -std=c++17 -pthread
 
 LINK_OPTS2=-lpthread -lz
 #I_PATH = -I../include -I../include/win32 
-I_PATH = -I../include/win32 
+I_PATH = -I../include/win32  -I../include
 L_PATH = 
-#L_PATH = ../lib/win32
+L_PATH = ../lib/win32
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
@@ -40,7 +40,7 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 
-all : selscan 
+all : norm 
 #norm
 
 selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 

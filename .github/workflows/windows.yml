@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    if: contains(github.event.head_commit.message, '[run ci]')
+    if: (contains(github.event.head_commit.message, '[run ci]') || contains(github.event.head_commit.message, '[win]'))
 
     steps:
 
@@ -46,13 +46,13 @@ jobs:
     - name: Build selscan
       shell: msys2 {0}
       working-directory: src/
-      run: make -f Makefile_win
+      run: make -f Makefile_win -j
 #      shell: bash
 
     - name: Test selscan installation
       shell: msys2 {0}
       working-directory: src/
-      run: ./selscan.exe --help
+      run: ./norm.exe --help
 
 
     - name: Commit and push binary
