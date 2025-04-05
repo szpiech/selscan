@@ -136,13 +136,13 @@ jobs:
     # - name: Update PATH
     #   run: echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
 
-    # - name: Verify GCC Installation
-    #   run: gcc --version
+    - name: Verify GCC Installation
+      run: gcc --version
 
-    # - name: Build Project
-    #   working-directory: src/
-    #   run: make -f Makefile_win
-    #   shell: bash
+    - name: Build Project
+      working-directory: src/
+      run: make -f Makefile_win
+      shell: bash
 
 
     - name: Test
