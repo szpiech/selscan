@@ -1,12 +1,10 @@
 #include "ehhs.h"
 #include "../thread_pool.h"
 
-
 EHHS_ehh_data::~EHHS_ehh_data(){
     delete[] group_count;
     delete[] group_id;
 }
-
 
 void EHHS::updateGroup_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc){
     for (const auto &ele : m) {

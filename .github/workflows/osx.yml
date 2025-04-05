@@ -1,0 +1,29 @@
+name: C++ CI OSX 
+# This workflow will build and test the C++ code on Intel-based macOS Runners using GitHub Actions.  
+
+on:
+  push:
+    branches:
+      - speedup
+  pull_request:
+    branches:
+      - speedup
+
+jobs:
+  build:
+    runs-on: macos-13 # Use macOS 13 (Ventura) for Intel-based Runners. These runners provide a 4-core Intel processor, 14 GB of RAM, and 14 GB of SSD storage.
+    if: contains(github.event.head_commit.message, '[run ci]')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: speedup
+
+    - name: Build
+      working-directory: src/
+      run: make -f Makefile -j
+
+    - name: Test
+      working-directory: src/
+      run: ./selscan --help
