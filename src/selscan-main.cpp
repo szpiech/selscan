@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
-// #include <pthread.h>
+#include <pthread.h>
 #include <map>
 #include "selscan-cli.h"
 #include "selscan-data.h"
