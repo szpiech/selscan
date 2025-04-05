@@ -22,6 +22,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Set Up MSVC Environment
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build with Makefile
+      run: nmake /f Makefile_nmake
+      working-directory: src/
+      shell: cmd
+
+
     # - name: Set Up MSYS2 Environment
     #   uses: msys2/setup-msys2@v2
     #   with:
@@ -64,20 +73,20 @@ jobs:
     #   working-directory: src/
     #   run: mingw32-make -f Makefile_win
 
-    - name: Install MinGW with POSIX Threads
-      run: |
-        choco install mingw --params "/threads:posix"
+    # - name: Install MinGW with POSIX Threads
+    #   run: |
+    #     choco install mingw --params "/threads:posix"
 
-    - name: Update PATH
-      run: echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
+    # - name: Update PATH
+    #   run: echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
 
-    - name: Verify GCC Installation
-      run: gcc --version
+    # - name: Verify GCC Installation
+    #   run: gcc --version
 
-    - name: Build Project
-      working-directory: src/
-      run: make -f Makefile_win
-      shell: bash
+    # - name: Build Project
+    #   working-directory: src/
+    #   run: make -f Makefile_win
+    #   shell: bash
 
 
     - name: Test

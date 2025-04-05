@@ -1,0 +1,35 @@
+# Compiler
+CC = cl.exe
+
+# Compiler Flags
+CFLAGS = /O2 /W4 /WX /std:c++17 /EHsc
+
+# Include and Library Paths
+I_PATH = /I"..\include" /I"..\include\win32"
+L_PATH = /LIBPATH:"..\lib\win32"
+
+# Libraries
+LIBS = pthreadVC2.lib zlib.lib
+
+# Source and Object Files
+SRCS = selscan-main.cpp xpihh.cpp ehh.cpp ihs.cpp ihh12.cpp pi.cpp ehh12.cpp \
+       hapdata.cpp mapdata.cpp bitset.cpp selscan-data.cpp selscan-cli.cpp \
+       binom.cpp param_t.cpp gzstream.cpp thread_pool.cpp
+OBJS = $(SRCS:.cpp=.obj)
+
+# Targets
+all: selscan.exe norm.exe
+
+selscan.exe: $(OBJS)
+    $(CC) $(CFLAGS) $(OBJS) /Fe:selscan.exe $(L_PATH) $(LIBS)
+
+norm.exe: norm.obj param_t.obj
+    $(CC) $(CFLAGS) norm.obj param_t.obj /Fe:norm.exe $(L_PATH) $(LIBS)
+
+# Compilation Rules
+.cpp.obj:
+    $(CC) $(CFLAGS) $(I_PATH) /c $< /Fo$@
+
+# Clean Rule
+clean:
+    del *.obj *.exe
