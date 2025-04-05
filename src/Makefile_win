@@ -22,7 +22,7 @@
 #for windows, using MinGW build environment
 CC = clang++  
 G++FLAG=-std=c++17 
-G++FLAG_NORM= -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++  -m32
+G++FLAG_NORM= -DPTW32_STATIC_LIB -O3 -m32
 #-fuse-ld=bfd
 
 #-pthread
