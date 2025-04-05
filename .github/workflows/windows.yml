@@ -26,29 +26,16 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
 
 
-    - name: Set up vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        vcpkgGitCommitId: '5b1214315250939257ef5d62ecdcbca18cf4fb1c' # Replace with the desired commit ID
-        runVcpkgInstall: false
+    # - name: Set up vcpkg
+    #   uses: lukka/run-vcpkg@v11
+    #   with:
+    #     vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+    #     vcpkgGitCommitId: '5b1214315250939257ef5d62ecdcbca18cf4fb1c' # Replace with the desired commit ID
+    #     runVcpkgInstall: false
 
-    - name: Install zlib
-      run: |
-        $VCPKG_ROOT = "${{ github.workspace }}\vcpkg"
-        & $VCPKG_ROOT\vcpkg.exe install zlib:x64-windows
-
-    - name: Integrate vcpkg with MSBuild
-      run: |
-        $VCPKG_ROOT = "${{ github.workspace }}\vcpkg"
-        & $VCPKG_ROOT\vcpkg.exe integrate install
 
     - name: Build with nmake
-      run: |
-        $VCPKG_ROOT = "${{ github.workspace }}\vcpkg"
-        $env:INCLUDE = "$VCPKG_ROOT\installed\x64-windows\include;$env:INCLUDE"
-        $env:LIB = "$VCPKG_ROOT\installed\x64-windows\lib;$env:LIB"
-        nmake /f Makefile_nmake
+      run: nmake /f Makefile_nmake
       working-directory: src/
 
     # - name: Download and Build zlib
