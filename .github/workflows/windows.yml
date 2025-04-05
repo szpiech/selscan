@@ -40,8 +40,8 @@ jobs:
           base-devel
           mingw-w64-clang-x86_64-toolchain
        
-    - name: Verify GCC/Clang Installation
-      run: gcc --version; clang++ --version
+    # - name: Verify GCC/Clang Installation
+    #   run: gcc --version; clang++ --version
 
     - name: Build selscan
       shell: msys2 {0}

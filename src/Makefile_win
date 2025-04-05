@@ -93,10 +93,10 @@ binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm : norm.o param_t.o
-	$(CC) $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
+	g++ $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
 
 norm.o : norm.cpp
-	$(CC) $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
+	g++ $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
 
 param_t.o : param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c param_t.cpp
