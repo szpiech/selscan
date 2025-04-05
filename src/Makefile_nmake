@@ -9,7 +9,7 @@ I_PATH = /I"..\include" /I"..\include\win32"
 L_PATH = /LIBPATH:"..\lib\win32"
 
 # Libraries
-LIBS = pthreadVC2.lib zlib.lib
+LIBS = zlib.lib
 
 # Source and Object Files
 SRCS = selscan-main.cpp xpihh.cpp ehh.cpp ihs.cpp ihh12.cpp pi.cpp ehh12.cpp \
@@ -29,6 +29,7 @@ norm.exe: norm.obj param_t.obj
 # Compilation Rules
 .cpp.obj:
     $(CC) $(CFLAGS) $(I_PATH) /c $< /Fo$@
+    # $(CC) $(CFLAGS) $(I_PATH) /c $< /Fo$@
 
 # Clean Rule
 clean:
