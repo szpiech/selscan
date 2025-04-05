@@ -97,8 +97,8 @@ jobs:
           git
           base-devel
           mingw-w64-clang-x86_64-toolchain
-          # mingw-w64-clang-x86_64-cmake
-          # mingw-w64-clang-x86_64-ninja
+        # mingw-w64-clang-x86_64-cmake
+        # mingw-w64-clang-x86_64-ninja
 
 
     # - name: Set up MSYS2
