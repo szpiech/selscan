@@ -57,12 +57,15 @@ jobs:
     # make
     # make install
 
-    # - name: Commit and push binary
-    #   if: contains(github.event.head_commit.message, '[gsl]') 
-    #   run: |
-    #     git add gsl-install
-    #     git commit -m "Adding gsl" || echo "No changes to commit"
-    #     git push
+    - name: Commit and push binary
+      if: contains(github.event.head_commit.message, '[gsl]') 
+      run: |
+        git add include/gsl
+        git add lib/win32/libgsl.a
+        git add lib/win32/libgslcblas.a
+        git add lib/win32
+        git commit -m "Adding gsl" || echo "No changes to commit"
+        git push
 
     - name: Build selscan
       shell: msys2 {0}
