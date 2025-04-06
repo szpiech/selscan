@@ -65,7 +65,7 @@ jobs:
       shell: msys2 {0}
       # working-directory: src/
       run: |
-        pacman -S mingw-w64-x86_64-pthreads mingw-w64-x86_64-zlib --noconfirm
+        pacman -S mingw-w64-x86_64-winpthread mingw-w64-x86_64-zlib --noconfirm
         cp /mingw64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
         cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
   # find /mingw64 -name 'libwinpthread.a'
