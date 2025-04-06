@@ -32,7 +32,7 @@ G++FLAG_NORM= -O3
 #LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a -lpthread -lz
 
 
-LINK_OPTS2=-lpthread -lz
+
 #I_PATH = -I../include -I../include/win32 
 
 
@@ -56,6 +56,8 @@ LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a
 LINK_OPTS2 = -lz -lpthread
 I_PATH = -I../include -I../include/win32 
 L_PATH = ../lib/win32
+LINK_OPTS2=-L$(L_PATH) -lpthread -lz 
+
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a

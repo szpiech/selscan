@@ -65,7 +65,10 @@ jobs:
     - name: Build selscan
       shell: msys2 {0}
       working-directory: src/
-      run: make -f Makefile_win -j
+      run: |
+        cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
+        cp /mingw64/lib/libpthread.a "${{ github.workspace }}"/lib/win32/
+        make -f Makefile_win -j
 #      shell: bash
 
     - name: Test selscan installation
