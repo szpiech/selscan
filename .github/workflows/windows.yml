@@ -61,13 +61,13 @@ jobs:
         git commit -m "Adding gsl" || echo "No changes to commit"
         git push
 
-    - name: Build selscan
+    - name: Install zlib 
       shell: msys2 {0}
-      # working-directory: src/
       run: |
         pacman -S mingw-w64-x86_64-zlib --noconfirm
         cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
-        make -f Makefile_win -j
+        cp C:/msys64/clang64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
+
   # find /mingw64 -name 'libwinpthread.a'
   # find /mingw64 -name 'libz.a'
 
@@ -80,6 +80,11 @@ jobs:
 #      shell: bash
 # cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
 
+    - name: Install selscan 
+      shell: msys2 {0}
+      working-directory: src/
+      run: |
+        make -f Makefile_win -j
     - name: Test selscan installation
       shell: msys2 {0}
       working-directory: src/
