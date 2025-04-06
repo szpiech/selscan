@@ -66,10 +66,10 @@ jobs:
       shell: msys2 {0}
       working-directory: src/
       run: |
-        cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
         cp /mingw64/lib/libpthread.a "${{ github.workspace }}"/lib/win32/
         make -f Makefile_win -j
 #      shell: bash
+# cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
 
     - name: Test selscan installation
       shell: msys2 {0}
@@ -86,5 +86,6 @@ jobs:
       run: |
         mkdir -p bin/win; cp src/selscan.exe bin/win/
         git add bin/win
+        git add lib/win32
         git commit -m "Adding bin to bin/win" || echo "No changes to commit"
         git push
