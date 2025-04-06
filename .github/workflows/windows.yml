@@ -67,6 +67,7 @@ jobs:
       run: |
         pacman -S mingw-w64-x86_64-zlib --noconfirm
         cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
+        make -f Makefile_win -j
   # find /mingw64 -name 'libwinpthread.a'
   # find /mingw64 -name 'libz.a'
 
@@ -93,6 +94,7 @@ jobs:
       if: contains(github.event.head_commit.message, '[binary_win]') 
       run: |
         mkdir -p bin/win; cp src/selscan.exe bin/win/
+        cp src/norm.exe bin/win/
         git add bin/win
         git add lib/win32
         git commit -m "Adding bin to bin/win" || echo "No changes to commit"
