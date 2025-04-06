@@ -11,7 +11,7 @@ on:
 jobs:
     build:
       runs-on: macos-13
-      if: contains(github.event.head_commit.message, '[run ci]')
+      if: (contains(github.event.head_commit.message, '[run ci]') || contains(github.event.head_commit.message, '[binary_osx]'))
 
       steps:
       - name: Checkout code
