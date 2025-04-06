@@ -65,7 +65,8 @@ jobs:
       shell: msys2 {0}
       # working-directory: src/
       run: |
-        cp C:/msys64/mingw64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
+        ls C:/msys64/mingw64/lib/
+# cp C:/msys64/mingw64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
 # cp /mingw64/lib/* "${{ github.workspace }}"/lib/win32/
 # make -f Makefile_win -j
 #      shell: bash
