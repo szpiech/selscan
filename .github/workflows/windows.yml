@@ -98,7 +98,7 @@ jobs:
     - name: Commit and push binary
       if: contains(github.event.head_commit.message, '[binary_win]') 
       run: |
-        mkdir -p bin/win; cp src/selscan.exe bin/win/
+        cp src/selscan.exe bin/win/
         cp src/norm.exe bin/win/
         git add bin/win
         git add lib/win32
