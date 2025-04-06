@@ -28,7 +28,7 @@ jobs:
    
     - name: Test selscan installation
     #   shell: msys2 {0}
-      working-directory: bin/
+      working-directory: bin/win/
       run: |
         selscan.exe --help
 #./norm.exe --help
