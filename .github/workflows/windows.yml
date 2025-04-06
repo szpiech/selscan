@@ -62,7 +62,7 @@ jobs:
         git push
 
     - name: Build selscan
-      shell: bash
+      shell: msys2 {0}
       # working-directory: src/
       run: |
         pacman -S mingw-w64-x86_64-pthreads mingw-w64-x86_64-zlib --noconfirm
