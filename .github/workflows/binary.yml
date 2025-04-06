@@ -30,6 +30,6 @@ jobs:
     #   shell: msys2 {0}
       working-directory: src/
       run: |
-        "${{ github.workspace }}"/bin/selscan.exe --help
+        "${{ github.workspace }}\bin\selscan.exe" --help
 #./norm.exe --help
 
