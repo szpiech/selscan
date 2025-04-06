@@ -1,4 +1,4 @@
-name: C++ CI Test Binary (macos)
+name: C++ CI Test Binary (MacOS)
 on:
   push:
     branches:

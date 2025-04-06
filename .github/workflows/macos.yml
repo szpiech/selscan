@@ -1,4 +1,4 @@
-name: C++ CI Mac
+name: C++ CI MacOS
 # This workflow will build and test the C++ code on macOS using GitHub Actions.
 
 on:

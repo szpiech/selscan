@@ -1,4 +1,4 @@
-name: C++ CI Windows Only
+name: C++ CI Windows
 # This workflow will build and test the C++ code on windows using GitHub Actions.
 
 on:

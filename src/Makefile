@@ -1,4 +1,4 @@
-# Makefile for selscan
+# Makefile for selscan2.1
 
 CC = g++ -std=c++17  -w -Wno-psabi
 G++FLAG = -O3 -m64  -arch arm64  -ftree-vectorize
