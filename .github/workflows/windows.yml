@@ -66,7 +66,7 @@ jobs:
       run: |
         pacman -S mingw-w64-x86_64-zlib --noconfirm
         cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
-        cp /mingw64/clang64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
+  #cp /mingw64/clang64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
 
   # find /mingw64 -name 'libwinpthread.a'
   # find /mingw64 -name 'libz.a'

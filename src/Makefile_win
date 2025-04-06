@@ -20,7 +20,7 @@
 #L_PATH = ../lib/linux
 
 #for windows, using MinGW build environment
-CC = clang++  
+CC = clang++  -static 
 G++FLAG=-std=c++17 -static -static-libgcc -static-libstdc++ -O3
 G++FLAG_NORM= -O3
 #-fuse-ld=bfd
