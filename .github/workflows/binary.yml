@@ -30,6 +30,6 @@ jobs:
     #   shell: msys2 {0}
       working-directory: bin/win/
       run: |
-        selscan.exe --help
+        ./selscan.exe --help
 #./norm.exe --help
 
