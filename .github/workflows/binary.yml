@@ -28,8 +28,8 @@ jobs:
    
     - name: Test selscan installation
     #   shell: msys2 {0}
-      working-directory: src/
+      working-directory: bin/
       run: |
-        ${{github.workspace}}\bin\selscan.exe --help
+        selscan.exe --help
 #./norm.exe --help
 
