@@ -1,0 +1,27 @@
+name: C++ CI Test Binary (Windows)
+# This workflow will build and test the C++ code on windows using GitHub Actions.
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+    if: (contains(github.event.head_commit.message, '[testbin]'))
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test selscan installation
+      working-directory: bin/win/
+      run: |
+        ./selscan.exe --help
+        ./norm.exe --help
+
