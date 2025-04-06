@@ -51,6 +51,7 @@ LINK_OPTS_LATER =  -L../lib/win32
 
 G++FLAG = -O3
 LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
+LINK_OPTS2=
 I_PATH = -I../include -I../include/win32 
 L_PATH = ../lib/win32
 
