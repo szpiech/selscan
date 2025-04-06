@@ -1,4 +1,4 @@
-name: C++ CI Test Binary (Windows) -
+name: C++ CI Test Binary (Windows) 
 # This workflow will build and test the C++ code on windows using GitHub Actions.
 
 on:
