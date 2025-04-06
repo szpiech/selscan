@@ -65,8 +65,11 @@ jobs:
       shell: bash
       # working-directory: src/
       run: |
-        ls /msys64/usr/lib 
-        ls /msys64/mingw64/lib/
+        find /mingw64 -name 'libwinpthread.a'
+        find /mingw64 -name 'libz.a'
+
+    # ls /msys64/usr/lib 
+    # ls /msys64/mingw64/lib/
 #ls C:/msys64/mingw64/lib/
 # cp C:/msys64/mingw64/lib/libwinpthread.a "${{ github.workspace }}"/lib/win32/
 # cp /mingw64/lib/* "${{ github.workspace }}"/lib/win32/
