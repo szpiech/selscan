@@ -32,7 +32,9 @@ jobs:
 
     - name: Test selscan installation
       working-directory: src/
-      run: ./selscan --help
+      run: |
+        ./selscan --help
+        ./norm --help
 
     - name: Commit and push binary
       if: contains(github.event.head_commit.message, '[binary_mac]')

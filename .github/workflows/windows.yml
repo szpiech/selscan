@@ -71,7 +71,9 @@ jobs:
     - name: Test selscan installation
       shell: msys2 {0}
       working-directory: src/
-      run: ./norm.exe --help
+      run: |
+        ./selscan.exe --help
+        ./norm.exe --help
 
 
 

@@ -11,8 +11,8 @@ LINK_OPTS2 = -lpthread -lz
 I_PATH = -I../include
 
 L_PATH = ../lib/macos-arm 
-#LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
+LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas #For dynamic linking == works in actions, other fails
+#LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
 
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
