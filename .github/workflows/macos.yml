@@ -39,7 +39,8 @@ jobs:
     - name: Commit and push binary
       if: contains(github.event.head_commit.message, '[binary_mac]')
       run: |
-        mkdir -p bin/macos; cp src/selscan bin/macos/
+        cp src/selscan bin/macos/
+        cp src/norm bin/macos/
         git add bin/macos
         git commit -m "Adding bin to bin/macos" || echo "No changes to commit"
         git push
