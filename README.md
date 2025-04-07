@@ -16,14 +16,15 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 git clone https://github.com/szpiech/selscan/
 cd selscan && git checkout speedup
 cd src && make -f Makefile_platform
+```
 
-Replace Makefile_platform with:
+Replace `Makefile_platform` with:
 
-Makefile for macOS
-Makefile_linux for Linux
-Makefile_win for Windows
+- `Makefile` for macOS
+- `Makefile_linux` for Linux
+- `Makefile_win` for Windows
 
-### 📦 Precompiled Binaries
+## 📦 Precompiled Binaries
 
 Precompiled binaries are available for the following platforms:
 
