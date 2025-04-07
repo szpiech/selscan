@@ -16,35 +16,25 @@ G++FLAG_NORM= -O3 -static
 
 
 I_PATH = -I../include/win32  
-#-I../include
 I_PATH_NORM = -I../include
 
-L_PATH = 
 L_PATH = ../lib/win32
 
-#For static linking of norm program to gsl libs
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a  #For static linking of norm program to gsl libs
-LINK_OPTS =  -lgsl -lgslcblas -L$(L_PATH) #For dynamic linking
-LINK_OPTS =  -lgsl -lgslcblas -lm
+# LINK_OPTS =  -lgsl -lgslcblas -lm
 LINK_OPTS_LATER =  -L../lib/win32 
 
 G++FLAG = -O3
-LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
-# LINK_OPTS2=../lib/win32/libz.a 
 
-LINK_OPTS2 = -lz -lpthread
 I_PATH = -I../include -I../include/win32 
 L_PATH = ../lib/win32
+
+
+
 LINK_OPTS2=-L$(L_PATH) -lpthread -lz 
 
 
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
-
-
-
-
-#LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a  
 
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
