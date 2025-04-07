@@ -9,56 +9,28 @@ pair for XP-EHH).  selscan is 'dumb' with respect ancestral/derived coding and
 simply expects haplotype data to be coded 0/1.  Unstandardized iHS/nSL scores are    
 thus reported as log(iHH1/iHH0) based on the coding you have provided.   
 
-## Citations
-```
-ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. biorxiv doi: 
-	doi:10.1101/2021.10.22.465497.
-ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
-	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
-	31: 2824-2827.
-ZA Szpiech et al. (2021) Application of a novel haplotype-based scan for local adaptation 
-	to study high-altitude adaptation in rhesus macaques. Evolution Letters 
-	doi: https://doi.org/10.1002/evl3.232
-R Torres et al. (2018) Human demographic history has amplified the effects of
-	background selection across the genome. PLoS Genetics 15: e1007898.
-N Garud et al. (2015) Recent selective sweeps in North American Drosophila
-	melanogaster show signatures of soft sweeps. PLoS Genetics 11: 1–32.
-A Ferrer-Admetlla et al. (2014) On detecting incomplete soft or hard selective sweeps
-	using haplotype structure. Molecular Biology and Evolution 31: 1275-1291.
-K Wagh et al. (2012) Lactase Persistence and Lipid Pathway Selection in the Maasai. PloS ONE 7: e44751.
-PC Sabeti et al. (2007) Genome-wide detection and characterization of positive 
-	selection in human populations. Nature 449: 913–918.
-BF Voight et al. (2006) A map of recent positive selection in the human 
-	genome. PLoS Biology 4: e72.
-PC Sabeti et al. (2002) Detecting recent positive selection in the human 
-	genome from haplotype structure. Nature 419: 832–837.
-```
 
-## Installation from source 
+## 🛠️ Installation from source 
 
-From MacOS:   
-```
+```bash
 git clone https://github.com/szpiech/selscan/
-cd selscan
-git checkout speedup
-cd src/
-make
-```
+cd selscan && git checkout speedup
+cd src && make -f Makefile_platform
 
-From linux:   
-```
-git clone https://github.com/szpiech/selscan/
-cd selscan
-git checkout speedup
-cd src/
-make -f Makefile_linux
-```
+Replace Makefile_platform with:
 
-## Binary
-Binary for MacOS Universal (Intel x86_64 and Apple Silicon ARM64) is available at `/bin/macos/`
+Makefile for macOS
+Makefile_linux for Linux
+Makefile_win for Windows
 
-## Conda installation
-*Coming soon*
+### 📦 Precompiled Binaries
+
+Precompiled binaries are available for the following platforms:
+
+- **macOS (Apple Silicon, ARM64):** `/bin/macos/`  
+- **macOS (Intel, x86_64):** `/bin/osx/`  
+- **Windows:** `/bin/win/`  
+- **Linux:** `/bin/linux/`
 
 
 ## Usage   
@@ -233,6 +205,31 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 --xpnsl <bool>: Set this flag to calculate XP-nSL.
 	Default: false
+```
+
+## Citations
+```
+ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. biorxiv doi: 
+	doi:10.1101/2021.10.22.465497.
+ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
+	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
+	31: 2824-2827.
+ZA Szpiech et al. (2021) Application of a novel haplotype-based scan for local adaptation 
+	to study high-altitude adaptation in rhesus macaques. Evolution Letters 
+	doi: https://doi.org/10.1002/evl3.232
+R Torres et al. (2018) Human demographic history has amplified the effects of
+	background selection across the genome. PLoS Genetics 15: e1007898.
+N Garud et al. (2015) Recent selective sweeps in North American Drosophila
+	melanogaster show signatures of soft sweeps. PLoS Genetics 11: 1–32.
+A Ferrer-Admetlla et al. (2014) On detecting incomplete soft or hard selective sweeps
+	using haplotype structure. Molecular Biology and Evolution 31: 1275-1291.
+K Wagh et al. (2012) Lactase Persistence and Lipid Pathway Selection in the Maasai. PloS ONE 7: e44751.
+PC Sabeti et al. (2007) Genome-wide detection and characterization of positive 
+	selection in human populations. Nature 449: 913–918.
+BF Voight et al. (2006) A map of recent positive selection in the human 
+	genome. PLoS Biology 4: e72.
+PC Sabeti et al. (2002) Detecting recent positive selection in the human 
+	genome from haplotype structure. Nature 419: 832–837.
 ```
 
 

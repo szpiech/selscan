@@ -1,7 +1,7 @@
 # Makefile for selscan (Windows / MinGW)
 
 # Compiler
-CC = clang++  # Use Clang++ (no need for -static here; handled in G++FLAG)
+CC = clang++ -static  # Use Clang++ (no need for -static here; handled in G++FLAG)
 
 # Compiler flags
 G++FLAG_SELSCAN = -O3 -std=c++17 -static -static-libgcc -static-libstdc++  # For selscan
@@ -18,7 +18,8 @@ L_PATH = ../lib/win32   # Path to statically built or extracted GSL/pthread/zlib
 LINK_OPTS_SELSCAN = -L$(L_PATH) -lpthread -lz
 
 # Combined linker options for norm (static linking to GSL libraries + general linking)
-LINK_OPTS_NORM = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a -L$(L_PATH) -lpthread -lz
+LINK_OPTS_NORM = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a  -L../lib/win32 
+#$(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a -L$(L_PATH) -lpthread -lz
 
 # Object files
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
