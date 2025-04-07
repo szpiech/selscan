@@ -579,7 +579,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             if(!p.MISSING_ALLOWED){
                 if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
                 {
-                    HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " + allele1 + separator + allele2);
+                    HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
                 }
             }
 
