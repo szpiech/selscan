@@ -26,8 +26,11 @@ void HapData::initHapData(int nhaps, int nloci)
         cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
         throw 0;
     }
-    cout << "Final number of haplotypes " << nhaps << ", number of loci " << nloci << ".\n";
-
+    cout << "=====" << endl;
+    std::cout << "After filtering: \n"
+          << "  Haplotypes: " << nhaps << "\n"
+          << "  Loci:       " << nloci << std::endl;
+    cout << "=====" << endl;
     this->hapEntries = new struct HapEntry[nloci];
     this->nhaps = nhaps;
     this->nloci = nloci;

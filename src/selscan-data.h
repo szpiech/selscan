@@ -27,7 +27,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-// #include <omp.h>
+
 #include "gzstream.h"
 #include "param_t.h"
 
@@ -167,7 +167,7 @@ public:
     void readHapDataVCFMissing(string filename, HapData& hap);
     void readHapDataMSHap(string filename, HapData& hap);
 
-    bool skipThisLocus(int number_of_1s, int number_of_2s, int nalleles, int missing_count = 0);
+    bool shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles, int missing_count = 0);
     void loadHapMapData();
 
 };

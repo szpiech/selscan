@@ -14,23 +14,29 @@
 // #endif
 // #endif
 
+#define SKIP_LOCUS_VALUE -9999
 
 /// @brief Class to hold common stuff required to compute all statistics for selscan
 class SelscanStats {
     protected:
         bool inline skipLocus(pair<double, double> p){
-            return (p.first == -9999 || p.second ==  -9999 );
+            return (p.first == SKIP_LOCUS_VALUE || p.second == SKIP_LOCUS_VALUE );
         }
 
+        bool inline skipLocus(double p){
+            return p == SKIP_LOCUS_VALUE;
+        }
+
+
         pair<double, double> inline skipLocusPair(){
-            return make_pair(-9999,-9999);
+            return make_pair(SKIP_LOCUS_VALUE,SKIP_LOCUS_VALUE);
         }
         int inline skipLocusInt(){
-            return -9999;
+            return SKIP_LOCUS_VALUE;
         }
 
         double inline skipLocusDouble(){
-            return -9999;
+            return SKIP_LOCUS_VALUE;
         }
 
     public:
@@ -69,46 +75,79 @@ class SelscanStats {
         fout_obj.open(outFilename+".out");
         fout = &fout_obj;
 
-        (*flog) << "\nv" + VERSION + "\nCalculating ";
-        if (statname == "ihs") (*flog) << " iHS.\n";
-        else if (statname == "nsl") (*flog) << " nSL.\n";
-        else if (statname == "xpnsl") (*flog) << " XP-nSL.\n";
-        else if (statname == "xpehh") (*flog) << " XP-EHH.\n";
-        else if (statname == "ehh") (*flog) << " EHH.\n";
-        else if (statname == "pi") (*flog) << " PI.\n";
-        else if (statname == "ihh12") (*flog) << " iHH12.\n";
+        // (*flog) << "\nv" + VERSION + "\nCalculating ";
+        // if (statname == "ihs") (*flog) << " iHS.\n";
+        // else if (statname == "nsl") (*flog) << " nSL.\n";
+        // else if (statname == "xpnsl") (*flog) << " XP-nSL.\n";
+        // else if (statname == "xpehh") (*flog) << " XP-EHH.\n";
+        // else if (statname == "ehh") (*flog) << " EHH.\n";
+        // else if (statname == "pi") (*flog) << " PI.\n";
+        // else if (statname == "ihh12") (*flog) << " iHH12.\n";
+
+        LOG("\nv" + VERSION + "\nCalculating " + (
+            statname == "ihs"    ? "iHS." :
+            statname == "nsl"    ? "nSL." :
+            statname == "xpnsl"  ? "XP-nSL." :
+            statname == "xpehh"  ? "XP-EHH." :
+            statname == "ehh"    ? "EHH." :
+            statname == "pi"     ? "PI." :
+            statname == "ihh12"  ? "iHH12." :
+            "Unknown statistic."
+        ));
+        LOG("=====");
 
         if (p.TPED)
         {
-            (*flog) << "Input filename: " << p.tpedFilename << "\n";
-            if (p.CALC_XP || p.CALC_XPNSL) (*flog) << "Reference input filename: " << p.tpedFilename2 << "\n";
+            LOG("Input (TPED) filename: " << p.tpedFilename);
+            if (p.CALC_XP || p.CALC_XPNSL) LOG("Reference input (TPED) filename: " << p.tpedFilename2 );
         }
         else if (p.VCF) {
-            (*flog) << "Input filename: " << p.vcfFilename << "\n";
-            if (p.CALC_XP || p.CALC_XPNSL) (*flog) << "Reference input filename: " << p.vcfFilename2 << "\n";
-            (*flog) << "Map filename: " << p.mapFilename << "\n";
+            LOG("Input (VCF) filename: " << p.vcfFilename);
+            if (p.CALC_XP || p.CALC_XPNSL) LOG("Reference input (VCF) filename: " << p.vcfFilename2 );
+            LOG("Map filename: " << p.mapFilename);
+        }
+        else if (p.THAP) {
+            LOG("Input (transposed hap) filename: " << p.thapFilename);
+            if (p.CALC_XP || p.CALC_XPNSL) LOG("Reference input(transposed hap) filename: " << p.thapFilename2 );
+            LOG("Map filename: " << p.mapFilename);
         }
         else {
-            (*flog) << "Input filename: " << p.hapFilename << "\n";
-            if (p.CALC_XP || p.CALC_XPNSL) (*flog) << "Reference input filename: " << p.hapFilename2 << "\n";
-            (*flog) << "Map filename: " << p.mapFilename << "\n";
+            LOG("Input hap filename: " << p.hapFilename);
+            if (p.CALC_XP || p.CALC_XPNSL) LOG("Reference input hap filename: " << p.hapFilename2);
+            LOG("Map filename: " << p.mapFilename);
         }
 
-        (*flog) << "Output file: " << p.outFilename << "\n";
-        (*flog) << "Threads: " << p.numThreads << "\n";
-        (*flog) << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
-        (*flog) << "Max gap parameter: " << p.MAX_GAP << "\n";
-        (*flog) << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
-                (*flog) << "Minimum maf cutoff: " << p.MAF << "\n";
+
+        LOG("Output file: " + p.outFilename);
+
         
+        LOG("Threads: " + std::to_string(p.numThreads));
+        LOG("Scale parameter: " + std::to_string(p.SCALE_PARAMETER));
+        LOG("Max gap parameter: " + std::to_string(p.MAX_GAP));
+        LOG("EHH cutoff value: " << (p.EHH_CUTOFF));
+        LOG("Minimum MAF cutoff: " << (p.MAF));
+
+        LOG("Phased: " + std::string(p.UNPHASED ? "no" : "yes"));
+        LOG("Alt flag set: " + std::string(p.ALT ? "yes" : "no"));
+
+
+        // (*flog) << "Output file: " << p.outFilename << "\n";
+        // (*flog) << "Threads: " << p.numThreads << "\n";
+        // (*flog) << "Scale parameter: " << p.SCALE_PARAMETER << "\n";
+        // (*flog) << "Max gap parameter: " << p.MAX_GAP << "\n";
+        // (*flog) << "EHH cutoff value: " << p.EHH_CUTOFF << "\n";
+        //         (*flog) << "Minimum maf cutoff: " << p.MAF << "\n";
+        //         (*flog) << "Phased: ";
+        //         if(p.UNPHASED) (*flog) << "no\n";
+        //         else (*flog) << "yes\n";
+        //         (*flog) << "Alt flag set: ";
+        //         if (p.ALT) (*flog) << "yes\n";
+        //         else (*flog) << "no\n";
+
         //(*flog) << "Missing value: " << p.MISSING_ALLOWED << "\n";
 
-        (*flog) << "Phased: ";
-        if(p.UNPHASED) (*flog) << "no\n";
-        else (*flog) << "yes\n";
-        (*flog) << "Alt flag set: ";
-        if (p.ALT) (*flog) << "yes\n";
-        else (*flog) << "no\n";
+
+  
 
         (*flog).flush();
         
@@ -171,9 +210,11 @@ class SelscanStats {
             // this should not happen as we already did integrity check previously
             if (distance < 0)
             {
-                cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
-                std::cerr << "ERROR: physical position not in ascending order.\n"; 
-                throw 0;
+                // cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
+                // std::cerr << "ERROR: physical position not in ascending order.\n"; 
+                // throw 0;
+
+                HANDLE_ERROR("genetic position not in ascending order.");
             }
             return distance;
         }
@@ -201,27 +242,25 @@ class SelscanStats {
             double distance;
             if(downstream){
                 if(currentLocus+1> hm->hapData->nloci-1){
-                    std::cerr << "ERROR: wrong locus"<<endl;
-                    throw 0;
+                    HANDLE_ERROR("invalid locus");
                 }
                 distance =   double(hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
             }else{
                 if(currentLocus-1<0){
-                    std::cerr << "ERROR: wrong locus"<<endl;
-                    throw 0;
+                    HANDLE_ERROR("invalid locus");
                 }
                 distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos);
-                // if(currentLocus == 22){
-                //     cout<<hm->mapData->mapEntries[currentLocus].physicalPos<<" "<<hm->mapData->mapEntries[currentLocus-1].physicalPos<<" "<<distance<<endl;
-                // }
+
             }
 
             // this should not happen as we already did integrity check previously
             if (distance < 0)
             {
-                cout<<"Distance: "<<distance<<" "<<currentLocus<<" "<<downstream<<"\n";
-                std::cerr << "ERROR: physical position not in ascending order.\n"; 
-                throw 0;
+                // cout<<"Distance: "<<distance<<" "<<currentLocus<<" "<<downstream<<"\n";
+                // std::cerr << "ERROR: physical position not in ascending order.\n"; 
+                // throw 0;
+                HANDLE_ERROR("physical position not in ascending order.");
+                // "<<"distance: "<<distance<<" locus: "<<currentLocus <<" "<<" downstream: "<<downstream);
             }
             return distance;
         }
@@ -238,8 +277,7 @@ class SelscanStats {
             // this should not happen as we already did integrity check previously
             if (distance < 0)
             {
-                std::cerr << "ERROR: genetic position not in ascending order.\n"; 
-                throw 0;
+                HANDLE_ERROR("genetic position not in ascending order.");
             }
             return distance;
         }

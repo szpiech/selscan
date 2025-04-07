@@ -360,7 +360,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
     if(hm->hapData->nloci != hm->hapData2->nloci){
-        throw std::runtime_error("Number of SNPs in both hapData and hapData2 should be same.");
+        HANDLE_ERROR("Number of loci in both reference and non-reference hapData should be same.");
     }
 
     double ihh_p1 = 0;
@@ -600,15 +600,9 @@ void XPIHH::main()
         init_global_fout("xpehh");
     }
 
-    if(p.UNPHASED){
-        cerr<<"WARNING: Unphased analysis not yet fully tested for XP-EHH"<<endl;
-        *flog<<"WARNING: Unphased analysis not yet fully tested for XP-EHH"<<endl;
-    }
-
     int nloci = hm->mapData->nloci;
     if(hm->hapData->nloci != hm->hapData2->nloci){
-        throw std::runtime_error("ERROR: Number of SNPs in both hapData and hapData2 should be same.");
-        exit(EXIT_FAILURE);
+        HANDLE_ERROR("Number of SNPs in both hapData and hapData2 should be same.");
     }
 
     if (p.CALC_XPNSL){
@@ -617,8 +611,8 @@ void XPIHH::main()
         }
     }
 
-    if (p.CALC_XP) std::cerr << "Starting XP-EHH calculations.\n";
-    if (p.CALC_XPNSL) std::cerr << "Starting XP-nSL calculations.\n";
+    if (p.CALC_XP) LOG("Starting XP-EHH calculations.");
+    if (p.CALC_XPNSL) LOG("Starting XP-nSL calculations.");
 
     if (p.CALC_XP) (*fout) << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
     if (p.CALC_XPNSL) (*fout) << "id\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
@@ -630,7 +624,6 @@ void XPIHH::main()
             double ihh_p1 = ihh_p1_p2.first;
             double ihh_p2 = ihh_p1_p2.second;
             
-            //if ( !skipLocus(ihh_p1_p2) && ihh_p1 != 0 && ihh_p2 != 0)
             if ( !skipLocus(ihh_p1_p2))
             {
                 (*fout) << hm->mapData->mapEntries[i].locusName << "\t"
@@ -659,7 +652,6 @@ void XPIHH::main()
             double ihh_p1 = ihh_p1_p2.first;
             double ihh_p2 = ihh_p1_p2.second;
 
-            //if (  !skipLocus(ihh_p1_p2) && ihh_p1 != 0 && ihh_p2 != 0)
             if (  !skipLocus(ihh_p1_p2))
             {
                 (*fout) << hm->mapData->mapEntries[locus].locusName << "\t"
@@ -674,12 +666,11 @@ void XPIHH::main()
 
             locus++;
             if(locus>hm->mapData->nloci){
-                throw std::runtime_error("locus out of bounds");
-                exit(2);
+                HANDLE_ERROR("locus out of bounds");
             }
         }
     }
-    std::cerr << "\nFinished.\n";
+    LOG("Finished XP-EHH.");
 }
 
 /**

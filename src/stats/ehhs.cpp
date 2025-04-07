@@ -541,10 +541,6 @@ void EHHS::main()
 
     init_global_fout("ehhs");
 
-    if(p.UNPHASED){
-        cerr<<"WARNING: Unphased analysis not yet fully tested for XP-EHH"<<endl;
-        *flog<<"WARNING: Unphased analysis not yet fully tested for XP-EHH"<<endl;
-    }
 
     int nloci = hm->mapData->nloci;
     if(hm->hapData->nloci != hm->hapData2->nloci){
@@ -552,11 +548,6 @@ void EHHS::main()
         exit(EXIT_FAILURE);
     }
 
-    if (p.CALC_XPNSL){
-        for (int i = 0; i < hm->mapData->nloci; i++){
-            hm->mapData->mapEntries[i].geneticPos = i;
-        }
-    }
 
     std::cerr << "Starting EHHs calculations.\n";
    
@@ -565,22 +556,7 @@ void EHHS::main()
     if(numThreads==1){
         for (int i = 0; i < nloci; i++)
         {
-            pair<double, double> ihh_p1_p2 = calc_EHHS(i);
-            double ihh_p1 = ihh_p1_p2.first;
-            double ihh_p2 = ihh_p1_p2.second;
-            
-            //if ( !skipLocus(ihh_p1_p2) && ihh_p1 != 0 && ihh_p2 != 0)
-            if ( !skipLocus(ihh_p1_p2))
-            {
-                (*fout) << hm->mapData->mapEntries[i].locusName << "\t"
-                        << hm->mapData->mapEntries[i].physicalPos << "\t"
-                        << hm->mapData->mapEntries[i].geneticPos << "\t"
-                        << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"
-                        << ihh_p1 << "\t"
-                        << hm->hapData2->calcFreq(i) << "\t"  //<< freq2[i] << "\t"
-                        << ihh_p2 << "\t";
-                (*fout) << log10(ihh_p1 / ihh_p2) << endl;
-            }
+            calc_EHHS(i);
         }
     }else{
         ThreadPool pool(p.numThreads);
@@ -592,30 +568,32 @@ void EHHS::main()
                 })
             );
         }
-        int locus = 0;
-        for(auto && result: results){ // this is a blocking call
-            pair<double, double> ihh_p1_p2 = result.get(); 
-            double ihh_p1 = ihh_p1_p2.first;
-            double ihh_p2 = ihh_p1_p2.second;
 
-            //if (  !skipLocus(ihh_p1_p2) && ihh_p1 != 0 && ihh_p2 != 0)
-            if (  !skipLocus(ihh_p1_p2))
-            {
-                (*fout) << hm->mapData->mapEntries[locus].locusName << "\t"
-                        << hm->mapData->mapEntries[locus].physicalPos << "\t"
-                        << hm->mapData->mapEntries[locus].geneticPos << "\t"
-                        << hm->hapData->calcFreq(locus) << "\t"  //<< freq1[i] << "\t"
-                        << ihh_p1 << "\t"
-                        << hm->hapData2->calcFreq(locus) << "\t"  //<< freq2[i] << "\t"
-                        << ihh_p2 << endl;
-            }
 
-            locus++;
-            if(locus>hm->mapData->nloci){
-                throw std::runtime_error("locus out of bounds");
-                exit(2);
-            }
-        }
+        // int locus = 0;
+        // for(auto && result: results){ // this is a blocking call
+        //     pair<double, double> ihh_p1_p2 = result.get(); 
+        //     double ihh_p1 = ihh_p1_p2.first;
+        //     double ihh_p2 = ihh_p1_p2.second;
+
+        //     //if (  !skipLocus(ihh_p1_p2) && ihh_p1 != 0 && ihh_p2 != 0)
+        //     if (  !skipLocus(ihh_p1_p2))
+        //     {
+        //         (*fout) << hm->mapData->mapEntries[locus].locusName << "\t"
+        //                 << hm->mapData->mapEntries[locus].physicalPos << "\t"
+        //                 << hm->mapData->mapEntries[locus].geneticPos << "\t"
+        //                 << hm->hapData->calcFreq(locus) << "\t"  //<< freq1[i] << "\t"
+        //                 << ihh_p1 << "\t"
+        //                 << hm->hapData2->calcFreq(locus) << "\t"  //<< freq2[i] << "\t"
+        //                 << ihh_p2 << endl;
+        //     }
+
+        //     locus++;
+        //     if(locus>hm->mapData->nloci){
+        //         throw std::runtime_error("locus out of bounds");
+        //         exit(2);
+        //     }
+        // }
     }
     std::cerr << "\nFinished.\n";
 }
