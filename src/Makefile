@@ -1,4 +1,4 @@
-# Makefile for selscan (macOS ARM)
+# Makefile for selscan (macOS ARM) -
 
 # Compiler
 CC = g++ 	
