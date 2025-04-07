@@ -42,19 +42,6 @@ Source code and binaries can be found at <https://www.github.com/szpiech/selscan
 
 selscan currently implements EHH, iHS, XP-EHH, nSL, and XP-nSL.
 
-Citations:
-
-selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.
-         ZA Szpiech (2021) biorxiv: doi:10.1101/2021.10.22.465497.
-iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.
-       N Garud et al. (2015) PLoS Genetics 11: 1–32.
-nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.
-XP-nSL: Szpiech et al. (2021) Evol Lett 5: 408-421.
-XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.
-        K Wagh et al. (2012) PloS ONE 7: e44751.
-iHS: BF Voight et al. (2006) PLoS Biology 4: e72.
-EHH: PC Sabeti et al. (2002) Nature 419: 832–837.
-
 To calculate EHH:
 
 ./selscan --ehh <locusID> --vcf <vcf> --map <mapfile> --out <outfile>
