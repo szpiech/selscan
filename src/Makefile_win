@@ -1,28 +1,7 @@
-# Makefile for selscan
-
-#debugging
-#G++FLAG = -g -Wall -Werror
-#For dynamic linking
-#LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
-
-#for osx systems
-#CC = g++
-#G++FLAG = -fast -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/osx
-
-#for linux systems
-#CC = g++
-#G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/linux
-
 #for windows, using MinGW build environment
-CC = clang++  -static 
-G++FLAG=-std=c++17 -static -static-libgcc -static-libstdc++ -O3
-G++FLAG_NORM= -O3 -static -static-libgcc -static-libstdc++
+CC = clang++  
+G++FLAG=-std=c++17 -static  -O3
+G++FLAG_NORM= -O3 -static 
 #-fuse-ld=bfd
 
 #-pthread
