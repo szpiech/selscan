@@ -15,14 +15,15 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 ```bash
 git clone https://github.com/szpiech/selscan/
 cd selscan && git checkout speedup
-cd src && make -f Makefile_platform
+cd src && make -f Makefile
 ```
 
-Replace `Makefile_platform` with:
+Replace `Makefile` with:
 
-- `Makefile` for macOS
 - `Makefile_linux` for Linux
 - `Makefile_win` for Windows
+- `Makefile_osx` for OSX (macOS Intel, x86_64)
+
 
 ## 📦 Precompiled Binaries
 
@@ -34,7 +35,10 @@ Precompiled binaries are available for the following platforms:
 - **Linux:** `/bin/linux/`
 
 
-## Usage   
+## 📖 Usage   
+
+For details, refer to the manual.  
+
 ```
 ** Data must have no missing genotypes. **
 
@@ -195,7 +199,7 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: false
 ```
 
-## Citations
+## 📚 Citations
 ```
 ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. biorxiv doi: 
 	doi:10.1101/2021.10.22.465497.
@@ -221,7 +225,7 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 ```
 
 
-## Change Log
+## 📝 Change Log
 ```
 17NOV2023 - selscan v2.0.1 - Bug fixes for --ehh flag. Total EHH at the core snp will now be reported correctly (i.e. homozygosity of the site and not as 0). Also implemented --unphased for --ehh, and EHH output files now have a header line.
 
