@@ -1,39 +1,47 @@
-# Makefile for selscan
-
-#debugging
-#G++FLAG = -g -Wall -Werror
-#For dynamic linking
-#LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
-
-#for osx systems
-#CC = g++
-#G++FLAG = -fast -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/osx
-
-#for linux systems
-#CC = g++
-#G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/linux
-
 #for windows, using MinGW build environment
-CC = g++.exe
-G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a -lpthread -lz
+CC = clang++  
+G++FLAG=-std=c++17 -static  -O3
+G++FLAG_NORM= -O3 -static 
+#-fuse-ld=bfd
+
+#-pthread
+# G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+
+#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
+#LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a -lpthread -lz
+
+
+
+#I_PATH = -I../include -I../include/win32 
+
+
+I_PATH = -I../include/win32  
+I_PATH_NORM = -I../include
+
+L_PATH = ../lib/win32
+
+# LINK_OPTS =  -lgsl -lgslcblas -lm
+LINK_OPTS_LATER =  -L../lib/win32 
+
+G++FLAG = -O3
+
 I_PATH = -I../include -I../include/win32 
 L_PATH = ../lib/win32
 
+
+
+LINK_OPTS2=-L$(L_PATH) -lpthread -lz 
+
+
 #For static linking of norm program to gsl libs
 LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 
-all : selscan norm
+all : selscan norm 
 
 selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
 	$(CC) $(G++FLAG) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)
@@ -60,10 +68,10 @@ binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm : norm.o param_t.o
-	$(CC) $(G++FLAG) -o norm norm.o param_t.o $(LINK_OPTS)
+	$(CC) $(G++FLAG_NORM) $(LINK_OPTS_LATER) -o norm norm.o param_t.o $(LINK_OPTS)
 
 norm.o : norm.cpp
-	$(CC) $(G++FLAG) -c norm.cpp $(I_PATH)
+	$(CC) $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
 
 param_t.o : param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c param_t.cpp

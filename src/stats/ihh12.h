@@ -113,9 +113,9 @@ class IHH12 : public SelscanStats{
         void main();
         void findMaxTwo(int* arr, int n, int &max1, int &max2);
         //void findMaxK(int* arr, int n, int &max1, int &max2, int k);
+        std::mutex mutex_log; //static pthread_mutex_t mutex_log;
 
     protected:
-        static pthread_mutex_t mutex_log;
         int max_extend;
         //void static thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj);
         void updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* p);

@@ -26,6 +26,7 @@
 #include <gsl/gsl_inline.h>
 #include <gsl/gsl_check_range.h>
 #include <gsl/gsl_vector_short.h>
+#include <gsl/gsl_blas_types.h>
 
 #undef __BEGIN_DECLS
 #undef __END_DECLS
@@ -216,12 +217,14 @@ int gsl_matrix_short_fprintf (FILE * stream, const gsl_matrix_short * m, const c
  
 int gsl_matrix_short_memcpy(gsl_matrix_short * dest, const gsl_matrix_short * src);
 int gsl_matrix_short_swap(gsl_matrix_short * m1, gsl_matrix_short * m2);
+int gsl_matrix_short_tricpy(CBLAS_UPLO_t Uplo, CBLAS_DIAG_t Diag, gsl_matrix_short * dest, const gsl_matrix_short * src);
 
 int gsl_matrix_short_swap_rows(gsl_matrix_short * m, const size_t i, const size_t j);
 int gsl_matrix_short_swap_columns(gsl_matrix_short * m, const size_t i, const size_t j);
 int gsl_matrix_short_swap_rowcol(gsl_matrix_short * m, const size_t i, const size_t j);
 int gsl_matrix_short_transpose (gsl_matrix_short * m);
 int gsl_matrix_short_transpose_memcpy (gsl_matrix_short * dest, const gsl_matrix_short * src);
+int gsl_matrix_short_transpose_tricpy (CBLAS_UPLO_t Uplo_src, CBLAS_DIAG_t Diag, gsl_matrix_short * dest, const gsl_matrix_short * src);
 
 short gsl_matrix_short_max (const gsl_matrix_short * m);
 short gsl_matrix_short_min (const gsl_matrix_short * m);
@@ -238,13 +241,17 @@ int gsl_matrix_short_ispos (const gsl_matrix_short * m);
 int gsl_matrix_short_isneg (const gsl_matrix_short * m);
 int gsl_matrix_short_isnonneg (const gsl_matrix_short * m);
 
+short gsl_matrix_short_norm1 (const gsl_matrix_short * m);
+
 int gsl_matrix_short_add (gsl_matrix_short * a, const gsl_matrix_short * b);
 int gsl_matrix_short_sub (gsl_matrix_short * a, const gsl_matrix_short * b);
 int gsl_matrix_short_mul_elements (gsl_matrix_short * a, const gsl_matrix_short * b);
 int gsl_matrix_short_div_elements (gsl_matrix_short * a, const gsl_matrix_short * b);
-int gsl_matrix_short_scale (gsl_matrix_short * a, const double x);
-int gsl_matrix_short_add_constant (gsl_matrix_short * a, const double x);
-int gsl_matrix_short_add_diagonal (gsl_matrix_short * a, const double x);
+int gsl_matrix_short_scale (gsl_matrix_short * a, const short x);
+int gsl_matrix_short_scale_rows (gsl_matrix_short * a, const gsl_vector_short * x);
+int gsl_matrix_short_scale_columns (gsl_matrix_short * a, const gsl_vector_short * x);
+int gsl_matrix_short_add_constant (gsl_matrix_short * a, const short x);
+int gsl_matrix_short_add_diagonal (gsl_matrix_short * a, const short x);
 
 /***********************************************************************/
 /* The functions below are obsolete                                    */

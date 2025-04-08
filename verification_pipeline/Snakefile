@@ -1,0 +1,59 @@
+import os
+
+configfile: "config.yaml"
+
+samples = config["inputs"]
+stats = config["runs"]
+
+rule all:
+    input:
+        expand("output_sc/{sample}.{stat}.out", 
+               sample=[s["name"] for s in samples],
+               stat=[r["stat"] for r in stats]),
+        expand("output_sb/{sample}.{stat}.out", 
+               sample=[s["name"] for s in samples],
+               stat=[r["stat"] for r in stats]),
+        expand("output/{sample}_{stat}_comparison.txt", 
+               sample=[s["name"] for s in samples],
+               stat=[r["stat"] for r in stats])
+
+rule selscan:
+    output:
+        "output_sc/{sample}.{stat}.out"
+    params:
+        hap=lambda wc: next(s["hap"] for s in samples if s["name"] == wc.sample),
+        # map=lambda wc: next(s["map"] for s in samples if s["name"] == wc.sample),
+        extra=lambda wc: next(r["extra"] for r in stats if r["stat"] == wc.stat)
+    shell:
+        """
+        selscan --{wildcards.stat} \
+          --vcf {params.hap} \
+          --pmap  \
+          {params.extra} \
+          --out output_sc/{wildcards.sample}
+        """
+
+rule selbin:
+    output:
+        "output_sb/{sample}.{stat}.out"
+    params:
+        hap=lambda wc: next(s["hap"] for s in samples if s["name"] == wc.sample),
+        extra=lambda wc: next(r["extra"] for r in stats if r["stat"] == wc.stat)
+    shell:
+        """
+        /Users/amatur/code/selscan-amatur-main/bin/macos/selscan --{wildcards.stat} \
+          --vcf {params.hap} \
+          --pmap \
+          {params.extra} \
+          --out output_sb/{wildcards.sample}
+        """
+
+rule compare_outputs:
+    input:
+        sc="output_sc/{sample}.{stat}.out",
+        sb="output_sb/{sample}.{stat}.out"
+    output:
+        txt="output/{sample}_{stat}_comparison.txt",
+        fig="output/{sample}_{stat}_corr.png"
+    shell:
+        "Rscript scripts/compare_outputs.R {input.sc} {input.sb} {output.fig} > {output.txt}"

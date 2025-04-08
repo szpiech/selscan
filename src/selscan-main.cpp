@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
-#include <pthread.h>
+//#include <pthread.h>
 #include <map>
 #include "selscan-cli.h"
 #include "selscan-data.h"
@@ -206,9 +206,9 @@ int main(int argc, char *argv[])
     
 
 
-#ifdef PTW32_STATIC_LIB
-    pthread_win32_process_attach_np();
-#endif
+// #ifdef PTW32_STATIC_LIB
+//     pthread_win32_process_attach_np();
+// #endif
 
     std::unique_ptr<HapMap> hm; 
     ofstream* flog;
@@ -283,8 +283,8 @@ int main(int argc, char *argv[])
     flog->close();
 
 
-    #ifdef PTW32_STATIC_LIB
-        pthread_win32_process_detach_np();
-    #endif
+    // #ifdef PTW32_STATIC_LIB
+    //     pthread_win32_process_detach_np();
+    // #endif
     return 0;
 }

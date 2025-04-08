@@ -26,6 +26,7 @@
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_check_range.h>
 #include <gsl/gsl_vector_complex_double.h>
+#include <gsl/gsl_blas_types.h>
 
 #undef __BEGIN_DECLS
 #undef __END_DECLS
@@ -216,6 +217,7 @@ int gsl_matrix_complex_fprintf (FILE * stream, const gsl_matrix_complex * m, con
 
 int gsl_matrix_complex_memcpy(gsl_matrix_complex * dest, const gsl_matrix_complex * src);
 int gsl_matrix_complex_swap(gsl_matrix_complex * m1, gsl_matrix_complex * m2);
+int gsl_matrix_complex_tricpy(CBLAS_UPLO_t Uplo, CBLAS_DIAG_t Diag, gsl_matrix_complex * dest, const gsl_matrix_complex * src);
 
 int gsl_matrix_complex_swap_rows(gsl_matrix_complex * m, const size_t i, const size_t j);
 int gsl_matrix_complex_swap_columns(gsl_matrix_complex * m, const size_t i, const size_t j);
@@ -223,6 +225,9 @@ int gsl_matrix_complex_swap_rowcol(gsl_matrix_complex * m, const size_t i, const
 
 int gsl_matrix_complex_transpose (gsl_matrix_complex * m);
 int gsl_matrix_complex_transpose_memcpy (gsl_matrix_complex * dest, const gsl_matrix_complex * src);
+int gsl_matrix_complex_transpose_tricpy(CBLAS_UPLO_t Uplo_src, CBLAS_DIAG_t Diag, gsl_matrix_complex * dest, const gsl_matrix_complex * src);
+
+int gsl_matrix_complex_conjtrans_memcpy (gsl_matrix_complex * dest, const gsl_matrix_complex * src);
 
 int gsl_matrix_complex_equal (const gsl_matrix_complex * a, const gsl_matrix_complex * b);
 
@@ -236,8 +241,11 @@ int gsl_matrix_complex_sub (gsl_matrix_complex * a, const gsl_matrix_complex * b
 int gsl_matrix_complex_mul_elements (gsl_matrix_complex * a, const gsl_matrix_complex * b);
 int gsl_matrix_complex_div_elements (gsl_matrix_complex * a, const gsl_matrix_complex * b);
 int gsl_matrix_complex_scale (gsl_matrix_complex * a, const gsl_complex x);
+int gsl_matrix_complex_scale_rows (gsl_matrix_complex * a, const gsl_vector_complex * x);
+int gsl_matrix_complex_scale_columns (gsl_matrix_complex * a, const gsl_vector_complex * x);
 int gsl_matrix_complex_add_constant (gsl_matrix_complex * a, const gsl_complex x);
 int gsl_matrix_complex_add_diagonal (gsl_matrix_complex * a, const gsl_complex x);
+int gsl_matrix_complex_conjugate (gsl_matrix_complex * a);
 
 /***********************************************************************/
 /* The functions below are obsolete                                    */

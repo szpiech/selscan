@@ -1,0 +1,25 @@
+name: C++ CI Test Binary (OSX)
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: macos-13
+    if: (contains(github.event.head_commit.message, '[testbin]'))
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test selscan installation
+      working-directory: bin/osx/
+      run: |
+        ./selscan --help
+        ./norm --help
+

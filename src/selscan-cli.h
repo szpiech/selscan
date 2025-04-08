@@ -15,10 +15,60 @@
 #ifndef __SELSCAN_CLI_H__
 #define __SELSCAN_CLI_H__
 
+
+#include <thread>
+
+
 #include "param_t.h"
 #include <string>
 
 using namespace std;
+
+
+
+
+
+
+
+#define LOG(msg) do { \
+        std::cerr << msg << std::endl; \
+        if (flog) (*flog) << msg << std::endl; \
+    } while (0)
+    
+    
+    #ifdef DEBUG
+        #define DBG(x) do { std::cerr << "[DEBUG] " << x << std::endl; } while (0)
+    #else
+        #define DBG(x) do {} while (0)
+    #endif
+    
+    #include <stdexcept>
+    
+    #ifdef DEBUG
+        #define HANDLE_ERROR(msg) do { \
+            std::cerr << "[DEBUG ERROR] " << msg << std::endl; \
+            *flog << "[ERROR] " << msg << std::endl; \
+            throw 1; \
+        } while(0)
+        #define HANDLE_ERROR_NOLOG(msg) do { \
+            std::cerr << "[ERROR] " << msg << std::endl; \
+            throw 1; \
+        } while(0)
+    #else
+        #define HANDLE_ERROR(msg) do { \
+            std::cerr << "[ERROR] " << msg << std::endl; \
+            *flog << "[ERROR] " << msg << std::endl; \
+            exit(EXIT_FAILURE); \
+        } while(0)
+        #define HANDLE_ERROR_NOLOG(msg) do { \
+                std::cerr << "[ERROR] " << msg << std::endl; \
+                exit(EXIT_FAILURE); \
+            } while(0)
+    #endif
+
+
+
+
 
 const string VERSION = "2.1.0";
 
@@ -65,7 +115,7 @@ To calculate XP-EHH:\n\
 ./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>\n";
 
 const string ARG_THREAD = "--threads";
-const int DEFAULT_THREAD = 1;
+const int DEFAULT_THREAD = std::thread::hardware_concurrency();
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
 \tPartitions loci across threads.";
 
@@ -196,6 +246,14 @@ const string ARG_EHH = "--ehh";
 const string DEFAULT_EHH = "__NO_LOCUS__";
 const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
 \tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+
+
+
+// const string ARG_EHHS = "--ehhs";
+// const bool DEFAULT_EHHS = false;
+// const string HELP_EHHS = "Calculate EHH of the '1' and '0' haplotypes at all loci. Outputs separate files for different loci. \n Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+
+
 
 const string ARG_EHH12 = "--ehh12";
 const string DEFAULT_EHH12 = "__NO_LOCUS__";

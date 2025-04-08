@@ -169,13 +169,14 @@ class XPIHH_ehh_data_unphased: public XPIHH_ehh_data{
 
 class XPIHH : public SelscanStats{
     public:
+        std::mutex mutex_log; //static pthread_mutex_t mutex_log;
+        
         XPIHH(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){}
         void main();
         ~XPIHH(){}
 
     private:
-        static pthread_mutex_t mutex_log;
-        int max_extend;
+       int max_extend;
         pair<double, double> calc_xpihh(int locus);
         pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
         pair<double, double> calc_ehh_unidirection_unphased(int locus, bool downstream);

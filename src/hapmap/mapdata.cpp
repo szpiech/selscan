@@ -4,6 +4,7 @@
 #include "../gzstream.h"
 #include <queue>
 #include <sstream>
+#include <limits>
 
 using namespace std;
 
@@ -152,26 +153,23 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     
     string chr;
     int locus_after_filter = 0;
-    for (int locus = 0; locus < this->nloci; locus++)  // locus = locus_before_filter
+    for (int locus = 0; locus < nloci; locus++)  // locus = locus_before_filter
     {
-        getline(fin, line);
-        
         if(!skip_queue.empty()){
             if(skip_queue.front()==locus){
                 skip_queue.pop();
-                //getline(fin, line);
+                getline(fin, line);
                 continue;
             }
         }
-
-        stringstream ss(line);
-        ss >> mapEntries[locus_after_filter].chr;
-        ss >> mapEntries[locus_after_filter].locusName;
-        ss >> mapEntries[locus_after_filter].geneticPos;
-        ss >> mapEntries[locus_after_filter].physicalPos;
+        fin >> mapEntries[locus_after_filter].chr;
+        fin >> mapEntries[locus_after_filter].locusName;
+        fin >> mapEntries[locus_after_filter].geneticPos;
+        fin >> mapEntries[locus_after_filter].physicalPos;
+        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip rest of the line
 
         if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
-        //getline(fin, line);
+    
         locus_after_filter++;
     }
 

@@ -26,6 +26,7 @@
 #include <gsl/gsl_inline.h>
 #include <gsl/gsl_check_range.h>
 #include <gsl/gsl_vector_long.h>
+#include <gsl/gsl_blas_types.h>
 
 #undef __BEGIN_DECLS
 #undef __END_DECLS
@@ -216,12 +217,14 @@ int gsl_matrix_long_fprintf (FILE * stream, const gsl_matrix_long * m, const cha
  
 int gsl_matrix_long_memcpy(gsl_matrix_long * dest, const gsl_matrix_long * src);
 int gsl_matrix_long_swap(gsl_matrix_long * m1, gsl_matrix_long * m2);
+int gsl_matrix_long_tricpy(CBLAS_UPLO_t Uplo, CBLAS_DIAG_t Diag, gsl_matrix_long * dest, const gsl_matrix_long * src);
 
 int gsl_matrix_long_swap_rows(gsl_matrix_long * m, const size_t i, const size_t j);
 int gsl_matrix_long_swap_columns(gsl_matrix_long * m, const size_t i, const size_t j);
 int gsl_matrix_long_swap_rowcol(gsl_matrix_long * m, const size_t i, const size_t j);
 int gsl_matrix_long_transpose (gsl_matrix_long * m);
 int gsl_matrix_long_transpose_memcpy (gsl_matrix_long * dest, const gsl_matrix_long * src);
+int gsl_matrix_long_transpose_tricpy (CBLAS_UPLO_t Uplo_src, CBLAS_DIAG_t Diag, gsl_matrix_long * dest, const gsl_matrix_long * src);
 
 long gsl_matrix_long_max (const gsl_matrix_long * m);
 long gsl_matrix_long_min (const gsl_matrix_long * m);
@@ -238,13 +241,17 @@ int gsl_matrix_long_ispos (const gsl_matrix_long * m);
 int gsl_matrix_long_isneg (const gsl_matrix_long * m);
 int gsl_matrix_long_isnonneg (const gsl_matrix_long * m);
 
+long gsl_matrix_long_norm1 (const gsl_matrix_long * m);
+
 int gsl_matrix_long_add (gsl_matrix_long * a, const gsl_matrix_long * b);
 int gsl_matrix_long_sub (gsl_matrix_long * a, const gsl_matrix_long * b);
 int gsl_matrix_long_mul_elements (gsl_matrix_long * a, const gsl_matrix_long * b);
 int gsl_matrix_long_div_elements (gsl_matrix_long * a, const gsl_matrix_long * b);
-int gsl_matrix_long_scale (gsl_matrix_long * a, const double x);
-int gsl_matrix_long_add_constant (gsl_matrix_long * a, const double x);
-int gsl_matrix_long_add_diagonal (gsl_matrix_long * a, const double x);
+int gsl_matrix_long_scale (gsl_matrix_long * a, const long x);
+int gsl_matrix_long_scale_rows (gsl_matrix_long * a, const gsl_vector_long * x);
+int gsl_matrix_long_scale_columns (gsl_matrix_long * a, const gsl_vector_long * x);
+int gsl_matrix_long_add_constant (gsl_matrix_long * a, const long x);
+int gsl_matrix_long_add_diagonal (gsl_matrix_long * a, const long x);
 
 /***********************************************************************/
 /* The functions below are obsolete                                    */

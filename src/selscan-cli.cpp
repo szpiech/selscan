@@ -120,13 +120,16 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     p.MAF = params.getDoubleFlag(ARG_MAF);
 
     p.UNPHASED = params.getBoolFlag(ARG_UNPHASED);
+
     p.USE_PMAP = params.getBoolFlag(ARG_PMAP);
     p.ALT = params.getBoolFlag(ARG_ALT);
     p.WAGH = params.getBoolFlag(ARG_WAGH);
     p.CALC_IHS = params.getBoolFlag(ARG_IHS);
     p.CALC_XPNSL = params.getBoolFlag(ARG_XPNSL);
     p.CALC_NSL = params.getBoolFlag(ARG_NSL);
+
     p.WRITE_DETAILED_IHS = params.getBoolFlag(ARG_IHS_DETAILED);
+    
     p.CALC_XP = params.getBoolFlag(ARG_XP);
     p.CALC_SOFT = params.getBoolFlag(ARG_SOFT);
     p.SINGLE_EHH = false;
@@ -196,11 +199,11 @@ void checkParameters(param_main &p){
     // if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
     if (p.VCF && p.TPED) {
-        throw runtime_error("Please choose only one of TPED, VCF, or HAP formatted files.\n");
+        HANDLE_ERROR_NOLOG("Please choose only one of TPED, VCF, or HAP formatted files.\n");
     }
 
     if ( (p.VCF || p.TPED) && (p.hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || p.hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ) {
-        throw runtime_error("Please choose only one of TPED, VCF, or HAP formatted files.\n");
+        HANDLE_ERROR_NOLOG("Please choose only one of TPED, VCF, or HAP formatted files.\n");
     }
     
 	// string outFilename = params.getStringFlag(ARG_OUTFILE);
@@ -272,71 +275,71 @@ void checkParameters(param_main &p){
     */
 
     if(p.MISSING_ALLOWED){
-        throw runtime_error("--missing flag is still under development, so it is disabled in this version.\n");
+        HANDLE_ERROR_NOLOG("--missing flag is still under development, so it is disabled in this version.");
     }
 
     if (p.WAGH && p.UNPHASED){
         string error_msg = "--wagh and --unphased currently incompatible.\n\t\
         Consider --xpehh or --xpnsl with --unphased for two population selection statistics.\n";
-        throw runtime_error(error_msg);
+        HANDLE_ERROR_NOLOG(error_msg);
     }
 
     if (p.CALC_PI && p.UNPHASED){
-        throw runtime_error("--pi and --unphased currently incompatible.\n");
+        HANDLE_ERROR_NOLOG("--pi and --unphased currently incompatible.");
     }
 
     if (p.CALC_SOFT && p.UNPHASED){
-        throw runtime_error("--ihh12 and --unphased currently incompatible.\n");
+        HANDLE_ERROR_NOLOG("--ihh12 and --unphased currently incompatible.");
     }
     if (p.numThreads < 1)
     {
-        throw runtime_error("Must run with one or more threads.\n");
+        HANDLE_ERROR_NOLOG("Must run with one or more threads.");
     }
     if (p.SCALE_PARAMETER < 1)
     {
-        throw runtime_error("Scale parameter must be positive.\n");
+        HANDLE_ERROR_NOLOG("Scale parameter must be positive.");
     }
     if (p.MAX_GAP < 1)
     {
-        throw runtime_error("Max gap parameter must be positive.\n");
+        HANDLE_ERROR_NOLOG("Max gap parameter must be positive.");
     }
     if (p.EHH_CUTOFF <= 0 || p.EHH_CUTOFF >= 1)
     {
-        throw runtime_error("EHH cut off must be > 0 and < 1.\n");
+        HANDLE_ERROR_NOLOG("EHH cut off must be > 0 and < 1.");
     }
     if (p.TPED)
     {
         if ((!p.CALC_XP && !p.CALC_XPNSL) && p.tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
         {
-            throw runtime_error("You are not calculating XP stats but have given a second data file (" + p.tpedFilename2 + ").\n");
+            HANDLE_ERROR_NOLOG("You are not calculating XP stats but have given a second data file (" + p.tpedFilename2 + ").");
         }
     }
     else if (p.VCF) {
         if ((!p.CALC_XP && !p.CALC_XPNSL) && p.vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0)
         {
-            throw runtime_error("You are not calculating XP stats but have given a second data file (" + p.vcfFilename2 + ").\n");
+            HANDLE_ERROR_NOLOG("You are not calculating XP stats but have given a second data file (" + p.vcfFilename2 + ").");
         }
 
         if ((!p.CALC_NSL && !p.CALC_XPNSL) && (p.mapFilename.compare(DEFAULT_FILENAME_MAP) == 0 && !p.USE_PMAP)) {
-            throw runtime_error("Must also provide a mapfile.\n");
+            HANDLE_ERROR_NOLOG("Must also provide a mapfile.");
         }
     }
     else if(p.THAP)
     {
         if ((!p.CALC_XP && !p.CALC_XPNSL) && p.thapFilename2.compare(DEFAULT_FILENAME_POP2_THAP) != 0)
         {
-            throw runtime_error("You are not calculating XP stats but have given a second data file (" + p.thapFilename2 + ").\n");
+            HANDLE_ERROR_NOLOG("You are not calculating XP stats but have given a second data file (" + p.thapFilename2 + ").");
         }
         if (p.mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
-            throw runtime_error("Must also provide a mapfile.\n");
+            HANDLE_ERROR_NOLOG("Must also provide a mapfile.");
         }
     }else{
         if ((!p.CALC_XP && !p.CALC_XPNSL) && p.hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0)
         {
-            throw runtime_error("You are not calculating XP stats but have given a second data file (" + p.hapFilename2 + ").\n");
+            HANDLE_ERROR_NOLOG("You are not calculating XP stats but have given a second data file (" + p.hapFilename2 + ").");
         }
         if (p.mapFilename.compare(DEFAULT_FILENAME_MAP) == 0) {
-            throw runtime_error("Must also provide a mapfile.\n");
+            HANDLE_ERROR_NOLOG("Must also provide a mapfile.");
         }
     }
     // if (EHH1K < 1)
@@ -347,7 +350,7 @@ void checkParameters(param_main &p){
 
     if (p.PI_WIN < 1)
     {
-        throw runtime_error("pi window must be > 0.\n");
+        HANDLE_ERROR_NOLOG("pi window must be > 0.");
     }
 
     // if (p.MULTI_CHR && !p.VCF)
@@ -382,8 +385,7 @@ void jsonParse(param_main &base_p, vector<param_main> &multi_params){
     std::ifstream inputFile(base_p.jsonFilename);
 
     if (!inputFile.is_open()) {
-        cerr<<"ERROR: Failed to open json file "<< base_p.jsonFilename << " containing parameters.\n";
-        exit(1);
+        HANDLE_ERROR_NOLOG("Failed to open json file " + base_p.jsonFilename + " containing parameters.");
     }
 
     nlohmann::json data;
@@ -405,21 +407,21 @@ void jsonParse(param_main &base_p, vector<param_main> &multi_params){
 
         if (param.contains(MAF)) { // Check if the field exists and retrieve it if it does
             p.MAF = param[MAF];
-            cerr<<"DEBUG:::"<<ARG_MAF<<" "<<p.MAF<<endl;
+            DBG("DEBUG:::"<<ARG_MAF<<" "<<p.MAF<<endl);
         }
 
         if (param.contains(MAX_EXTEND)) { // Check if the field exists and retrieve it if it does
             p.MAX_EXTEND = param[MAX_EXTEND];
-            cerr<<"DEBUG:::"<<ARG_MAX_EXTEND<<" "<<p.MAX_EXTEND<<endl;
+            DBG("DEBUG:::"<<ARG_MAX_EXTEND<<" "<<p.MAX_EXTEND<<endl);
         }
 
         if (param.contains(MAX_EXTEND_NSL)) { // Check if the field exists and retrieve it if it does
             p.MAX_EXTEND_NSL = param[MAX_EXTEND_NSL];
-            cerr<<"DEBUG:::"<<ARG_MAX_EXTEND_NSL<<" "<<p.MAX_EXTEND_NSL<<endl;
+            DBG("DEBUG:::"<<ARG_MAX_EXTEND_NSL<<" "<<p.MAX_EXTEND_NSL<<endl);
         }
         if(param.contains(CUTOFF)){
             p.EHH_CUTOFF = param[CUTOFF];
-            cerr<<"DEBUG:::"<<ARG_CUTOFF<<" "<<p.EHH_CUTOFF<<endl;
+            DBG("DEBUG:::"<<ARG_CUTOFF<<" "<<p.EHH_CUTOFF<<endl);
         }
         checkParameters(p);
         multi_params.push_back(p);

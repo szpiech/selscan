@@ -259,29 +259,25 @@ typedef struct
 gsl_integration_glfixed_table;
 
 
-gsl_integration_glfixed_table *
-  gsl_integration_glfixed_table_alloc (size_t n);
+gsl_integration_glfixed_table * gsl_integration_glfixed_table_alloc (size_t n);
 
-void
-  gsl_integration_glfixed_table_free (gsl_integration_glfixed_table * t);
+void gsl_integration_glfixed_table_free (gsl_integration_glfixed_table * t);
 
 /* Routine for fixed-order Gauss-Legendre integration */
 
-double
-  gsl_integration_glfixed (const gsl_function *f,
-                           double a,
-                           double b,
-                           const gsl_integration_glfixed_table * t);
+double gsl_integration_glfixed (const gsl_function *f,
+                                double a,
+                                double b,
+                                const gsl_integration_glfixed_table * t);
 
 /* Routine to retrieve the i-th Gauss-Legendre point and weight from t */
 
-int
-  gsl_integration_glfixed_point (double a,
-                                 double b,
-                                 size_t i,
-                                 double *xi,
-                                 double *wi,
-                                 const gsl_integration_glfixed_table * t);
+int gsl_integration_glfixed_point (double a,
+                                   double b,
+                                   size_t i,
+                                   double *xi,
+                                   double *wi,
+                                   const gsl_integration_glfixed_table * t);
 
 
 /* Cquad integration - Pedro Gonnet */
@@ -313,10 +309,100 @@ gsl_integration_cquad_workspace_free (gsl_integration_cquad_workspace * w);
 
 int
 gsl_integration_cquad (const gsl_function * f, double a, double b,
-		       double epsabs, double epsrel,
-		       gsl_integration_cquad_workspace * ws,
-		       double *result, double *abserr, size_t * nevals);
+		                   double epsabs, double epsrel,
+		                   gsl_integration_cquad_workspace * ws,
+		                   double *result, double *abserr, size_t * nevals);
 
+/* Romberg integration workspace and routines */
+
+typedef struct
+{
+  size_t n;       /* maximum number of steps */
+  double *work1;  /* workspace for a row of R matrix, size n */
+  double *work2;  /* workspace for a row of R matrix, size n */
+} gsl_integration_romberg_workspace;
+
+gsl_integration_romberg_workspace *gsl_integration_romberg_alloc(const size_t n);
+void gsl_integration_romberg_free(gsl_integration_romberg_workspace * w);
+int gsl_integration_romberg(const gsl_function * f, const double a, const double b,
+                            const double epsabs, const double epsrel, double * result,
+                            size_t * neval, gsl_integration_romberg_workspace * w);
+
+/* IQPACK related structures and routines */
+
+typedef struct
+{
+  double alpha;
+  double beta;
+  double a;
+  double b;
+  double zemu;
+  double shft;
+  double slp;
+  double al;
+  double be;
+} gsl_integration_fixed_params;
+
+typedef struct
+{
+  int (*check)(const size_t n, const gsl_integration_fixed_params * params);
+  int (*init)(const size_t n, double * diag, double * subdiag, gsl_integration_fixed_params * params);
+} gsl_integration_fixed_type;
+
+typedef struct
+{
+  size_t n;        /* number of nodes/weights */
+  double *weights; /* quadrature weights */
+  double *x;       /* quadrature nodes */
+  double *diag;    /* diagonal of Jacobi matrix */
+  double *subdiag; /* subdiagonal of Jacobi matrix */
+  const gsl_integration_fixed_type * type;
+} gsl_integration_fixed_workspace;
+
+/* IQPACK integral types */
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_legendre;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_chebyshev;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_gegenbauer;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_jacobi;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_laguerre;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_hermite;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_exponential;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_rational;
+GSL_VAR const gsl_integration_fixed_type * gsl_integration_fixed_chebyshev2;
+
+gsl_integration_fixed_workspace *
+gsl_integration_fixed_alloc(const gsl_integration_fixed_type * type, const size_t n,
+                            const double a, const double b, const double alpha, const double beta);
+
+void gsl_integration_fixed_free(gsl_integration_fixed_workspace * w);
+
+size_t gsl_integration_fixed_n(const gsl_integration_fixed_workspace * w);
+
+double *gsl_integration_fixed_nodes(const gsl_integration_fixed_workspace * w);
+
+double *gsl_integration_fixed_weights(const gsl_integration_fixed_workspace * w);
+
+int gsl_integration_fixed(const gsl_function * func, double * result,
+                          const gsl_integration_fixed_workspace * w);
+
+/* Lebedev quadrature */
+
+typedef struct
+{
+  size_t n;        /* number of nodes/weights */
+  double *weights; /* quadrature weights */
+  double *x;       /* x quadrature nodes */
+  double *y;       /* y quadrature nodes */
+  double *z;       /* z quadrature nodes */
+  double *theta;   /* theta quadrature nodes */
+  double *phi;     /* phi quadrature nodes */
+} gsl_integration_lebedev_workspace;
+
+gsl_integration_lebedev_workspace * gsl_integration_lebedev_alloc(const size_t n);
+
+void gsl_integration_lebedev_free(gsl_integration_lebedev_workspace * w);
+
+size_t gsl_integration_lebedev_n(const gsl_integration_lebedev_workspace * w);
 
 __END_DECLS
 
