@@ -1,0 +1,94 @@
+name: C++ CI Windows -
+# This workflow will build and test the C++ code on windows using GitHub Actions.
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+    if: (contains(github.event.head_commit.message, '[run ci]') || contains(github.event.head_commit.message, '[binary_win]'))
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+
+    - name: Set up Git credentials
+      if: (contains(github.event.head_commit.message, '[binary_win]') || contains(github.event.head_commit.message, '[gsl]') )
+      run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          
+    # - name: Set Up MSVC Environment ## works
+    #   uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Set Up MSYS2 Environment
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: clang64
+        update: true
+        install: >-
+          git
+          base-devel
+          mingw-w64-clang-x86_64-toolchain
+       
+
+    - name: Build gsl
+      shell: msys2 {0}
+      if: contains(github.event.head_commit.message, '[gsl]') 
+      run: |
+        pacman -S mingw-w64-x86_64-gsl --noconfirm 
+        cp /mingw64/lib/libgsl.a "${{ github.workspace }}"/lib/win32/
+        cp /mingw64/lib/libgslcblas.a "${{ github.workspace }}"/lib/win32/
+        mkdir -p "${{ github.workspace }}"/include/gsl
+        cp /mingw64/include/gsl/* "${{ github.workspace }}"/include/gsl/
+
+    - name: Commit and push binary
+      if: contains(github.event.head_commit.message, '[gsl]') 
+      run: |
+        git add include/gsl
+        git add lib/win32/libgsl.a
+        git add lib/win32/libgslcblas.a
+        git add lib/win32
+        git commit -m "Adding gsl" || echo "No changes to commit"
+        git push
+
+    # - name: Install zlib 
+    #   shell: msys2 {0}
+    #   run: |
+    #     pacman -S mingw-w64-x86_64-zlib --noconfirm
+    #     cp /mingw64/lib/libz.a "${{ github.workspace }}"/lib/win32/
+
+
+    - name: Install selscan 
+      shell: msys2 {0}
+      working-directory: src/
+      run: |
+        make -f Makefile_win -j
+    - name: Test selscan installation
+      shell: msys2 {0}
+      working-directory: src/
+      run: |
+        ./selscan.exe --help
+        ./norm.exe --help
+
+
+
+
+    - name: Commit and push binary
+      if: contains(github.event.head_commit.message, '[binary_win]') 
+      run: |
+        cp src/selscan.exe bin/win/
+        cp src/norm.exe bin/win/
+        git add bin/win
+        git add lib/win32
+        git commit -m "Adding bin to bin/win" || echo "No changes to commit"
+        git push

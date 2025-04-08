@@ -4,3 +4,4 @@
 test.*
 sample.*
 .DS_Store
+.vscode/
