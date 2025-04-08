@@ -479,10 +479,12 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
                 return std::isspace(static_cast<unsigned char>(c));
             }), line.end());
 
+        int cols = (p.UNPHASED) ? current_nhaps*2 : current_nhaps;
+
         if (p.UNPHASED){
             
             
-            for (int hap = 0; hap < current_nhaps; hap++){ 
+            for (int hap = 0; hap < cols; hap++){ 
                 if (hap % 2 == 0){
                     if(line[hap]=='1'  && line[hap+1]=='1'){
                         hapData.addAllele2(locus_after_filter, hap/2);
@@ -1268,32 +1270,36 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
     }
 
+    
     string junk;
     int locus_after_filter = 0;
     for (int locus = 0; locus < nloci_before_filter; locus++)
     {
+        getline(fin, line);
         if(!skiplist.empty()){
             if(skiplist.front() == locus){
                 skiplist.pop();    
                 hapData.skipQueue.push(locus); // make a copy to skipQueue
-                getline(fin, junk);
                 continue;
             }
         }
+
+        istringstream ss(line);
         for (int i = 0; i < numMapCols; i++)
         {
-            fin >> junk; // skip first 4 columns
+            ss >> junk; // skip first 4 columns
         }
 
         std::ostringstream rest;
 
-        int cols = current_nhaps;
+        int cols = current_nhaps; 
+        
         if(p.UNPHASED) {
             cols *= 2;
         }
         for (int i = 0; i < cols; i++)
         {
-            fin >> junk; 
+            ss >> junk; 
             rest << junk << "";
         }
 
@@ -1304,7 +1310,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         }), line_haps.end());  // erase spaces inside and outside
 
         if (p.UNPHASED){
-            for (int hap = 0; hap < current_nhaps; hap++){ 
+            for (int hap = 0; hap < cols; hap++){ 
                 if (hap % 2 == 0){
                     if(line_haps[hap]=='1'  && line_haps[hap+1]=='1'){
                         hapData.addAllele2(locus_after_filter, hap/2);
@@ -1327,6 +1333,9 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
             }
         }
         locus_after_filter++;
+        line.clear();
+        ss.clear();
+        rest.clear();
     }
 
     fin.close();
@@ -1355,7 +1364,8 @@ void HapMap::loadHapMapData(){
                 HANDLE_ERROR("Haplotypes from " + p.tpedFilename + " and " + p.tpedFilename2 + " do not have the same number of loci.");
             }
         }
-        mapData->readMapDataTPED(p.tpedFilename, hapData->nloci, hapData->nhaps, p.USE_PMAP, hapData->skipQueue);
+        int exp_haps = (p.UNPHASED)? hapData->nhaps*2 : hapData->nhaps;
+        mapData->readMapDataTPED(p.tpedFilename, hapData->nloci, exp_haps, p.USE_PMAP, hapData->skipQueue);
     }
     else if (p.VCF) {
         if (p.CALC_XP || p.CALC_XPNSL)
@@ -1370,6 +1380,7 @@ void HapMap::loadHapMapData(){
             readHapDataVCF(p.vcfFilename, *hapData);
         }
         if(!p.CALC_NSL && !p.CALC_XPNSL && !p.USE_PMAP) {
+            //int exp_haps = (p.UNPHASED)? hapData->nhaps*2 : hapData->nhaps;
             mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
         }
         else{//Load physical positions

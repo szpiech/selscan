@@ -723,8 +723,8 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 
 
 void IHS::main() {
-    hm->hapData->print(100);
-    exit(1);
+    // hm->hapData->print(100);
+    // exit(1);
     if(p.CALC_NSL && !p.CALC_IHS){
         this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
         init_global_fout("nsl");
