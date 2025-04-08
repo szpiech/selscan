@@ -1,5 +1,8 @@
 
 #include "selscan-data.h"
+
+#include <limits>
+
 #include <set>
 
 
