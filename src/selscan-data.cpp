@@ -309,61 +309,61 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
     initParamsInHap(hapData);
 
     //verification
-    ifstream infile(filename); // Input file path
-    if (!infile) {
-        cerr << "Failed to open file." << endl;
-        return;
-    }
+    // ifstream infile(filename); // Input file path
+    // if (!infile) {
+    //     cerr << "Failed to open file." << endl;
+    //     return;
+    // }
 
-    vector<vector<int>> matrix;
-    string line;
+    // vector<vector<int>> matrix;
+    // string line;
 
-    int nrowss = 0;
-    int ncolss = 0;
-    // Step 1: Read the matrix from file (text format)
-    while (getline(infile, line)) {
-        vector<int> row;
-        ncolss = 0;
-        for (char ch : line) {
-            if (ch == '0' || ch == '1') {
-                row.push_back(ch - '0');
-                ncolss++;
-            }
-        }
-        if (!row.empty()) {
-            matrix.push_back(row);
-        }
-        nrowss++;
-    }
+    // int nrowss = 0;
+    // int ncolss = 0;
+    // // Step 1: Read the matrix from file (text format)
+    // while (getline(infile, line)) {
+    //     vector<int> row;
+    //     ncolss = 0;
+    //     for (char ch : line) {
+    //         if (ch == '0' || ch == '1') {
+    //             row.push_back(ch - '0');
+    //             ncolss++;
+    //         }
+    //     }
+    //     if (!row.empty()) {
+    //         matrix.push_back(row);
+    //     }
+    //     nrowss++;
+    // }
 
-    infile.close();
+    // infile.close();
 
-    if (matrix.empty()) {
-        cerr << "Matrix is empty or invalid." << endl;
-        return;
-    }
+    // if (matrix.empty()) {
+    //     cerr << "Matrix is empty or invalid." << endl;
+    //     return;
+    // }
 
-    // Step 2: Filter rows with more than 5 zeros
-    vector<vector<int>> filtered_matrix;
-    for (const auto& row : matrix) {
-        int zero_count = 0;
-        for (int val : row) {
-            if (val == 0) zero_count++;
-        }
-        if (zero_count*1.0/ncolss > p.MAF && 1-zero_count*1.0/ncolss > p.MAF) {
-            filtered_matrix.push_back(row);
-        }
-    }
+    // // Step 2: Filter rows with more than 5 zeros
+    // vector<vector<int>> filtered_matrix;
+    // for (const auto& row : matrix) {
+    //     int zero_count = 0;
+    //     for (int val : row) {
+    //         if (val == 0) zero_count++;
+    //     }
+    //     if (zero_count*1.0/ncolss > p.MAF && 1-zero_count*1.0/ncolss > p.MAF) {
+    //         filtered_matrix.push_back(row);
+    //     }
+    // }
 
-    // Step 3: Print the filtered matrix
-    cout << "Filtered Matrix (rows with >5 zeros):" << endl;
-    for (const auto& row : filtered_matrix) {
-        // for (int val : row) {
-        //     cout << val;
-        // }
-        // cout << endl;
-    }
-    cout << "Number of rows (loci): " << filtered_matrix.size() << endl;
+    // // Step 3: Print the filtered matrix
+    // cout << "Filtered Matrix (rows with >5 zeros):" << endl;
+    // for (const auto& row : filtered_matrix) {
+    //     // for (int val : row) {
+    //     //     cout << val;
+    //     // }
+    //     // cout << endl;
+    // }
+    // cout << "Number of rows (loci): " << filtered_matrix.size() << endl;
 
 
     //PHASE 1: Read input file to get "nloci", "nhaps" and "skiplist"
@@ -376,7 +376,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
     }
 
-    //string line;
+    string line;
     
     int previous_nhaps = -1;
     int current_nhaps = 0;
@@ -393,6 +393,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
             return std::isspace(static_cast<unsigned char>(c));
         }), line.end());
         current_nhaps = line.length(); // number of haps 
+        
         int number_of_2s = 0; // for unphased
         int number_of_1s = 0;
         for (int hap = 0; hap < current_nhaps; hap++){ 
@@ -1165,7 +1166,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     int previous_nhaps = -1;
     int current_nhaps = 0;
     
-    queue<int> skipQueue_local;
+    queue<int> skiplist;
 
     //Counts number of haps (cols) and number of loci (rows)
     //if any lines differ, send an error message and throw an exception
@@ -1176,26 +1177,9 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         nloci_before_filter++; // each line contributes to a locus
         current_nhaps = countFields(line) - numMapCols; // here, current_nhaps (count of fields) is the number of haps 
         
-        if (previous_nhaps < 0)
-        {
-            previous_nhaps = current_nhaps;
-            continue;
-        }
-
-        else if (previous_nhaps != current_nhaps)
-        {
-            HANDLE_ERROR("line " + std::to_string(nloci_before_filter) +
-                          " of " + filename + " has " + std::to_string(current_nhaps) +
-                          " fields, but the previous line has " + std::to_string(previous_nhaps) + ".");
-        }
-        previous_nhaps = current_nhaps;
-
-        int number_of_1s = 0;
-        int number_of_2s = 0;
-
         stringstream ss;
         ss.str(line);
-          
+
         char allele1, allele2;
         string junk;
         
@@ -1203,47 +1187,78 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
             ss >> junk;
         }
 
-        for (int hap = 0; hap < current_nhaps; hap++)
-        {
-            if(p.UNPHASED){
-                ss >> allele1;
-                ss >> allele2;
+        std::ostringstream rest;
+        while (ss >> junk) {
+            rest << junk ;
+        }
 
-                if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') ){
-                    HANDLE_ERROR("Alleles must be coded 0/1 only. Found alleles " << allele1 << " " << allele2 );
+        line.clear();
+        string line_haps = rest.str();
+        line_haps.erase(std::remove_if(line_haps.begin(), line_haps.end(), [](char c) {
+            return std::isspace(static_cast<unsigned char>(c));
+        }), line_haps.end());  // erase spaces inside and outside
+
+
+        int number_of_2s = 0; // for unphased
+        int number_of_1s = 0;
+        for (int hap = 0; hap < current_nhaps; hap++){ 
+            if(p.UNPHASED){
+                if (hap % 2 == 0){
+                    if(line_haps[hap]=='1'  && line_haps[hap+1]=='1'){
+                        number_of_2s++;
+                    }else if ( (line_haps[hap]=='1' && line_haps[hap+1]=='0') || (line_haps[hap]=='0' && line_haps[hap+1]=='1') ){ // ==1
+                        number_of_1s++;
+                    }
                 }
-                
-                if (allele1 == '1' && allele2 == '1'){
-                    number_of_2s++; //allele = '2';
-                }
-                else if (allele1 == '1' || allele2 == '1'){
-                    number_of_1s++; //allele = '1';
-                }
-            }else{ //phased
-                char allele;
-                ss >> allele;
-                if (allele!= '0' && allele!= '1')
-                {
-                    HANDLE_ERROR("Alleles must be coded 0/1 only. Found alleles " << allele1 << " " << allele2 );
-                }
-                if(allele=='1'){
+            }else{
+                if(line_haps[hap]=='1'){
                     number_of_1s++;
                 }
             }
         }
         if(shouldSkipLocus(number_of_1s, number_of_2s, current_nhaps)){
-            skipQueue_local.push(nloci_before_filter-1);
+            skiplist.push(nloci_before_filter-1);
         }
+
+        if (previous_nhaps < 0)
+        {
+            previous_nhaps = current_nhaps;
+            continue;
+        }
+        else if (previous_nhaps != current_nhaps) {
+            HANDLE_ERROR(("line " + std::to_string(nloci_before_filter) +
+                          " of " + filename + " has " + std::to_string(current_nhaps) +
+                          " haps, but the previous line has " + std::to_string(previous_nhaps) + ".").c_str());
+        }
+        
+        previous_nhaps = current_nhaps;
     }
 
     fin.clear(); // clear error flags
     //fin.seekg(fileStart);
     fin.close();
 
-    int nloci_after_filter = nloci_before_filter-skipQueue_local.size();
-    current_nhaps = p.UNPHASED? current_nhaps/2: current_nhaps; // each haplotype is represented by 2 columns
-    hapData.initHapData(current_nhaps, nloci_after_filter); // works for both phased and unphased
+
+    if(p.SKIP) { //prefilter all sites < MAF
+        LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
+        LOG("Removed "<<skiplist.size() <<" low frequency all variants.");
+
+    }else{
+        LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF << ".");
+    }
     
+    if(p.UNPHASED){
+        if (current_nhaps % 2 != 0)
+        {
+            HANDLE_ERROR("Number of haplotypes must be even for unphased.");
+        }
+    }
+    current_nhaps = (p.UNPHASED) ? current_nhaps/2 : current_nhaps;
+    
+    LOG("Loading " << current_nhaps << " haplotypes and " << nloci_before_filter - skiplist.size() << " loci...");
+    hapData.initHapData(current_nhaps, nloci_before_filter-skiplist.size());
+    hapData.skipQueue = queue<int>();
+
     
     // PHASE 2: Open again and load the data to HapData: now that we gathered some idea about the format of the file
     fin.open(filename.c_str());
@@ -1253,17 +1268,13 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
     }
 
-    LOG("Loading " << current_nhaps << " haplotypes and " << nloci_after_filter << " loci...\n");
-    if(p.SKIP){
-        LOG("Removed " << hapData.skipQueue.size() << " low frequency variants.\n");
-    }
-
     string junk;
+    int locus_after_filter = 0;
     for (int locus = 0; locus < nloci_before_filter; locus++)
     {
-        if(!skipQueue_local.empty()){
-            if(skipQueue_local.front() == locus){
-                skipQueue_local.pop();    
+        if(!skiplist.empty()){
+            if(skiplist.front() == locus){
+                skiplist.pop();    
                 hapData.skipQueue.push(locus); // make a copy to skipQueue
                 getline(fin, junk);
                 continue;
@@ -1273,28 +1284,49 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         {
             fin >> junk; // skip first 4 columns
         }
-        for (int hap = 0; hap < hapData.nhaps; hap++)
+
+        std::ostringstream rest;
+
+        int cols = current_nhaps;
+        if(p.UNPHASED) {
+            cols *= 2;
+        }
+        for (int i = 0; i < cols; i++)
         {
-            if(p.UNPHASED){
-                char allele1, allele2;
-                fin >> allele1;
-                fin >> allele2;
-                
-                if (allele1 == '1' && allele2 == '1'){ //allele = '2';
-                    hapData.addAllele2(locus, hap);
+            fin >> junk; 
+            rest << junk << "";
+        }
+
+        string line_haps = rest.str();
+        
+        line_haps.erase(std::remove_if(line_haps.begin(), line_haps.end(), [](char c) {
+            return std::isspace(static_cast<unsigned char>(c));
+        }), line_haps.end());  // erase spaces inside and outside
+
+        if (p.UNPHASED){
+            for (int hap = 0; hap < current_nhaps; hap++){ 
+                if (hap % 2 == 0){
+                    if(line_haps[hap]=='1'  && line_haps[hap+1]=='1'){
+                        hapData.addAllele2(locus_after_filter, hap/2);
+                    }else if ( (line_haps[hap]=='1' && line_haps[hap+1]=='0') || (line_haps[hap]=='0' && line_haps[hap+1]=='1') ){ // ==1
+                        hapData.addAllele1(locus_after_filter, hap/2);
+                    }
                 }
-                else if (allele1 == '1' || allele2 == '1'){ //allele = '1';
-                    hapData.addAllele1(locus, hap);
+            }
+        }else{ // PHASED
+            for (int hap = 0; hap < current_nhaps; hap++)
+            {   
+                char allele1 = line_haps[hap];
+                if (allele1 != '0' && allele1 != '1')
+                {
+                    HANDLE_ERROR("Alleles must be coded 0/1 only.");
                 }
-            }else{
-                char allele;
-                fin >> allele;
-                
-                if(allele=='1'){
-                    hapData.addAllele1(locus, hap);
+                if(allele1=='1'){
+                    hapData.addAllele1(locus_after_filter, hap);
                 }
             }
         }
+        locus_after_filter++;
     }
 
     fin.close();

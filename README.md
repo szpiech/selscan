@@ -42,7 +42,7 @@ For details, refer to the manual.
 ```
 ** Data must have no missing genotypes. **
 
-selscan v2.0.0 -- a program to calculate EHH-based scans for positive selection in genomes.
+selscan v2.1.0 -- a program to calculate EHH-based scans for positive selection in genomes.
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.
 
 selscan currently implements EHH, iHS, XP-EHH, nSL, and XP-nSL.

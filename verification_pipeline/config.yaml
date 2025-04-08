@@ -1,0 +1,16 @@
+inputs:
+  - name: sample1
+    hap: "/Users/amatur/code/selscan/example.p1.vcf.gz"
+  - name: sample2
+    hap: "/Users/amatur/code/selscan/example/p2.vcf.gz"
+  - name: sample3
+    hap: "/Users/amatur/code/selscan/example/p4.2000.vcf.gz"
+
+
+runs:
+  - stat: "ihs"
+    extra: "--max-extend 100000 --threads 8 --maf 0.1 --trunc-ok --unphased"
+  - stat: "nsl"
+    extra: "--max-gap 200000 --threads 8 --maf 0.1  --trunc-ok  --unphased"
+
+

@@ -6,16 +6,12 @@ bin/win/
 
 To install the binaries, just place them somewhere in your $PATH (i.e. ~/bin/).
 
-selscan depends on the pthread library, which should be available by default
-in any build environment on a OSX/Linux system.  On Windows, I have had success
-building selscan using pthreads-win32 (http://www.sourceware.org/pthreads-win32/)
-and compiling in a MinGW environment (http://www.mingw.org/). I have provided
-a compiled version of the pthreads-win32 library in lib/win32/.
+selscan depends on the C++ standard thread library, which should be available by default
+in any build environment on a OSX/Linux system. On Windows, we successfully built selscan using the clang++ compiler with MinGW in an MSYS2 environment. MinGW provides a lightweight development setup for native Windows compilation, while MSYS2 offers Unix-like libraries and utilities. clang++ was used instead of gcc to ensure correct support for C++ standard threads.
 
-selscan (1.0.3+) also depends on zlib (http://www.zlib.net/), which should be
-available by default in OSX/Linux build environments.  On Windows, I have had
-success compiling zlib in a MinGW environment (http://www.mingw.org/).  I have
-provided a compiled version of zlib for win32 in lib/win32/.
+selscan (2.1.0+) also depends on zlib (http://www.zlib.net/), which should be
+available by default in OSX/Linux build environments.  On Windows, we have had
+success compiling zlib in a MinGW environment (http://www.mingw.org/).  A compiled version of zlib in provided in lib/win32/.
 
 To build (some lines in the Makefile may need to be commented/uncommented):
 
@@ -24,8 +20,8 @@ make selscan
 The selscan binary will appear in the src/ directory when built.
 
 The program norm depends on GNU GSL (http://www.gnu.org/software/gsl/). There shouldn't be 
-a strict need to download and install these yourself, as I've provided pre-compiled static 
-versions of GSL for OSX, Linux, and Windows in lib/osx/, lib/linux/, and lib/win32/.
+a strict need to download and install these yourself, as pre-compiled static 
+versions of GSL for OSX, Linux, and Windows in lib/osx/, lib/linux/, and lib/win32/ are provided.
 
 To build (some lines in the Makefile may need to be commented/uncommented):
 

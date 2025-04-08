@@ -1,0 +1,677 @@
+\documentclass[12pt]{article}%
+\usepackage{setspace}
+\usepackage{color}
+\usepackage{enumerate} %allows the line spacing to be set
+\usepackage{epsfig} %lets you put .eps figures into the document
+\usepackage{amssymb} %provides a command for bold math symbols
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{multirow}
+\usepackage{rotating}
+\usepackage{verbatim}
+\usepackage[left=0.5in,top=0.75in,right=0.5in,bottom=0.5in]{geometry}
+\usepackage{listings}
+\usepackage{url}
+
+\newcommand{\negspace}{\!\!\!\!\!\!\!\!\!\!\!\!}
+
+\title{{\tt selscan} v2.0.0 User Manual}
+\date{\today}
+\author{Zachary A. Szpiech}
+
+
+\begin{document}
+
+\lstset{breaklines=true,basicstyle=\ttfamily}
+
+\null  % Empty line
+\nointerlineskip  % No skip for prev line
+\vfill
+\let\snewpage \newpage
+\let\newpage \relax
+\maketitle
+\thispagestyle{empty}
+\let \newpage \snewpage
+\vfill 
+\break % page break
+
+\tableofcontents 
+
+\newpage
+
+\section{Introduction}
+
+Extended Haplotype Homozygosity (EHH) \cite[]{SabetiEtAl02}, Integrated Haplotype 
+Score (iHS) \cite[]{VoightEtAl06}, Cross-population Extended Haplotype 
+Homozygosity (XPEHH) \cite[]{SabetiEtAl07}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, nSL \cite[]{FerrerAdmetllaEtAl14}, and XP-nSL \cite[]{SzpiechEtAl21} are statistics designed to use phased genotypes to identify putative regions
+of recent or ongoing positive selection in genomes. (Starting with selscan v2.0.0, the --unphased flag can be used to compute iHS, nSL, XP-EHH, and XP-nSL with unphased data. \cite[]{Szpiech21}) They are all based on the model of 
+a selective sweep, where a {\it de novo} adaptive mutation arises on a haplotype
+that quickly sweeps toward fixation, reducing diversity around the locus (a "hard" sweep).  If selection is strong enough, this occurs
+faster than recombination or mutation can act to break up the haplotype, and thus a signal of high 
+haplotype homozygosity can be observed extending from an adaptive locus.  nSL and XP-nSL in retain power to detect soft sweeps as well.
+
+As genetics data sets grow larger both in number of individuals and number of loci,
+there is a need for a fast and efficient publicly available implementation of these statistics. Below we 
+introduce these statistics and provide concise definitions for their calculations.  
+
+When using {\tt selscan} please cite \cite{SzpiechAndHernandez14} as well as the appropriate paper that introduced the statistic: EHH \cite[]{SabetiEtAl02}, iHS \cite[]{VoightEtAl06}, XP-EHH \cite[]{SabetiEtAl07}, nSL \cite[]{FerrerAdmetllaEtAl14}, iHH12 \cite[]{GarudEtAl15, TorresEtAl18}, XP-nSL \cite[]{SzpiechEtAl21}.
+
+This introduction has been adapted from \cite{SzpiechAndHernandez14}.
+
+\section{Obtaining {\tt selscan}}
+
+{\tt selscan} pre-built binaries and source code are available at {\tt https://github.com/szpiech/selscan}.  Binaries have been compiled on OSX, Linux, and Windows, and they should function across most versions of these operating systems.  To compile from source, change directories to the {\tt src/} directory and type {\tt make}.  Some minor modification (commenting and uncommenting certain lines) to the Makefile may be necessary depending on your target OS.  {\tt selscan} depends on the POSIX standard threading library (pthreads) and the zlib library ({\tt http://www.zlib.net/}). A win32 implementation of pthreads is available at {\tt https://www.sourceware.org/pthreads-win32/}, and a win32 implementation of zlib is available at {\tt http://gnuwin32.sourceforge.net/packages/zlib.htm}.  The windows version of {\tt selscan} was built using a MinGW environment ({\tt http://www.mingw.org/}), although it should only be necessary to set this environment up if you wish to compile from source on Windows.
+
+The companion program {\tt norm} depends on GNU GSL ({\tt http://www.gnu.org/software/gsl/gsl.html}), and precompiled static libraries for each OS are included in the source code.
+
+\section{Basic Usage}
+
+To calculate EHH:
+
+{\tt selscan --ehh <locusID> --hap <haplotypes> --map <mapfile> --out <outfile>}
+~\\
+\noindent To calculate iHS:
+
+{\tt selscan --ihs --hap <haplotypes> --map <mapfile> --out <outfile>}
+~\\
+\noindent To calculate XP-EHH:
+
+{\tt selscan --xpehh --hap <pop1 haplotypes> --ref <pop2 haplotypes> --map <mapfile> --out <outfile>}
+~\\
+\noindent To calculate nSL:
+
+{\tt selscan --nsl --hap <haplotypes> --map <mapfile> --out <outfile>}
+~\\
+\noindent To calculate iHH12:
+
+{\tt selscan --ihh12 --hap <haplotypes> --map <mapfile> --out <outfile>}
+~\\
+\noindent To calculate XP-nSL:
+
+{\tt selscan --xpnsl --hap <pop1 haplotypes> --ref <pop2 haplotypes> --out <outfile>}
+
+\section{Statistics implemented}
+
+Here we describe the various statistics implemented in {\tt selscan}.  Sections 
+\ref{sec:ehh}, \ref{sec:ihs}, and \ref{sec:xpehh} are reproduced with minor modifications from 
+\cite{SzpiechAndHernandez14}.
+
+\subsection{Extended Haplotype Homozygosity (EHH)}\label{sec:ehh}
+
+Extended Haplotype Homozygosity (EHH) was introduced by \cite{SabetiEtAl02}. In a sample of $n$ chromosomes, let $\mathcal{C}$ denote the set of all possible
+distinct haplotypes at a locus of interest (named $x_0$), and let 
+$\mathcal{C}(x_i)$ denote the set of all possible distinct haplotypes 
+extending from the locus $x_0$ to the $i^{th}$ marker either upstream or 
+downstream from $x_0$.  For example, if the locus of interest $x_0$ is a 
+biallelic SNP where $0$ represents the ancestral allele and $1$ represents the 
+derived allele, then $\mathcal{C} := \{0,1\}$.  If $x_1$ is an immediately 
+adjacent marker, then the set of all possible haplotypes is 
+$\mathcal{C}(x_1) := \{11,10,00,01\}$.
+
+EHH of the entire sample, extending from the locus $x_0$ 
+out to marker $x_i$, is calculated as 
+\begin{equation}\label{eq:ehh}
+EHH(x_i) = \sum_{h \in \mathcal{C}(x_i)} \frac{{n_h \choose 2}}{{n \choose 2}},
+\end{equation}
+where $n_h$ is the number of observed haplotypes of type $h \in \mathcal{C}(x_i)$.
+
+In some cases, we may want to calculate the haplotype homozygosity of a 
+sub-sample of chromosomes all carrying a `core' haplotype at locus $x_0$. Let 
+$\mathcal{H}_c(x_i)$ be a partition of $\mathcal{C}(x_i)$ containing all 
+distinct haplotypes carrying the core haplotype, $c \in \mathcal{C}$, at $x_0$ and 
+extending to marker $x_i$.  Note that
+\begin{equation} 
+\mathcal{C}(x_i) = \bigcup_{c \in \mathcal{C}}\mathcal{H}_c(x_i).
+\end{equation}
+
+Following the example above, if the derived allele (1) is chosen as the core haplotype,
+then $\mathcal{H}_1(x_1) := \{11,10\}$.  Similarly, if the ancestral allele is the core
+haplotype, then $\mathcal{H}_0(x_1) := \{00,01\}$
+
+We calculate the EHH of the chromosomes carrying the core haplotype $c$ to marker $x_i$ as
+\begin{equation}\label{eq:ehh-core}
+EHH_c(x_i) = \sum_{h \in \mathcal{H}_c(x_i)} \frac{{n_h \choose 2}}{{n_c \choose 2}},
+\end{equation}
+where $n_h$ is the number of observed haplotypes of type $h \in \mathcal{H}_c(x_i)$ and 
+$n_c$ is the number of observed haplotypes carrying the core haplotype ($c \in \mathcal{C}$). 
+
+\subsection{Integrated Haplotype Score (iHS)}\label{sec:ihs}
+
+Integrated Haplotype Score (iHS) was introduced by \cite{VoightEtAl06}. iHS is calculated by using Equation \ref{eq:ehh-core} to track the decay of haplotype homozygosity
+for both the ancestral and derived haplotypes extending from a query site.
+To calculate iHS at a site, we first calculate the integrated haplotype 
+homozygosity (iHH) for the ancestral ($0$) and derived ($1$) haplotypes 
+($\mathcal{C} := \{0,1\}$) via trapezoidal quadrature.
+\begin{align}\label{eq:ihh}
+iHH_c =& \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH_c(x_{i-1}) + EHH_c(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH_c(x_{i-1}) + EHH_c(x_i)\right)g(x_{i-1},x_i),
+\end{align}
+where $\mathcal{D}$ is the set of markers downstream from the current locus 
+such that $x_i \in \mathcal{D}$ denotes the $i^{th}$ closest downstream 
+marker from the locus of interest ($x_0$). $\mathcal{U}$ and $x_i \in \mathcal{U}$ are defined similarly 
+for upstream markers. $g(x_{i-1},x_i)$ gives the genetic distance between two 
+markers.  The (unstandardized) iHS is then calculated as
+\begin{equation}
+\ln\left(\frac{iHH_1}{iHH_0}\right).
+\end{equation}
+Note that this definition differs slightly from that in \cite{VoightEtAl06}, where 
+unstandardized iHS is defined with $iHH_1$ and $iHH_0$ swapped.
+
+Finally, the unstandardized scores are normalized in frequency bins across the 
+entire genome.
+\begin{equation}
+iHS = \frac{\ln\left(\frac{iHH_1}{iHH_0}\right) - E_p\Big[\ln\left(\frac{iHH_1}{iHH_0}\right)\Big]}{SD_p\Big[\ln\left(\frac{iHH_1}{iHH_0}\right)\Big]},
+\end{equation}
+where $E_p\Big[\ln\left(\frac{iHH_1}{iHH_0}\right)\Big]$ and 
+$SD_p\Big[\ln\left(\frac{iHH_1}{iHH_0}\right)\Big]$ are the expectation and 
+standard deviation in frequency bin $p$.
+
+In practice, the summations in Equation \ref{eq:ihh} are truncated once 
+$EHH_c(x_i) < 0.05$ or the computation extends more than $1$Mbp from the core.  Additionally with low density SNP data, if the physical 
+distance $b$ (in kbp) between two markers is $> 20$, then $g(x_{i-1},x_i)$ is 
+scaled by a factor of $20/b$ in order to reduce possible spurious signals 
+induced by lengthy gaps.  During computation if the start/end of a chromosome 
+arm is reached before $EHH_c(x_i) < 0.05$ or if a gap of $b > 200$ is 
+encountered, the iHS calculation is aborted for that locus.  iHS is not 
+reported at core sites with minor allele frequency $< 0.05$.  In {\tt selscan}, the 
+EHH truncation value, gap scaling factor, and core site MAF cutoff value are
+all flexible parameters definable on the command line.
+
+\subsection{Cross-population Extended Haplotype Homozygosity (XP-EHH)}\label{sec:xpehh}
+
+Cross-population Extended Haplotype Homozygosity (XP-EHH) was introduced by \cite{SabetiEtAl07}. To calculate XPEHH between populations $A$ and $B$ at a marker $x_0$, we first calculate iHH for each population separately, integrating the EHH of the entire sample in the population (Equation \ref{eq:ehh}).
+\begin{align}\label{eq:xpihh}
+iHH =&\notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH(x_{i-1}) + EHH(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH(x_{i-1}) + EHH(x_i)\right)g(x_{i-1},x_i)
+\end{align}
+If $iHH_A$ and $iHH_B$ are the iHHs for populations $A$ and $B$, then the 
+(unstandardized) XPEHH is
+\begin{equation}
+\ln\left(\frac{iHH_A}{iHH_B}\right),
+\end{equation}
+and after genome-wide normalization we have
+\begin{equation}
+XPEHH = \frac{\ln\left(\frac{iHH_A}{iHH_B}\right) - E\Big[\ln\left(\frac{iHH_A}{iHH_B}\right)\Big]}{SD\Big[\ln\left(\frac{iHH_A}{iHH_B}\right)\Big]}.
+\end{equation}
+
+In practice, the sums in each of $iHH_A$ and $iHH_B$ (Equation \ref{eq:xpihh}) 
+are truncated at $x_i$---the marker at which the EHH of the haplotypes {\it 
+pooled across populations} is $EHH(x_i) < 0.05$ or if the computation extends more than $1$Mbp from the core.  Scaling of $g(x_{i-1},x_i)$ 
+and handling of gaps is done as for iHS, and these parameters are definable 
+on the {\tt selscan} command line. For XP-EHH computations, data provided with the flags {\tt --hap}, {\tt --tped}, or {\tt --vcf} correspond to population $A$, and data provided with the flags {\tt --ref}, {\tt --tped-ref}, or {\tt --vcf-ref} correspond to population $B$.
+
+\subsection{nSL}\label{sec:nsl}
+
+nSL is a statistic related to iHS and was introduced by \cite{FerrerAdmetllaEtAl14}.  nSL can be reformulated to conform to the notation given above.  nSL is calculated as a log-ratio of the $SL$ statistic calculated for the ancestral and derived haplotype pools.  The essential difference from iHS is the removal of genetic map information.  Whereas in Equation \ref{eq:ihh} we integrate with respect to a genetic map, for the calculation of nSL $g(x_i,x_j) = |j-i|$.  Thus,
+
+\begin{align}\label{eq:sl}
+SL_c =& \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH_c(x_{i-1}) + EHH_c(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH_c(x_{i-1}) + EHH_c(x_i)\right)g(x_{i-1},x_i),
+\end{align}
+and
+\begin{equation}
+nSL = \frac{\ln\left(\frac{SL_1}{SL_0}\right) - E_p\Big[\ln\left(\frac{SL_1}{SL_0}\right)\Big]}{SD_p\Big[\ln\left(\frac{SL_1}{SL_0}\right)\Big]}.
+\end{equation}
+Note that, for nSL, $g(x_{i-1},x_i) = 1$.
+
+For the nSL option, there is no EHH decay cutoff, but the computation stops when more than $200$ snps are included in building the haplotypes (can be changed with {\tt --max-extend-nsl}).  Scaling of $g(x_{i-1},x_i)$ and handling of gaps is done as for iHS, and these parameters are definable 
+on the {\tt selscan} command line.
+
+\subsection{XP-nSL}\label{sec:xpnsl}
+
+XP-nSL is a statistic related to XP-EHH in the same way nSL is related to iHS and was introduced by \cite{SzpiechEtAl21}.  XP-nSL can be reformulated to conform to the notation given above.  XP-nSL is calculated as a log-ratio of the $SL$ statistic calculated for each population's haplotype pools.  The essential difference from XP-EHH is the removal of genetic map information.  Whereas in Equation \ref{eq:ihh} we integrate with respect to a genetic map, for the calculation of nSL $g(x_i,x_j) = |j-i|$.  Thus,
+
+\begin{align}
+SL =& \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH(x_{i-1}) + EHH(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH(x_{i-1}) + EHH(x_i)\right)g(x_{i-1},x_i),
+\end{align}
+and
+\begin{equation}
+XP-nSL = \frac{\ln\left(\frac{SL_A}{SL_B}\right) - E\Big[\ln\left(\frac{SL_A}{SL_B}\right)\Big]}{SD\Big[\ln\left(\frac{SL_A}{SL_B}\right)\Big]}.
+\end{equation}
+Note that, for nSL, $g(x_{i-1},x_i) = 1$.
+
+For the XP-nSL option, there is no EHH decay cutoff, but the computation stops when more than $200$ snps are included in building the haplotypes (can be changed with {\tt --max-extend-nsl}).  Scaling of $g(x_{i-1},x_i)$ and handling of gaps is done as for iHS, and these parameters are definable 
+on the {\tt selscan} command line. For XP-nSL computations, data provided with the flags {\tt --hap}, {\tt --tped}, or {\tt --vcf} correspond to population $A$, and data provided with the flags {\tt --ref}, {\tt --tped-ref}, or {\tt --vcf-ref} correspond to population $B$.
+
+
+\subsection{Integrated Haplotype Homozygosity Pooled (iHH12)}\label{sec:ihh12}
+
+iHH12 \cite[]{TorresEtAl18} is adapted from the H12 statistic \cite[]{GarudEtAl15}, with better power than iHS to detect soft sweeps. For this statistic, we calculate the integrated haplotype homozygosity of the entire sample, but we first collapse the top two most frequent haplotypes into a single class.
+
+To calculate iHH12 at a site, we first calculate the integrated haplotype 
+homozygosity (iHH) for the sample using $EHH12$ via trapezoidal quadrature.
+\begin{align}\label{eq:ihh12}
+iHH =& \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{D}|} \frac{1}{2}\left(EHH12(x_{i-1}) + EHH12(x_i)\right)g(x_{i-1},x_i) + \notag\\
+&\negspace\sum_{i = 1}^{|\mathcal{U}|} \frac{1}{2}\left(EHH12(x_{i-1}) + EHH12(x_i)\right)g(x_{i-1},x_i),
+\end{align}
+where $\mathcal{D}$ is the set of markers downstream from the current locus 
+such that $x_i \in \mathcal{D}$ denotes the $i^{th}$ closest downstream 
+marker from the locus of interest ($x_0$). $\mathcal{U}$ and $x_i \in \mathcal{U}$ are defined similarly 
+for upstream markers. $g(x_{i-1},x_i)$ gives the genetic distance between two 
+markers.  $EHH12$ is then defined as
+\begin{equation}\label{eq:ehh12}
+EHH12(x_i) = \frac{{n_{h_1} + n_{h_2} \choose 2}}{{n \choose 2}} + \sum_{h \in \mathcal{C}(x_i)\setminus \{h_1, h_2\}} \frac{{n_h \choose 2}}{{n \choose 2}},
+\end{equation}
+where $h_i$ is the $i^{th}$ most frequent haplotype in the sample and $n_{h_i}$ is the number of observed $h_i$ haplotypes.
+
+Finally, the scores are normalized across the 
+entire genome.
+\begin{equation}
+iHH12 = \frac{iHH12 - E\Big[iHH12\Big]}{SD\Big[iHH12\Big]},
+\end{equation}
+
+In practice, the summations in Equation \ref{eq:ihh12} are truncated once 
+$EHH12_c(x_i) < 0.05$ or the computation extends more than $1$Mbp from the core.  Additionally with low density SNP data, if the physical 
+distance $b$ (in kbp) between two markers is $> 20$, then $g(x_{i-1},x_i)$ is 
+scaled by a factor of $20/b$ in order to reduce possible spurious signals 
+induced by lengthy gaps.  During computation if the start/end of a chromosome 
+arm is reached before $EHH12_c(x_i) < 0.05$ or if a gap of $b > 200$ is 
+encountered, the iHH12 calculation is aborted for that locus.  iHH12 is not 
+reported at core sites with minor allele frequency $< 0.05$.  In {\tt selscan}, the 
+EHH truncation value, gap scaling factor, and core site MAF cutoff value are
+all flexible parameters definable on the command line.
+
+
+\subsection{Mean Pairwise Sequence Difference ($\pi$)}\label{sec:pi}
+
+The mean pairwise sequence difference among a sample of $n$ haplotypes is 
+\begin{equation}
+\pi = \frac{1}{{n \choose 2}} \sum_{i = 1}^{n-1} i(n-i)\xi_i,
+\end{equation}
+where $\xi_i$ is the unfolded site frequency spectrum.
+
+\section{Program Options}
+
+Using the command line flag {\tt --help}, will print a help dialog with a summary of each command line option.
+
+\subsection{Input Files}
+
+All genetic data is required to be coded $0/1$ and must not contain missing data.  Consecutive loci are assumed to be in order with respect to their physical location on the chromosome.  {\tt selscan} assumes only one non-homologous chromosome per file, and different non-homologous chromosomes should be computed separately.
+
+These methods (excluding $\pi$) assume phased haplotypes.  If your haplotypes are unphased you will have substantially reduced power to identify regions undergoing positive selection.  Two popular programs that perform haplotype phasing are SHAPEIT2 \cite[]{DelaneauEtAl13} and Beagle v4.0 \cite[]{BrowningAndBrowning07}.
+
+Any file format that {\tt selscan} supports may be directly read as a gzipped ({\tt http://www.gzip.org/}) version without first decompressing. 
+
+\subsubsection{{\tt --hap} and {\tt --ref}}
+
+Use {\tt --hap} to specify a .hap file containing genetic variant information.  If computing XP-EHH, use {\tt --ref} to specify a .hap formatted sample from the desired reference population.  Reference population files are expected to contain the exact same loci as the non-reference file.
+
+A .hap file organizes variant data with rows representing a single haploid copy from an individual and columns representing consecutive loci delimited by whitespace.  For example,
+\begin{lstlisting}
+0 1 0 0 1
+1 1 0 0 0
+0 1 1 1 0
+0 0 0 0 1
+\end{lstlisting}
+represents four halpoid samples with variant information at five loci.
+
+Note that {\tt selscan} expects a .map file to provide genetic and physical map information.
+
+\subsubsection{{\tt --vcf} and {\tt --vcf-ref}}
+
+Use {\tt --vcf} to specify a .vcf file (see {\tt https://github.com/samtools/hts-specs} for exact specifications) containing genetic variant information.  If computing XP-EHH, use {\tt --vcf-ref} to specify a .vcf formatted sample from the desired reference population.  Reference population files are expected to contain the exact same loci as the non-reference file.
+
+A .vcf file organizes variant data with rows representing consecutive loci and columns delimited by whitespace representing a diploid sample.  For a given diploid sample at a particular locus a genotype is represented by two alleles separated by either $/$ or $|$.  The first nine columns contain information about the locus and the file is organized in the following way:
+\begin{lstlisting}
+<chr#> <physical position> <id> <reference allele> <alternate allele> <quality> <filter> <info> <format> <individual 1 genotype> ... <individual N genotype>  
+\end{lstlisting}
+All rows preceeded by a $\#$ symbol will be ignored. While a VCF file can encode quite a lot of information, {\tt selscan} assumes biallelic phased genetic data and will not perform any checks on those assumptions nor perform any filtering (except filtering low frequency variants if {\tt --skip-low-freq} is set). In fact, a .vcf file passed to {\tt selscan} need not strictly conform to the general specifications.  For example,
+\begin{lstlisting}
+1 100 rs1 0 1 . . . . 0|1 0|0
+1 200 rs2 0 1 . . . . 1|1 1|0
+1 300 rs3 0 1 . . . . 0|0 1|0
+1 400 rs4 0 1 . . . . 0|0 1|0
+1 500 rs5 0 1 . . . . 1|0 0|1
+\end{lstlisting}
+is sufficient to represent two dipoid samples with variant information at five loci.
+
+Note that even though physical position information is given on column two, {\tt selscan} expects a .map file to provide genetic and physical map information.
+
+\subsubsection{{\tt --tped} and {\tt --tped-ref}}
+
+Use {\tt --tped} to specify a .tped (transposed PLINK; \cite{PurcellEtAl07}) file (see {\tt http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml\#tr} for exact specifications) containing genetic variant information.  If computing XP-EHH, use {\tt --tped-ref} to specify a .tped formatted sample from the desired reference population.  Reference population files are expected to contain the exact same loci as the non-reference file.  Note that {\tt selscan} expects .tped formatted data to be coded $0/1$ only.
+
+A .tped file organizes variant data with rows representing consecutive loci and columns delimited by whitespace representing haploid samples.  The first four columns contain information about the locus and the file is organized in the following way:
+\begin{lstlisting}
+<chr#> <id> <genetic position> <physical position> <haploid copy 1> ... <haploid copy N>  
+\end{lstlisting}
+For example,
+\begin{lstlisting}
+1 rs1 0.01 100 0 0 1 0 0
+1 rs2 0.02 200 0 1 1 1 0
+1 rs3 0.03 300 0 0 0 1 0
+1 rs4 0.04 400 0 0 0 1 0
+1 rs5 0.05 500 0 1 0 0 1
+\end{lstlisting}
+is sufficient to represent two dipoid samples with variant information at five loci.
+
+Note that for .tped files {\tt selscan} does not expect a .map file to provide genetic and physical map information, as this information is contained in the first four columns of the file.  When calculating XP-EHH, map information is taken only from the file specifed with {\tt --tped}.
+
+\subsubsection{{\tt --map}}
+
+For all file formats except .tped, {\tt selscan} requires a PLINK \cite[]{PurcellEtAl07} formatted map file
+
+The columns are delimited by whitespace and contain information about each locus.  The file is organized in the following way:
+\begin{lstlisting}
+<chr#> <id> <genetic position> <physical position>
+\end{lstlisting}
+For example,
+\begin{lstlisting}
+1 rs1 0.01 100
+1 rs2 0.02 200
+1 rs3 0.03 300
+1 rs4 0.04 400
+1 rs5 0.05 500
+\end{lstlisting}
+
+\subsection{Output Files}
+
+{\tt selscan} produces two files as output.  Results are output to a .out file and a log is output to a .log file.  The .log file will record the runtime parameters as well as any information regarding the exclusion of particular loci.  Results (.out) files are formatted in the following way.
+~\\~\\
+For EHH the file will be named {\tt <outfile>.ehh.<locusID>[.alt].out} and formatted as
+\begin{lstlisting}
+<physicalPos> <geneticPos> <'1' EHH> <'0' EHH>
+\end{lstlisting}
+~\\
+For iHS the file will be named {\tt <outfile>.ihs[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <'1' freq> <ihh1> <ihh0> <unstandardized iHS>
+\end{lstlisting}
+or if {\tt --ihs-detail} is set as
+\begin{lstlisting}
+<locusID> <physicalPos> <'1' freq> <ihh1> <ihh0> <unstandardized iHS> <derived_ihh_left> <derived_ihh_right> <ancestral_ihh_left> <ancestral_ihh_right>
+\end{lstlisting}
+~\\
+For XP-EHH the file will be named {\tt <outfile>.xpehh[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <geneticPos> <popA '1' freq> <ihhA> <popB '1' freq> <ihhB> <unstandardized XPEHH>
+\end{lstlisting}
+~\\
+For nSL the file will be named {\tt <outfile>.nsl[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <'1' freq> <sl1> <sl0> <unstandardized nSL>
+\end{lstlisting}
+~\\
+For XP-nSL the file will be named {\tt <outfile>.xpnsl[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <geneticPos> <popA '1' freq> <slA> <popB '1' freq> <slB> <unstandardized XPnSL>
+\end{lstlisting}
+~\\
+For iHH12 the file will be named {\tt <outfile>.ihh12[.alt].out} and formatted as
+\begin{lstlisting}
+<locusID> <physicalPos> <'1' freq> <unstandardized iHH12>
+\end{lstlisting}
+~\\
+For $\pi$ the file will be named {\tt <outfile>.pi.<winsize>bp.out} and formatted as
+\begin{lstlisting}
+<window start> <window end> <pi> 
+\end{lstlisting}
+
+\subsubsection{{\tt --out}}
+
+Use {\tt --out} to provide a base name for an output file.  This will be used in place of {\tt <outfile>} above.  Default value is {\tt outfile}.  
+
+\subsection{Choice of Statistic}
+
+\subsubsection{{\tt --ehh <string>}}
+
+Use {\tt --ehh <Locus ID>} to specify a core locus and calculate EHH curves for the ancestral and derived haploytpes extending out to a fixed distance. Can use locus ID or physical position. Associated flags: {\tt --ehh-win}.
+
+\subsubsection{{\tt --ihs}}
+
+Set {\tt --ihs} to calculate iHS (see Section \ref{sec:ihs}).  Associated flags: {\tt --pmap}, {\tt --cutoff}, {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}, {\tt --skip-low-freq}.
+
+\subsubsection{{\tt --xpehh}}
+
+Set {\tt --xpehh} to calculate XP-EHH (see Section \ref{sec:xpehh}).  Associated flags: {\tt --pmap}, {\tt --cutoff}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}.
+
+\subsubsection{{\tt --nsl}}
+
+Set {\tt --nsl} to calculate nSL (see Section \ref{sec:nsl}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend-nsl}, {\tt --trunc-ok}, {\tt --alt}.
+
+\subsubsection{{\tt --xpnsl}}
+
+Set {\tt --xpnsl} to calculate XP-nSL (see Section \ref{sec:xpnsl}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend-nsl}, {\tt --trunc-ok}, {\tt --alt}.
+
+\subsubsection{{\tt --ihh12}}
+
+Set {\tt --ihh12} to calculate iHH12 (see Section \ref{sec:ihh12}).  Associated flags: {\tt --maf}, {\tt --gap-scale}, {\tt --max-gap}, {\tt --max-extend}, {\tt --trunc-ok}, {\tt --alt}.
+
+\subsubsection{{\tt --pi}}
+
+Set {\tt --pi} to calculate the mean pairwise sequence difference within a sliding window along the genome (see Section \ref{sec:pi}).  Associated flag: {--pi-win}.
+
+\subsection{Controling How a Statistic is Computed}
+
+\subsubsection{{\tt --unphased}}
+
+Set {\tt--unphased} to use unphased implementations of iHS, nSL, XP-EHH, and XP-nSL computations.
+
+\subsubsection{{\tt --pmap}}
+
+Set {\tt--pmap} to use physical distances instead of genetic distances for iHS and XP-EHH computations.
+
+\subsubsection{{\tt --cutoff <double>}}
+
+Use {\tt --cutoff} to set the EHH decay stopping condition.  When computing iHS or XP-EHH, the EHH decay curve is truncated and integrated once the EHH decay cutoff is reached.  Default is 0.05.
+
+\subsubsection{{\tt --maf <double>}}
+
+Use {\tt --maf <double>} to set a minor allele frequency (MAF) threshold.  Any site below this will not be used as a core site for iHS and nSL scans.  Default is 0.05.
+
+\subsubsection{{\tt --gap-scale <int>}}
+
+Use {\tt --gap-scale <int>} to set the gap scale parameter \cite[]{VoightEtAl06}.  When computing iHS, XP-EHH, and nSL, if a gap of $B$ bp is encountered and is greater than $GAP\_SCALE$, then the distance function $g(x_i,x_j)$ is weighted by $GAP\_SCALE/B$. Default is $20,000$ bp.
+
+\subsubsection{{\tt --max-gap <int>}}
+
+Use {\tt --max-gap <int>} to set the maximum allowed gap between loci when assembling haplotypes for iHS, XP-EHH, and nSL computations.  If a gap greater than this is encountered before a stop condition is reached, the computation at the current core locus is aborted.  Default is $200,000$ bp.
+
+\subsubsection{{\tt --max-extend <int>}}
+
+Use {\tt --max-extend <int>} to set an additional stopping condition for iHS and XP-EHH computations.  If the EHH decay curve has extended $MAX\_EXTEND$ bp away from the core without reaching the ehh decay cutoff, truncate the curve here and integrate.  Default is $1,000,000$ bp; set $\le 0$ for no restriction.
+
+\subsubsection{{\tt --max-extend-nsl <int>}}
+
+Use {\tt --max-extend-nsl <int>} to set a stopping condition for nSL and XP-nSL computations.  If the EHH decay curve has extended $MAX\_EXTEND$ loci away from the core, truncate the curve here and integrate.  Default is $100$ loci; set $\le 0$ for no restriction.
+
+\subsubsection{{\tt --trunc-ok}}
+
+Core loci near the boundaries of the data set are unlikely to reach a stopping condition before running out of haplotype information.  Typically in this case, EHH curves are truncated and thrown out. Set {\tt --trunc-ok} to integrate these anyway.
+
+\subsubsection{{\tt --alt}}
+
+Set {\tt --alt} to compute EHH using sample haplotype frequencies:
+\begin{equation}
+EHH(x_i) = \sum_{h \in \mathcal{C}(x_i)} \left(\frac{n_h}{n}\right)^2
+\end{equation}
+and
+\begin{equation}
+EHH_c(x_i) = \sum_{h \in \mathcal{H}_c(x_i)} \left(\frac{n_h}{n_c}\right)^2.
+\end{equation}
+Contrast with Equations \ref{eq:ehh} and \ref{eq:ehh-core}.
+
+\subsubsection{{\tt --skip-low-freq}}
+
+**This flag no longer functions.  It is effectively on by default.  If you wish to include low frequency sites use {\tt --keep-low-freq}.** Set {\tt --skip-low-freq} during an iHS scan to pre-filter all sites with a MAF less than that specified with {\tt --maf}.  If sites are not pre-filtered, {\tt selscan} will use these sites to construct haplotypes, but will not use them as core sites (and thus will not report a score).
+
+\subsubsection{{\tt --keep-low-freq}}
+
+Set {\tt --keep-low-freq} during an iHS scan to use low MAF sites to construct haplotypes, but {\tt selscan} will not use them as core sites (and thus will not report a score).
+
+\subsubsection{{\tt --ehh-win <int>}}
+
+Set {\tt --ehh-win <int>} to define for a single EHH computation the maximum extension in base pairs from the query locus.  Default is $100,000$ bp.
+
+\subsubsection{{\tt --pi-win <int>}}
+
+Set {\tt --pi-win <int>} to define the size of the non-overlapping windows in base pairs for calculating $\pi$.  Default is $100$ bp.
+
+
+\subsection{Other Options}
+
+
+\subsubsection{{\tt --ihs-detail}}
+
+Set {\tt--ihs-detail} to write out left and right iHH scores for ancestral ($0$) and derived ($1$) in addition to iHS.
+
+\subsubsection{{\tt --threads <int>}}
+
+{\tt selscan} uses shared memory parallelism to speed up computations on multi-core workstations.  Use {\tt --threads <int>} to set the number of concurrent threads that {\tt selscan} will use.  Because genomic regions may have varying levels of haplotype homozygosity, slower EHH decays, and thus longer compute times, {\tt selscan} assigns consecutive loci to different threads instead of partitioning the genome into chunks.  Default is $1$.
+
+%\section{Frequently Asked Questions}
+
+\section{Change Log}
+
+\begin{lstlisting}
+22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2021) Biorxiv for details. Normalize as you would with the phased 
+	statistics.
+	
+20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
+
+	--pmap <bool>: Set this flag to use physical distance instead of genetic map
+
+Introduction of XP-nSL, this statistic is a cross population statistic for identifying hard/soft sweeps. Does not require a genetic map. XP-nSL:nSL::XP-EHH:iHS
+
+	--xpnsl <bool>: Set this flag to calculate XP-nSL.
+	Default: false
+
+Normalize XP-nSL with --xpnsl flag in norm.
+
+lasugden adds the option to calculate XP-EHH with either definition of EHH. By default, uses original denominator (N choose 2). To use denominator defined in Wagh et al. for better performance on incomplete sweeps, use flag --wagh
+
+	--wagh <bool>: Set this flag to calculate EHH with Wagh denominator. For xpehh only. DO NOT use with --alt
+	Default: false
+
+Normalize these computations with --xpehh flag in norm.
+
+norm v1.3.0 - Now supports --xpnsl flag, which is identical to using --xpehh.
+--qbins now has a default value of 10 instead of 20.
+--bp-win analyses have been changed when analyzing XP-EHH and XP-nSL scores. Since positive scores suggest adaptation in the first (non-ref) population and negative scores suggest adaptation in the second (ref) population, we split windows into those enriched for extreme positive scores and those enriched for extreme negative scores.
+min and max scores are given for each window for XP statistics, and the max |score| is reported for iHS and nSL stats.
+
+*.windows output files therefore have additional columns:
+
+For XP stats:
+<win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
+
+For iHS and nSL:
+<win start> <win end> <# scores in win> <frac scores gt threshold> <frac scores lt threshold> <approx percentile for gt threshold wins> <approx percentile for lt threshold wins> <max score> <min score>
+
+
+18SEPT2017 - norm v1.2.1a, selcan v1.2.0a iHH12 output files have a header line, XPEHH header line has an extra column name, fixed norm bugs relating to normalization of ihh12 files.
+
+25AUG2017 - norm v1.2.1 released to fix a crash when --nsl flag is used.
+
+18JUL2017 - Support for iHH12 calculations. norm has --ihh12 and --nsl flags.
+
+09JAN2017 - Fixed buggy --crit-percent flag in norm binary.
+
+05SEPT2016 - Fixed misleading error messages when --trunc-ok used.
+
+12FEB2016 - v 1.1.0b - The flag --skip-low-freq is now on by default and no longer has any function.  selscan now filters low frequency variants by default.  A new flag --keep-low-freq is available if you would like to include low frequency variants when building haplotypes (low frequency variants will still be skipped over as core loci), using this option may reduce the power of iHS scans.
+
+28OCT2015 - Updates to norm so that it can handle output from selscan when --ihs-detail is used.
+
+18JUNE2015 - v1.1.0a - When calculating nSL, a mapfile is no longer required for VCF.  Physical distances will be read directly from VCF.  A mapfile specifying physical distances is stille required for .hap files when calculating nSL.  selscan now appropriately reports an error if this is not provided.
+
+15JUNE2015 - Release of 1.1.0. tomkinsc adds the --ihs-detail parameter which, when provided as an adjunct to --ihs, will cause selscan to write out four additional columns to the output file of iHS calculations (in order): derived_ihh_left, derived_ihh_right, ancestral_ihh_left, and ancestral_ihh_right.
+
+An example file row follows, with header added for clarity.
+
+locus           phys-pos        1_freq          ihh_1           ihh_0           ihs             derived_ihh_left     derived_ihh_right    ancestral_ihh_left      ancestral_ihh_right
+
+16133705        16133705        0.873626        0.0961264       0.105545        -0.0934761      0.0505176             0.0456087           0.0539295               0.0516158
+
+From these values we can calculate iHS, but it is preserved in the output for convenience. Having left and right integral information may assist certain machine learning models that gain information from iHH asymmetry. 
+
+selscan can now calculate the nSL statistic described in A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.  Also introduced a check on map distance ordering.  Three new command line options.
+
+--nsl <bool>: Set this flag to calculate nSL.
+	Default: false
+
+--max-extend-nsl <int>: The maximum distance an nSL haplotype is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 100
+
+--ihs-detail <bool> : Set this flag to write out left and right iHH scores for '1' and '0' in addition to iHS.
+
+06MAY2015 - Release of 1.0.5. Added basic VCF support.  selscan can now read .vcf and .vcf.gz files but without tabix support.  A mapfile is required when using VCF.  Two new command line options.
+
+13MAY2015 - norm v1.0.5 is released.  norm will now normalize ihs or xpehh scores.  Two new command line options.
+
+--ihs <bool>: Do iHS normalization.
+
+--xpehh <bool>: Do XP-EHH normalization.
+
+Exactly one of these must be specified when running norm (e.g. ./norm --ihs --files *.ihs.out or ./norm --xpehh --files *.xpehh.out).
+
+--vcf <string>: A VCF file containing haplotype data.
+	A map file must be specified with --map.
+
+--vcf-ref <string>: A VCF file containing haplotype and map data.
+	Variants should be coded 0/1. This is the 'reference'
+	population for XP-EHH calculations and should contain the same number
+	of loci as the query population. Ignored otherwise.
+
+07JAN2015 - norm bug fix and --skip-low-freq works for single EHH queries.
+
+12NOV2014 - The program norm has been updated to allow for user defined critical values.  Two new command line options.
+
+--crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.
+	Not used by default.
+
+--crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
+	Default: 2.00
+
+17OCT2014 - Release of 1.0.4. A pairwise sequence difference module has been introduced.  This module isn't multithreaded at the moment, but still runs quite fast.  Calculating pi in 100bp windows with 198 haplotypes with 707,980 variants on human chr22 finishes in 77s on the test machine.  Using 100kb windows, it finishes in 34s.  Two new command line options.
+
+--pi <bool>: Set this flag to calculate mean pairwise sequence difference in a sliding window.
+	Default: false
+
+--pi-win <int>: Sliding window size in bp for calculating pi.
+	Default: 100
+
+15SEP2014 - Release of 1.0.3.  **A critical bug in the XP-EHH module was introduced in version 1.0.2 and had been fixed in 1.0.3.  Do not use 1.0.2 for calculating XP-EHH scores.**  Thanks to David McWilliams for finding this error.  1.0.3 also introduces support for gzipped input files.  You may pass hap.gz, map.gz. and tped.gz files interchangably with unzipped files using the same command line arguments.  A new command line option is available.
+
+--trunc-ok <bool>: If an EHH decay reaches the end of a sequence before reaching the cutoff,
+	integrate the curve anyway (iHS and XPEHH only).
+	Normal function is to disregard the score for that core.
+	Default: false
+
+17JUN2014 - Release of 1.0.2.  General speed improvements have been made, especially with threading.  New support for TPED formatted data and new command line options are available.
+
+--skip-low-freq <bool>: Do not include low frequency variants in the construction of haplotypes (iHS only).
+	Default: false
+
+--max-extend: The maximum distance an EHH decay curve is allowed to extend from the core.
+	Set <= 0 for no restriction.
+	Default: 1000000
+
+--tped <string>: A TPED file containing haplotype and map data.
+	Variants should be coded 0/1
+	Default: __hapfile1
+
+--tped-ref <string>: A TPED file containing haplotype and map data.
+	Variants should be coded 0/1. This is the 'reference'
+	population for XP-EHH calculations and should contain the same number
+	of loci as the query population. Ignored otherwise.
+	Default: __hapfile2
+
+10APR2014 - Release of 1.0.1.  Minor bug fixes. XP-EHH output header is now separated by tabs instead of spaces.  Removed references to missing data (which is not accepted), and introduced error checking in the event of non-0/1 data being provided.
+
+26MAR2014 - Initial release of selscan 1.0.0.
+
+\end{lstlisting}
+
+\bibliographystyle{natbib}%%%%natbib.sty
+\bibliography{Ref_ZAS}
+\end{document}
