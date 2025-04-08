@@ -1,24 +1,26 @@
-name: C++ CI Linux
+name: C++ CI MacOS
+# This workflow will build and test the C++ code on macOS using GitHub Actions.
 
 on:
   push:
     branches:
-      - master
+      - speedup
   pull_request:
     branches:
-      - master
+      - speedup
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    if: (contains(github.event.head_commit.message, '[run ci]') || contains(github.event.head_commit.message, '[binary_linux]'))
+    runs-on: macos-latest
+    if: (contains(github.event.head_commit.message, '[run ci]') ||  contains(github.event.head_commit.message, '[binary_mac]'))
 
     steps:
+
     - name: Checkout code
       uses: actions/checkout@v3
 
     - name: Set up Git credentials
-      if: contains(github.event.head_commit.message, '[binary_linux]')
+      if: contains(github.event.head_commit.message, '[binary_mac]')
       run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
@@ -26,7 +28,7 @@ jobs:
           
     - name: Build selscan
       working-directory: src/
-      run: make -f Makefile_linux -j
+      run: make -f Makefile -j
 
     - name: Test selscan installation
       working-directory: src/
@@ -34,13 +36,13 @@ jobs:
         ./selscan --help
         ./norm --help
 
-
     - name: Commit and push binary
-      if: contains(github.event.head_commit.message, '[binary_linux]')
+      if: contains(github.event.head_commit.message, '[binary_mac]')
       run: |
-        cp src/selscan bin/linux/
-        cp src/norm bin/linux/
-        git add bin/linux
-        git commit -m "Adding bin to bin/linux" || echo "No changes to commit"
+        cp src/selscan bin/macos/
+        cp src/norm bin/macos/
+        git add bin/macos
+        git commit -m "Adding bin to bin/macos" || echo "No changes to commit"
         git push
 
+    
