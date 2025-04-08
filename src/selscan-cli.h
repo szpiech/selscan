@@ -314,8 +314,10 @@ const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 
 const string ARG_MULTI_PARAMS = "--multi-param";
 const string DEFAULT_MULTI_PARAMS = "__jsonFile";
-const string HELP_MULTI_PARAMS = "For all parameter combination in this file, separate output files will be generated.";
-
+const string HELP_MULTI_PARAMS = "Specify a JSON file with multiple parameter sets.\n\
+\tEach set should match the structure of command-line arguments.\n\
+\tThe program will run the analysis for each set, generating separate outputs.\n\
+\tUseful for batch processing and exploring different configurations.\n";
 
 void initalizeParameters(param_t &params,int argc, char *argv[]);
 void checkParameters(param_main &params);

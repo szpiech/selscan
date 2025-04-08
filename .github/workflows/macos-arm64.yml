@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    if: (contains(github.event.head_commit.message, '[run ci]') ||  contains(github.event.head_commit.message, '[binary_mac]'))
+    if: (contains(github.event.head_commit.message, '[run ci]') ||  contains(github.event.head_commit.message, '[binary_mac_arm]'))
 
     steps:
 
@@ -20,7 +20,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Set up Git credentials
-      if: contains(github.event.head_commit.message, '[binary_mac]')
+      if: contains(github.event.head_commit.message, '[binary_mac_arm]')
       run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
@@ -28,7 +28,7 @@ jobs:
           
     - name: Build selscan
       working-directory: src/
-      run: make -f Makefile_macos -j
+      run: make -f Makefile_macos-arm64 -j
 
     - name: Test selscan installation
       working-directory: src/
@@ -37,12 +37,12 @@ jobs:
         ./norm --help
 
     - name: Commit and push binary
-      if: contains(github.event.head_commit.message, '[binary_mac]')
+      if: contains(github.event.head_commit.message, '[binary_mac_arm]')
       run: |
-        cp src/selscan bin/macos/
-        cp src/norm bin/macos/
-        git add bin/macos
-        git commit -m "Adding bin to bin/macos" || echo "No changes to commit"
+        cp src/selscan bin/macos-arm64/
+        cp src/norm bin/macos-arm64/
+        git add bin/macos-arm64
+        git commit -m "Adding bin to bin/macos-arm64" || echo "No changes to commit"
         git push
 
     

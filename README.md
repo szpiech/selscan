@@ -14,26 +14,25 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 
 ```bash
 git clone https://github.com/szpiech/selscan/
-cd selscan && git checkout speedup
-cd src && make -f Makefile
+cd selscan && git checkout main
+cd src && make
 ```
 
-Replace `Makefile` with:
+If you prefer OS-specific makefiles, replace `make` with one of the following:
 
-- `Makefile_linux` for Linux
-- `Makefile_win` for Windows
-- `Makefile_osx` for OSX (macOS Intel, x86_64)
-
+- `make -f Makefile_macos` &nbsp;&nbsp;&nbsp;→ for **macOS**
+- `make -f Makefile_linux` &nbsp;&nbsp;&nbsp;→ for **Linux**
+- `make -f Makefile_win` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ for **Windows**
 
 ## 📦 Precompiled Binaries
 
 Precompiled binaries are available for the following platforms:
 
-- **macOS (Apple Silicon, ARM64):** `/bin/macos/`  
-- **macOS (Intel, x86_64):** `/bin/osx/`  
-- **Windows:** `/bin/win/`  
 - **Linux:** `/bin/linux/`
-
+- **Windows:** `/bin/win/`  
+- **macOS Universal (Apple Silicon, ARM64):** `/bin/macos/`  
+- **macOS (Apple Silicon, ARM64 only):** `/bin/macos-arm64/`  
+- **macOS (Intel, x86_64 and older macs):** `/bin/osx/`  
 
 ## 📖 Usage   
 
@@ -48,27 +47,21 @@ Source code and binaries can be found at <https://www.github.com/szpiech/selscan
 selscan currently implements EHH, iHS, XP-EHH, nSL, and XP-nSL.
 
 To calculate EHH:
-
 ./selscan --ehh <locusID> --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate iHS:
-
 ./selscan --ihs --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate nSL:
-
 ./selscan --nsl --vcf <vcf> --out <outfile>
 
 To calculate XP-nSL:
-
 ./selscan --xpnsl --vcf <vcf> --vcf-ref <vcf> --out <outfile>
 
 To calculate iHH12:
-
 ./selscan --ihh12 --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate XP-EHH:
-
 ./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>
 
 ----------Command Line Arguments----------
@@ -132,6 +125,13 @@ To calculate XP-EHH:
 --max-gap <int>: Maximum allowed gap in bp between two snps.
 	Default: 200000
 
+--multi-param <string>: Specify a JSON file with multiple parameter sets.
+        Each set should match the structure of command-line arguments.
+        The program will run the analysis for each set, generating separate outputs.
+        Useful for batch processing and exploring different configurations.
+
+        Default: __jsonFile
+
 --nsl <bool>: Set this flag to calculate nSL.
 	Default: false
 
@@ -156,9 +156,18 @@ To calculate XP-EHH:
 in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: false
 
+--thap <string>: A hapfile in IMPUTE hap format with one column per haplotype, and one row per
+        variant. Variants should be coded 0/1
+        Default: __thapfile1
+
+--thap-ref <string>: A hapfile in IMPUTE hap format with one column per haplotype, and row per
+        variant. Variants should be coded 0/1. This is the 'reference'
+        population for XP calculations.  Ignored otherwise.
+        Default: __thapfile2
+
 --threads <int>: The number of threads to spawn during the calculation.
 	Partitions loci across threads.
-	Default: 1
+	Default: Maximum concurrency supported by the system (hardware threads).
 
 --tped <string>: A TPED file containing haplotype and map data.
 	Variants should be coded 0/1
@@ -201,8 +210,8 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📚 Citations
 ```
-ZA Szpiech (2021) selscan 2.0: scanning for sweeps in unphased data. biorxiv doi: 
-	doi:10.1101/2021.10.22.465497.
+ZA Szpiech (2024) selscan 2.0: scanning for sweeps in unphased data. Bioinformatics, 40(1), btae006.
+	doi: https://doi.org/10.1093/bioinformatics/btae006
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
 	to calculate EHH-based scans for positive selection. Molecular Biology and Evolution 
 	31: 2824-2827.
@@ -227,11 +236,18 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 
 ## 📝 Change Log
 ```
+15APR2025 - selscan v2.1.0 - Introducing fast and memory-efficient versions for all statistics. See Rahman, et al. (2025) Biorxiv for details. 
+
+There is a new batch option for efficient processing of multiple statistics or parameters at once. See the manual for full details.
+      --multi-param <filename>: Specify a JSON file with multiple parameter sets. Each set should match the structure of command-line arguments. The program will run the analysis for each set, generating separate outputs. Useful for batch processing and exploring different configurations."
+
+Support for impute-style hap format is added (see --thap and --thap-ref).
+
 17NOV2023 - selscan v2.0.1 - Bug fixes for --ehh flag. Total EHH at the core snp will now be reported correctly (i.e. homozygosity of the site and not as 0). Also implemented --unphased for --ehh, and EHH output files now have a header line.
 
 	   - selscan v2.0.2 - Small change that should result in faster runtime when --pmap set.
 
-22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2021) Biorxiv for details. Normalize as you would with the phased 
+22OCT2021 - selscan v2.0.0 - Introducing unphased versions of iHS, nSL, XP-EHH, and XP-nSL. Use with --unphased flag. See ZA Szpiech (2024) Bioinformatics for details. Normalize as you would with the phased 
 	statistics.
 	
 20MAY2020 - selscan v1.3.0 - Log ratios are now output as log10 not natural logs (beware comparisons with raw selscan computations from versions prior to v1.3.0). New statistics implemented.
