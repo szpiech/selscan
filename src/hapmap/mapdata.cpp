@@ -4,6 +4,7 @@
 #include "../gzstream.h"
 #include <queue>
 #include <sstream>
+#include <limits>
 
 using namespace std;
 
