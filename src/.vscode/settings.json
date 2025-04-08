@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "*.Snakefile": "snakemake",
-        "thread": "cpp",
-        "string": "cpp"
-    }
-}
