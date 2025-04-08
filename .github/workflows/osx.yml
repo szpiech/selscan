@@ -3,10 +3,10 @@ name: C++ CI OSX # This workflow will build and test the C++ code on Intel-based
 on:
   push:
       branches:
-      - speedup
+      - master
   pull_request:
       branches:
-      - speedup
+      - master
 
 jobs:
     build:
