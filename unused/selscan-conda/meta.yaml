@@ -1,0 +1,20 @@
+package:
+  name: selscan
+  version: "2.1.0"
+
+source:
+  path: .
+
+build:
+  number: 0
+  script: build.sh  # for Linux/macOS
+
+about:
+  home: https://github.com/szpiech/selscan
+  summary: "a program to calculate EHH-based scans for positive selection in genomes"
+  license: GNU GENERAL PUBLIC LICENSE
+
+extra:
+  recipe-maintainers:
+    - amatur
+    - szpiech
