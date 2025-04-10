@@ -75,7 +75,7 @@ const string VERSION = "2.1.0";
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
 \n\
-selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
+selscan currently implements EHH, iHS, XP-EHH, XP-nSL, iHH12 and nSL.\n\
 \n\
 Citations:\n\
 \n\
