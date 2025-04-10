@@ -3,10 +3,10 @@ name: C++ CI Linux
 on:
   push:
     branches:
-      - master
+      - speedup
   pull_request:
     branches:
-      - master
+      - speedup
 
 jobs:
   build:
