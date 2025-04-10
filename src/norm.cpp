@@ -659,7 +659,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;
-        int maxAbs = -99999;
+        double maxAbs = -99999.9;
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> name;
@@ -681,7 +681,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
                 if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
                 maxAbsScore[i].push_back(maxAbs);
                 
-                maxAbs = -99999;
+                maxAbs = -99999.9;
                 winStart += winSize;
                 winEnd += winSize;
                 numSNPs = 0;
@@ -837,7 +837,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
             }
             */
             fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
-            if(maxAbsScore[i][j] == -99999){
+            if(maxAbsScore[i][j] == -99999.9){
                 fout << "NA\n";
             }
             else{
