@@ -30,7 +30,7 @@
 
 using namespace std;
 
-const string VERSION = "1.3.0";
+const string VERSION = "1.3.1";
 
 const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
