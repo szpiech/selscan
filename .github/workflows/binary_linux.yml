@@ -2,10 +2,10 @@ name: C++ CI Test Binary (Linux)
 on:
   push:
     branches:
-      - master
+      - speedup
   pull_request:
     branches:
-      - master
+      - speedup
 
 jobs:
   build:
