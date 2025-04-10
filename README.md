@@ -241,10 +241,10 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 
 09APR2025 - selscan v2.1.0 - Introducing fast and memory-efficient versions for all statistics. See Rahman, et al. (2025) Biorxiv for details. 
 
-There is a new batch option for efficient processing of multiple statistics or parameters at once. See the manual for full details.
-      --multi-param <string>: Specify a JSON file with multiple parameter sets. Each set should match the structure of command-line arguments. The program will run the analysis for each set, generating separate outputs. Useful for batch processing and exploring different configurations."
+	There is a new batch option for efficient processing of multiple statistics or parameters at once. See the manual for full details.
+      --multi-param <string>: Specify a JSON file with multiple parameter sets. Each set should match the structure of command-line arguments. The program will run the analysis for each set, generating separate outputs. Useful for batch processing and exploring different configurations.
 
-Support for impute-style hap format is added (see --thap and --thap-ref).
+	Support for impute-style hap format is added (see --thap and --thap-ref).
 
 	norm v1.3.1 - Fixed bug in --bp-win analysis for iHS/nSL where max absolute value was reported as integer. Now reports as double.
 
