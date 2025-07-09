@@ -312,7 +312,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             }
         }
 
-        if(double(curr_ehh_before_norm[0]*1.0/normalizer[0]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS) ){
+        if(double(prev_ehh_before_norm[0]*1.0/normalizer[0]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS) ){ // bug fix for low MAC
             curr_ehh_before_norm[0] = ehh0_before_norm;
             if( normalizer[0]!=0){
                 iHH[0] += ((curr_ehh_before_norm[0]/ normalizer[0])* 0.5 + (prev_ehh_before_norm[0]* 1.0/ normalizer[0]) * 0.5 ) *distance;
@@ -320,7 +320,7 @@ pair<double, double> IHS::calc_ehh_unidirection_unphased(int locus, bool downstr
             prev_ehh_before_norm[0] = curr_ehh_before_norm[0];
         }
 
-        if(double(curr_ehh_before_norm[2]*1.0/normalizer[2]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS)){
+        if(double(prev_ehh_before_norm[2]*1.0/normalizer[2]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS)){  // bug fix for low MAC
             curr_ehh_before_norm[2] = ehh2_before_norm;
             if( normalizer[2]!=0){
                 iHH[2] += ((curr_ehh_before_norm[2] / normalizer[2]) * 0.5 + (prev_ehh_before_norm[2] / normalizer[2]) * 0.5 ) *distance;
@@ -682,13 +682,13 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 
         m.clear(); // CLEAR THE MAP //unordered_map<int, vector<int> >().swap(m);
         
-        if(curr_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){
+        if(prev_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){ // bug fix for low MAC
             assert(normalizer_1!=0);
             ihh1 += (prev_ehh1_before_norm + curr_ehh1_before_norm) * distance * 0.5 / normalizer_1;
             prev_ehh1_before_norm = curr_ehh1_before_norm;
         }
 
-        if(curr_ehh0_before_norm*1.0/normalizer_0 > p.EHH_CUTOFF){
+        if(prev_ehh0_before_norm*1.0/normalizer_0 > p.EHH_CUTOFF){ // bug fix for low MAC
             assert(normalizer_0!=0);
             ihh0 += (prev_ehh0_before_norm + curr_ehh0_before_norm) * distance * 0.5 / normalizer_0;
             prev_ehh0_before_norm = curr_ehh0_before_norm;

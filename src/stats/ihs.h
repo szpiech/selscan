@@ -7,7 +7,6 @@
 
 using namespace std;
 
-
 #define ACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
     for (int k = 0; k < (hapbitset->nwords); k++) {             \
         uint64_t bitset = (hapbitset->bits)[k];                 \
@@ -20,18 +19,15 @@ using namespace std;
         }                                            \
     }
 
-
-
     struct IhhComponents {
         double derived_right;
         double derived_left;
         double ancestral_right;
         double ancestral_left;
     };
+
+
 class IHS: public SelscanStats{
-
-
-    
     public:
         IHS(const std::unique_ptr<HapMap>&  hm, param_main& params) : SelscanStats(hm, params){  
 
@@ -43,16 +39,12 @@ class IHS: public SelscanStats{
         std::mutex mutex_log;
         //std::unique_ptr<std::mutex> mutex_log = std::make_unique<std::mutex>();
 
-
     protected:
         void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core);
         string getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0);
 
     private:
         //static pthread_mutex_t mutex_log;
-
-        
-
         int max_extend;
 
         //phased_ihs
