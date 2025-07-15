@@ -71,7 +71,6 @@ void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, in
 OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
     OutputUnphasedIHH skipLocusOutput = {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
 
-    assert(hm->mapData->mapEntries[locus].locId != -1);
 
     std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
     unordered_map<int, vector<int> >& m = (* mp);
@@ -79,10 +78,14 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
     int numSnps = hm->hapData->nloci;
     int numHaps = hm->hapData->nhaps;
 
-    double prev_ehh_before_norm[3];
+    //double prev_ehh_before_norm[3];
     double curr_ehh_before_norm[3];
-    double  prev_cehh_before_norm[3]; 
+    //double  prev_cehh_before_norm[3]; 
     double  curr_cehh_before_norm[3];
+
+    double prev_ehh[3] = {1, 1, 1};
+    double prev_cehh[3] = {1, 1, 1};
+
 
     int n_c[3] = {0,0,0};
 
@@ -107,6 +110,11 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
     n_c[2] = hm->hapData->get_n_c2(locus); // hm->hapData->hapEntries[locus].xorbitset->num_1s;
     n_c[0] = numHaps - n_c[1] - n_c[2]; // assume no missing
     
+
+    // if(hm->mapData->mapEntries[locus].physicalPos==2455){
+    //     cout<<"n_c1: "<<n_c[1]<<" n_c2: "<<n_c[2]<<" n_c0: "<<n_c[0]<<endl;
+    //     //HANDLE_ERROR("");
+    // }
     if(n_c[1] + n_c[2] + n_c[0] != numHaps){
         HANDLE_ERROR("n_c1 + n_c2 + n_c0 != numHaps");
     }
@@ -162,11 +170,11 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         totgc+=3;
     }
 
-    for (int i : {0, 2}) {
-        //we dont need i = 1
-        prev_ehh_before_norm[i] = curr_ehh_before_norm[i];
-        prev_cehh_before_norm[i] =  curr_cehh_before_norm[i];
-    }
+    // for (int i : {0, 2}) {
+    //     //we dont need i = 1
+    //     prev_ehh_before_norm[i] = curr_ehh_before_norm[i];
+    //     prev_cehh_before_norm[i] =  curr_cehh_before_norm[i];
+    // }
 
     if(n_c[1] == numHaps || n_c[0] == numHaps || n_c[2] == numHaps){ 
         {
@@ -178,21 +186,30 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         return skipLocusOutput;
     }
 
-    if(n_c[2] == 1){
-        {std::lock_guard<std::mutex> lock(mutex_log);
-        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-                << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") has het count = 1. Skipping calculation at this locus.\n";
-        }//unlock
-        return skipLocusOutput;
-    }
+    // if(n_c[2] == 1){
+    //     {std::lock_guard<std::mutex> lock(mutex_log);
+    //     (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+    //             << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") has het count = 1. Skipping calculation at this locus.\n";
+    //     }//unlock
+    //     return skipLocusOutput;
+    // }
 
-    if(n_c[0] == 1){
-        {std::lock_guard<std::mutex> lock(mutex_log);
-        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-                << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") has ancestral homozygotes count = 1. Skipping calculation at this locus.\n";
-        }//unlock
-        return skipLocusOutput;
-    }
+    // if(n_c[0] == 1){
+    //     {std::lock_guard<std::mutex> lock(mutex_log);
+    //     (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+    //             << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") has ancestral homozygotes count = 1. Skipping calculation at this locus.\n";
+    //     }//unlock
+    //     return skipLocusOutput;
+    // }
+
+    // if(n_c[2] == 1){
+    //     {std::lock_guard<std::mutex> lock(mutex_log);
+    //     (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+    //             << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") has derived homozygotes count = 1. Skipping calculation at this locus.\n";
+    //     }//unlock
+    //     return skipLocusOutput;
+    // }
+
 
     double freqHetGT = n_c[1]*1.0/numHaps;
     if (  freqHetGT > 1-p.MAF ) 
@@ -208,11 +225,12 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
 
     int i = locus;  // locus == core_locus
     int prev_index = locus;
+    int skipped_due_to_multimaf = 0;
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
     
         if(p.CALC_IHS && !p.CALC_NSL){
             if(curr_ehh_before_norm[2]*1.0/normalizer[2] <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/normalizer[0]  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
-                //DBG("Break reason for locus "<<locus<<":: EHH_CUTOFF.");
+                DBG("Break reason for locus "<<locus<<":: EHH_CUTOFF.");
                 break;
             }
         }
@@ -241,8 +259,9 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         
         i = (downstream) ? i-1 : i+1;
         if(p.MULTI_MAF){
-            if(hm->mapData->mapEntries[i].locId == -1){
-                continue; // skip this locus
+            if(hm->hapData->get_maf(i) < p.MAF){
+                skipped_due_to_multimaf++;
+                continue; // skip this locus for integration
             }
         }
         
@@ -290,13 +309,20 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
 
        if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, compute separately          
             DBG("WARNING: Monomorphic site at locus "<<i);
-            //if you wish to continue anyway
+            //no need to do grouping logic  unnecessarily
             for(int i : {0, 2}){
                 if(normalizer[i]!=0){
-                    iHH[i] += (curr_ehh_before_norm[i] * 1.0 / normalizer[i]  + prev_ehh_before_norm[i] * 1.0  / normalizer[i] ) * 0.5 * distance;
+                    iHH[i] += (curr_ehh_before_norm[i] * 1.0 / normalizer[i]  + prev_ehh[i] ) * 0.5 * distance;
+                }else{
+                    iHH[i] += prev_ehh[i] * 0.5 * distance;
+                    prev_ehh[i] = 0; // AC = 0 or 1, this ensures only first two points are used for area calculation
                 }
+
                 if(normalizer_not[i]!=0){
-                    ciHH[i] += (curr_cehh_before_norm[i] * 1.0  / normalizer_not[i] + prev_cehh_before_norm[i] * 1.0  / normalizer_not[i]) * 0.5  *  distance;
+                    ciHH[i] += (curr_cehh_before_norm[i] * 1.0  / normalizer_not[i] + prev_cehh[i]) * 0.5  *  distance;
+                }else{
+                    ciHH[i] += prev_cehh[i] * 0.5 * distance;
+                    prev_ehh[i] = 0; // AC = 0 or 1, this ensures only first two points are used for area calculation
                 }
             }
             continue; 
@@ -336,36 +362,48 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         }
 
         // area update for iHH0
-        if(double(prev_ehh_before_norm[0]*1.0/normalizer[0]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS) ){ // bug fix for low MAC
+        if(prev_ehh[0] > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS) ){ // bug fix for low MAC
             curr_ehh_before_norm[0] = ehh0_before_norm;
-            if( normalizer[0]!=0){
-                iHH[0] += ((curr_ehh_before_norm[0]/ normalizer[0])* 0.5 + (prev_ehh_before_norm[0]* 1.0/ normalizer[0]) * 0.5 ) *distance;
+            if( normalizer[0]!=0 ){ 
+                iHH[0] += ((curr_ehh_before_norm[0]/ normalizer[0])* 0.5 + (prev_ehh[0]) * 0.5 ) * distance;
+                prev_ehh[0] = curr_ehh_before_norm[0] / normalizer[0];
+            }else{
+                iHH[0] += prev_ehh[0] * 0.5  * distance;
+                prev_ehh[0] = 0; // AC = 0 or 1, this ensures only first two points are used for area calculation
             }
-            prev_ehh_before_norm[0] = curr_ehh_before_norm[0];
         }
 
         // area update for iHH2
-        if(double(prev_ehh_before_norm[2]*1.0/normalizer[2]) > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS)){  // bug fix for low MAC
+        if(prev_ehh[2] > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS)){  // bug fix for low MAC
             curr_ehh_before_norm[2] = ehh2_before_norm;
             if( normalizer[2]!=0){
-                iHH[2] += ((curr_ehh_before_norm[2] / normalizer[2]) * 0.5 + (prev_ehh_before_norm[2] / normalizer[2]) * 0.5 ) *distance;
+                iHH[2] += (curr_ehh_before_norm[2] / normalizer[2]) * 0.5 + (prev_ehh[2]*0.5) * distance;
+                prev_ehh[2] = curr_ehh_before_norm[2]  / normalizer[2];
+            }else{
+                iHH[2] += prev_ehh[2] * 0.5  * distance;
+                prev_ehh[2] = 0; // if normalizer is zero, we set prev_ehh to zero
             }
-            prev_ehh_before_norm[2] = curr_ehh_before_norm[2];
         }
             
         // area update for cIHH 
         if(true){  //this is how it's in selscan, does not depend on cutoff
             curr_cehh_before_norm[0] = cehh0_before_norm;
             if(normalizer_not[0]!=0){
-                ciHH[0] += ((curr_cehh_before_norm[0] / normalizer_not[0])*0.5  + (prev_cehh_before_norm[0]/ normalizer_not[0])*0.5)*distance ;
+                ciHH[0] += ((curr_cehh_before_norm[0] / normalizer_not[0])  + (prev_cehh[0])) * 0.5 * distance ;
+                prev_cehh[0] = curr_cehh_before_norm[0] /  normalizer_not[0];
+            }else{
+                ciHH[0] +=  prev_cehh[0] * 0.5 * distance ;
+                prev_cehh[0] = 0; // AC = 0 or 1, this ensures only first two points are used for area calculation
             }
-            prev_cehh_before_norm[0] = curr_cehh_before_norm[0];
 
             curr_cehh_before_norm[2] = cehh2_before_norm;
             if(normalizer_not[2]!=0){
-                ciHH[2] += ((curr_cehh_before_norm[2] / normalizer_not[2])*0.5  + (prev_cehh_before_norm[2] / normalizer_not[2])*0.5)*distance ;
+                ciHH[2] += ((curr_cehh_before_norm[2] / normalizer_not[2])*0.5  + (prev_cehh[2]) *0.5) * distance ;
+                prev_cehh[2] = curr_cehh_before_norm[2] / normalizer_not[2];
+            }else{
+                ciHH[2] +=  prev_cehh[2] * 0.5 * distance ;
+                prev_cehh[2] = 0;
             }
-            prev_cehh_before_norm[2] = curr_cehh_before_norm[2];
         }
 
         // //If locus is monomorphic, shoot a warning and skip locus
@@ -381,22 +419,25 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         // }
 
         if(totgc == numHaps) {
-            //DBG("Break reason for locus "<<locus<<":: ALL_UNIQUE.");
+            DBG("Break reason for locus "<<locus<<":: ALL_UNIQUE.");
             break;
         }
 
-        // @DEBUG_BLOCK
-        // if(i==16 && locus==172){ // debugging specific locus
-        //     cout<<locus<<":::l "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
-        //     cout<<hm->mapData->mapEntries[locus].physicalPos <<" "<<hm->mapData->mapEntries[i].physicalPos<<endl;
+        //@DEBUG_BLOCK
+        // if(locus==1){ // debugging specific locus
+        //     if(downstream){
+        //         cout<<locus<<":::l "<<i << " "<<curr_cehh_before_norm[2]/normalizer_not[2]<<" "<<curr_ehh_before_norm[2]/normalizer[2]<<" "<<ciHH[2]<<" "<<iHH[2]<<endl;
+        //     }else{
+        //         cout<<locus<<":::r "<<i << " "<<curr_cehh_before_norm[2]/normalizer_not[2]<<" "<<curr_ehh_before_norm[2]/normalizer[2]<<" "<<ciHH[2]<<" "<<iHH[2]<<endl;
+        //     }
         // }
 
         if ((!p.CALC_NSL && p.CALC_IHS) && physicalDistance(i, locus, downstream) >= max_extend) { // max-exted is --max-extend value
-            //DBG("Break reason for locus "<<locus<<":: MAX_EXTEND.");
+            DBG("Break reason for locus "<<locus<<":: MAX_EXTEND.");
             break;
         }
-        if ((p.CALC_NSL && !p.CALC_IHS) && abs(i-locus) >= max_extend) { // max-exted is --max-extend-nsl value
-            //DBG("Break reason for locus "<<locus<<":: MAX_EXTEND.");
+        if ((p.CALC_NSL && !p.CALC_IHS) && abs(i-locus)-skipped_due_to_multimaf >= max_extend) { // max-exted is --max-extend-nsl value
+            DBG("Break reason for locus "<<locus<<":: MAX_EXTEND_NSL." << i << " "<<locus<< " " << skipped_due_to_multimaf<< " " <<abs(i-locus)-skipped_due_to_multimaf << " >= " << max_extend);
             break;
         }
 
@@ -471,7 +512,6 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         vector<pair<int, int> > ranges = parse_ranges(input);
         OUT_EHHS = (is_position_in_ranges(hm->mapData->mapEntries[locus].physicalPos, ranges));
     }
-    assert(hm->mapData->mapEntries[locus].locId != -1);
 
     double ihh1=0;
     double ihh0=0;
@@ -586,6 +626,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 
     int i = locus;  
     int prev_index = locus; // for multi-MAF
+    int skipped_due_to_multimaf = 0; // for multi-MAF
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
 
         bool edgeBreak = false;
@@ -608,7 +649,8 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         
         i = (downstream)? i-1 : i+1; // update i 
         if(p.MULTI_MAF){
-            if(hm->mapData->mapEntries[i].locId == -1){
+            if(hm->hapData->get_maf(i) < p.MAF){
+                skipped_due_to_multimaf++;
                 continue;
             }
         }
@@ -730,15 +772,15 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 
 
         if(totgc == numHaps) {
-            //DBG("Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl);
+            DBG("Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl);
             break;
         }
         if(!p.CALC_NSL && p.CALC_IHS && physicalDistance(i,locus, downstream) >= max_extend) {
-            //DBG("Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl);
+            DBG("Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl);
             break;
         }
-        if(p.CALC_NSL && !p.CALC_IHS && abs(i-locus) >= max_extend) {
-            //DBG("Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl);
+        if(p.CALC_NSL && !p.CALC_IHS && abs(i-locus)-skipped_due_to_multimaf >= max_extend) {
+            DBG("Break reason for locus "<<locus<<":: MAX_EXTEND_NSL."<<endl);
             break; 
         }
     }
@@ -834,12 +876,6 @@ void IHS::main() {
     if(p.WRITE_DETAILED_IHS){
         std::vector< std::future<IhhComponents> > results;
         for(int i = 0; i <  hm->mapData->nloci; ++i) {
-            if(hm->mapData->mapEntries[i].locId == -1) { //p.MULTI_MAF
-                continue;
-            }
-            if(hm->hapData->get_maf(i) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
-                continue;
-            }
             results.emplace_back(
                 pool.enqueue([i,this] {
                     return this->calc_ihh1_details(i);
@@ -904,10 +940,6 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
     const int numSnps = hm->mapData->nloci;
     const int numHaps = hm->hapData->nhaps;
 
-
-    if(hm->mapData->mapEntries[locus].locId == -1) { //p.MULTI_MAF
-        return skipLocusPair();
-    }
     if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
         {
                 string reason = "MAF < " + std::to_string(p.MAF);
@@ -997,6 +1029,17 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
  * @return IhhComponents with directional values for derived and ancestral alleles.
  */
 IhhComponents IHS::calc_ihh1_details(int locus) {
+    if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
+    {
+        string reason = "MAF < " + std::to_string(p.MAF);
+        std::lock_guard<std::mutex> lock(mutex_log);
+        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+        << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") has " 
+        << reason << ". Skipping this locus." << std::endl;
+        }
+        return {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
+    }
+
     const int numSnps = hm->mapData->nloci;
     const int numHaps = hm->hapData->nhaps;
 

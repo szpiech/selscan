@@ -25,11 +25,6 @@
 using namespace std;
 
 
-
-
-
-
-
 #define LOG(msg) do { \
         std::cerr << msg << std::endl; \
         if (flog) (*flog) << msg << std::endl; \

@@ -138,18 +138,18 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
 
     //
     if(p.MULTI_MAF){
-        if(p.CALC_IHS || p.CALC_NSL){
-            //reassign all local ids // if a site has MAF < p.MAF assign -1, otherwise assign increasing id, starting from 0
-            int current_loc_id = 0;
-            for (size_t i = 0; i < hm->mapData->nloci; ++i) {
-                double maf = hm->hapData->get_maf(i);  // get MAF for site i
-                if (maf <= p.MAF && p.SKIP) {
-                    hm->mapData->mapEntries[i].locId = -1;  // skip: too low MAF and --keep-low-freq is not set
-                } else {
-                    hm->mapData->mapEntries[i].locId = current_loc_id++;
-                }
-            }
-        }
+        // if(p.CALC_IHS || p.CALC_NSL){
+        //     //reassign all local ids // if a site has MAF < p.MAF assign -1, otherwise assign increasing id, starting from 0
+        //     int current_loc_id = 0;
+        //     for (size_t i = 0; i < hm->mapData->nloci; ++i) {
+        //         double maf = hm->hapData->get_maf(i);  // get MAF for site i
+        //         if (maf <= p.MAF && p.SKIP) {
+        //             hm->mapData->mapEntries[i].locId = -1;  // skip: too low MAF and --keep-low-freq is not set
+        //         } else {
+        //             hm->mapData->mapEntries[i].locId = current_loc_id++;
+        //         }
+        //     }
+        // }
         
         cerr<<"WARNING: Running in multi-maf mode. Make sure parameters are consistent across runs.\n";
         *(hm->flog)<<"WARNING: Running in multi-maf mode. Make sure parameters are consistent across runs.\n";
