@@ -158,13 +158,14 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
     ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 
     int i = locus;
+    int prev_index = locus; 
     while(true){
         // int queryPad = p.QWIN; // only for query locu
         // if(physicalDistance_from_core(i, locus, downstream) > queryPad){
         //     break;
         // }
 
-        if(physicalDistance_from_core(i, locus, downstream) >= max_extend){ //check if currentLocus is beyond 1Mb
+        if(physicalDistance(i, locus, downstream) >= max_extend){ //check if currentLocus is beyond 1Mb
             break;
         }
 
@@ -198,7 +199,8 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
         //at this point we ensured that nextLocus (i-1 or i+1) is within bounds
         i = downstream? i-1 : i+1; //proceed to next locus
-        int physicalDistance_old = physicalDistance(i,downstream); //double check if i or nextlocus
+        int physicalDistance_old = physicalDistance(i, prev_index, downstream); //double check if i or nextlocus
+        
         if (physicalDistance_old > p.MAX_GAP)
         {
             {std::lock_guard<std::mutex> lock(mutex_log);
@@ -208,20 +210,29 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
             break;
         }
 
+        // why?
+        // double scale, distance;
+        // if(p.CALC_XPNSL || p.CALC_SOFT){
+        //     scale = double(p.SCALE_PARAMETER) / geneticDistance(i, downstream);
+        //     distance = geneticDistance(i, downstream);
+        // }else{
+        //     scale = double(p.SCALE_PARAMETER) / physicalDistance(i, downstream);
+        //     distance = physicalDistance(i, downstream);
+        // }
+        // if(distance > p.SCALE_PARAMETER){
+        //     distance /= p.SCALE_PARAMETER;
+        // }
+        // if(scale > 1) scale = 1;
+
         double scale, distance;
-        if(p.CALC_XPNSL || p.CALC_SOFT){
-            scale = double(p.SCALE_PARAMETER) / geneticDistance(i, downstream);
-            distance = geneticDistance(i, downstream);
-        }else{
-            scale = double(p.SCALE_PARAMETER) / physicalDistance(i, downstream);
-            distance = physicalDistance(i, downstream);
-        }
+        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, prev_index, downstream);
+        distance = geneticDistance(i, prev_index, downstream);        
         if(distance > p.SCALE_PARAMETER){
             distance /= p.SCALE_PARAMETER;
         }
         if(scale > 1) scale = 1;
 
-
+        prev_index = i; //store previous index for next iteration
 
 
         // if(distance> max_gap){
@@ -233,7 +244,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         //     distance /= p.SCALE_PARAMETER;
         // }
         //distance = 1; // for testing
-
 
         ehhdata.v = hm->hapData->hapEntries[i].hapbitset;
         ACTION_ON_ALL_SET_BITS(ehhdata.v, {
@@ -259,7 +269,7 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
         ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 
-        if (physicalDistance_from_core(i, locus, downstream) >= max_extend) break;
+        if (physicalDistance(i, locus, downstream) >= max_extend) break;
         
     }
     return ihh12;
@@ -271,8 +281,7 @@ void IHH12::main()
     init_global_fout("ihh12");
 
     if(p.UNPHASED){
-        throw std::invalid_argument("ERROR: Unphased analysis not supported for iHH12 calculations.");
-        exit(2);
+        HANDLE_ERROR("Unphased analysis not supported for iHH12 calculations.");
     }
 
     int nloci = hm->mapData->nloci;

@@ -6,7 +6,6 @@ XPIHH_ehh_data::~XPIHH_ehh_data(){
     delete[] group_id;
 }
 
-
 void XPIHH::updateGroup_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
@@ -37,8 +36,7 @@ void XPIHH::updateEHH_from_split(const unordered_map<int, vector<int> > & m, XPI
         for(int v: ele.second){
             ehhdata->group_id[v] = ehhdata->totgc;
             if(v > ehhdata->nhaps || v < 0){
-                throw std::runtime_error("set_bit_pos out of bounds");
-                exit(1);
+                HANDLE_ERROR("set_bit_pos out of bounds in XPIHH::updateEHH_from_split");
             }
         }
         
@@ -49,24 +47,20 @@ void XPIHH::updateEHH_from_split(const unordered_map<int, vector<int> > & m, XPI
         
         ehhdata->group_count[old_group_id] -= newgroup_size;
         if(old_group_id > ehhdata->nhaps || old_group_id < 0){
-            cout<<old_group_id<<" "<<ehhdata->nhaps<<endl;
-                throw std::runtime_error("set_bit_pos out of bounds");
-                exit(1);
-
-            }
+            cerr<<old_group_id<<" "<<ehhdata->nhaps<<endl;
+            HANDLE_ERROR("set_bit_pos out of bounds in XPIHH::updateEHH_from_split");
+        }
         ehhdata->group_count[ehhdata->totgc] += newgroup_size;  
         if(ehhdata->totgc > ehhdata->nhaps || ehhdata->totgc < 0){
-                cout<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
-
-                throw std::runtime_error("set_bit_pos out of bounds");
-                exit(1);
-
-            }
+            //cout<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
+            throw std::runtime_error("set_bit_pos out of bounds");
+            exit(1);
+        }
         
         ehhdata->totgc += 1;
         ehhdata->curr_ehh_before_norm += del_update;
         if(ehhdata->totgc > ehhdata->nhaps){
-            cerr<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
+            //cerr<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
             throw std::runtime_error("totgc out of bounds");
             exit(1);
         }
@@ -129,9 +123,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
     pooled->n_c[2] = p1->n_c[2] + p2->n_c[2];
 
     if(pooled->n_c[1] + pooled->n_c[2] + pooled->n_c[0] != pooled->nhaps){
-        cerr<<"ERROR: n_c1 + n_c2 + n_c0 != numHaps"<<endl;
-        cout<<pooled->n_c[1]<<" "<<pooled->n_c[2]<<" "<<pooled->n_c[0]<<" "<<pooled->nhaps<<endl;
-        exit(2);
+        std::ostringstream oss;
+        oss << pooled->n_c[1] << " "
+            << pooled->n_c[2] << " "
+            << pooled->n_c[0] << " "
+            << pooled->nhaps << "\n";
+        HANDLE_ERROR(oss.str() + "n_c1 + n_c2 + n_c0 != numHaps");
     }
 
     if(p.ALT){
@@ -153,6 +150,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
     MyBitset* p1_all2 = hm->hapData->hapEntries[locus].xorbitset;
     MyBitset* p2_all2 = hm->hapData2->hapEntries[locus].xorbitset;
+
     //assign groups
     pooled->assign_groups(p1_all1, p1_all2, p2_all1, p2_all2, p1->nhaps);
     p1->assign_groups(p1_all1, p1_all2);
@@ -172,9 +170,8 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
     p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
     pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
 
-
-    
     int i = locus;     
+    int prev_index = locus; 
     while(true){
         double pooled_ehh = (p.ALT ? pooled->curr_ehh_before_norm / square_alt(pooled->nhaps) : pooled->curr_ehh_before_norm/twice_num_pair(pooled->nhaps));
 
@@ -205,27 +202,28 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             if (++i >= numSnps) break;
         }
 
-        if (physicalDistance(i,downstream) > p.MAX_GAP)
+        if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
         {
             {std::lock_guard<std::mutex> lock(mutex_log);
-            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
+            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i, prev_index, downstream)
                     << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
             }//unlock
             return skipLocusPair();
-            //hm->mapData->mapEntries[locus].skipLocus = true;
-            //break;
         }
 
         double scale, distance;
         if(p.CALC_XPNSL){
-            distance = 1;
+            distance = snpDistance(i, prev_index, downstream);
         }else{
-            distance = physicalDistance(i, downstream);  
+            distance = geneticDistance(i, prev_index, downstream);   // why was it physicalDistance before?
         }
-        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, downstream);   
+
+        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, prev_index, downstream);   
         if(scale > 1) scale = 1;
         distance *= scale;
-        
+
+        prev_index = i; 
+
         std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map< int, std::vector<int>>());
         unordered_map<int, vector<int> >& m = (* mp);
 
@@ -239,7 +237,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             });
             updateGroup_from_split_unphased(m, p1->group_count, p1->group_id, p1->totgc);
             m.clear();
-
 
             ACTION_ON_ALL_SET_BITS(get_all_2s(i), {
                 int old_group_id = p1->group_id[set_bit_pos];
@@ -297,7 +294,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             m_pooled.clear(); 
         }
 
-
         pooled->curr_ehh_before_norm = 0;
         for(int x = 0; x<pooled->totgc; x++){
             long double gcsquare = twice_num_pair_or_square(pooled->group_count[x],p.ALT);
@@ -327,10 +323,9 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
         ihh_p2 += 0.5*distance*(p2->curr_ehh_before_norm + p2->prev_ehh_before_norm)/p2->normalizer;
         p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
 
-
         // check if current locus is beyond 1Mb
-        if(!p.CALC_XPNSL && physicalDistance_from_core(i,locus, downstream) >= max_extend) break;
-        if(p.CALC_XPNSL && abs(i-locus) >= max_extend) break; //g(xi−1, xi) = 1.
+        if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;
+        if(p.CALC_XPNSL && snpDistance(i,locus, downstream) >= max_extend) break;
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
 
@@ -338,12 +333,9 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
         //     cout<<locus<<":::r "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
         // }
     }
-
     delete p1;
     delete p2;
     delete pooled;
-    
-
     return make_pair(ihh_p1, ihh_p2);
 }
 
@@ -476,6 +468,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
     pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
     
     int i = locus;     
+    int prev_index = locus;
     while(true){
         double pooled_ehh = (p.ALT ? pooled->curr_ehh_before_norm / square_alt(pooled->nhaps) : pooled->curr_ehh_before_norm/twice_num_pair(pooled->nhaps));
         
@@ -507,10 +500,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             if (++i >= numSnps) break;
         }
 
-        if (physicalDistance(i,downstream) > p.MAX_GAP)
+        if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
         {
             {std::lock_guard<std::mutex> lock(mutex_log);
-            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
+            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i, prev_index, downstream)
                     << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
             }//unlock
             
@@ -521,14 +514,15 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
         double scale, distance;
         if(p.CALC_XPNSL){
-            distance = 1;
+            distance = 1; // snpDistance(i, prev_index, downstream); // or just use 1
         }else{
-            distance = physicalDistance(i, downstream);  
+            distance = geneticDistance(i, prev_index, downstream); // why was it physicalDistance before?
         }
-        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, downstream);   
+        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, prev_index, downstream);   
         if(scale > 1) scale = 1;
         distance *= scale;
-        
+        prev_index = i;
+
         if(p1->totgc != p1->nhaps){
             ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
                 int old_group_id = p1->group_id[set_bit_pos];
@@ -573,8 +567,8 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         }
 
         // check if current locus is beyond 1Mb
-        if(!p.CALC_XPNSL && physicalDistance_from_core(i,locus, downstream) >= max_extend) break;
-        if(p.CALC_XPNSL && abs(i-locus) >= max_extend) break; //g(xi−1, xi) = 1.
+        if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;
+        if(p.CALC_XPNSL && snpDistance(i, locus, downstream) >= max_extend) break; //g(xi−1, xi) = 1. // or just abs(i-locus)
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
 
@@ -593,10 +587,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 void XPIHH::main()
 {
     if(p.CALC_XPNSL){
-        this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
+        this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
         init_global_fout("xpnsl");
     }else{
-        this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance_from_core(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
+        this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
         init_global_fout("xpehh");
     }
 
@@ -605,11 +599,11 @@ void XPIHH::main()
         HANDLE_ERROR("Number of SNPs in both hapData and hapData2 should be same.");
     }
 
-    if (p.CALC_XPNSL){
-        for (int i = 0; i < hm->mapData->nloci; i++){
-            hm->mapData->mapEntries[i].geneticPos = i;
-        }
-    }
+    // if (p.CALC_XPNSL){
+    //     for (int i = 0; i < hm->mapData->nloci; i++){
+    //         hm->mapData->mapEntries[i].geneticPos = i;
+    //     }
+    // }
 
     if (p.CALC_XP) LOG("Starting XP-EHH calculations.");
     if (p.CALC_XPNSL) LOG("Starting XP-nSL calculations.");

@@ -82,6 +82,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         fin >> mapEntries[locus_after_filter].locusName;
         fin >> mapEntries[locus_after_filter].geneticPos;
         fin >> mapEntries[locus_after_filter].physicalPos;
+        
 
         //locus_query_map[mapEntries[locus_after_filter].locusName] = locus_after_filter;
         mapEntries[locus_after_filter].locId = locus_before_filter;

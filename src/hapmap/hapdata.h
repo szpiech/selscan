@@ -413,37 +413,40 @@ public:
 
     inline double get_maf(int locus){
         if(MISSING_ALLOWED){
-                throw "not implemented";
-            }
-        if(unphased){
             throw "not implemented";
+        }
+        if(unphased){
             int n_c0 = get_n_c0(locus);
             int n_c1 = get_n_c1(locus);
             int n_c2 = get_n_c2(locus);
-            int n_c_missing = get_n_c_missing(locus);
-            int total = n_c0 + n_c1 + n_c2 + n_c_missing;
-            if(total == 0){
-                return 0;
-            }
-            double maf = (n_c1 + 2*n_c2) / (double) (nhaps*2);
-            return (maf > 0.5)? 1-maf : maf;
-        }else{
+
+            // int n_alt = 2*n_c2 + n_c1; 
+            // int n_ref = 2*n_c0 + n_c1; 
+            // int n_minor = min(n_alt, n_ref);
+            // return n_minor / (double) (nhaps*2);
+            int derived_allele_count = (n_c1 + n_c2 * 2) ; // unphased: 1s = het, 2s = homozygous derived
+            int nalleles_per_loc = (nhaps*2);
+            double derived_freq = derived_allele_count * 1.0 / nalleles_per_loc;
+            double ancestral_freq = 1.0 - derived_freq;
+            return min(derived_freq, ancestral_freq);
             
+            //int n_c_missing = get_n_c_missing(locus);
+            //int total = n_c0 + n_c1 + n_c2 + n_c_missing;
+            // int total = n_c0 + n_c1 + n_c2;
+            // if(total == 0){
+            //     return 0;
+            // }
+            //double maf = (n_c1 + 2*n_c2) / (double) (nhaps*2);
+            //return (maf > 0.5)? 1-maf : maf;
+        }else{
             int n_c0 = get_n_c0(locus);
             int n_c1 = get_n_c1(locus);
             int total = n_c0 + n_c1;
             if(total == 0){
                 return 0;
             }
-            double maf = (double) n_c1 / nhaps;
-            
-            if (maf > 0.5){
-                //cout<<n_c0<< " "<<n_c1<<" "<< 1-maf<<endl;
-                return 1-maf;
-            } else{
-                //cout<<n_c0<< " "<<n_c1<<" "<< maf<<endl;
-                return maf;
-            }
+            int mac = min(n_c1, n_c0);
+            return mac / (double) total;
         }
         
     }

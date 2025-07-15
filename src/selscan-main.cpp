@@ -136,16 +136,37 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     }
     */
 
+    //
+    if(p.MULTI_MAF){
+        if(p.CALC_IHS || p.CALC_NSL){
+            //reassign all local ids // if a site has MAF < p.MAF assign -1, otherwise assign increasing id, starting from 0
+            int current_loc_id = 0;
+            for (size_t i = 0; i < hm->mapData->nloci; ++i) {
+                double maf = hm->hapData->get_maf(i);  // get MAF for site i
+                if (maf <= p.MAF && p.SKIP) {
+                    hm->mapData->mapEntries[i].locId = -1;  // skip: too low MAF and --keep-low-freq is not set
+                } else {
+                    hm->mapData->mapEntries[i].locId = current_loc_id++;
+                }
+            }
+        }
+        
+        cerr<<"WARNING: Running in multi-maf mode. Make sure parameters are consistent across runs.\n";
+        *(hm->flog)<<"WARNING: Running in multi-maf mode. Make sure parameters are consistent across runs.\n";
+    }
+
     // @@ EXPERIMENTAL: instead of else if allow all to run
     if (p.SINGLE_EHH)
     {
         EHH ehhfinder(hm, p);
         ehhfinder.main(p.query); // query_locus
     }
+
     if (p.SINGLE_EHH12){
         EHH12 ehh12finder(hm, p);
         ehh12finder.main(p.query_ehh12); // query_locus
     }
+
     if (p.CALC_IHS)
     {
         bool stored_calc_nsl = p.CALC_NSL;
@@ -155,6 +176,7 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
         p.CALC_NSL = stored_calc_nsl;
         p.CALC_IHS = false;
     }
+
     if (p.CALC_NSL)
     {
         IHS ihsfinder(hm, p);
@@ -206,9 +228,9 @@ int main(int argc, char *argv[])
     
 
 
-// #ifdef PTW32_STATIC_LIB
-//     pthread_win32_process_attach_np();
-// #endif
+    // #ifdef PTW32_STATIC_LIB
+    //     pthread_win32_process_attach_np();
+    // #endif
 
     std::unique_ptr<HapMap> hm; 
     ofstream* flog;

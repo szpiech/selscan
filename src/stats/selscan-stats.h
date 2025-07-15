@@ -5,6 +5,7 @@
 #include <thread>
 #include "../binom.h"
 #include "../selscan-data.h"
+#include <assert.h>
 
 // #ifdef __APPLE__
 // #include <TargetConditionals.h>
@@ -26,7 +27,6 @@ class SelscanStats {
         bool inline skipLocus(double p){
             return p == SKIP_LOCUS_VALUE;
         }
-
 
         pair<double, double> inline skipLocusPair(){
             return make_pair(SKIP_LOCUS_VALUE,SKIP_LOCUS_VALUE);
@@ -199,58 +199,59 @@ class SelscanStats {
         }
 
 
-        double geneticDistance_from_core(int currentLocus, int core, bool downstream){
-            double distance;
-            if(downstream){
-                distance =  hm->mapData->mapEntries[core].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos;
-            }else{
-                distance = hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[core].geneticPos;
-            }
+        // double geneticDistance_from_core(int currentLocus, int core, bool downstream){
+        //     double distance;
+        //     if(downstream){
+        //         distance =  hm->mapData->mapEntries[core].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos;
+        //     }else{
+        //         distance = hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[core].geneticPos;
+        //     }
 
-            // this should not happen as we already did integrity check previously
-            if (distance < 0)
-            {
-                // cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
-                // std::cerr << "ERROR: physical position not in ascending order.\n"; 
-                // throw 0;
+        //     // this should not happen as we already did integrity check previously
+        //     if (distance < 0)
+        //     {
+        //         // cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
+        //         // std::cerr << "ERROR: physical position not in ascending order.\n"; 
+        //         // throw 0;
 
-                HANDLE_ERROR("genetic position not in ascending order.");
-            }
-            return distance;
-        }
+        //         HANDLE_ERROR("genetic position not in ascending order.");
+        //     }
+        //     return distance;
+        // }
 
-        double physicalDistance_from_core(int currentLocus, int core, bool downstream){
-            int distance;
-            if(downstream){
-                distance =  hm->mapData->mapEntries[core].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos;
-            }else{
-                distance = hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[core].physicalPos;
-            }
+        // double physicalDistance_from_core(int currentLocus, int core, bool downstream){
+        //     int distance;
+        //     if(downstream){
+        //         distance =  hm->mapData->mapEntries[core].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos;
+        //     }else{
+        //         distance = hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[core].physicalPos;
+        //     }
 
-            // this should not happen as we already did integrity check previously
-            if (distance < 0)
-            {
-                cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
-                std::cerr << "ERROR: physical position not in ascending order.\n"; 
-                throw 0;
-            }
-            return distance;
-        }
+        //     // this should not happen as we already did integrity check previously
+        //     if (distance < 0)
+        //     {
+        //         cout<<"Distance: current: core: isLeft:"<<distance<<" "<<currentLocus<<" "<<core<<" "<<downstream<<"\n";
+        //         std::cerr << "ERROR: physical position not in ascending order.\n"; 
+        //         throw 0;
+        //     }
+        //     return distance;
+        // }
 
         /// @brief Compute physical distance between currentLocus and previous one
-        double physicalDistance(int currentLocus, bool downstream){
+        double physicalDistance(int currentLocus, int prevLocus, bool downstream){
             double distance;
             if(downstream){
                 if(currentLocus+1> hm->hapData->nloci-1){
                     HANDLE_ERROR("invalid locus");
                 }
-                distance =   double(hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
+                //distance =   double(hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
+                distance =   double(hm->mapData->mapEntries[prevLocus].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
             }else{
                 if(currentLocus-1<0){
                     HANDLE_ERROR("invalid locus");
                 }
-                distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos);
-
+                //distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos);
+                distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[prevLocus].physicalPos);
             }
 
             // this should not happen as we already did integrity check previously
@@ -264,18 +265,57 @@ class SelscanStats {
             }
             return distance;
         }
-            
-        /// @brief Compute genetic distance between currentLocus and previous one    
-        double geneticDistance(int currentLocus, bool downstream){
+
+
+        /// @brief Compute snp distance between currentLocus and previous one
+        double snpDistance(int currentLocus, int prevLocus, bool downstream){
+            //return 1.0; // if only retained snps are used
             double distance;
             if(downstream){
-                distance =  double(hm->mapData->mapEntries[currentLocus+1].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos);
+                if(currentLocus+1> hm->hapData->nloci-1){
+                    HANDLE_ERROR("invalid locus");
+                }
+                //distance =   double(hm->mapData->mapEntries[currentLocus+1].locId - hm->mapData->mapEntries[currentLocus].locId);
+                distance =   double(hm->mapData->mapEntries[prevLocus].locId - hm->mapData->mapEntries[currentLocus].locId);
             }else{
-                distance = double(hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[currentLocus-1].geneticPos);
+                if(currentLocus-1<0){
+                    HANDLE_ERROR("invalid locus");
+                }
+                //distance =  double(hm->mapData->mapEntries[currentLocus].locId - hm->mapData->mapEntries[currentLocus-1].locId);
+                distance =  double(hm->mapData->mapEntries[currentLocus].locId - hm->mapData->mapEntries[prevLocus].locId);
             }
 
-            // this should not happen as we already did integrity check previously
-            if (distance < 0)
+            if (distance < 0) // this should not happen as we already did integrity check previously
+            {
+                cout<<"Distance: "<<distance<<" "<<currentLocus<<" " << prevLocus<<" " <<downstream<<"\n";
+                cout<<hm->mapData->mapEntries[currentLocus].locId<<endl;
+                cout<<hm->mapData->mapEntries[prevLocus].locId<<endl;
+                HANDLE_ERROR("snp id not in ascending order.");
+            }
+
+            // if(distance != 1){
+            //     cerr<<"Distance: "<<distance<<" "<<currentLocus<<" " << prevLocus<<" " <<downstream<<"\n";
+            //     cerr<<hm->mapData->mapEntries[currentLocus].locId<<endl;
+            //     cerr<<hm->mapData->mapEntries[prevLocus].locId<<endl;
+
+            //     hm->mapData->print(10);
+            // }
+            // assert(distance == 1);
+            return distance;
+        }
+            
+        /// @brief Compute genetic distance between currentLocus and previous one    
+        double geneticDistance(int currentLocus, int prevLocus, bool downstream){
+            double distance;
+            if(downstream){
+                //distance =  double(hm->mapData->mapEntries[currentLocus+1].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos);
+                distance =  double(hm->mapData->mapEntries[prevLocus].geneticPos - hm->mapData->mapEntries[currentLocus].geneticPos);
+            }else{
+                //distance = double(hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[currentLocus-1].geneticPos);
+                distance = double(hm->mapData->mapEntries[currentLocus].geneticPos - hm->mapData->mapEntries[prevLocus].geneticPos);
+            }
+
+            if (distance < 0) // this should not happen as we already did integrity check previously
             {
                 HANDLE_ERROR("genetic position not in ascending order.");
             }

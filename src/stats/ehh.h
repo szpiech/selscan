@@ -117,7 +117,7 @@ class EHH : public SelscanStats {
                 }
             } catch (const std::exception & e) {
                 std::cerr << "ERROR: Could not find specific locus query ID or POS "<< query<< " in filtered data." << std::endl;
-                std::cerr <<  "If the site is filtered out because of MAF cutoff, either reduce --maf or set --keep-low-freq." << std::endl;
+                //std::cerr <<  "If the site is filtered out because of MAF cutoff, either reduce --maf or set --keep-low-freq." << std::endl;
                 exit(EXIT_FAILURE);
             } 
             

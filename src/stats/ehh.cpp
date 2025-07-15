@@ -103,6 +103,7 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
     //cout<<locus<< " "<<output[locus].pdist<<" "<<output[locus].ehh0<<" "<<output[locus].ehh1<<" "<<output[locus].ehh<<endl;
 
     int i = locus;  
+    int prev_index = locus;
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
         //output[i].print = false;
 
@@ -132,18 +133,7 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
             }
         }
 
-        double distance =  geneticDistance(i, downstream);
-        if (distance < 0) // this should not be needed as we already did integrity check previously
-        {
-            std::cerr << "ERROR: physical position not in ascending order.\n"; 
-            exit(EXIT_FAILURE);
-        }
-        // if(p.CALC_NSL){
-        //     distance = 1;
-        // }
-        double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, downstream) );
-        if (scale > 1) scale = 1;
-        distance *= scale;
+    
 
         if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ // monomorphic check, do not compute unnecessarily
         //if(false){
@@ -162,8 +152,8 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
             output[i].ehh0 = current_ancestral_ehh;
             output[i].ehh1 = current_derived_ehh;
             output[i].ehh = current_ehh;
-            output[i].pdist = downstream? -physicalDistance_from_core(i,locus, downstream): physicalDistance_from_core(i,locus, downstream);
-            output[i].gdist = downstream? -geneticDistance_from_core(i,locus, downstream): geneticDistance_from_core(i,locus, downstream);
+            output[i].pdist = downstream? -physicalDistance(i,locus, downstream): physicalDistance(i,locus, downstream);
+            output[i].gdist = downstream? -geneticDistance(i,locus, downstream): geneticDistance(i,locus, downstream);
             output[i].print = true;
             //cout<<i<< " "<<output[i].pdist<<" "<<output[i].ehh0<<" "<<output[i].ehh1<<" "<<output[i].ehh<<endl;
         }else{
@@ -222,8 +212,8 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
             output[i].ehh0 = current_ancestral_ehh;
             output[i].ehh1 = current_derived_ehh;
             output[i].ehh = current_ehh;
-            output[i].pdist = downstream? -physicalDistance_from_core(i,locus, downstream): physicalDistance_from_core(i,locus, downstream);
-            output[i].gdist = downstream? -geneticDistance_from_core(i,locus, downstream): geneticDistance_from_core(i,locus, downstream);
+            output[i].pdist = downstream? -physicalDistance(i,locus, downstream): physicalDistance(i,locus, downstream);
+            output[i].gdist = downstream? -geneticDistance(i,locus, downstream): geneticDistance(i,locus, downstream);
             output[i].print = true;
             //cout<<i<< " "<<output[i].pdist<<" "<<output[i].ehh0<<" "<<output[i].ehh1<<" "<<output[i].ehh<<endl;
 
@@ -234,7 +224,7 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
         //     break;
         // }
 
-        if(physicalDistance_from_core(i,locus, downstream) > p.QWIN) {
+        if(physicalDistance(i,locus, downstream) > p.QWIN) {
             //std::cout<<"Break reason for locus "<<locus<<":: MAX_EXTEND." << physicalDistance_from_core(i,locus, downstream)  <<endl;
             output[i].print = false;
             break;
@@ -287,26 +277,7 @@ void EHH::main(string query){
             (output[i].print = false);
         }
 
-        //vector<EHHOutput> output(numSnps);
         calc_ehh_unidirection(locus, true); // downstream
-        // for (int i = 0; i < numSnps; i++){
-        //     if(output[i].print == false){
-        //         continue;
-        //     }
-        //     // (cout) << std::fixed <<   output[i].pdist  << "\t"
-        //     // <<  output[i].gdist << "\t"
-        //     // << output[i].ehh1 << "\t"
-        //     // << output[i].ehh0  << "\t"
-        //     // << output[i].ehh  << "";
-        //     // (cout) << endl;
-        //     (*fout) << std::fixed <<   output[i].pdist  << "\t"
-        //     <<  output[i].gdist << "\t"
-        //     << output[i].ehh1 << "\t"
-        //     << output[i].ehh0  << "\t"
-        //     << output[i].ehh  << "";
-        //     (*fout) << endl;
-        // }
-
         calc_ehh_unidirection(locus, false); // upstream
 
         (*fout) << std::fixed <<   "pdist\tgdist\tderEHH\tancEHH\tEHH" << "\n";
@@ -364,8 +335,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
     n_c[0] = numHaps - n_c[1] - n_c[2]; // assume no missing
     
     if(n_c[1] + n_c[2] + n_c[0] != numHaps){
-        cerr<<"ERROR: n_c1 + n_c2 + n_c0 != numHaps"<<endl;
-        exit(2);
+        HANDLE_ERROR("n_c1 + n_c2 + n_c0 != numHaps");
     }
 
     string orderStr = getOrder(n_c[2], n_c[1], n_c[0]);
@@ -413,8 +383,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
         totgc+=1;
     }else if(group_count[2] == 0 ){ //second clause is redundant
         if(group_count[0] + group_count[1] != numHaps){
-            cerr<<"ERROR: gc2==0 locus"<<locus<<endl;
-            exit(2);
+            HANDLE_ERROR("gc2==0 locus: "+to_string(locus));
         }
         totgc+=2;
     }else{
@@ -429,7 +398,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
     }
 
     double freqHetGT = n_c[1]*1.0/numHaps;
-    if (  freqHetGT > 1-p.MAF ) 
+    if (freqHetGT > 1-p.MAF) 
     {
         (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
@@ -446,8 +415,8 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
     
 
     int i = locus;  // locus == core_locus
+    int prev_index = locus;
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
-    
         // if(p.CALC_IHS && !p.CALC_NSL){
         //     if(curr_ehh_before_norm[2]*1.0/normalizer[2] <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/normalizer[0]  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
         //         //std::cerr<<"Break reason for locus "<<locus<<":: EHH_CUTOFF."<<endl;
@@ -464,12 +433,8 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
         }
         i = (downstream) ? i-1 : i+1;
         
-        double distance =  geneticDistance(i, downstream);
-        if (distance < 0) // this should not be needed as we already did integrity check previously
-        {
-            std::cerr << "ERROR: physical position not in ascending order.\n"; 
-            exit(2);
-        }
+        double distance =  geneticDistance(i, prev_index, downstream);
+        prev_index = i;
 
         // if (physicalDistance(i,downstream) > p.MAX_GAP)
         // {
@@ -478,20 +443,11 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
         //     return;
         // }
 
-
-       if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, do not compute unnecessarily
-            // pthread_mutex_lock(&mutex_log);
-            // std::cerr<<"ERROR: Monomorphic site should not exist."<<endl;
-            // std::cerr<< hm->hapData->get_n_c0(i) <<" n_c0 at locus "<< i <<endl; 
-            // std::cerr<< hm->hapData->get_n_c1(i) <<" n_c1 at locus "<< i<< endl; 
-            // pthread_mutex_unlock(&mutex_log);
-            // throw 0;
-            
-            //if you wish to continue anyway
-
+        /* let us print values at monomorphic sites too
+        if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, do not compute unnecessarily
             continue; 
         }
-
+        */
         
         ACTION_ON_ALL_SET_BITS(get_all_2s(i), {
             int old_group_id = group_id[set_bit_pos];
@@ -546,7 +502,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
             // break;
         //}
 
-        if(physicalDistance_from_core(i,locus, downstream) >= p.QWIN) {
+        if(physicalDistance(i,locus, downstream) >= p.QWIN) {
             //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
            break;
         }
@@ -554,13 +510,13 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
         output[i].ehh0 = curr_ehh_before_norm[0]*1.0/normalizer[0];
         output[i].ehh2 = curr_ehh_before_norm[2]*1.0/normalizer[2];
         output[i].ehh = ehh_before_norm*1.0/normalizer_just;
-        output[i].pdist = downstream? -physicalDistance_from_core(i,locus, downstream): physicalDistance_from_core(i,locus, downstream);
-        output[i].gdist = downstream? -geneticDistance_from_core(i,locus, downstream): geneticDistance_from_core(i,locus, downstream);
+        output[i].pdist = downstream? -physicalDistance(i,locus, downstream): physicalDistance(i,locus, downstream);
+        output[i].gdist = downstream? -geneticDistance(i,locus, downstream): geneticDistance(i,locus, downstream);
         output[i].print = true;
 
+        // @DEBUG_BLOCK
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
-
         // }else{
         //     cout<<locus<<":::r "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
         // }

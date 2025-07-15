@@ -16,6 +16,7 @@
 #include "selscan-cli.h"
 #include "json.hpp"
 #include <fstream>
+#include <sstream>
 
 
 void initalizeParameters(param_t &params,int argc, char *argv[]){
@@ -72,6 +73,9 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
 
     params.addFlag(ARG_MULTI_PARAMS, DEFAULT_MULTI_PARAMS, "", HELP_MULTI_PARAMS);
 
+    params.addFlag(ARG_EHHS, DEFAULT_EHHS, "", HELP_EHHS);
+
+
 
     try
     {
@@ -82,6 +86,88 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
         throw runtime_error("Could not parse command line arguments.\n");
     }
 }
+
+
+
+
+void validate_ranges(const std::string& range_str) {
+    //std::vector<std::pair<int, int>> ranges;
+    std::stringstream ss(range_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        size_t dash_pos = token.find('-');
+        if (dash_pos == std::string::npos) {
+           HANDLE_ERROR_NOLOG("Invalid range format for --ehhs flag: " + token);
+        }
+
+        try {
+            std::string start_str = token.substr(0, dash_pos);
+            std::string end_str = token.substr(dash_pos + 1);
+
+            // Ensure both parts are strictly digits (no dot, no sign)
+            auto is_digits = [](const std::string& s) {
+                return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+            };
+
+            if (!is_digits(start_str) || !is_digits(end_str)) {
+                HANDLE_ERROR_NOLOG("Non-integer value in range for --ehhs flag: " + token);
+            }
+
+            int start = std::stoi(start_str);
+            int end = std::stoi(end_str);
+
+            if (start > end) {
+                //std::swap(start, end);
+                HANDLE_ERROR_NOLOG("Invalid range format for --ehhs flag: " + token);
+            }
+                
+        } catch (const std::invalid_argument&) {
+            HANDLE_ERROR_NOLOG("Invalid number in range  for --ehhs flag: " + token);
+        } catch (const std::out_of_range&) {
+            HANDLE_ERROR_NOLOG("Number out of range in range for --ehhs flag: " + token);
+        }
+    }
+
+    //return ranges;
+}
+
+// bool validateEhhRanges(const std::string& input, std::vector<std::pair<int, int>>& parsed_ranges) {
+//     std::stringstream ss(input);
+//     std::string token;
+
+//     while (std::getline(ss, token, ',')) {
+//         // Trim whitespace (optional)
+//         token.erase(0, token.find_first_not_of(" \t\r\n"));
+//         token.erase(token.find_last_not_of(" \t\r\n") + 1);
+
+//         if (token.empty()) {
+//             std::cerr << "Error: Empty range segment.\n";
+//             return false;
+//         }
+
+//         if (!isValidRangeFormat(token)) {
+//             std::cerr << "Error: Invalid range format: " << token << "\n";
+//             return false;
+//         }
+
+//         size_t dash = token.find('-');
+//         int start = std::stoi(token.substr(0, dash));
+//         int end   = std::stoi(token.substr(dash + 1));
+
+//         if (start > end) {
+//             std::cerr << "Error: Start > End in range: " << token << "\n";
+//             return false;
+//         }
+
+//         parsed_ranges.emplace_back(start, end);
+//     }
+
+//     return true;
+// }
+
+
+
 
 
 void getBaseParamFromCmdLine(param_t& params, param_main &p){
@@ -175,6 +261,12 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
         cerr << "WARNING: " << ARG_SKIP << " is now on by dafault.  This flag no longer has a function.\n";
     }
 
+    p.EHHS_RANGES = params.getStringFlag(ARG_EHHS);
+    if (p.EHHS_RANGES.compare(DEFAULT_EHHS) != 0) {
+        validate_ranges(p.EHHS_RANGES); // error will be thrown if ranges are invalid
+        p.CALC_EHHS = true;
+    }
+
     
 }
 
@@ -252,7 +344,7 @@ void checkParameters(param_main &p){
         //      << ")\n\tXP-nSL (" << ARG_XPNSL
         //      << ")\n\tiHH12 (" << ARG_SOFT
         //      << ")\n";
-        throw runtime_error("Must specify one of \n\tEHH (" + ARG_EHH + ")\n\tiHS (" + ARG_IHS + ")\n\tXP-EHH (" + ARG_XP + ")\n\tPI (" + ARG_PI + ")\n\tnSL (" + ARG_NSL + ")\n\tXP-nSL (" + ARG_XPNSL + ")\n\tiHH12 (" + ARG_SOFT + ")\n\tEHH12 (" + ARG_EHH12 + ")\n");
+        HANDLE_ERROR_NOLOG("Must specify one of \n\tEHH (" + ARG_EHH + ")\n\tiHS (" + ARG_IHS + ")\n\tXP-EHH (" + ARG_XP + ")\n\tPI (" + ARG_PI + ")\n\tnSL (" + ARG_NSL + ")\n\tXP-nSL (" + ARG_XPNSL + ")\n\tiHH12 (" + ARG_SOFT + ")\n\tEHH12 (" + ARG_EHH12 + ")\n");
     }
 
     if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12> 1)
@@ -352,6 +444,22 @@ void checkParameters(param_main &p){
     {
         HANDLE_ERROR_NOLOG("pi window must be > 0.");
     }
+
+    if (p.CALC_EHHS && p.EHHS_RANGES.compare(DEFAULT_EHHS) == 0) {
+        HANDLE_ERROR_NOLOG("Must provide a range for --ehhs flag.");
+    }
+
+    if (p.CALC_EHHS && !p.CALC_IHS && !p.CALC_NSL) {
+        HANDLE_ERROR_NOLOG("The --ehhs flag requires either the --ihs or --nsl flag to be set.\n");
+    }
+
+
+    // if(p.CALC_EHHS && (p.CALC_IHS || p.C){
+    //     HANDLE_ERROR_NOLOG("Cannot use --ehhs with --ihh12 flag. Please remove --ihh12 flag.");
+    // }
+    //check that either ihs or nsl flag or both are set, otherwise say ehhs only works with ihs or nsl
+
+
 
     // if (p.MULTI_CHR && !p.VCF)
     // {
