@@ -238,20 +238,20 @@ class SelscanStats {
         // }
 
         /// @brief Compute physical distance between currentLocus and previous one
-        double physicalDistance(int currentLocus, int prevLocus, bool downstream){
+        int physicalDistance(int currentLocus, int prevLocus, bool downstream){
             double distance;
             if(downstream){
                 if(currentLocus+1> hm->hapData->nloci-1){
                     HANDLE_ERROR("invalid locus");
                 }
                 //distance =   double(hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
-                distance =   double(hm->mapData->mapEntries[prevLocus].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
+                distance =   (hm->mapData->mapEntries[prevLocus].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
             }else{
                 if(currentLocus-1<0){
                     HANDLE_ERROR("invalid locus");
                 }
                 //distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos);
-                distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[prevLocus].physicalPos);
+                distance =  (hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[prevLocus].physicalPos);
             }
 
             // this should not happen as we already did integrity check previously

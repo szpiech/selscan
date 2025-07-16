@@ -103,7 +103,7 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
     //cout<<locus<< " "<<output[locus].pdist<<" "<<output[locus].ehh0<<" "<<output[locus].ehh1<<" "<<output[locus].ehh<<endl;
 
     int i = locus;  
-    int prev_index = locus;
+    //int prev_index = locus;
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
         //output[i].print = false;
 
@@ -247,7 +247,6 @@ void EHH::main(string query){
     init_output_and_querymap();
 
     int numSnps = hm->mapData->nloci;
-    int numHaps = hm->hapData->nhaps;
 
     int locus = this->queryFound(query);
     if(locus == -1){
@@ -307,7 +306,6 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
     std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
     unordered_map<int, vector<int> >& m = (* mp);
 
-    int numSnps = hm->hapData->nloci;
     int numHaps = hm->hapData->nhaps;
 
     double curr_ehh_before_norm[3];
@@ -415,14 +413,10 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
     
 
     int i = locus;  // locus == core_locus
-    int prev_index = locus;
+    //int prev_index = locus;
+
+
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
-        // if(p.CALC_IHS && !p.CALC_NSL){
-        //     if(curr_ehh_before_norm[2]*1.0/normalizer[2] <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/normalizer[0]  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
-        //         //std::cerr<<"Break reason for locus "<<locus<<":: EHH_CUTOFF."<<endl;
-        //         break;
-        //     }
-        // }
 
         bool edgeBreak = false;
         edgeBreak = nextLocOutOfBounds(i, downstream);
@@ -432,9 +426,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
             break;
         }
         i = (downstream) ? i-1 : i+1;
-        
-        double distance =  geneticDistance(i, prev_index, downstream);
-        prev_index = i;
+        //prev_index = i;
 
         // if (physicalDistance(i,downstream) > p.MAX_GAP)
         // {
@@ -453,14 +445,14 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
         });
-        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
         m.clear();
 
         ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
         });
-        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
         m.clear();
 
         // equivalent to calcHomozoygosity (without the normalization)

@@ -18,7 +18,7 @@
  * @param is2                Boolean array indicating if each chromosome has the ancestral allele at the core SNP.
  * @param group_core         Array tracking the core allele (1 = derived, 2 = ancestral, 0 = unknown) for each group.
  */
-void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core){
+void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, bool* is1, bool* is2, int* group_core){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
         int newgroup_size = ele.second.size() ;
@@ -70,12 +70,9 @@ void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, in
  */
 OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
     OutputUnphasedIHH skipLocusOutput = {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
-
-
     std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
     unordered_map<int, vector<int> >& m = (* mp);
 
-    int numSnps = hm->hapData->nloci;
     int numHaps = hm->hapData->nhaps;
 
     //double prev_ehh_before_norm[3];
@@ -332,14 +329,14 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
         });
-        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
         m.clear();
 
         ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[i].hapbitset, {
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
         });
-        updateEHH_from_split_unphased(m, group_count, group_id, totgc, curr_ehh_before_norm, curr_cehh_before_norm, is1, is2, group_core);
+        updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
         m.clear();
 
         // equivalent to calcHomozoygosity (without the normalization-by-tot-core-pairs)
@@ -806,8 +803,7 @@ void IHS::main() {
         init_global_fout("ihs");
     }
 
-    int total_calc_to_be_done = hm->hapData->nloci;
-    DBG("DEBUG::: Total number of loci: "<<total_calc_to_be_done<<endl);
+    DBG("DEBUG::: Total number of loci: "<<hm->hapData->nloci<<endl);
 
     // if(p.MISSING_ALLOWED){ // do imputation
     //     if(hm->p.MISSING_MODE == "NO_IMPUTE"){
@@ -937,8 +933,6 @@ void IHS::main() {
  * @return Pair of iHS-like values: (derived_score, ancestral_score)
  */
 std::pair<double, double> IHS::calc_ihh1(int locus) {
-    const int numSnps = hm->mapData->nloci;
-    const int numHaps = hm->hapData->nhaps;
 
     if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
         {
@@ -991,8 +985,6 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
     }
 
     // === Phased mode ===
-    double ihh1_up = 0, ihh1_down = 0;
-    double ihh0_up = 0, ihh0_down = 0;
 
     pair<double, double> ihh1_ihh0_downstream = calc_ehh_unidirection(locus, true);
     if (skipLocus(ihh1_ihh0_downstream)) return skipLocusPair();
@@ -1039,9 +1031,6 @@ IhhComponents IHS::calc_ihh1_details(int locus) {
         }
         return {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
     }
-
-    const int numSnps = hm->mapData->nloci;
-    const int numHaps = hm->hapData->nhaps;
 
     if (hm->hapData->unphased) {
         OutputUnphasedIHH left = calc_ehh_unidirection_unphased(locus, true);     // left (downstream)

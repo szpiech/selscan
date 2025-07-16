@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
 
         // run for all param combinations
         cerr<<"DEBUG::: Running for all param combinations. "<<multi_params.size()<<"\n";
-        for(int i = 0; i< multi_params.size(); i++){
+        for(size_t i = 0; i< multi_params.size(); i++){
             param_main p = multi_params[i];
             p.outFilename = p.outFilename + ".pconfig" + to_string(i);
             runStat(hm, p); // run the main program

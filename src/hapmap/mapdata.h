@@ -10,7 +10,7 @@ using namespace std;
 
 struct MapEntry
 {
-    int physicalPos;
+    int physicalPos; // uint64_t physicalPos;
     double geneticPos;
     string locusName;
     string chr;
@@ -39,9 +39,9 @@ public:
     //reads in map data and also does basic checks on integrity of format
     //returns a populated MapData structure if successful
     //throws an exception otherwise
-    void readMapData(string filename, int expected_loci, bool USE_PMAP, queue<int>& skip_queue);
-    void readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP, queue<int>& skip_queue);
-    void readMapDataVCF(string filename, int expected_loci, queue<int>& skipQueue); //Physical positions only
+    void readMapData(string filename, size_t expected_loci, bool USE_PMAP, queue<size_t>& skip_queue);
+    void readMapDataTPED(string filename, size_t expected_loci, int expected_haps, bool USE_PMAP, queue<size_t>& skip_queue);
+    void readMapDataVCF(string filename, size_t expected_loci, queue<size_t>& skipQueue); //Physical positions only
 
     inline int countFields(const string &str)
     {

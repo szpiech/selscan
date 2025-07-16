@@ -223,7 +223,6 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
 
     // p.EHH1K = params.getIntFlag(ARG_SOFT_K);
 
-    int queryLoc = -1;
     if (p.query.compare(DEFAULT_EHH) != 0) p.SINGLE_EHH = true;
     if (p.query_ehh12.compare(DEFAULT_EHH12) != 0) p.SINGLE_EHH12 = true;
 

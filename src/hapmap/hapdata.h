@@ -49,7 +49,7 @@ class MissingInfo{
             this->verdict =  '2';
             if (p0 >= p1 && p0 >= p2) this->verdict =  '0';
             if (p1 >= p0 && p1 >= p2) this->verdict =  '1';
-            if( (abs(p0-p1)<0.0001 && p0>=p2) || abs(p1-p2)<0.0001  && p1>=p0 || abs(p0-p2)<0.0001 && p0>=p1){
+            if( (abs(p0-p1)<0.0001 && p0>=p2) || (abs(p1-p2)<0.0001  && p1>=p0) || (abs(p0-p2)<0.0001 && p0>=p1)){
                 this->verdict = 'T';
             }
             //this->verdict = (abs(p0-p1)<0.0001)? 'T' :  this->verdict;
@@ -107,7 +107,7 @@ public:
     // int num_threads;
     // bool LOW_MEM = true;
 
-    queue<int> skipQueue;
+    queue<size_t> skipQueue;
     
     //ofstream* flog;
 
@@ -225,8 +225,6 @@ public:
         lock_guard<mutex> lock(map_mutex);
         {
             for(auto && [key, value]: missingMatrix){
-                int count1 = 0;
-                int count0 = 0;
                 for(auto && info: value){
                     cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " "<<info.p0<<" "<<info.p1<<" "<<info.verdict<<endl;
                 }
@@ -416,7 +414,7 @@ public:
             throw "not implemented";
         }
         if(unphased){
-            int n_c0 = get_n_c0(locus);
+            //int n_c0 = get_n_c0(locus);
             int n_c1 = get_n_c1(locus);
             int n_c2 = get_n_c2(locus);
 

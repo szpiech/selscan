@@ -2,7 +2,7 @@
 
 # Compiler settings
 CC = g++                                      # Use GNU C++ compiler
-G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17 -lm -ftree-vectorize
+G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17 -lm -ftree-vectorize -static
 # -O3              : Maximize optimization
 # -m64             : Generate 64-bit code
 # -mmmx            : Enable MMX instructions

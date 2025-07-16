@@ -134,7 +134,8 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
     double firstFreq = (top1 > 1) ? twice_num_pair(top1) : 0;
     double secondFreq =(top2 > 1) ?  twice_num_pair(top2): 0;
     double comboFreq = ((top1 + top2) > 1) ? twice_num_pair((top1 + top2)) : 0;
-    double normfac = twice_num_pair(ehhdata->nhaps);
+    
+    //double normfac = twice_num_pair(ehhdata->nhaps);
 
     ehhdata->curr_ehh12_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq - secondFreq + comboFreq;
     //ehhdata->curr_ehh12_before_norm *= normfac;
@@ -260,10 +261,13 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         }else{
             ihh12 += 0.5  * (ehhdata.curr_ehh12_before_norm/twice_num_pair(ehhdata.nhaps) + ehhdata.prev_ehh12_before_norm/twice_num_pair(ehhdata.nhaps)) * scale * distance;
         }
-        double current_ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
-        double previous_ehh1 = ehhdata.prev_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
-        double current_ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
-        double previous_ehh12 = ehhdata.prev_ehh12_before_norm / twice_num_pair(ehhdata.nhaps);
+
+        // double current_ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
+        // double previous_ehh1 = ehhdata.prev_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
+
+        // double current_ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
+        // double previous_ehh12 = ehhdata.prev_ehh12_before_norm / twice_num_pair(ehhdata.nhaps);
+        
         //if(!downstream) cout<<current_ehh1<<" "<<previous_ehh1<<" "<<current_ehh12<<" "<<previous_ehh12<<" "<<ihh12[locus] <<" "<<scale * distance<< endl;
 
         ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
@@ -284,7 +288,6 @@ void IHH12::main()
         HANDLE_ERROR("Unphased analysis not supported for iHH12 calculations.");
     }
 
-    int nloci = hm->mapData->nloci;
 
     std::cerr << "Starting iHH12 calculations."<<endl;
 

@@ -60,7 +60,7 @@ class EHH : public SelscanStats {
             return order_str;
         }
         
-        void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, double* ehh_before_norm, double* cehh_before_norm, bool* is1, bool* is2, int* group_core){
+        void updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, bool* is1, bool* is2, int* group_core){
             for (const auto &ele : m) {
                 int old_group_id = ele.first;
                 int newgroup_size = ele.second.size() ;
@@ -126,6 +126,8 @@ class EHH : public SelscanStats {
                 cerr << "Found POS " << query << " in data. Computing EHH...\n";
                 return queryLoc;
             }
+
+            return queryLoc;
             
                 // cerr << "Available locus queries are: ";
                 // //iterate over locus_query_map and print

@@ -1,0 +1,45 @@
+# Compiler
+CC := g++
+G++FLAG := -std=c++17 -O3 -Wall -Wextra -pthread  -pedantic -Wno-deprecated-declarations # -Wconversion -Wshadow
+I_PATH := -I. -Ihapmap -Istats -I../include                     # include for norm
+LINK_OPTS_SELSCAN := -pthread -lz
+L_PATH = ../lib/macos-arm                 # Path to GSL libraries
+LINK_OPTS_NORM := -L$(L_PATH) -lgsl -lgslcblas
+
+# Source files
+HAPMAP_SRC := $(wildcard hapmap/*.cpp)
+STATS_SRC := $(wildcard stats/*.cpp)
+COMMON_SRC := selscan-main.cpp selscan-data.cpp selscan-cli.cpp binom.cpp param_t.cpp gzstream.cpp thread_pool.cpp
+NORM_SRC := norm.cpp
+
+# Object files
+OBJ_HAPMAP := $(HAPMAP_SRC:.cpp=.o)
+OBJ_STATS := $(STATS_SRC:.cpp=.o)
+OBJ_COMMON := $(COMMON_SRC:.cpp=.o)
+OBJ_NORM := $(NORM_SRC:.cpp=.o)
+
+# Build all targets
+all: selscan
+# norm
+
+# Build selscan binary
+selscan: $(OBJ_COMMON) $(OBJ_STATS) $(OBJ_HAPMAP)
+	$(CC) $(G++FLAG) -o $@ $^ $(LINK_OPTS_SELSCAN)  && rm -f $^.o
+
+# Build norm binary
+norm: $(OBJ_NORM) param_t.o
+	$(CC) $(G++FLAG) -o $@ $^ $(LINK_OPTS_NORM)  && rm -f $^.o
+
+# Pattern rules
+%.o: %.cpp
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+%.o: hapmap/%.cpp
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+%.o: stats/%.cpp
+	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
+
+# Clean
+clean:
+	rm -f *.o hapmap/*.o stats/*.o selscan norm

@@ -12,17 +12,18 @@ void PI::main()
     // cerr<<"DEBUG::: "<<"num entries"<<num_entries<<endl;
 
     // vector<double> index_by_start(num_entries+1);
-    int site_counter;
+    
+    //int site_counter;
 
     int locus = 0;
     for(int i =0; i<= num_entries; i++){
         (*fout)<<i*winsize + 1<<" " <<(i+1)*winsize  <<" ";
 
-        int start = i*winsize + 1;
+        //int start = i*winsize + 1;
         int end = (i+1)*winsize;
 
         pi = 0;
-        site_counter = 0;
+        //site_counter = 0;
         while(true){
             int pos = hm->mapData->mapEntries[locus].physicalPos;
             if(pos > end){
@@ -31,7 +32,7 @@ void PI::main()
                 int n1 = hm->hapData->get_n_c1(locus);
                 int n0 =  hm->hapData->nhaps - n1;
                 pi += n1 * n0 ;
-                site_counter++;
+                //site_counter++;
 
                 locus++;
                 if(locus == hm->mapData->nloci){

@@ -128,6 +128,21 @@ class MyBitset{
     //     opFunc(x);
     // }
 
+    // Perform an action on all set bits
+    /*
+    template <typename Action>
+    void performActionOnSetBits(Action action) {
+        for (int k = 0; k < nwords; k++) {
+            uint64_t bitset = bits[k];
+            while (bitset != 0) {
+                uint64_t t = bitset & -bitset; // Get the lowest set bit
+                int r = __builtin_ctzl(bitset); // Get the index of the lowest set      
+                int set_bit_pos = (k * WORDSZ + r); // Calculate the position of the set bit
+                bitset ^= t; // Clear the lowest set bit
+                action(set_bit_pos); // Perform the action on the set bit position
+            }
+        }
+    }
     void action_on_all_set_bits(){
         for (int k = 0; k < nwords; k++) {
             uint64_t bitset = bits[k];
@@ -139,6 +154,7 @@ class MyBitset{
             }
         }
     }
+    */
 
     
 

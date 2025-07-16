@@ -5,7 +5,6 @@
 */
 void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
-    double ihh12 = 0;
     unordered_map<int, vector<int> > m;
 
     EHH12_ehh_data ehhdata;
@@ -29,7 +28,7 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
 
     int i = locus;
-    int prev_index = locus;
+    //int prev_index = locus;
     while(true){
 
         if(physicalDistance(i, locus, downstream) >= p.QWIN){ //check if currentLocus is beyond 1Mb
@@ -83,7 +82,7 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
         output[i].print = true;
         if (physicalDistance(i, locus, downstream) >= p.QWIN) break;
 
-        prev_index = i; //store previous index for next iteration
+        //prev_index = i; //store previous index for next iteration
     }
 }
 
@@ -92,7 +91,6 @@ void EHH12::main(string query){
     init_output_and_querymap();
     
     int numSnps = hm->mapData->nloci;
-    int numHaps = hm->hapData->nhaps;
 
     int locus = this->queryFound(query);
     if(locus == -1){
@@ -154,7 +152,8 @@ void EHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, EHH
     double firstFreq = (top1 > 1) ? twice_num_pair(top1) : 0;
     double secondFreq =(top2 > 1) ?  twice_num_pair(top2): 0;
     double comboFreq = ((top1 + top2) > 1) ? twice_num_pair((top1 + top2)) : 0;
-    double normfac = twice_num_pair(ehhdata->nhaps);
+    
+    //double normfac = twice_num_pair(ehhdata->nhaps);
 
     ehhdata->curr_ehh12_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq - secondFreq + comboFreq;
     ehhdata->curr_ehh12d1_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq;
