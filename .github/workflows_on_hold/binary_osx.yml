@@ -2,10 +2,10 @@ name: C++ CI Test Binary (OSX)
 on:
   push:
     branches:
-      - speedup
+      - bug_low_mac
   pull_request:
     branches:
-      - speedup
+      - bug_low_mac
 
 jobs:
   build:

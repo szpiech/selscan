@@ -17,7 +17,7 @@ L_PATH = ../lib/linux                         # Directory containing GSL librari
 
 # Linking options
 #LINK_OPTS_SELSCAN = -pthread -lz              # Used for building 'selscan' (POSIX threads, zlib)
-LINK_OPTS_SELSCAN = -lpthread /usr/lib/libz.a
+LINK_OPTS_SELSCAN = -lpthread -lz 
 
 # dynamic linking options for GSL
 # LINK_OPTS_NORM = -L$(L_PATH) -lgsl -lgslcblas # Used for building 'norm' (GSL dynamic linking)

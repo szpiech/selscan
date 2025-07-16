@@ -2,10 +2,10 @@ name: C++ CI Test Binary (Linux)
 on:
   push:
     branches:
-      - speedup
+      - bug_low_mac
   pull_request:
     branches:
-      - speedup
+      - bug_low_mac
 
 jobs:
   build:
@@ -22,4 +22,6 @@ jobs:
       run: |
         ./selscan --help
         ./norm --help
+        ldd ./selscan 
+        ldd ./norm
 
