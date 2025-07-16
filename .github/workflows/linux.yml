@@ -25,8 +25,8 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           
     - name: Build selscan
-      working-directory: unused/static_makefiles/
-      run: make -f Makefile_linux -j
+      working-directory: src/
+      run: make -f ../unused/static_makefiles/Makefile_linux -j
 
     - name: Test selscan installation
       working-directory: src/
