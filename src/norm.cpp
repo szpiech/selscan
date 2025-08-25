@@ -75,10 +75,28 @@ const string ARG_LOG = "--log";
 const string DEFAULT_LOG = "logfile";
 const string HELP_LOG = "The log file name.";
 
+
+///////-------------
+const string ARG_LOG = "--gene-bed";
+const string DEFAULT_LOG = "__bedfile__";
+const string HELP_LOG = "Provide a BED file to get annotations for outlier windows.";
+
+const string ARG_FIXED_SNPS = "--fixed-snps";
+const int DEFAULT_FIXED_SNPS = 100;
+const std::string HELP_FIXED_SNPS = "Fix the number of SNPs per window/bin instead of\n\
+\tusing a fixed window size or quantile bins. The argument specifies the\n\
+\tnumber of SNPs per bin.";
+// each bin to represent roughly the same number of SNPs, not the same number of windows.
+
+//Equal number of windows per bin (by rank)
+//Each bin has approx fixed SNP count total
+//////--------------
+
 const string ARG_WINSIZE = "--winsize";
 const int DEFAULT_WINSIZE = 100000;
 const string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage\n\
 \tof extreme SNPs.";
+//Windows are grouped by rank, so bins always have equal numbers of windows, no matter how SNP counts vary.
 
 const string ARG_QBINS = "--qbins";
 const int DEFAULT_QBINS = 10;
@@ -616,6 +634,7 @@ void skipCols(ifstream &fin, int numCols)
     }
 }
 
+// analyze normed iHS files for outlying windows of fixed bp size
 void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
     cerr << "\nAnalyzing BP windows:\n\n";
@@ -857,6 +876,7 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
     return;
 }
 
+// Similar to analyzeIHSBPWindows but for XPEHH
 void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
     cerr << "\nAnalyzing BP windows:\n\n";
@@ -1203,6 +1223,11 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     return;
 }
 
+// IHH12 only has one score and one critical value
+// This function analyzes the BP windows for the IHH12 dataset
+// and produces a window file with the number of SNPs, fraction of SNPs
+// exceeding the critical value, the percentile of that fraction, and the max score
+// in the window
 void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
     cerr << "\nAnalyzing BP windows:\n\n";
@@ -1434,6 +1459,16 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
 }
 
 
+// Calculates mean and variance for each bin, then normalizes data in each bin
+// Also normalizes the full data array so that we can calculate quantiles later
+// freq[] is the derived allele frequency array
+// data[] is the raw iHS or XPEHH score array
+// nloci is the number of loci in the arrays
+// mean[] is an array of size numBins to hold the mean for each bin
+// variance[] is an array of size numBins to hold the variance for each bin
+// n[] is an array of size numBins to hold the number of loci in each bin
+// numBins is the number of frequency bins
+// threshold[] is an array of size numBins holding the upper boundary for each bin
 void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[])
 {
     //initialize
@@ -1556,6 +1591,8 @@ void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci
     return;
 }
 
+// Reads a file, calculates the normalized score, and
+// outputs the original row plus normed score
 void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool XPNSL)
 {
     ifstream fin;
@@ -1626,6 +1663,8 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
     return;
 }
 
+// Reads a file, calculates the normalized score, and
+// outputs the original row plus normed score
 void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
 {
     ifstream fin;
@@ -1684,7 +1723,9 @@ void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLo
     return;
 }
 
-//returns number of lines in file
+// returns number of lines in file
+// checks that each line has the expected number of columns
+// if not, throws an error
 int checkIHSfile(ifstream &fin)
 {
     string line;
@@ -1715,6 +1756,9 @@ int checkIHSfile(ifstream &fin)
     return nloci;
 }
 
+// reads in all IHS files, extracts the frequency and score columns
+// assumes 6 columns: SNP, pos, freq, ihh1, ihh2, ihs
+// if more columns are present, they are ignored
 void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
     ifstream fin;
