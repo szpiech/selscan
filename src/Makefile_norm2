@@ -29,15 +29,15 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 # Build all targets
-all: selscan norm
+all: selscan norm2
 
 # Build selscan binary
 selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o
 	$(CC) $(G++FLAG) -o selscan $^ $(LINK_OPTS_SELSCAN)
 
 # Build norm binary
-norm: norm.o param_t.o
-	$(CC) $(G++FLAG) -o norm $^ $(LINK_OPTS_NORM)
+norm2: norm2.o param_t.o
+	$(CC) $(G++FLAG) -o norm2 $^ $(LINK_OPTS_NORM)
 
 # Compilation rules
 selscan-main.o: selscan-main.cpp
@@ -52,7 +52,7 @@ selscan-cli.o: selscan-cli.cpp selscan-cli.h
 binom.o: binom.cpp binom.h
 	$(CC) $(G++FLAG) -c $<
 
-norm.o: norm.cpp
+norm2.o: norm2.cpp
 	$(CC) $(G++FLAG) -c $< $(I_PATH)
 
 param_t.o: param_t.cpp param_t.h
@@ -78,5 +78,5 @@ thread_pool.o: thread_pool.cpp thread_pool.h
 # Cleanup rules
 .PHONY: clean
 clean:
-	rm -rf *.o selscan norm
+	rm -rf *.o selscan norm2 norm
 # rm -rf outfile*

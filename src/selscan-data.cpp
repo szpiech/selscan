@@ -553,6 +553,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
     int skipcount = 0;
 
+    int physpos = -1;
     //int num_meta_data_lines = 0;
     while (getline(fin, line))  //Counts number of haps (cols) and number of loci (rows)
     {
@@ -560,6 +561,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             //num_meta_data_lines++;
             continue;
         }
+
         nloci_before_filtering++;
         current_ngts = countFields(line) - numMapCols;
 
@@ -571,10 +573,20 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         int number_of_1s = 0;
         int number_of_2s = 0;
 
+
+        bool skip_due_to_missing = false;
+        bool skip_due_to_duplicate_pos = false;
+
         for (int i = 0; i < numMapCols; i++) {
             ss >> junk;
             if(i==0){
                 chr = junk;
+            }else if(i == 1){
+                if(physpos == std::stoi(junk)){
+                    std::cerr<<"WARNING: VCF file appears to have duplicate entries for same genomic position. Keeping only first one. Pos: "<< physpos << "\n";
+                    skip_due_to_duplicate_pos = true;
+                }
+                physpos = std::stoi(junk);
             }
         }
         for (int field = 0; field < current_ngts; field++)
@@ -584,15 +596,27 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             separator = junk[1];
             allele2 = junk[2];
 
-            if(!p.MISSING_ALLOWED){
+            if(!p.MISSING_ALLOWED || !p.MULTI_ALLELIC){
                 if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
                 {
-                    HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
+                    if(!p.MULTI_ALLELIC){
+                        HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
+                    }else{
+                        std::cerr<<"WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos << "\n";
+                        skip_due_to_missing = true;
+                    }
+                        
                 }
             }
-
+            
             if(separator != '|' && !p.UNPHASED){
-               HANDLE_ERROR("Unphased entries detected (| is used). Make sure you run with --unphased flag for correct results.");
+                if(!p.MULTI_ALLELIC){
+                    HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
+                }else{
+                    if(!skip_due_to_missing)
+                        std::cerr<<"WARNING: Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results. Skipping.\n";
+                    skip_due_to_missing = true;
+                }
             }
 
             if(p.UNPHASED){
@@ -615,6 +639,32 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         int nalleles_per_loc = current_ngts*2;
         bool skip_due_to_maf = shouldSkipLocus(number_of_1s, number_of_2s, nalleles_per_loc);
         
+
+        bool skip_due_to_multiallelic = false;
+        if(p.MULTI_ALLELIC){
+
+            std::stringstream ss2(line);
+            std::string chrom, pos, id, ref, alt, rest;
+            if (!(ss2 >> chrom >> pos >> id >> ref >> alt)) {
+                std::cerr << "Malformed line: " << line << "\n";
+                continue;
+            }else{
+                // Skip multi-allelic sites
+                //if (alt.find(',') != std::string::npos) continue;
+                // Only keep SNPs: both REF and ALT are A/C/G/T
+                if ((ref != "A" && ref != "C" && ref != "G" && ref != "T") ||
+                    (alt != "A" && alt != "C" && alt != "G" && alt != "T")) {
+                // Keep only SNPs (both REF and ALT are single-nucleotide)
+                //if (ref.length() != 1 || alt.length() != 1) {
+                    std::cerr << "WARNING: Non-biallelic or non-SNP site skipped at pos: " << pos <<" " << ref << " " << alt << "\n";
+                    skip_due_to_multiallelic = true;
+                }
+                
+
+            }
+        }
+        
+
         // bool skipreason2 = false;
         // if(p.MULTI_CHR){ 
         //     if(chr_set.empty()){
@@ -625,7 +675,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         // }
 
         if(!p.CALC_XP &&  !p.CALC_XPNSL){
-            if ( skip_due_to_maf ) {
+            if ( skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
                 skiplist.push(nloci_before_filtering-1);
                 skipcount++;
             } 

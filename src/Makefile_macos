@@ -31,9 +31,12 @@ OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 # Build all targets
 all: selscan norm
 
+#norm
+
 # Build selscan binary
 selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o
-	$(CC) $(G++FLAG) -o selscan $^ $(LINK_OPTS_SELSCAN)
+	$(CC) $(G++FLAG) -o selscan $^ $(LINK_OPTS_SELSCAN) 
+# $(LINK_OPTS_NORM)
 
 # Build norm binary
 norm: norm.o param_t.o

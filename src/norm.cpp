@@ -168,7 +168,8 @@ bool isint(string str);
 
 ofstream flog;
 
-int main(int argc, char *argv[])
+//int main(int argc, char *argv[])
+int runToolNorm(int argc, char *argv[])
 {
     cerr << "norm v" + VERSION + "\n";
     param_t params;
@@ -1888,4 +1889,10 @@ bool isint(string str)
     }
 
     return 1;
+}
+
+
+
+int main(int argc, char *argv[]){
+    return runToolNorm(argc, argv);
 }

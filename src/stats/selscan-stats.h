@@ -242,12 +242,15 @@ class SelscanStats {
             double distance;
             if(downstream){
                 if(currentLocus+1> hm->hapData->nloci-1){
+                    cout<<"currentLocus: "<<currentLocus<< " " << currentLocus+1 << " " << hm->hapData->nloci-1 << "\n";
                     HANDLE_ERROR("invalid locus");
                 }
                 //distance =   double(hm->mapData->mapEntries[currentLocus+1].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
                 distance =   (hm->mapData->mapEntries[prevLocus].physicalPos - hm->mapData->mapEntries[currentLocus].physicalPos);
             }else{
                 if(currentLocus-1<0){
+                    cout<<"currentLocus: "<<currentLocus<< " " << currentLocus+1 << " " << hm->hapData->nloci-1 << "\n";
+
                     HANDLE_ERROR("invalid locus");
                 }
                 //distance =  double(hm->mapData->mapEntries[currentLocus].physicalPos - hm->mapData->mapEntries[currentLocus-1].physicalPos);
@@ -260,6 +263,7 @@ class SelscanStats {
                 // cout<<"Distance: "<<distance<<" "<<currentLocus<<" "<<downstream<<"\n";
                 // std::cerr << "ERROR: physical position not in ascending order.\n"; 
                 // throw 0;
+                cout<<"Distance: "<<distance<<" "<<currentLocus<<" " << prevLocus<<" " <<downstream<<"\n";
                 HANDLE_ERROR("physical position not in ascending order.");
                 // "<<"distance: "<<distance<<" locus: "<<currentLocus <<" "<<" downstream: "<<downstream);
             }

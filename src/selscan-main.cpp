@@ -49,6 +49,8 @@
 #include <ctime>
 #include <cmath>
 
+// #include <norm.cpp>
+
 using namespace std;
 
 
@@ -212,7 +214,7 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     }
 }
 
-int main(int argc, char *argv[])
+int runToolSelscan(int argc, char *argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
     double time_start = (clock() / (double)CLOCKS_PER_SEC);
@@ -309,4 +311,25 @@ int main(int argc, char *argv[])
     //     pthread_win32_process_detach_np();
     // #endif
     return 0;
+}
+
+
+// ------------------- Main Dispatcher -------------------
+int main(int argc, char* argv[]) {
+    return runToolSelscan(argc, argv);
+    // if (argc < 2) {
+    //     // No subcommand, run original ToolA with no arguments
+    //     return runToolSelscan(0, nullptr);
+    // }
+
+    // std::string firstArg = argv[1];
+    // if (firstArg == "norm") {
+    //     // Pass remaining arguments to subcommand B
+    //     int subArgc = argc - 2;
+    //     char** subArgv = argv + 2;
+    //     return runToolNorm(subArgc, subArgv);
+    // } else {
+    //     // No subcommand, treat all arguments as ToolA arguments
+    //     return runToolSelscan(argc - 1, argv + 1);
+    // }
 }

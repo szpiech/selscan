@@ -33,7 +33,7 @@
 
 using namespace std;
 
-const string VERSION = "1.4.0";
+const string VERSION = "2.0.0";
 
 const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
 Source code and binaries can be found at\n\
@@ -459,9 +459,6 @@ static void processXPEHHorSOFT(const Config& c,
 }
 
 
-
-
-
 struct Stats {
     long long n;   // sample size
     double mean;   // mean
@@ -760,6 +757,8 @@ int main(int argc, char* argv[]) {
 }
 
 
+// if any part of gene overlaps a window, mark that window as overlapping the gene
+// if a window overlaps multiple genes, list all genes in the annotation (comma-separated?), 
 /**
  * Regresses score ~ intercept + log(length) using GSL
  * and returns residuals (length-corrected scores).

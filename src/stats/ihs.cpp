@@ -362,7 +362,7 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         if(prev_ehh[0] > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS) ){ // bug fix for low MAC
             curr_ehh_before_norm[0] = ehh0_before_norm;
             if( normalizer[0]!=0 ){ 
-                iHH[0] += ((curr_ehh_before_norm[0]/ normalizer[0])* 0.5 + (prev_ehh[0]) * 0.5 ) * distance;
+                iHH[0] += (curr_ehh_before_norm[0]/ normalizer[0] + prev_ehh[0]) * 0.5 * distance;
                 prev_ehh[0] = curr_ehh_before_norm[0] / normalizer[0];
             }else{
                 iHH[0] += prev_ehh[0] * 0.5  * distance;
@@ -374,7 +374,7 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         if(prev_ehh[2] > p.EHH_CUTOFF || (p.CALC_NSL && !p.CALC_IHS)){  // bug fix for low MAC
             curr_ehh_before_norm[2] = ehh2_before_norm;
             if( normalizer[2]!=0){
-                iHH[2] += (curr_ehh_before_norm[2] / normalizer[2]) * 0.5 + (prev_ehh[2]*0.5) * distance;
+                iHH[2] += (curr_ehh_before_norm[2] / normalizer[2] + prev_ehh[2]) * 0.5 * distance;
                 prev_ehh[2] = curr_ehh_before_norm[2]  / normalizer[2];
             }else{
                 iHH[2] += prev_ehh[2] * 0.5  * distance;
@@ -386,7 +386,7 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         if(true){  //this is how it's in selscan, does not depend on cutoff
             curr_cehh_before_norm[0] = cehh0_before_norm;
             if(normalizer_not[0]!=0){
-                ciHH[0] += ((curr_cehh_before_norm[0] / normalizer_not[0])  + (prev_cehh[0])) * 0.5 * distance ;
+                ciHH[0] += (curr_cehh_before_norm[0] / normalizer_not[0]  + prev_cehh[0]) * 0.5 * distance ;
                 prev_cehh[0] = curr_cehh_before_norm[0] /  normalizer_not[0];
             }else{
                 ciHH[0] +=  prev_cehh[0] * 0.5 * distance ;
@@ -395,7 +395,7 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
 
             curr_cehh_before_norm[2] = cehh2_before_norm;
             if(normalizer_not[2]!=0){
-                ciHH[2] += ((curr_cehh_before_norm[2] / normalizer_not[2])*0.5  + (prev_cehh[2]) *0.5) * distance ;
+                ciHH[2] += (curr_cehh_before_norm[2] / normalizer_not[2] + prev_cehh[2]) * 0.5 * distance ;
                 prev_cehh[2] = curr_cehh_before_norm[2] / normalizer_not[2];
             }else{
                 ciHH[2] +=  prev_cehh[2] * 0.5 * distance ;

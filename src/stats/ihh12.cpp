@@ -159,16 +159,60 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
     ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 
     int i = locus;
-    int prev_index = locus; 
+    int prev_index = locus; // for multi-MAF
+    int skipped_due_to_multimaf = 0; // for multi-MAF
+
     while(true){
-        // int queryPad = p.QWIN; // only for query locu
-        // if(physicalDistance_from_core(i, locus, downstream) > queryPad){
+
+        bool edgeBreak = false;
+        edgeBreak = (downstream)? (i-1 < 0) : (i+1 >= numSnps);
+
+        if(edgeBreak) {
+            {std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
+                    << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
+            if (!p.TRUNC){
+                (*flog) << "Skipping calculation.";
+            }
+            (*flog) << endl;
+            }//unlock
+            if (!p.TRUNC){
+                return skipLocusDouble();
+            }
+            break;
+        }
+
+        i = (downstream)? i-1 : i+1; // update i 
+
+        if(p.MULTI_MAF){
+            if(hm->hapData->get_maf(i) < p.MAF){
+                skipped_due_to_multimaf++;
+                continue;
+            }
+        }
+
+        // if(physicalDistance(i, locus, downstream) >= max_extend){ //check if currentLocus is beyond 1Mb
         //     break;
         // }
 
-        if(physicalDistance(i, locus, downstream) >= max_extend){ //check if currentLocus is beyond 1Mb
-            break;
+
+
+
+        double distance =  geneticDistance(i, prev_index, downstream);
+        double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, prev_index, downstream) );
+        if (scale > 1) scale = 1;
+        distance *= scale;
+        if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
+        {
+            {
+                std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: Reached a gap of " << physicalDistance(i, prev_index, downstream)
+                        << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }
+            return skipLocusDouble();
         }
+        prev_index = i;  // save last index that was not skipped
+
 
         double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
         if(breaking_ehh <= p.EHH_CUTOFF){
@@ -181,60 +225,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
              */
             break;
         }
-
-        bool breakReachedEdge = false;
-        breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
-        if(breakReachedEdge){ //nextLocus < 0 || nextLocus >= numSnps to avoid going to negative
-            {std::lock_guard<std::mutex> lock(mutex_log);
-            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
-            }//unlock
-
-            if (p.TRUNC == false){
-                {std::lock_guard<std::mutex> lock(mutex_log);
-                (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[i].physicalPos << " id: " << hm->mapData->mapEntries[i].locusName <<endl;
-                }//unlock
-                return skipLocusDouble();
-            }
-            break;
-        }
-
-        //at this point we ensured that nextLocus (i-1 or i+1) is within bounds
-        i = downstream? i-1 : i+1; //proceed to next locus
-        int physicalDistance_old = physicalDistance(i, prev_index, downstream); //double check if i or nextlocus
-        
-        if (physicalDistance_old > p.MAX_GAP)
-        {
-            {std::lock_guard<std::mutex> lock(mutex_log);
-            (*flog) << "WARNING: Reached a gap of " << physicalDistance_old << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " <<  hm->mapData->mapEntries[i].physicalPos << " id: " <<  hm->mapData->mapEntries[i].locusName << "\n";
-            }//unlock
-            return skipLocusDouble();
-            break;
-        }
-
-        // why?
-        // double scale, distance;
-        // if(p.CALC_XPNSL || p.CALC_SOFT){
-        //     scale = double(p.SCALE_PARAMETER) / geneticDistance(i, downstream);
-        //     distance = geneticDistance(i, downstream);
-        // }else{
-        //     scale = double(p.SCALE_PARAMETER) / physicalDistance(i, downstream);
-        //     distance = physicalDistance(i, downstream);
-        // }
-        // if(distance > p.SCALE_PARAMETER){
-        //     distance /= p.SCALE_PARAMETER;
-        // }
-        // if(scale > 1) scale = 1;
-
-        double scale, distance;
-        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, prev_index, downstream);
-        distance = geneticDistance(i, prev_index, downstream);        
-        if(distance > p.SCALE_PARAMETER){
-            distance /= p.SCALE_PARAMETER;
-        }
-        if(scale > 1) scale = 1;
-
-        prev_index = i; //store previous index for next iteration
-
 
         // if(distance> max_gap){
         //     gap_skip = true;
@@ -273,6 +263,7 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
         ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 
+        if(ehhdata.totgc == hm->hapData->nhaps) break;
         if (physicalDistance(i, locus, downstream) >= max_extend) break;
         
     }
