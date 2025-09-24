@@ -1,3 +1,8 @@
+src/*.o
+src/selscan
+src/norm
+src/outfile.ihs.out
+src/outfile.ihs.log
 *.o
 *~
 *.log
