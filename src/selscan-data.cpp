@@ -527,14 +527,24 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         if (p.CALC_XP || p.CALC_XPNSL) 
             skip_due_to_maf = 0;
 
-        if(!skip_due_to_maf && !skip_due_to_multiallelic && !skip_due_to_missing && skip_due_to_duplicate_pos == 1){ // also remove first instance of duplicate position
-            skiplist.push(physpos_first_duplicated_id);
-            skipcount++;
+        // if(!skip_due_to_maf && !skip_due_to_multiallelic && !skip_due_to_missing && skip_due_to_duplicate_pos == 1){ // also remove first instance of duplicate position
+        //     skiplist.push(physpos_first_duplicated_id);
+        //     skipcount++;
+        // }
+        if(skip_due_to_duplicate_pos == 1){ // it means that this is the second instance of duplicate position
+            //ensure it was not already addeed to skiplist
+            if( skiplist.back() != nloci_before_filtering-2){                
+                if(physpos_first_duplicated_id != nloci_before_filtering-2){
+                    HANDLE_ERROR("Logic error in duplicate position handling.");
+                }
+                skiplist.push(nloci_before_filtering-2);
+                skipcount++;
+            }
         }
 
         if (skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
-            skiplist.push(nloci_before_filtering-1);
-            skipcount++;
+                skiplist.push(nloci_before_filtering-1);
+                skipcount++;
         } 
 
 
