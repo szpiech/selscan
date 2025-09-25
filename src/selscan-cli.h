@@ -279,6 +279,12 @@ const string ARG_KEEP = "--keep-low-freq";
 const bool DEFAULT_KEEP = false;
 const string HELP_KEEP = "Include low frequency variants in the construction of your haplotypes.";
 
+
+const string ARG_MULTIALLELIC = "--filter-vcf";
+const bool DEFAULT_MULTIALLELIC = false;
+const string HELP_MULTIALLELIC = "Allows filtering of VCF files to remove non-biallelic sites and sites with missing data.";
+
+
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;
 const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before reaching the cutoff,\n\

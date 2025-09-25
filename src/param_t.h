@@ -69,7 +69,7 @@ struct param_main{
     bool MULTI_MAF = false;
     bool MULTI_PARAMS = false;
 
-    bool MULTI_ALLELIC = true;
+    bool MULTI_ALLELIC = false;
 
     bool CALC_EHHS = false;
     string EHHS_RANGES;
