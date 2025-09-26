@@ -438,7 +438,9 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             ss >> junk;
             if(i==0){
                 chr = junk;
-            }else if(i == 1){
+            } 
+            
+            if(i == 1){
                 if(physpos == std::stoi(junk)){
                     std::cerr<<"WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos<<"\n";
                     skip_due_to_duplicate_pos += 1;
@@ -531,9 +533,10 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         //     skiplist.push(physpos_first_duplicated_id);
         //     skipcount++;
         // }
+
         if(skip_due_to_duplicate_pos == 1){ // it means that this is the second instance of duplicate position
-            //ensure it was not already addeed to skiplist
-            if( skiplist.back() != nloci_before_filtering-2){                
+            //ensure it was not already addeed to skiplist for some other reason
+            if( skiplist.empty() || skiplist.back() != physpos_first_duplicated_id){                
                 if(physpos_first_duplicated_id != nloci_before_filtering-2){
                     HANDLE_ERROR("Logic error in duplicate position handling.");
                 }
