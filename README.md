@@ -238,7 +238,15 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
+26SEP2025 - selscan v2.1.1 - Bug fixes for the fast and memory-efficient version introduced in v2.1:
 
+    - Refined cutoff handling for edge cases, improving correlation with v2.0 outputs.
+    - Corrected reporting of sites with low minor allele counts (avoids zero-area and infinite nSL/iHS).
+    - Fixed nSL distance cutoff in multi-parameter mode.
+    - XP-EHH now uses genetic distance from map files instead of defaulting to physical distance.
+    - Binaries updated for compatibility with older GLIBC.
+    - Improvements in manual: added a section describing norm usage.
+	
 09APR2025 - selscan v2.1.0 - Introducing fast and memory-efficient versions for all statistics. See Rahman, et al. (2025) Biorxiv for details. 
 
 	There is a new batch option for efficient processing of multiple statistics or parameters at once. See the manual for full details.
