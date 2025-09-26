@@ -10,4 +10,4 @@ test.*
 sample.*
 .DS_Store
 .vscode/
-.unused/
+unused/
