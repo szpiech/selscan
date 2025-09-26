@@ -87,18 +87,6 @@ class IHS: public SelscanStats{
             return ranges;
         }
 
-        void create_directories(const std::string& path) {
-            std::istringstream iss(path);
-            std::string token;
-            std::string current_path;
-
-            while (std::getline(iss, token, '/')) {
-                current_path += token + "/";
-                mkdir(current_path.c_str(), 0755);  // ignores errors if exists
-            }
-            
-        }
-
         std::string basename(const std::string& path) {
             size_t pos = path.find_last_of("/\\");
             if (pos == std::string::npos) return path;
