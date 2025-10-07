@@ -97,6 +97,11 @@ public:
 
     bool parseCommandLine(int argc, char *argv[]);
 
+
+
+    bool flagWasSet(const std::string &flag);
+
+    
     bool getBoolFlag(string flag);
     double getDoubleFlag(string flag);
     int getIntFlag(string flag);
@@ -132,7 +137,6 @@ private:
     bool goodChar(string str);
 
     bool flagExists(string flag);
-
     string preamble;
 };
 

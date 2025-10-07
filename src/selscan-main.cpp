@@ -49,7 +49,7 @@
 #include <ctime>
 #include <cmath>
 
-// #include <norm.cpp>
+#include "norm.h"
 
 using namespace std;
 
@@ -316,20 +316,20 @@ int runToolSelscan(int argc, char *argv[])
 
 // ------------------- Main Dispatcher -------------------
 int main(int argc, char* argv[]) {
-    return runToolSelscan(argc, argv);
-    // if (argc < 2) {
-    //     // No subcommand, run original ToolA with no arguments
-    //     return runToolSelscan(0, nullptr);
-    // }
+    //return runToolSelscan(argc, argv);
+    if (argc < 2) {
+        // No subcommand, run original selscan with no arguments
+        return runToolSelscan(0, nullptr);
+    }
 
-    // std::string firstArg = argv[1];
-    // if (firstArg == "norm") {
-    //     // Pass remaining arguments to subcommand B
-    //     int subArgc = argc - 2;
-    //     char** subArgv = argv + 2;
-    //     return runToolNorm(subArgc, subArgv);
-    // } else {
-    //     // No subcommand, treat all arguments as ToolA arguments
-    //     return runToolSelscan(argc - 1, argv + 1);
-    // }
+    std::string firstArg = argv[1];
+    if (firstArg == "norm") {
+        int subArgc = argc - 1;
+        char** subArgv = argv + 1;
+        SelscanNorm snorm;
+        int exitval = snorm.runToolNorm(subArgc, subArgv);
+        return exitval;
+    } else {
+        return runToolSelscan(argc, argv);
+    }
 }

@@ -463,3 +463,8 @@ void param_t::setPreamble(string str)
     preamble = str;
     return;
 }
+
+
+bool param_t::flagWasSet(const std::string &flag) {
+    return isSet.count(flag) > 0 && isSet[flag];
+}
