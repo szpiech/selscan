@@ -307,7 +307,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
             getMeanVarBinsFromLog(params.getStringFlag(ARG_LOG_INPUT),
                                        freq, score, totalLoci,
-                                       mean, variance,  n, numBins, threshold);
+                                       mean, variance,  n, numBins, threshold, (XPNSL|| XPEHH|| SOFT));
         }else{
             getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold);
 
@@ -408,7 +408,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
             getMeanVarBinsFromLog(params.getStringFlag(ARG_LOG_INPUT),
                                        freq1, score, totalLoci,
-                                       mean, variance,  n, numBins, threshold);
+                                       mean, variance,  n, numBins, threshold, (XPNSL|| XPEHH|| SOFT));
         }else{
             getMeanVarBins(freq1, score, totalLoci, mean, variance, n, numBins, threshold);
         }
@@ -1277,7 +1277,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
-        fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc\ttop_score\tbottom_score\n";  
+        fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc_top\tperc_bottom\ttop_score\tbottom_score\n";  
         cerr << "Creating window file " << winfilename[i] << endl; 
         flog << "Creating window file " << winfilename[i] << endl;
 
@@ -1695,7 +1695,7 @@ void SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double
 void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
                                        double freq[], double data[], int nloci,
                                        double mean[], double variance[], int n[],
-                                       int numBins, double threshold[])
+                                       int numBins, double threshold[], bool XPORSOFT)
 {
     // 1. Initialize arrays
     for (int b = 0; b < numBins; b++) {
@@ -1716,37 +1716,75 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
 
     // 3. Read until we find the header that starts with "bin"
     while (std::getline(in, line)) {
-        if (line.rfind("bin", 0) == 0) {  // starts with "bin"
-            headerFound = true;
-            break;
-        }
+            if(!XPORSOFT){
+                if (line.rfind("bin\tnum\mean\variance", 0) == 0) {  // starts with "bin"
+                    headerFound = true;
+                    break;
+                }
+            }else{
+                if (line.rfind("num\tmean\tvariance", 0) == 0) {  // starts with "num"
+                    headerFound = true;
+                    break;
+                }
+            }
+        
     }
 
     if (!headerFound) {
-        std::cerr << "Error: no header starting with 'bin' found in " << binFile << "\n";
-        exit(1);
+        if(XPORSOFT){
+            std::cerr << "Error: no header starting with 'num\tmean\tvariance' found in " << binFile << "\n";
+            exit(1);
+            
+        }else{
+            std::cerr << "Error: no header starting with 'bin\tnum\tmean\tvariance' found in " << binFile << "\n";
+            exit(1);
+        }
     }
 
     // 4. Read the rest of the file (bin rows)
-    while (std::getline(in, line)) {
-        if (line.empty()) continue;
+    if(!XPORSOFT){
+        while (std::getline(in, line)) {
+            if (line.empty()) continue;
 
-        std::istringstream iss(line);
-        double bin;
-        int num;
-        double m, v;
-        if (!(iss >> bin >> num >> m >> v)) continue;
+            std::istringstream iss(line);
+            double bin;
+            int num;
+            double m, v;
+            if (!(iss >> bin >> num >> m >> v)) continue;
 
-        // Find the right bin slot by threshold match
-        for (int b = 0; b < numBins; b++) {
-            if (std::abs(bin - threshold[b]) < 1e-6) {
+            // Find the right bin slot by threshold match
+            for (int b = 0; b < numBins; b++) {
+                if (std::abs(bin - threshold[b]) < 1e-6) {
+                    n[b] = num;
+                    mean[b] = m;
+                    variance[b] = v;
+                    break;
+                }
+            }
+        }
+    }else{
+        if(numBins != 1){
+            std::cerr << "Error: XP-EHH or XP-nSL or iHH12 log file should contain stats for exactly one bin.\n";
+            exit(1);
+        }
+        int b = 0;
+        while (std::getline(in, line)) {
+            if (line.empty()) continue;
+
+            std::istringstream iss(line);
+            int num;
+            double m, v;
+            if (!(iss >> num >> m >> v)) continue;
+
+            if (b < numBins) {
                 n[b] = num;
                 mean[b] = m;
                 variance[b] = v;
-                break;
+                b++;
             }
         }
     }
+    
     in.close();
 
     // 5. Normalize the data using the precomputed stats
@@ -2199,7 +2237,7 @@ std::vector<double> SelscanNorm::regress_out_length(
     std::vector<size_t> valid_idx;
     valid_idx.reserve(n);
     for (size_t i = 0; i < n; i++) {
-        if (scores[i] != -1.0) {
+        if (abs(scores[i]) != MISSING_SCORE) {
             valid_idx.push_back(i);
         }
     }

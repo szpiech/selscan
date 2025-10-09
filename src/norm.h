@@ -227,6 +227,8 @@ class SelscanNorm{
     // const string HELP_NO_HEADER = "If set, will not include header in output files.";
 
     const int MISSING = -9999;
+    const int MISSING_SCORE = 99999;
+
     bool FINE_PERCENTILE = false;
     string GENE_BED = "";
 
@@ -271,7 +273,7 @@ class SelscanNorm{
     void getMeanVarBinsFromLog(const std::string &binFile,
                                        double freq[], double data[], int nloci,
                                        double mean[], double variance[], int n[],
-                                       int numBins, double threshold[]);
+                                       int numBins, double threshold[], bool XPORSOFT);
     
         
     double mean(const std::vector<double> &v) {
@@ -398,6 +400,8 @@ class SelscanNorm{
 
 
     void annotateWindows(std::string geneBedFile, std::string windowFile, bool XP){
+        
+
         std::ifstream geneFile(geneBedFile);
         std::ifstream winFile(windowFile);
 
@@ -456,9 +460,9 @@ class SelscanNorm{
                 //cout<<"Read window: "<< w.start << "-" << w.end << " nSNPs: "<< w.nSNPs << " frac_max: "<< w.frac_max << " perc: "<< w.perc << " score: "<< score_str << "\n";
             }
             
-            w.score_max = (score_str == "NA") ? -1 : std::stod(score_str);
+            w.score_max = (score_str == "NA") ? -MISSING_SCORE : std::stod(score_str);
             if(XP){
-                w.score_min = (score_str_bottom == "NA") ? -1 : std::stod(score_str_bottom);
+                w.score_min = (score_str_bottom == "NA") ? MISSING_SCORE : std::stod(score_str_bottom);
             }
 
             w.overlap_genes = "";
@@ -534,7 +538,7 @@ class SelscanNorm{
                 // double varScore  = 0; // for n = 1
                 // if (n > 1) varScore = std::sqrt(gsl_stats_variance(data, 1, n)/n); 
                 //genetable << gene << "\t" << meanScore << "\t" << varScore << "\t" << n << "\t" << maxScore << "\t" << geneScoresMax[i] << "\t" <<"\n";
-                genetable << gene << "\t" << len << "\t" << n << "\t" << maxScore << "\t" << geneScoresMax[i] << "\t" <<"\n";
+                if(abs(maxScore)!=MISSING_SCORE) genetable << gene << "\t" << len << "\t" << n << "\t" << maxScore << "\t" << geneScoresMax[i] << "\t" <<"\n";
                 i++;
             }
             genetable.close();
