@@ -60,7 +60,7 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
 
-    params.addFlag(ARG_MULTIALLELIC, DEFAULT_MULTIALLELIC, "", HELP_MULTIALLELIC);
+    params.addFlag(ARG_MULTIALLELIC, DEFAULT_MULTIALLELIC, "SILENT", HELP_MULTIALLELIC);
 
 
     // params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
@@ -91,8 +91,8 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
 
 
 
-
-void validate_ranges(const std::string& range_str) {
+/*
+void validate_ranges_ehhs(const std::string& range_str) { // to allow for ranges in ehh
     //std::vector<std::pair<int, int>> ranges;
     std::stringstream ss(range_str);
     std::string token;
@@ -132,6 +132,28 @@ void validate_ranges(const std::string& range_str) {
     }
 
     //return ranges;
+}
+    */
+
+void validate_positions_ehhs(const std::string& pos_str) {
+    std::stringstream ss(pos_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        // Ensure token is strictly digits (no dash, no dot, no sign)
+        if (token.empty() || !std::all_of(token.begin(), token.end(), ::isdigit)) {
+            HANDLE_ERROR_NOLOG("Invalid position format for --ehhs flag: " + token);
+        }
+
+        try {
+            int pos = std::stoi(token);
+            (void)pos; // unused, just validation
+        } catch (const std::invalid_argument&) {
+            HANDLE_ERROR_NOLOG("Invalid number in position for --ehhs flag: " + token);
+        } catch (const std::out_of_range&) {
+            HANDLE_ERROR_NOLOG("Number out of range in position for --ehhs flag: " + token);
+        }
+    }
 }
 
 // bool validateEhhRanges(const std::string& input, std::vector<std::pair<int, int>>& parsed_ranges) {
@@ -264,8 +286,12 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
 
     p.EHHS_RANGES = params.getStringFlag(ARG_EHHS);
     if (p.EHHS_RANGES.compare(DEFAULT_EHHS) != 0) {
-        validate_ranges(p.EHHS_RANGES); // error will be thrown if ranges are invalid
+        validate_positions_ehhs(p.EHHS_RANGES); // error will be thrown if ranges are invalid
         p.CALC_EHHS = true;
+    }
+    if(p.CALC_EHHS && !(p.CALC_IHS || p.CALC_NSL)){
+       p.CALC_IHS = true; // if ehhs is requested, also calculate ihs
+       cerr << "WARNING: In current implementation, --ehhs flag also triggers computation of iHS.\n";
     }
 
     p.MULTI_ALLELIC = params.getBoolFlag(ARG_MULTIALLELIC);
@@ -336,7 +362,7 @@ void checkParameters(param_main &p){
     //     return 1;
     // }
 
-        if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12 < 1)
+        if (p.CALC_XPNSL + p.CALC_IHS + p.CALC_XP + p.SINGLE_EHH + p.CALC_PI + p.CALC_NSL + p.CALC_SOFT + p.SINGLE_EHH12 + p.CALC_EHHS < 1)
     {
         // cerr << "ERROR: Must specify one of \n\tEHH (" << ARG_EHH
         //      << ")\n\tiHS (" << ARG_IHS

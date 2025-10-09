@@ -1,4 +1,5 @@
 #include "norm.h"
+#include <deque>
 
 // #include <gsl/gsl_statistics_double.h>
 // #include <gsl/gsl_interp.h>
@@ -7,7 +8,9 @@
 //int main(int argc, char *argv[])
 int SelscanNorm::runToolNorm(int argc, char *argv[])
 {
-    cerr << "norm v" + VERSION + "\n";
+    cerr << "selscan v" + VERSION + "\n";
+    cerr << "Subcommand: norm\n";
+    cerr << "================\n";
     param_t params;
     params.setPreamble(PREAMBLE);
     params.addFlag(ARG_FREQ_BINS, DEFAULT_FREQ_BINS, "", HELP_FREQ_BINS);
@@ -16,8 +19,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     params.addFlag(ARG_WINSIZE, DEFAULT_WINSIZE, "", HELP_WINSIZE);
     params.addFlag(ARG_QBINS, DEFAULT_QBINS, "", HELP_QBINS);
     params.addFlag(ARG_MINSNPS, DEFAULT_MINSNPS, "", HELP_MINSNPS);
-    params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "SILENT", HELP_SNPWIN);
-    params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "SILENT", HELP_SNPWINSIZE);
+    // params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "SILENT", HELP_SNPWIN);
+    // params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "SILENT", HELP_SNPWINSIZE);
     params.addFlag(ARG_BPWIN, DEFAULT_BPWIN, "", HELP_BPWIN);
     params.addFlag(ARG_FIRST, DEFAULT_FIRST, "", HELP_FIRST);
     params.addFlag(ARG_CRIT_NUM, DEFAULT_CRIT_NUM, "", HELP_CRIT_NUM);
@@ -27,13 +30,15 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     params.addFlag(ARG_SOFT, DEFAULT_SOFT, "", HELP_SOFT);
     params.addFlag(ARG_XPEHH, DEFAULT_XPEHH, "", HELP_XPEHH);
     params.addFlag(ARG_XPNSL, DEFAULT_XPNSL, "", HELP_XPNSL);
-    params.addFlag(ARG_LOG_INPUT, DEFAULT_LOG_INPUT, "", HELP_LOG_INPUT); //added in v3
-    params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED); //added in v3
-    params.addFlag(ARG_FINE_PERCENTILE, DEFAULT_FINE_PERCENTILE, "", HELP_FINE_PERCENTILE); //added in v3
-    
-    // params.addFlag(ARG_LOG_INPUT, DEFAULT_LOG_INPUT, "", HELP_LOG_INPUT);
-    // params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED);
 
+
+    params.addFlag(ARG_LOG_INPUT, DEFAULT_LOG_INPUT, "", HELP_LOG_INPUT); //added in v3
+    params.addFlag(ARG_FINE_PERCENTILE, DEFAULT_FINE_PERCENTILE, "", HELP_FINE_PERCENTILE); //added in v3
+    params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED); //added in v3
+    params.addFlag(ARG_WIN_FILE, DEFAULT_WIN_FILE, "", HELP_WIN_FILE); //added in v3
+    params.addFlag(ARG_GENE_SETA, DEFAULT_GENE_SETA, "", HELP_GENE_SETA); //added in v3
+    params.addFlag(ARG_GENE_SETB, DEFAULT_GENE_SETB, "", HELP_GENE_SETB); //added in v3
+    // params.addFlag(ARG_NO_HEADER, DEFAULT_NO_HEADER, "", HELP_NO_HEADER); //added in v3
 
     try
     {
@@ -52,34 +57,85 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     string infoOutfile = params.getStringFlag(ARG_LOG);
     int numQBins = params.getIntFlag(ARG_QBINS);
     int minSNPs = params.getIntFlag(ARG_MINSNPS);
-    int snpWinSize = params.getIntFlag(ARG_SNPWINSIZE);
+    // int snpWinSize = params.getIntFlag(ARG_SNPWINSIZE);
+        // bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
     bool BPWIN = params.getBoolFlag(ARG_BPWIN);
-    bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
+
     bool FIRST = params.getBoolFlag(ARG_FIRST);
     double critNum = params.getDoubleFlag(ARG_CRIT_NUM);
     double critPercent = params.getDoubleFlag(ARG_CRIT_PERCENT);
+    
     bool IHS = params.getBoolFlag(ARG_IHS);
     bool NSL = params.getBoolFlag(ARG_NSL);
     bool SOFT = params.getBoolFlag(ARG_SOFT);
     bool XPEHH = params.getBoolFlag(ARG_XPEHH);
     bool XPNSL = params.getBoolFlag(ARG_XPNSL);
-    this->FINE_PERCENTILE = params.getBoolFlag(ARG_FINE_PERCENTILE);
 
+    this->FINE_PERCENTILE = params.getBoolFlag(ARG_FINE_PERCENTILE);
+    this->GENE_BED = params.getStringFlag(ARG_BED);
+    this->USE_GENE_BED = params.flagWasSet(ARG_BED);
+
+
+    // read window file
+    string windowFile = params.getStringFlag(ARG_WIN_FILE);
+    string geneBedFile = params.getStringFlag(ARG_BED);
+    bool ANNOTATE_WINDOWS = params.flagWasSet(ARG_WIN_FILE);// && params.flagWasSet(ARG_BED);
+    string geneSetA = params.getStringFlag(ARG_GENE_SETA);
+    string geneSetB = params.getStringFlag(ARG_GENE_SETB);
+    bool PERMUTE_TEST = params.flagWasSet(ARG_GENE_SETA) && params.flagWasSet(ARG_GENE_SETB);
+    
+
+    if(ANNOTATE_WINDOWS){
+        if(IHS + XPEHH + NSL + SOFT + XPNSL != 1){
+            cerr << "ERROR: Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
+            return 1;
+        }
+        
+        if(!this->USE_GENE_BED){
+            cerr << "ERROR: --gene-bed must be provided with --annotate-win to annotate windows.\n";
+            return 1;
+        }
+        if(geneBedFile == DEFAULT_BED || windowFile == DEFAULT_WIN_FILE){
+            cerr << "ERROR: --gene-bed and --annotate-win must be provided to annotate windows.\n";
+            return 1;
+        }
+        cerr << "Annotating windows in " << windowFile << " with genes from " << geneBedFile << "\n";
+        // string statName;
+        // if(IHS) statName = "ihs";
+        // if(NSL) statName = "nsl";
+        // if(XPEHH) statName = "xpehh";
+        // if(XPNSL) statName = "xpnsl";
+        // if(SOFT) statName = "ihh12";
+
+        bool XP = (XPEHH || XPNSL);
+        annotateWindows(geneBedFile, windowFile, XP);
+        return 0;
+    }
+
+    if(PERMUTE_TEST){
+        if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
+            cerr << "ERROR: --gene-target and --gene-background must be provided to run permutation test.\n";
+            return 1;
+        }
+        cerr << "Running permutation test with target genes from " << geneSetA << " and background genes from " << geneSetB << "\n";
+        perm_test(geneSetA, geneSetB);
+        return 0;
+    }
 
     if(params.flagWasSet(ARG_FREQ_BINS) && params.flagWasSet(ARG_LOG_INPUT)){
-        cerr << "ERROR: Options --log-input and --freq-bins cannot be used together. "
+        cerr << "ERROR: Options --log-input and --bins cannot be used together. "
          << "--log-input already provides frequency bin information.\n";
         exit(1);
     }
 
-    if(params.flagWasSet(ARG_FREQ_BINS) && (params.flagWasSet(ARG_XPEHH) || params.flagWasSet(ARG_SOFT))){
-        cerr << "ERROR: Options --bins and --xpehh/--ihh12 cannot be used together. "
+    if(params.flagWasSet(ARG_FREQ_BINS) && (params.flagWasSet(ARG_XPEHH) || params.flagWasSet(ARG_XPNSL) || params.flagWasSet(ARG_SOFT))){
+        cerr << "ERROR: Options --bins and --xpehh/--xpnsl/--ihh12 cannot be used together. "
          << "Frequency bins are only used for iHS and nSL normalization.\n";
         exit(1);
     }
        
     if(params.flagWasSet(ARG_QBINS) && params.flagWasSet(ARG_LOG_INPUT)){
-        cerr << "ERROR: Options --log-input and --quantile-bins cannot be used together. "
+        cerr << "ERROR: Options --log-input and --qbins cannot be used together. "
          << "--log-input already provides quantile bin information.\n";
         exit(1);
     }
@@ -120,10 +176,27 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         return 1;
     }
     
-    if(IHS + XPEHH + NSL + SOFT!= 1){
-        cerr << "Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
+    if(IHS + XPEHH + NSL + SOFT + XPNSL != 1){
+        cerr << "ERROR: Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
         return 1;
     }
+
+    // cout<<("=== Parameters ===\n");
+    // cout<<params.flagWasSet(ARG_FILES)<<endl;
+    
+    if( filename[0] == DEFAULT_FILES ){
+        if( !ANNOTATE_WINDOWS ){
+            cerr << "ERROR: Must provide at least one input file with " + ARG_FILES + " for normalization.\n";
+            return 1;
+        }
+    }
+
+    if(ANNOTATE_WINDOWS && params.flagWasSet(ARG_FILES)){
+        cerr << "ERROR: Cannot provide input files with " + ARG_FILES + " when annotating windows.\n";
+        return 1;
+    }
+
+
     cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
 
     string *outfilename = new string[nfiles];
@@ -277,7 +350,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         for (int i = 0; i < nfiles; i++)
         {
             cerr << "Normalizing " << filename[i] << "\n";
-            normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
+            normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, NSL);
             //fin[i].close();
             //fout[i].close();
         }
@@ -289,6 +362,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         if (BPWIN) analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
         //if(SNPWIN) analyzeSNPWindows(outfilename,fileLoci,nfiles,snpWinSize);
+
+        
     }
     else if (XPEHH || SOFT) {
 
@@ -701,6 +776,16 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     delete [] allSNPsPerWindow;
     delete [] allFracCritPerWindow;
 
+    //USE_GENEBED_ADDSTART
+    // vector<Gene> genes;
+    // if(USE_GENE_BED){
+    //     readGenes(GENE_BED, genes);
+    //     std::sort(genes.begin(), genes.end(), [](auto& a, auto& b){ return a.start < b.start; });
+    // }
+    // std::map<string, std::vector<double>> geneScores;
+    // std::map<string, std::vector<double>> geneLengthsMap;
+    //USE_GENEBED_ADDEND
+
     for (int i = 0; i < nfiles; i++)
     {
         fout.open(winfilename[i].c_str());
@@ -711,11 +796,13 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         }
         cerr << "Creating window file " << winfilename[i] << endl;
         flog << "Creating window file " << winfilename[i] << endl;
+        fout<<"start\tend\tn_snps\tfrac_extreme\tperc\tscore\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
+    
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
+                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
                 continue;
             }
             double percentile = 100.0;
@@ -753,16 +840,108 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
                 percentile = 0.1;
             }
             */
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+
+            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
             if(maxAbsScore[i][j] == -99999.9){
-                fout << "NA\n";
+                fout << "NA" << endl;
             }
             else{
                 fout << maxAbsScore[i][j] << endl;
             }
+
+            // if(!USE_GENE_BED || i != 0){
+            //     fout<<"\t-"<<endl; 
+            // }
+
+            // if(USE_GENE_BED && i == 0){ // only annotate first file if multiple files   
+            //     fout<<"\t";
+                
+            //     std::deque<Gene> active;
+            //     size_t g = 0;  // pointer for genes
+
+            //     int winStart = winStarts[i][j];
+            //     int winEnd   = winStart + winSize - 1;
+
+            //     while (!active.empty() && active.front().end < winStart) { // Remove genes that ended before this window
+            //         active.pop_front();
+            //     }
+                
+            //     while (g < genes.size() && genes[g].start <= winEnd) { // Add genes whose start is <= window end
+            //         active.push_back(genes[g]);
+            //         g++;
+            //     }
+
+            //     std::vector<std::string> overlaps; // Collect overlapping gene names
+            //     for (const auto& gene : active) {
+            //         if (gene.end >= winStart) {
+            //             overlaps.push_back(gene.name);
+            //             //=
+            //             geneScores[gene.name].push_back(maxAbsScore[i][j]);
+            //             geneLengthsMap[gene.name].push_back(gene.end - gene.start + 1);
+            //             //=
+            //         }
+            //     }
+
+            //     if (overlaps.empty()) {
+            //         fout << "-";
+            //     } else {
+            //         for (size_t i = 0; i < overlaps.size(); i++) {
+            //             fout << overlaps[i];
+            //             if (i < overlaps.size() - 1) fout << ", ";
+            //         }
+            //     }
+            //     fout << "\n";
+            // }
         }
+            
         fout.close();
+        
     }
+
+    
+
+  
+    // if(USE_GENE_BED){
+    //     vector<double> geneLengths;
+    //     //populate geneLengths from map
+    //     for (const auto& [gene, vals] : geneLengthsMap) {
+    //         if(vals.size() > 0){
+    //             geneLengths.push_back(geneLengthsMap[gene][0]); // all lengths are the same for a gene
+    //         }
+    //     }
+    //     vector<double> geneScoresMax;
+    //     for (const auto& [gene, vals] : geneScores) {
+    //         if(vals.size() > 0){
+    //             double* data = const_cast<double*>(vals.data()); // gsl requires non-const pointer
+    //             size_t n = vals.size();
+    //             double maxScore  = *std::max_element(vals.begin(), vals.end());
+    //             geneScoresMax.push_back(maxScore);
+    //         }
+    //     }
+    //     geneScoresMax = regress_out_length(geneLengths, geneScoresMax);
+
+    //     ofstream genetable; // output gene table with mean, sd, nwin, max, max_lenreg
+    //     string genetablefile = GENE_BED + ".genetable";
+    //     genetable.open(genetablefile.c_str());
+    //     if (genetable.fail())
+    //     {
+    //         cerr << "ERROR: " << genetablefile << " " << strerror(errno);
+    //         exit(EXIT_FAILURE);
+    //     }
+    //     genetable << "gene\tmean\tsd\tnwin\tmax\tmax_lenreg\n";  //gene   mean   sd   nwin   max   max_lenreg
+    //     int i = 0;
+    //     for (const auto& [gene, vals] : geneScores) {
+    //         double* data = const_cast<double*>(vals.data()); // gsl requires non-const pointer
+    //         size_t n = vals.size();
+    //         double maxScore  = *std::max_element(vals.begin(), vals.end());
+    //         double meanScore = gsl_stats_mean(data, 1, n);
+    //         double varScore  = 0; // for n = 1
+    //         if (n > 1) varScore = std::sqrt(gsl_stats_variance(data, 1, n)/n); 
+    //         genetable << gene << "\t" << meanScore << "\t" << varScore << "\t" << n << "\t" << maxScore << "\t" << geneScoresMax[i] << "\t" <<"\n";
+    //         i++;
+    //     }
+    //     genetable.close();
+    // }
 
     delete [] quantileBound;
     delete [] topWindowBoundary;
@@ -770,6 +949,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     delete [] nSNPs;
     delete [] fracCrit;
     delete [] winfilename;
+    delete [] maxAbsScore; // added 
 
     return;
 }
@@ -837,6 +1017,8 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             fin >> data;
             fin >> normedData;
             fin >> crit;
+
+            
 
             while (pos > winEnd)
             {
@@ -1095,11 +1277,13 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
-        cerr << "Creating window file " << winfilename[i] << endl;
+        fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc\ttop_score\tbottom_score\n";  
+        cerr << "Creating window file " << winfilename[i] << endl; 
         flog << "Creating window file " << winfilename[i] << endl;
+
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
+            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
             if (nSNPs[i][j] < minSNPs)
             {
                 fout << "-1\t-1\tNA\tNA" << endl;
@@ -1201,6 +1385,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     vector<int> *winStarts = new vector<int>[nfiles];
     vector<int> *nSNPs = new vector<int>[nfiles];
     vector<double> *fracCrit = new vector<double>[nfiles];
+    vector<double> *maxAbsScore = new vector<double>[nfiles];
 
     ifstream fin;
     ofstream fout;
@@ -1214,7 +1399,8 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     double gpos, freq1, ihh12, data, normedData;
     bool crit;
     int numWindows = 0;
-
+    double maxAbs = -99999.9;
+    
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(normedfiles[i].c_str());
@@ -1254,13 +1440,17 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
                 else fracCrit[i].push_back(double(numCrit) / double(numSNPs));
 
                 if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
+                maxAbsScore[i].push_back(maxAbs);
+                maxAbs = -99999.9;
 
                 winStart += winSize;
                 winEnd += winSize;
                 numSNPs = 0;
                 numCrit = 0;
+                
             }
 
+            if(normedData > maxAbs) maxAbs = normedData;
             numSNPs++;
             numCrit += crit;
         }
@@ -1375,13 +1565,15 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
+        fout<<"start\tend\tnSNPs\tfrac_extreme\tperc\tscore\tannotation\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
+    
         cerr << "Creating window file " << winfilename[i] << endl;
         flog << "Creating window file " << winfilename[i] << endl;
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
+                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" <<"\tNA"<< endl;
                 continue;
             }
             double percentile = 100.0;
@@ -1419,7 +1611,14 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
                 percentile = 0.1;
             }
             */
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
+            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+            if(maxAbsScore[i][j] == -99999.9){
+                fout << "NA";
+            }
+            else{
+                fout << maxAbsScore[i][j] ;
+            }
+            fout<<endl;
         }
         fout.close();
     }
@@ -1430,6 +1629,8 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     delete [] nSNPs;
     delete [] fracCrit;
     delete [] winfilename;
+
+    delete [] maxAbsScore;
 
     return;
 }
@@ -1564,7 +1765,7 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
 
 //Reads a file, calculates the normalized score, and
 //outputs the original row plus normed score
-void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
+void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool NSL)
 {
     ifstream fin;
     ofstream fout;
@@ -1577,11 +1778,18 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
         throw 1;
     }
 
-    string name;
+
+    string name, header;
     int pos;
     double freq, data, normedData, ihh1, ihh2;;
     int numInBin = 0;
     string junk;
+    getline(fin, header);
+    if (NSL){
+        fout << header + "\tnorm_nsl\tcrit\n"; 
+    } else{
+        fout << header + "\tnorm_ihs\tcrit\n";  
+    } 
 
     // determine the number of cols to skip 
     // (the number more than the number we care about: 6)
@@ -1771,6 +1979,7 @@ int SelscanNorm::checkIHSfile(ifstream &fin)
     int start = fin.tellg();
 
     int nloci = 0;
+    
     while (getline(fin, line))
     {
         nloci++;
@@ -1783,6 +1992,8 @@ int SelscanNorm::checkIHSfile(ifstream &fin)
         }
         //previous_cols = current_cols;
     }
+
+    nloci--; //added in v3, skip header line
 
     fin.clear();
     fin.seekg(start);
@@ -1798,6 +2009,7 @@ void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(filename[i].c_str());
+        getline(fin, junk); //added v3, skip header line
 
         int numColsToSkip = 0;
         numColsToSkip = colsToSkip(fin, 6);
@@ -1976,38 +2188,68 @@ bool SelscanNorm::isint(string str)
  * @param scores   Vector of per-gene scores
  * @return residuals vector (score corrected for length)
  */
-std::vector<double> SelscanNorm::regress_out_length(const std::vector<double> &lengths,
-                                       const std::vector<double> &scores) {
+std::vector<double> SelscanNorm::regress_out_length(
+    const std::vector<double> &lengths,
+    const std::vector<double> &scores) 
+{
     size_t n = lengths.size();
     size_t p = 2; // intercept + log(length)
 
-    gsl_matrix *X = gsl_matrix_alloc(n, p);
-    gsl_vector *y = gsl_vector_alloc(n);
+    // First collect only valid (score != -1) entries
+    std::vector<size_t> valid_idx;
+    valid_idx.reserve(n);
+    for (size_t i = 0; i < n; i++) {
+        if (scores[i] != -1.0) {
+            valid_idx.push_back(i);
+        }
+    }
+
+    size_t m = valid_idx.size(); // number of valid points
+    if (m == 0) {
+        // nothing to fit, just return original
+        return scores;
+    }
+
+    gsl_matrix *X = gsl_matrix_alloc(m, p);
+    gsl_vector *y = gsl_vector_alloc(m);
     gsl_vector *c = gsl_vector_alloc(p);
     gsl_matrix *cov = gsl_matrix_alloc(p, p);
     double chisq;
 
-    // Fill design matrix and response
-    for (size_t i = 0; i < n; i++) {
-        gsl_matrix_set(X, i, 0, 1.0);                  // intercept
-        gsl_matrix_set(X, i, 1, std::log(lengths[i])); // log(length)
-        gsl_vector_set(y, i, scores[i]);
+    // Fill design matrix and response with only valid data
+    for (size_t j = 0; j < m; j++) {
+        size_t i = valid_idx[j];
+        gsl_matrix_set(X, j, 0, 1.0);                  // intercept
+        gsl_matrix_set(X, j, 1, std::log(lengths[i])); // log(length)
+        gsl_vector_set(y, j, scores[i]);
     }
 
     // Fit linear regression
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(n, p);
+    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(m, p);
     gsl_multifit_linear(X, y, c, cov, &chisq, work);
     gsl_multifit_linear_free(work);
 
     double beta0 = gsl_vector_get(c, 0);
     double beta1 = gsl_vector_get(c, 1);
 
-    // Compute residuals
-    std::vector<double> residuals(n);
-    for (size_t i = 0; i < n; i++) {
+    // Compute residuals (keep same size as input)
+    std::vector<double> residuals(n, -1.0);
+    for (size_t j = 0; j < m; j++) {
+        size_t i = valid_idx[j];
         double pred = beta0 + beta1 * std::log(lengths[i]);
         residuals[i] = scores[i] - pred;
     }
+
+    // Shift residuals so the minimum valid one is 0
+    // double minResidual = std::numeric_limits<double>::max();
+    // for (double r : residuals) {
+    //     if (r != -1.0) minResidual = std::min(minResidual, r);
+    // }
+    // if (minResidual < 0.0) {
+    //     for (auto &r : residuals) {
+    //         if (r != -1.0) r -= minResidual;
+    //     }
+    // }
 
     // Free memory
     gsl_matrix_free(X);
@@ -2017,3 +2259,52 @@ std::vector<double> SelscanNorm::regress_out_length(const std::vector<double> &l
 
     return residuals;
 }
+
+// std::vector<double> SelscanNorm::regress_out_length(const std::vector<double> &lengths,
+//                                        const std::vector<double> &scores) {
+//     size_t n = lengths.size();
+//     size_t p = 2; // intercept + log(length)
+
+    
+//     gsl_matrix *X = gsl_matrix_alloc(n, p);
+//     gsl_vector *y = gsl_vector_alloc(n);
+//     gsl_vector *c = gsl_vector_alloc(p);
+//     gsl_matrix *cov = gsl_matrix_alloc(p, p);
+//     double chisq;
+
+//     // Fill design matrix and response
+//     for (size_t i = 0; i < n; i++) {
+//         gsl_matrix_set(X, i, 0, 1.0);                  // intercept
+//         gsl_matrix_set(X, i, 1, std::log(lengths[i])); // log(length)
+//         gsl_vector_set(y, i, scores[i]);
+//     }
+
+//     // Fit linear regression
+//     gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(n, p);
+//     gsl_multifit_linear(X, y, c, cov, &chisq, work);
+//     gsl_multifit_linear_free(work);
+
+//     double beta0 = gsl_vector_get(c, 0);
+//     double beta1 = gsl_vector_get(c, 1);
+
+//     // Compute residuals
+//     std::vector<double> residuals(n);
+//     for (size_t i = 0; i < n; i++) {
+//         double pred = beta0 + beta1 * std::log(lengths[i]);
+//         residuals[i] = scores[i] - pred;
+//     }
+
+//     //After computing residuals, shift them so the minimum is 0
+//     double minResidual = *std::min_element(residuals.begin(), residuals.end());
+//     if (minResidual < 0.0) {
+//         for (auto &r : residuals) r -= minResidual;
+//     }
+//     // Free memory
+//     gsl_matrix_free(X);
+//     gsl_matrix_free(cov);
+//     gsl_vector_free(y);
+//     gsl_vector_free(c);
+
+    
+//     return residuals;
+// }

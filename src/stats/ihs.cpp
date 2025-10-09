@@ -818,6 +818,17 @@ void IHS::main() {
     ThreadPool pool(p.numThreads);
 
     if(!p.WRITE_DETAILED_IHS){
+        string ihsornsl = p.CALC_NSL ? "nsl" : "ihs";
+        if(hm->hapData->unphased){
+            *fout << "id" << "\t" <<   "pos" << "\t"
+                            << "freq" << "\t"
+                            << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl << "\t" << "ihhDerivedLeft" << "\t" << "ihhDerivedRight" << "\t" << "ihhAncestralLeft" << "\t" << "ihhAncestralRight" << endl;
+        }else{
+            *fout << "id" << "\t" <<   "pos" << "\t"
+                            << "freq" << "\t"
+                            << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl << "\t" << "ihhDerivedLeft" << "\t" << "ihhDerivedRight" << "\t" << "ihhAncestralLeft" << "\t" << "ihhAncestralRight" << endl;
+        }
+        
         std::vector< std::future<pair<double, double> > > results;
         for(int i = 0; i <  hm->mapData->nloci; ++i) {
 
@@ -870,6 +881,14 @@ void IHS::main() {
     }
 
     if(p.WRITE_DETAILED_IHS){
+        string ihsornsl = p.CALC_NSL ? "nsl" : "ihs";
+        if(hm->hapData->unphased){
+            cerr<<"ERROR: Detailed iHS output not supported for unphased data. Please run without --write-detailed-ihs flag."<<endl;
+            exit(1);
+        }
+        *fout << "id" << "\t" <<   "pos" << "\t"
+                            << "freq" << "\t" << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl << "\t"
+                            << "ihh1_left" << "\t" << "ihh1_right" << "\t" << "ihh0_left" << "\t" << "ihh0_right" << endl;
         std::vector< std::future<IhhComponents> > results;
         for(int i = 0; i <  hm->mapData->nloci; ++i) {
             results.emplace_back(

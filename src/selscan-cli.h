@@ -65,7 +65,7 @@ using namespace std;
 
 
 
-const string VERSION = "2.1.1";
+const string VERSION = "3.0";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -245,10 +245,10 @@ const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the spec
 
 const string ARG_EHHS = "--ehhs";
 const string DEFAULT_EHHS = "-";
-const string HELP_EHHS = "Specifies one or more genomic coordinate ranges (in bp) for which EHH is computed. Works with --ihs or --nsl flag.\n\
-Format: start1-end1,start2-end2,... (e.g., 1000-2000,5000-6000).\n\
-Outputs a separate file for a single locus, if valid EHH values are present.\n\
-Output columns: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>.\n";
+const string HELP_EHHS = "Specifies one or more comma-separated genomic positions (in bp) for which EHH is computed. "
+"Format: pos1,pos2,pos3,... (e.g., 1500,5200,7800).\n"
+"Outputs a separate file for each specified locus if valid EHH values are present.\n"
+"Output columns: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>.\n";
 
 const string ARG_EHH12 = "--ehh12";
 const string DEFAULT_EHH12 = "__NO_LOCUS__";
