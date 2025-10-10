@@ -164,10 +164,9 @@ public:
     void readHapDataTHAP(string filename, HapData& hap);
     void readHapDataTPED(string filename, HapData& hap);
     void readHapDataVCF(string filename, HapData& hap);
-    void readHapDataVCFMissing(string filename, HapData& hap);
     void readHapDataMSHap(string filename, HapData& hap);
 
-    bool shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles, int missing_count = 0);
+    bool shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles); // int missing_count = 0
     void loadHapMapData();
 
 };

@@ -49,7 +49,7 @@ class MissingInfo{
             this->verdict =  '2';
             if (p0 >= p1 && p0 >= p2) this->verdict =  '0';
             if (p1 >= p0 && p1 >= p2) this->verdict =  '1';
-            if( (abs(p0-p1)<0.0001 && p0>=p2) || abs(p1-p2)<0.0001  && p1>=p0 || abs(p0-p2)<0.0001 && p0>=p1){
+            if( (abs(p0-p1)<0.0001 && p0>=p2) || (abs(p1-p2)<0.0001  && p1>=p0) || (abs(p0-p2)<0.0001 && p0>=p1)){
                 this->verdict = 'T';
             }
             //this->verdict = (abs(p0-p1)<0.0001)? 'T' :  this->verdict;
@@ -107,7 +107,7 @@ public:
     // int num_threads;
     // bool LOW_MEM = true;
 
-    queue<int> skipQueue;
+    queue<size_t> skipQueue;
     
     //ofstream* flog;
 
@@ -225,8 +225,6 @@ public:
         lock_guard<mutex> lock(map_mutex);
         {
             for(auto && [key, value]: missingMatrix){
-                int count1 = 0;
-                int count0 = 0;
                 for(auto && info: value){
                     cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " "<<info.p0<<" "<<info.p1<<" "<<info.verdict<<endl;
                 }
@@ -413,37 +411,40 @@ public:
 
     inline double get_maf(int locus){
         if(MISSING_ALLOWED){
-                throw "not implemented";
-            }
-        if(unphased){
             throw "not implemented";
-            int n_c0 = get_n_c0(locus);
+        }
+        if(unphased){
+            //int n_c0 = get_n_c0(locus);
             int n_c1 = get_n_c1(locus);
             int n_c2 = get_n_c2(locus);
-            int n_c_missing = get_n_c_missing(locus);
-            int total = n_c0 + n_c1 + n_c2 + n_c_missing;
-            if(total == 0){
-                return 0;
-            }
-            double maf = (n_c1 + 2*n_c2) / (double) (nhaps*2);
-            return (maf > 0.5)? 1-maf : maf;
-        }else{
+
+            // int n_alt = 2*n_c2 + n_c1; 
+            // int n_ref = 2*n_c0 + n_c1; 
+            // int n_minor = min(n_alt, n_ref);
+            // return n_minor / (double) (nhaps*2);
+            int derived_allele_count = (n_c1 + n_c2 * 2) ; // unphased: 1s = het, 2s = homozygous derived
+            int nalleles_per_loc = (nhaps*2);
+            double derived_freq = derived_allele_count * 1.0 / nalleles_per_loc;
+            double ancestral_freq = 1.0 - derived_freq;
+            return min(derived_freq, ancestral_freq);
             
+            //int n_c_missing = get_n_c_missing(locus);
+            //int total = n_c0 + n_c1 + n_c2 + n_c_missing;
+            // int total = n_c0 + n_c1 + n_c2;
+            // if(total == 0){
+            //     return 0;
+            // }
+            //double maf = (n_c1 + 2*n_c2) / (double) (nhaps*2);
+            //return (maf > 0.5)? 1-maf : maf;
+        }else{
             int n_c0 = get_n_c0(locus);
             int n_c1 = get_n_c1(locus);
             int total = n_c0 + n_c1;
             if(total == 0){
                 return 0;
             }
-            double maf = (double) n_c1 / nhaps;
-            
-            if (maf > 0.5){
-                //cout<<n_c0<< " "<<n_c1<<" "<< 1-maf<<endl;
-                return 1-maf;
-            } else{
-                //cout<<n_c0<< " "<<n_c1<<" "<< maf<<endl;
-                return maf;
-            }
+            int mac = min(n_c1, n_c0);
+            return mac / (double) total;
         }
         
     }

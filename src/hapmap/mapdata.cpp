@@ -13,7 +13,7 @@ using namespace std;
  * @returns a populated MapData structure if successful
  * @throws an exception if not successful
  */
-void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, queue<int>& skip_queue)
+void MapData::readMapData(string filename, size_t expected_loci, bool USE_PMAP, queue<size_t>& skip_queue)
 {
     igzstream fin;
     cerr << "Opening " << filename << " to read map data...\n";
@@ -26,7 +26,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
     }
 
     string line;
-    int nloci_before_filter = 0;
+    size_t nloci_before_filter = 0;
     int num_cols = 4;
     int current_cols = 0;
     while (getline(fin, line))
@@ -41,7 +41,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         }
     }
 
-    if (nloci_before_filter-skip_queue.size() != expected_loci)
+    if (nloci_before_filter - (skip_queue.size()) != expected_loci)
     {
         cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci_before_filter-skip_queue.size() << ".\n";
         exit(EXIT_FAILURE);
@@ -62,8 +62,8 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
     initMapData(nloci_before_filter-skip_queue.size());
 
     string chr;
-    unsigned int locus_after_filter = 0;
-    for (unsigned int locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
+    size_t locus_after_filter = 0;
+    for (size_t locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
     {
         if(!skip_queue.empty()){
             if(skip_queue.front()==locus_before_filter){
@@ -82,6 +82,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
         fin >> mapEntries[locus_after_filter].locusName;
         fin >> mapEntries[locus_after_filter].geneticPos;
         fin >> mapEntries[locus_after_filter].physicalPos;
+        
 
         //locus_query_map[mapEntries[locus_after_filter].locusName] = locus_after_filter;
         mapEntries[locus_after_filter].locId = locus_before_filter;
@@ -98,7 +99,7 @@ void MapData::readMapData(string filename, int expected_loci, bool USE_PMAP, que
     fin.close();
 }
 
-void MapData::readMapDataTPED(string filename, int expected_loci, int expected_haps, bool USE_PMAP, queue<int>& skip_queue)
+void MapData::readMapDataTPED(string filename, size_t expected_loci, int expected_haps, bool USE_PMAP, queue<size_t>& skip_queue)
 {   
     igzstream fin;
     cerr << "Opening " << filename << "...\n";
@@ -111,7 +112,7 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     }
 
     string line;
-    int nloci = 0;
+    size_t nloci = 0;
     int num_cols = 4;
     int current_cols = 0;
     while (getline(fin, line))
@@ -126,7 +127,7 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
         }
     }
 
-    if (nloci - skip_queue.size() != expected_loci)
+    if (nloci - (skip_queue.size()) != expected_loci)
     {
         cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci - skip_queue.size()  << ".\n";
         exit(EXIT_FAILURE);
@@ -152,8 +153,8 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     double Mb = 1000000.0;
     
     string chr;
-    int locus_after_filter = 0;
-    for (int locus = 0; locus < nloci; locus++)  // locus = locus_before_filter
+    size_t locus_after_filter = 0;
+    for (size_t locus = 0; locus < nloci; locus++)  // locus = locus_before_filter
     {
         if(!skip_queue.empty()){
             if(skip_queue.front()==locus){
@@ -176,7 +177,7 @@ void MapData::readMapDataTPED(string filename, int expected_loci, int expected_h
     fin.close();
 }
 
-void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& skip_queue) {
+void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_t>& skip_queue) {
     igzstream fin;
     cerr << "Opening " << filename << " to read map data...\n";
     fin.open(filename.c_str());
@@ -188,7 +189,7 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
     }
 
     string line;
-    int nloci_before_filter = 0;
+    size_t nloci_before_filter = 0;
     int numCommentedLines = 0;
     while (getline(fin, line))
     {
@@ -230,8 +231,9 @@ void MapData::readMapDataVCF(string filename, int expected_loci, queue <int>& sk
     string chr;
 
     //int n_chromosomes_included = 0;
-    unsigned int locus_after_filter = 0;
-    for (unsigned  int locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
+
+    size_t locus_after_filter = 0;
+    for (size_t locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
     {
         if(!skip_queue.empty()){
             if(skip_queue.front()==locus_before_filter){

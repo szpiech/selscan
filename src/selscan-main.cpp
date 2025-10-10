@@ -49,6 +49,8 @@
 #include <ctime>
 #include <cmath>
 
+// #include <norm.cpp>
+
 using namespace std;
 
 
@@ -136,16 +138,37 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     }
     */
 
+    //
+    if(p.MULTI_MAF){
+        // if(p.CALC_IHS || p.CALC_NSL){
+        //     //reassign all local ids // if a site has MAF < p.MAF assign -1, otherwise assign increasing id, starting from 0
+        //     int current_loc_id = 0;
+        //     for (size_t i = 0; i < hm->mapData->nloci; ++i) {
+        //         double maf = hm->hapData->get_maf(i);  // get MAF for site i
+        //         if (maf <= p.MAF && p.SKIP) {
+        //             hm->mapData->mapEntries[i].locId = -1;  // skip: too low MAF and --keep-low-freq is not set
+        //         } else {
+        //             hm->mapData->mapEntries[i].locId = current_loc_id++;
+        //         }
+        //     }
+        // }
+        
+        cerr<<"WARNING: Running in multi-maf mode. Make sure parameters are consistent across runs.\n";
+        *(hm->flog)<<"WARNING: Running in multi-maf mode. Make sure parameters are consistent across runs.\n";
+    }
+
     // @@ EXPERIMENTAL: instead of else if allow all to run
     if (p.SINGLE_EHH)
     {
         EHH ehhfinder(hm, p);
         ehhfinder.main(p.query); // query_locus
     }
+
     if (p.SINGLE_EHH12){
         EHH12 ehh12finder(hm, p);
         ehh12finder.main(p.query_ehh12); // query_locus
     }
+
     if (p.CALC_IHS)
     {
         bool stored_calc_nsl = p.CALC_NSL;
@@ -155,6 +178,7 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
         p.CALC_NSL = stored_calc_nsl;
         p.CALC_IHS = false;
     }
+
     if (p.CALC_NSL)
     {
         IHS ihsfinder(hm, p);
@@ -190,7 +214,7 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     }
 }
 
-int main(int argc, char *argv[])
+int runToolSelscan(int argc, char *argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
     double time_start = (clock() / (double)CLOCKS_PER_SEC);
@@ -206,9 +230,9 @@ int main(int argc, char *argv[])
     
 
 
-// #ifdef PTW32_STATIC_LIB
-//     pthread_win32_process_attach_np();
-// #endif
+    // #ifdef PTW32_STATIC_LIB
+    //     pthread_win32_process_attach_np();
+    // #endif
 
     std::unique_ptr<HapMap> hm; 
     ofstream* flog;
@@ -260,7 +284,7 @@ int main(int argc, char *argv[])
 
         // run for all param combinations
         cerr<<"DEBUG::: Running for all param combinations. "<<multi_params.size()<<"\n";
-        for(int i = 0; i< multi_params.size(); i++){
+        for(size_t i = 0; i< multi_params.size(); i++){
             param_main p = multi_params[i];
             p.outFilename = p.outFilename + ".pconfig" + to_string(i);
             runStat(hm, p); // run the main program
@@ -287,4 +311,25 @@ int main(int argc, char *argv[])
     //     pthread_win32_process_detach_np();
     // #endif
     return 0;
+}
+
+
+// ------------------- Main Dispatcher -------------------
+int main(int argc, char* argv[]) {
+    return runToolSelscan(argc, argv);
+    // if (argc < 2) {
+    //     // No subcommand, run original ToolA with no arguments
+    //     return runToolSelscan(0, nullptr);
+    // }
+
+    // std::string firstArg = argv[1];
+    // if (firstArg == "norm") {
+    //     // Pass remaining arguments to subcommand B
+    //     int subArgc = argc - 2;
+    //     char** subArgv = argv + 2;
+    //     return runToolNorm(subArgc, subArgv);
+    // } else {
+    //     // No subcommand, treat all arguments as ToolA arguments
+    //     return runToolSelscan(argc - 1, argv + 1);
+    // }
 }

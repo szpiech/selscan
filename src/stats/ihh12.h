@@ -23,13 +23,13 @@ using namespace std;
 
 class IHH12_ehh_data{
     public:
-    double prev_ehh12_before_norm = twice_num_pair(nhaps);
+    double prev_ehh12_before_norm = 0;
     double curr_ehh12_before_norm = 0;
 
     // double prev_ehh12d1_before_norm = 0;
     // double curr_ehh12d1_before_norm = 0;
 
-    double prev_ehh_before_norm = twice_num_pair(nhaps);
+    double prev_ehh_before_norm = 0;
     double curr_ehh_before_norm = 0;
 
     int n_c[2] = {0,0};
@@ -92,6 +92,7 @@ class IHH12_ehh_data{
         });
 
         curr_ehh_before_norm = (ALT?   square_alt(n_c[0]) +  square_alt(n_c[1]) :  twice_num_pair(n_c[0]) + twice_num_pair(n_c[1])); 
+        prev_ehh_before_norm = curr_ehh_before_norm;
 
         double firstFreq_before_norm = (n_c[1] > 1) ? twice_num_pair(n_c[1]) : 0;
         double secondFreq_before_norm =(n_c[0] > 1) ?  twice_num_pair(n_c[0]): 0;

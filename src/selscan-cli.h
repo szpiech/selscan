@@ -25,11 +25,6 @@
 using namespace std;
 
 
-
-
-
-
-
 #define LOG(msg) do { \
         std::cerr << msg << std::endl; \
         if (flog) (*flog) << msg << std::endl; \
@@ -70,7 +65,7 @@ using namespace std;
 
 
 
-const string VERSION = "2.1.0";
+const string VERSION = "2.1.1";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -81,6 +76,7 @@ Citations:\n\
 \n\
 selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
          ZA Szpiech (2024) Bioinformatics 40: btae006.\n\
+         A Rahman, TQ Smith, and ZA Szpiech (2025). bioRxiv, pp.2025-04.\n\
 iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
        N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
 nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
@@ -247,13 +243,12 @@ const string DEFAULT_EHH = "__NO_LOCUS__";
 const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
 \tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
 
-
-
-// const string ARG_EHHS = "--ehhs";
-// const bool DEFAULT_EHHS = false;
-// const string HELP_EHHS = "Calculate EHH of the '1' and '0' haplotypes at all loci. Outputs separate files for different loci. \n Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
-
-
+const string ARG_EHHS = "--ehhs";
+const string DEFAULT_EHHS = "-";
+const string HELP_EHHS = "Specifies one or more genomic coordinate ranges (in bp) for which EHH is computed. Works with --ihs or --nsl flag.\n\
+Format: start1-end1,start2-end2,... (e.g., 1000-2000,5000-6000).\n\
+Outputs a separate file for a single locus, if valid EHH values are present.\n\
+Output columns: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>.\n";
 
 const string ARG_EHH12 = "--ehh12";
 const string DEFAULT_EHH12 = "__NO_LOCUS__";
@@ -283,6 +278,12 @@ in the construction of your haplotypes please use the --keep-low-freq flag.";
 const string ARG_KEEP = "--keep-low-freq";
 const bool DEFAULT_KEEP = false;
 const string HELP_KEEP = "Include low frequency variants in the construction of your haplotypes.";
+
+
+const string ARG_MULTIALLELIC = "--filter-vcf";
+const bool DEFAULT_MULTIALLELIC = false;
+const string HELP_MULTIALLELIC = "Allows filtering of VCF files to remove non-biallelic sites and sites with missing data.";
+
 
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;

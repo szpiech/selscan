@@ -1,10 +1,6 @@
 
 #include "selscan-data.h"
-
-
 #include <set>
-
-
 
 void HapMap::initParamsInHap(HapData &hapData){
     hapData.MISSING_ALLOWED = p.MISSING_ALLOWED;
@@ -32,13 +28,20 @@ void HapMap::initParamsInHap(HapData &hapData){
 
     // if we are in multi param mode, or using xp, we want to set the MAF cutoff to the minimum
     this->MIN_MAF_CUTOFF = p.MAF;
-    if(p.MULTI_MAF){
-        for (const auto& param : ps) {
-            if(param.MAF < MIN_MAF_CUTOFF){
-                this->MIN_MAF_CUTOFF = param.MAF;
+
+    if(p.CALC_IHS || p.CALC_NSL){
+        if(p.MULTI_MAF){
+            for (const auto& param : ps) {
+                if(param.MAF < MIN_MAF_CUTOFF){
+                    this->MIN_MAF_CUTOFF = param.MAF;
+                }
             }
         }
+    }else{
+        // if we are not calculating IHS or NSL, we can set the MAF cutoff to 0
+        this->MIN_MAF_CUTOFF = 0;
     }
+    // if IHS OR NSL othwerwise MINMAF==0
 }
 
 
@@ -49,82 +52,6 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
 {
     //HANDLE_ERROR("Bug found in ms-style hap format. This function is undergoing development.");
     initParamsInHap(hapData);
-
-
-
-    // ifstream infile(filename); // Replace with your actual file path
-    // if (!infile) {
-    //     cerr << "Failed to open file." << endl;
-    //     return;
-    // }
-
-    // vector<vector<int>> raw_matrix;
-    // string line;
-
-    // // Step 1: Read file into a 2D vector
-    // while (getline(infile, line)) {
-    //     vector<int> row;
-    //     for (char ch : line) {
-    //         if (ch == '0' || ch == '1') {
-    //             row.push_back(ch - '0');
-    //         }
-    //     }
-    //     raw_matrix.push_back(row);
-    // }
-
-    // infile.close();
-
-    // if (raw_matrix.empty()) {
-    //     cerr << "Matrix is empty or invalid." << endl;
-    //     return;
-    // }
-
-    // size_t num_rows = raw_matrix.size();
-    // size_t num_cols = raw_matrix[0].size();
-
-    // // Step 2: Count zeros in each column
-    // vector<int> zero_counts(num_cols, 0);
-    // for (size_t j = 0; j < num_cols; ++j) {
-    //     for (size_t i = 0; i < num_rows; ++i) {
-    //         if (raw_matrix[i][j] == 0) {
-    //             zero_counts[j]++;
-    //         }
-    //     }
-    // }
-
-    // // Step 3: Collect indices of columns with > 5 zeros
-    // vector<size_t> selected_cols;
-    // for (size_t j = 0; j < num_cols; ++j) {
-    //     if (zero_counts[j]/50.0 >= p.MAF && 1-zero_counts[j]/50.0 >= p.MAF) {
-    //         selected_cols.push_back(j);
-    //     }
-    // }
-
-    // // Step 4: Build filtered matrix
-    // vector<vector<int>> filtered_matrix;
-    // for (const auto& row : raw_matrix) {
-    //     vector<int> new_row;
-    //     for (size_t j : selected_cols) {
-    //         new_row.push_back(row[j]);
-    //     }
-    //     filtered_matrix.push_back(new_row);
-    // }
-
-    // // Output the filtered matrix
-    // cout << "Filtered Matrix (columns with >5 zeros):" << endl;
-    // for (const auto& row : filtered_matrix) {
-    //     cout<< row.size() << " " <<8324-row.size() << endl;
-    //     break;
-    //     // for (int val : row) {
-    //     //     cout << val;
-
-    //     // }
-    //     // cout << endl;
-    // }
-    // cout << "Number of rows: " << filtered_matrix.size() << endl;
-
-    //return ;
-
 
     // Phase === PHASE 1: Determine nloci, nhaps, and MAF-based skiplist ===
     //PHASE 1: Read input file to get "nloci", "nhaps" and "skiplist"
@@ -233,8 +160,7 @@ if (p.SKIP) {
     }
 
     stringstream ss;
-    char allele1;
-    int locus_after_filter = 0;
+
 
     // getline(fin, prev_line);
     // ss.str(prev_line);
@@ -251,11 +177,10 @@ if (p.SKIP) {
         }), line.end());   
 
         int skip_idx = 0;
-
         int loc_after_filter = 0;
         for(int loc=0; loc<nloci_before_filter; loc++){
             
-            if (skip_idx < skiplist.size()) {
+            if (skip_idx < static_cast<int>(skiplist.size())) {
                 if ( loc == skiplist[skip_idx]) {
                     if(hap==num_rows-1){
                         hapData.skipQueue.push(loc);
@@ -309,64 +234,6 @@ if (p.SKIP) {
 void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 {
     initParamsInHap(hapData);
-
-    //verification
-    // ifstream infile(filename); // Input file path
-    // if (!infile) {
-    //     cerr << "Failed to open file." << endl;
-    //     return;
-    // }
-
-    // vector<vector<int>> matrix;
-    // string line;
-
-    // int nrowss = 0;
-    // int ncolss = 0;
-    // // Step 1: Read the matrix from file (text format)
-    // while (getline(infile, line)) {
-    //     vector<int> row;
-    //     ncolss = 0;
-    //     for (char ch : line) {
-    //         if (ch == '0' || ch == '1') {
-    //             row.push_back(ch - '0');
-    //             ncolss++;
-    //         }
-    //     }
-    //     if (!row.empty()) {
-    //         matrix.push_back(row);
-    //     }
-    //     nrowss++;
-    // }
-
-    // infile.close();
-
-    // if (matrix.empty()) {
-    //     cerr << "Matrix is empty or invalid." << endl;
-    //     return;
-    // }
-
-    // // Step 2: Filter rows with more than 5 zeros
-    // vector<vector<int>> filtered_matrix;
-    // for (const auto& row : matrix) {
-    //     int zero_count = 0;
-    //     for (int val : row) {
-    //         if (val == 0) zero_count++;
-    //     }
-    //     if (zero_count*1.0/ncolss > p.MAF && 1-zero_count*1.0/ncolss > p.MAF) {
-    //         filtered_matrix.push_back(row);
-    //     }
-    // }
-
-    // // Step 3: Print the filtered matrix
-    // cout << "Filtered Matrix (rows with >5 zeros):" << endl;
-    // for (const auto& row : filtered_matrix) {
-    //     // for (int val : row) {
-    //     //     cout << val;
-    //     // }
-    //     // cout << endl;
-    // }
-    // cout << "Number of rows (loci): " << filtered_matrix.size() << endl;
-
 
     //PHASE 1: Read input file to get "nloci", "nhaps" and "skiplist"
     igzstream fin;
@@ -453,7 +320,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
     
     LOG("Loading " << current_nhaps << " haplotypes and " << nloci_before_filter - skiplist.size() << " loci...");
     hapData.initHapData(current_nhaps, nloci_before_filter-skiplist.size());
-    hapData.skipQueue = queue<int>();
+    hapData.skipQueue = queue<size_t>();
 
     //PHASE 2: Open input File 2nd time To Load into Data Structure
     fin.open(filename.c_str());
@@ -520,17 +387,11 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 void HapMap::readHapDataVCF(string filename, HapData& hapData)
 {
     //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
-
+    
     initParamsInHap(hapData);
 
-    if(p.MISSING_ALLOWED){
-        LOG("WARNING: Missing entries allowed: will impute missing entries if less than threshold.");
-        readHapDataVCFMissing(filename, hapData);
-        return;
-    }
-    
     igzstream fin;
-    queue<int> skiplist;
+    queue<size_t> skiplist;
 
     // PHASE 1: Counting so that inititalization is smooth
     LOG("Opening " << filename << " to count number of haplotypes and loci...");
@@ -544,19 +405,22 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
     int numMapCols = 9;
     string line;
-    int nloci_before_filtering = 0;
+    size_t nloci_before_filtering = 0;
     int prev_ngts = -1;
     int current_ngts = 0;
 
     int skipcount = 0;
 
-    int num_meta_data_lines = 0;
+    int physpos = -1;
+    int physpos_first_duplicated_id = -1;
+    int skip_due_to_duplicate_pos = 0;
+    //int num_meta_data_lines = 0;
     while (getline(fin, line))  //Counts number of haps (cols) and number of loci (rows)
     {
         if (line[0] == '#') {
-            num_meta_data_lines++;
-            continue;
+            continue; //num_meta_data_lines++;
         }
+
         nloci_before_filtering++;
         current_ngts = countFields(line) - numMapCols;
 
@@ -568,12 +432,26 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         int number_of_1s = 0;
         int number_of_2s = 0;
 
+        bool skip_due_to_missing = false;
+
         for (int i = 0; i < numMapCols; i++) {
             ss >> junk;
             if(i==0){
                 chr = junk;
+            } 
+            
+            if(i == 1){
+                if(physpos == std::stoi(junk)){
+                    std::cerr<<"WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos<<"\n";
+                    skip_due_to_duplicate_pos += 1;
+                }else{
+                    skip_due_to_duplicate_pos = 0;
+                    physpos_first_duplicated_id = nloci_before_filtering - 1;
+                }
+                physpos = std::stoi(junk);
             }
         }
+
         for (int field = 0; field < current_ngts; field++)
         {
             ss >> junk;
@@ -584,12 +462,22 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             if(!p.MISSING_ALLOWED){
                 if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
                 {
-                    HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
+                    if(!p.MULTI_ALLELIC){
+                        HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
+                    }else{
+                        std::cerr<<"WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos << "\n";
+                        skip_due_to_missing = true;
+                    }
                 }
             }
-
+            
             if(separator != '|' && !p.UNPHASED){
-               HANDLE_ERROR("Unphased entries detected (| is used). Make sure you run with --unphased flag for correct results.");
+                if(!p.MULTI_ALLELIC){
+                    HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
+                }else{
+                    std::cerr<<"WARNING: Unphased entries detected (/ is used). To use this site, run with --unphased flag for correct results. Skipping.\n";
+                    skip_due_to_missing = true;
+                }
             }
 
             if(p.UNPHASED){
@@ -611,7 +499,24 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
         int nalleles_per_loc = current_ngts*2;
         bool skip_due_to_maf = shouldSkipLocus(number_of_1s, number_of_2s, nalleles_per_loc);
-        
+        bool skip_due_to_multiallelic = false;
+
+        if(p.MULTI_ALLELIC){
+            std::stringstream ss2(line);
+            std::string chrom, pos, id, ref, alt, rest;
+            if (!(ss2 >> chrom >> pos >> id >> ref >> alt)) {
+                std::cerr << "Malformed line: " << line << "\n";
+                continue;
+            }else{
+                // Skip multi-allelic sites,  Keep only SNPs (both REF and ALT are single-nucleotide) //if (ref.length() != 1 || alt.length() != 1) { this keeps biallelic indels too
+                if ((ref != "A" && ref != "C" && ref != "G" && ref != "T") ||
+                    (alt != "A" && alt != "C" && alt != "G" && alt != "T")) {
+                    std::cerr << "WARNING: Non-biallelic or non-SNP site skipped at pos: " << pos <<" " << ref << " " << alt << "\n";
+                    skip_due_to_multiallelic = true;
+                }                
+            }
+        }
+
         // bool skipreason2 = false;
         // if(p.MULTI_CHR){ 
         //     if(chr_set.empty()){
@@ -621,13 +526,32 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         //     }
         // }
 
-        if(!p.CALC_XP &&  !p.CALC_XPNSL){
-            if ( skip_due_to_maf ) {
+        if (p.CALC_XP || p.CALC_XPNSL) 
+            skip_due_to_maf = 0;
+
+        // if(!skip_due_to_maf && !skip_due_to_multiallelic && !skip_due_to_missing && skip_due_to_duplicate_pos == 1){ // also remove first instance of duplicate position
+        //     skiplist.push(physpos_first_duplicated_id);
+        //     skipcount++;
+        // }
+
+        if(skip_due_to_duplicate_pos == 1){ // it means that this is the second instance of duplicate position
+            //ensure it was not already addeed to skiplist for some other reason
+            if( skiplist.empty() || skiplist.back() != physpos_first_duplicated_id){                
+                if(physpos_first_duplicated_id != nloci_before_filtering-2){
+                    HANDLE_ERROR("Logic error in duplicate position handling.");
+                }
+                skiplist.push(nloci_before_filtering-2);
+                skipcount++;
+            }
+        }
+
+        if (skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
                 skiplist.push(nloci_before_filtering-1);
                 skipcount++;
-            } 
-        }
-        
+        } 
+
+
+
         /*********/
         if (prev_ngts < 0)
         {
@@ -661,17 +585,17 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     }
    
     int nhaps = p.UNPHASED ? (current_ngts ) : (current_ngts ) * 2;
-    LOG("Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci... skipped "<<skipcount << "loci \n");
+    LOG("Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci. Skipped "<<skipcount << " loci \n");
     hapData.initHapData(nhaps, nloci_before_filtering-skipcount);
 
     string junk;
-    char allele1, allele2, separator;
+    char allele1, allele2;
     bool skipLine = false; // to skip metadata lines
 
     hapData.skipQueue = skiplist; 
-    int nloci_after_filtering = 0;
+    size_t nloci_after_filtering = 0;
 
-    for (int locus = 0; locus < nloci_before_filtering; locus++)
+    for (size_t locus = 0; locus < nloci_before_filtering; locus++)
     {
         for (int i = 0; i < numMapCols; i++) {
             fin >> junk;
@@ -700,8 +624,6 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         {
             fin >> junk;
             allele1 = junk[0];
-            separator = junk[1];
-
             allele2 = junk[2];
 
             if(p.UNPHASED){
@@ -723,318 +645,13 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         nloci_after_filtering++;
     }
     
-
     if(p.SKIP){
         LOG("Removed " << skipcount << " low frequency variants from haplotype data.");
     }
     LOG("====");
     fin.close();
 
-    // // // DEBUG
-    // for(int locus_after_filter = 0; locus_after_filter < 1; locus_after_filter++){
-    //     cout<<locus_after_filter<<"::: ";
-    //     for(int i=0; i< hapEntries[locus_after_filter].positions.size(); i++){
-    //         cout<<hapEntries[locus_after_filter].positions[i]<<" ";
-    //     }
-    //     cout<<endl;
-        
-    //     cout<<locus_after_filter<<":::*";
-    //     for(int i=0; i< hapEntries[locus_after_filter].positions2.size(); i++){
-    //         cout<<hapEntries[locus_after_filter].positions2[i]<<" ";
-    //     }
-    //     cout<<endl;
-    // }
-}
-
-
-
-
-//tested-> unphased - lowmem, phased - lowmem
-//RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
-void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
-{
-    initParamsInHap(hapData);
-    float ALLOWED_MISSING_PERC = 1;
-    
-    igzstream fin;
-
-    std::unique_ptr<std::vector<int> > vp1(new std::vector<int>());
-    std::unique_ptr<std::vector<int> > vp2(new std::vector<int>());
-
-    vector<int>& number_of_1s_per_loci = *vp1;
-    vector<int>& number_of_2s_per_loci = *vp2;
-    queue<int> skiplist;
-
-    // PHASE 1: Counting so that inititalization is smooth
-    LOG("Opening " << filename << " to count number of haplotypes and loci...");
-    fin.open(filename.c_str());
-
-    if (fin.fail())
-    {
-        HANDLE_ERROR("Failed to open " + filename + " for reading.");
-    }
-
-    int numMapCols = 9;
-    string line;
-    int nloci_before_filtering = 0;
-    int previous_nhaps = -1;
-    int current_nhaps = 0;
-
-    int skipcount = 0;
-
-    int num_meta_data_lines = 0;
-    while (getline(fin, line))  //Counts number of haps (cols) and number of loci (rows)
-    {
-        if (line[0] == '#') {
-            num_meta_data_lines++;
-            continue;
-        }
-        nloci_before_filtering++;
-        current_nhaps = countFields(line) - numMapCols;
-
-        /********/
-        string junk;
-        char allele1, allele2, separator;
-        std::stringstream ss(line);
-        int number_of_1s = 0;
-        int number_of_2s = 0;
-
-        for (int i = 0; i < numMapCols; i++) {
-            ss >> junk;
-        }
-
-        int missing_count = 0; // reset at every locus
-        for (int field = 0; field < current_nhaps; field++)
-        {
-            ss >> junk;
-            allele1 = junk[0];
-            separator = junk[1];
-            allele2 = junk[2];
-            
-
-            if(p.UNPHASED){
-                char allele = '0';
-                if (allele1 == '1' && allele2 == '1'){
-                    number_of_2s++;
-                }
-                else if (allele1 == '1' || allele2 == '1'){
-                    number_of_1s++;
-                }
-                if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-                {
-                    // if(allele1 == '.' || allele2 == '.'){
-                    //     continue;
-                    // }
-
-                    LOG("WARNING: Alleles not coded 0/1, treating this as missing site.");
-
-
-                    if(p.MISSING_MODE=="RANDOM"){
-                        allele1 = randomZeroOrOne();
-                        allele2 = randomZeroOrOne();
-                    }else if(p.MISSING_MODE=="ONE_IMPUTE"){
-                        allele1 = '1';
-                        allele2 = '1';
-                    }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
-                        allele1 = '0';
-                        allele2 = '0';
-                    }else if(p.MISSING_MODE=="NO_IMPUTE"){
-                        missing_count+= 1;
-                    }
-                }
-            }else{
-                if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
-                    if(p.MISSING_MODE=="RANDOM"){
-                        allele1 = randomZeroOrOne();
-                        allele2 = randomZeroOrOne();
-                    }else if(p.MISSING_MODE=="ONE_IMPUTE"){
-                        allele1 = '1';
-                        allele2 = '1';
-                    }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
-                        allele1 = '0';
-                        allele2 = '0';
-                        missing_count = 0;
-                    }else if(p.MISSING_MODE=="NO_IMPUTE"){
-                        missing_count+= 2;
-                    }
-                }
-                if(allele1 == '1'){
-                    number_of_1s++;
-                }
-                if(allele2 == '1'){
-                    number_of_1s++;
-                }
-                
-                if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
-                    missing_count+= 2;
-                }
-            }
-        }
-
-        int derived_allele_count = (p.UNPHASED? (number_of_1s + number_of_2s*2) : number_of_1s);
-      
-        // --skip-low-freq filtering based on MAF
-        //missing filter, being on the safe side
-        if ( p.SKIP ){ // works for both phased and unphased
-            int ancestral_allele_count = 0;
-            ancestral_allele_count = current_nhaps*2 - derived_allele_count;
-            bool derived_lower = (derived_allele_count+missing_count)*1.0/(current_nhaps*2) < p.MAF;
-            bool ancestral_lower = (ancestral_allele_count+missing_count)*1.0/(current_nhaps*2) < p.MAF;
-            bool missing_cutoff_crossed = 1.0*missing_count/(current_nhaps*2) > ALLOWED_MISSING_PERC;
-            if (derived_lower || ancestral_lower || missing_cutoff_crossed) {
-                //cout<<"Skipping cause Derived "<<derived_allele_count<<" Missing "<<missing_count<<" Total "<<current_nhaps*2<<endl;
-                LOG("Skipping cause Derived " + std::to_string(derived_allele_count) + " Missing " + std::to_string(missing_count) + " Total " + std::to_string(current_nhaps*2));
-                skiplist.push(nloci_before_filtering-1);
-                skipcount++;
-            }
-        } 
-
-        /*********/
-        if (previous_nhaps < 0)
-        {
-            previous_nhaps = current_nhaps;
-            continue;
-        }
-        else if (previous_nhaps != current_nhaps)
-        {
-            HANDLE_ERROR("line " + std::to_string(nloci_before_filtering) +
-                          " of " + filename + " has " + std::to_string(current_nhaps) +
-                          " fields, but the previous line has " + std::to_string(previous_nhaps) + ".");
-        }
-        previous_nhaps = current_nhaps;
-    }
-
-    fin.clear(); // clear error flags
-    //fin.seekg(fileStart);
-    fin.close();
-
-
-    //PHASE 2: Load according to first pass information
-    fin.open(filename.c_str());
-
-    if (fin.fail())
-    {
-        HANDLE_ERROR("Failed to open " + filename + " for reading.");
-    }
-
-    if(p.SKIP){
-        LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
-    }
-   
-    int nhaps = p.UNPHASED ? (current_nhaps ) : (current_nhaps ) * 2;
-    LOG("Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci... skipped "<<skipcount << "loci \n");
-    hapData.initHapData(nhaps, nloci_before_filtering-skipcount);
-
-    string junk;
-    char allele1, allele2, separator;
-    bool skipLine = false; // to skip metadata lines
-
-    hapData.skipQueue = skiplist; 
-    int nloci_after_filtering = 0;
-
-    for (int locus = 0; locus < nloci_before_filtering; locus++)
-    {
-        for (int i = 0; i < numMapCols; i++) {
-            fin >> junk;
-            if (i == 0 && junk[0] == '#') { // to skip metadata lines
-                skipLine = true;
-                break;
-            }
-        }
-
-        if (skipLine) { // to skip metadata lines
-            getline(fin, junk);
-            skipLine = false;
-            locus--;
-            continue;
-        }
-
-        if(!skiplist.empty()){
-            if(skiplist.front() == locus){
-                skiplist.pop();    
-                getline(fin, junk);
-                continue;
-            }
-        }
-        
-
-        for (int field = 0; field <  current_nhaps ; field++)
-        {
-            fin >> junk;
-            allele1 = junk[0];
-            separator = junk[1];
-
-            allele2 = junk[2];
-            if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-            {
-
-                LOG("WARNING: Alleles must be coded 0/1 only. Found "<< allele1 << " " << allele2);
-                allele1 = '?';
-                allele2 = '?';
-            }
-
-            if(p.UNPHASED){
-                char allele = '0';
-                if (allele1 == '1' && allele2 == '1'){
-                    hapData.addAllele2(nloci_after_filtering, field);
-                }
-                else if ((allele1 == '1' && allele2 == '0') || (allele2 == '1' && allele1 == '0')){
-                    hapData.addAllele1(nloci_after_filtering, field);
-                }else if(allele1 == '?' || allele2 == '?'){
-                    if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
-                        if(p.MISSING_MODE=="RANDOM"){
-                            allele1 = randomZeroOrOne();
-                            allele2 = randomZeroOrOne();
-                        }else if(p.MISSING_MODE=="ONE_IMPUTE"){
-                            allele1 = '1';
-                            allele2 = '1';
-                        }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
-                            allele1 = '0';
-                            allele2 = '0';
-                        }else if(p.MISSING_MODE=="NO_IMPUTE"){
-                            hapData.addAlleleMissing(nloci_after_filtering, field);
-                        }
-                    }
-                }
-            }else{ // phased
-                if(allele1 == '1'){
-                    hapData.addAllele1(nloci_after_filtering, 2*field);
-                }
-                if(allele2 == '1'){
-                    hapData.addAllele1(nloci_after_filtering, 2*field + 1);
-                }   
-                if(allele1 == '?' || allele2 == '?'){
-                    if( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1')){
-                        if(p.MISSING_MODE=="RANDOM"){
-                            allele1 = randomZeroOrOne();
-                            allele2 = randomZeroOrOne();
-                        }else if(p.MISSING_MODE=="ONE_IMPUTE"){
-                            allele1 = '1';
-                            allele2 = '1';
-                        }else if(p.MISSING_MODE=="ZERO_IMPUTE"){
-                            allele1 = '0';
-                            allele2 = '0';
-                        }else if(p.MISSING_MODE=="NO_IMPUTE"){
-                            hapData.addAlleleMissing(nloci_after_filtering, 2*field);
-                            hapData.addAlleleMissing(nloci_after_filtering, 2*field+1);
-                            // hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field);
-                            // hapData.hapEntries[nloci_after_filtering].xorbitset->set_bit(2 * field + 1);
-                            // hapData.hapEntries[nloci_after_filtering].xorbitset->num_1s+= 2;
-                        }
-                    }
-                }
-            }
-        }
-        nloci_after_filtering++;
-    }
-
-    if(p.SKIP){
-        LOG("Removed " << skipcount << " low frequency variants from haplotype data.");
-    }
-
-    fin.close();
-
-    // // // DEBUG
+    // // // @:::DEBUG_BLOCK
     // for(int locus_after_filter = 0; locus_after_filter < 1; locus_after_filter++){
     //     cout<<locus_after_filter<<"::: ";
     //     for(int i=0; i< hapEntries[locus_after_filter].positions.size(); i++){
@@ -1051,7 +668,7 @@ void HapMap::readHapDataVCFMissing(string filename, HapData& hapData)
 }
 
 // Decide whether to skip a locus based on MAF and missing data
-bool HapMap::shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles_per_loc, int missing_count)
+bool HapMap::shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles_per_loc)
 {
     // Compute the count of derived alleles depending on phased/unphased data
     int derived_allele_count = (p.UNPHASED
@@ -1184,7 +801,6 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         stringstream ss;
         ss.str(line);
 
-        char allele1, allele2;
         string junk;
         
         for(int i = 0; i < numMapCols; i++){
@@ -1261,7 +877,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     
     LOG("Loading " << current_nhaps << " haplotypes and " << nloci_before_filter - skiplist.size() << " loci...");
     hapData.initHapData(current_nhaps, nloci_before_filter-skiplist.size());
-    hapData.skipQueue = queue<int>();
+    hapData.skipQueue = queue<size_t>();
 
     
     // PHASE 2: Open again and load the data to HapData: now that we gathered some idea about the format of the file
