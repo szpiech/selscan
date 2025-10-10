@@ -822,11 +822,11 @@ void IHS::main() {
         if(hm->hapData->unphased){
             *fout << "id" << "\t" <<   "pos" << "\t"
                             << "freq" << "\t"
-                            << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl << "\t" << "ihhDerivedLeft" << "\t" << "ihhDerivedRight" << "\t" << "ihhAncestralLeft" << "\t" << "ihhAncestralRight" << endl;
+                            << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl  << endl;
         }else{
             *fout << "id" << "\t" <<   "pos" << "\t"
                             << "freq" << "\t"
-                            << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl << "\t" << "ihhDerivedLeft" << "\t" << "ihhDerivedRight" << "\t" << "ihhAncestralLeft" << "\t" << "ihhAncestralRight" << endl;
+                            << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl  << endl;
         }
         
         std::vector< std::future<pair<double, double> > > results;
