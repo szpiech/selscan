@@ -159,8 +159,7 @@ class SelscanNorm{
     const bool DEFAULT_BPWIN = false;
     //const string HELP_BPWIN = "If set, will use windows of a constant bp size with varying\n\
     //\tnumber of SNPs.";
-    const string HELP_BPWIN = "Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.\n"
-    "If BED file with same name exists, annotate using 4th column (assumes 2nd/3rd cols are start/end).";
+    const string HELP_BPWIN = "Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.\n";
 
     const string ARG_IHS = "--ihs";
     const bool DEFAULT_IHS = false;
@@ -197,9 +196,11 @@ class SelscanNorm{
 
     // Added in v3
     const string ARG_LOG_INPUT = "--log-input";
-    const string DEFAULT_LOG_INPUT = "logfile";
-    const string HELP_LOG_INPUT = "The log file name.";
-
+    const string DEFAULT_LOG_INPUT = "__logfile__";
+    const string HELP_LOG_INPUT =     "Specifies the log file used as an input for normalization.\n"
+    "If provided, frequency-bin or mean/variance normalization is applied from the log-input file.\n"
+    "Cannot be used together with --bins.\n"
+    "Default: __logfile__.\n";
     const string ARG_BED = "--gene-bed"; // CHR START END GENE 
     const string DEFAULT_BED = "__filebed__"; 
     const string HELP_BED = "Provide a .bed file (<chr> <start> <end> <gene>) with gene annotations. "
@@ -218,7 +219,7 @@ class SelscanNorm{
     const string DEFAULT_GENE_SETB = "__genebackground__";
     const string HELP_GENE_SETB = "Provide a .genetable for background gene set for permutation test.";
 
-    const string ARG_FINE_PERCENTILE = "--fine-perc";
+    const string ARG_FINE_PERCENTILE = "--fine-percentile";
     const bool DEFAULT_FINE_PERCENTILE = false;
     const string HELP_FINE_PERCENTILE = "If set, will use fine grain percentiles (1,2,3,...,100) for normalization.";
 

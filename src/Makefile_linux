@@ -27,15 +27,15 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 # Default build target
-all: selscan norm
+all: selscan
 
 # Build selscan binary
-selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
-	$(CC) $(G++FLAG) -o selscan $^ $(LINK_OPTS_SELSCAN)
+selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o norm.o gzstream.o thread_pool.o 
+	$(CC) $(G++FLAG) -o selscan $^ $(LINK_OPTS_SELSCAN) $(LINK_OPTS_NORMs)
 
 # Build norm binary
-norm: norm.o param_t.o
-	$(CC) $(G++FLAG) -o norm $^ $(LINK_OPTS_NORM)
+# norm: norm.o param_t.o
+# 	$(CC) $(G++FLAG) -o norm $^ $(LINK_OPTS_NORM)
 
 # Compilation rules
 selscan-main.o: selscan-main.cpp
@@ -50,8 +50,8 @@ selscan-cli.o: selscan-cli.cpp selscan-cli.h
 binom.o: binom.cpp binom.h
 	$(CC) $(G++FLAG) -c $<
 
-norm.o: norm.cpp
-	$(CC) $(G++FLAG) -c $< $(I_PATH)
+norm.o: norm.cpp norm.h
+	$(CC) $(G++FLAG) -c $< $(I_PATH) $(LINK_OPTS_NORM)
 
 param_t.o: param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c $<
@@ -68,9 +68,6 @@ thread_pool.o: thread_pool.cpp thread_pool.h
 
 %.o: stats/%.cpp stats/%.h 
 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
-
-# %.o: filetype/%.cpp filetype/%.h 
-# 	$(CC) $(G++FLAG) -c $< -o $@ $(I_PATH)
 
 # Cleanup
 clean:

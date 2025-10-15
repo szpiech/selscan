@@ -282,7 +282,7 @@ const string HELP_KEEP = "Include low frequency variants in the construction of 
 
 const string ARG_MULTIALLELIC = "--filter-vcf";
 const bool DEFAULT_MULTIALLELIC = false;
-const string HELP_MULTIALLELIC = "Allows filtering of VCF files to remove non-biallelic sites and sites with missing data.";
+const string HELP_MULTIALLELIC = "Filter VCF to keep only biallelic SNPs with canonical alleles (A, C, G, T); excludes indels/MNPs/ambiguous bases.";
 
 
 const string ARG_TRUNC = "--trunc-ok";

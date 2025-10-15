@@ -60,7 +60,7 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
     params.addFlag(ARG_TRUNC, DEFAULT_TRUNC, "", HELP_TRUNC);
     params.addFlag(ARG_PI, DEFAULT_PI, "", HELP_PI);
 
-    params.addFlag(ARG_MULTIALLELIC, DEFAULT_MULTIALLELIC, "SILENT", HELP_MULTIALLELIC);
+    params.addFlag(ARG_MULTIALLELIC, DEFAULT_MULTIALLELIC, "", HELP_MULTIALLELIC);
 
 
     // params.addFlag(ARG_MISSING_FLAG, DEFAULT_MISSING_FLAG, "", HELP_MISSING_FLAG);
