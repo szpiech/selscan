@@ -79,7 +79,7 @@ class IHH12_ehh_data{
 
     void initialize_core(bool ALT){
         if(n_c[1] == 0 || n_c[0] == 0){
-            cout<<"WARNING: cannot use this as core"<<endl;
+            //cout<<"WARNING: cannot use this as core"<<endl;
         }
 
         group_count[1] = n_c[1];
