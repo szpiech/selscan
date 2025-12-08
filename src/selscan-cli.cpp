@@ -68,7 +68,7 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
 
 
     //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
-    //params.addFlag(ARG_MULTI_CHR, DEFAULT_MULTI_CHR, "", HELP_MULTI_CHR);
+    params.addFlag(ARG_MULTI_CHR, DEFAULT_MULTI_CHR, "", HELP_MULTI_CHR);
 
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
@@ -269,9 +269,9 @@ void getBaseParamFromCmdLine(param_t& params, param_main &p){
     //     p.MISSING_MODE = "ONE_IMPUTE";
     // }
 
-    // p.CHR_LIST = params.getStringFlag(ARG_MULTI_CHR);
-    // p.MULTI_CHR = false;
-    // if (p.CHR_LIST.compare(DEFAULT_MULTI_CHR) != 0) p.MULTI_CHR = true;
+    p.CHR_LIST = params.getStringFlag(ARG_MULTI_CHR);
+    p.MULTI_CHR = false;
+    if (p.CHR_LIST.compare(DEFAULT_MULTI_CHR) != 0) p.MULTI_CHR = true;
 
     p.MULTI_MAF = false;
     p.MULTI_PARAMS = false;

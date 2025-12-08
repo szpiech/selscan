@@ -232,8 +232,7 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
             }
         }
 
-        bool edgeBreak = false;
-        edgeBreak = nextLocOutOfBounds(i, downstream);
+        bool edgeBreak = nextLocOutOfBounds(i, downstream);
         if(edgeBreak) {
             {
                 std::lock_guard<std::mutex> lock(mutex_log);
@@ -820,11 +819,11 @@ void IHS::main() {
     if(!p.WRITE_DETAILED_IHS){
         string ihsornsl = p.CALC_NSL ? "nsl" : "ihs";
         if(hm->hapData->unphased){
-            *fout << "id" << "\t" <<   "pos" << "\t"
+            *fout << "chr" << "\t" << "id" << "\t" <<   "pos" << "\t"
                             << "freq" << "\t"
                             << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl  << endl;
         }else{
-            *fout << "id" << "\t" <<   "pos" << "\t"
+            *fout << "chr" << "\t" << "id" << "\t" <<   "pos" << "\t"
                             << "freq" << "\t"
                             << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl  << endl;
         }
@@ -860,13 +859,13 @@ void IHS::main() {
                     const double& iHS0 = ihh0;
                     double ihs = iHS2 > iHS0 ? iHS2 : 0-iHS0;
                     //std::fixed <<   std::setprecision(6) << 
-                    *fout << hm->mapData->mapEntries[locus].locusName << "\t" <<   hm->mapData->mapEntries[locus].physicalPos << "\t"
+                    *fout << hm->mapData->mapEntries[locus].chr << "\t" << hm->mapData->mapEntries[locus].locusName << "\t" <<   hm->mapData->mapEntries[locus].physicalPos << "\t"
                             << hm->hapData->calcFreq(locus) << "\t"
                             << iHS2 << "\t" << iHS0 <<"\t"<< ihs <<endl;
                             //<<  hm->mapData->mapEntries[locus].locId << "\t" 
                 }else{  
                     //std::fixed <<   std::setprecision(6) <<  
-                    *fout << hm->mapData->mapEntries[locus].locusName << "\t" <<   hm->mapData->mapEntries[locus].physicalPos << "\t"
+                    *fout << hm->mapData->mapEntries[locus].chr << "\t" << hm->mapData->mapEntries[locus].locusName << "\t" <<   hm->mapData->mapEntries[locus].physicalPos << "\t"
                             << hm->hapData->calcFreq(locus) << "\t"
                             << ihh1 << "\t" << ihh0 <<"\t"<< log10(ihh1/ihh0) <<endl;
                             //hm->mapData->mapEntries[locus].locId << "\t"
@@ -883,10 +882,10 @@ void IHS::main() {
     if(p.WRITE_DETAILED_IHS){
         string ihsornsl = p.CALC_NSL ? "nsl" : "ihs";
         if(hm->hapData->unphased){
-            cerr<<"ERROR: Detailed iHS output not supported for unphased data. Please run without --write-detailed-ihs flag."<<endl;
+            cerr<<"ERROR: Detailed iHS output not supported for unphased data. Please run unphased analysis without --write-detailed-ihs flag."<<endl;
             exit(1);
         }
-        *fout << "id" << "\t" <<   "pos" << "\t"
+        *fout <<    "chr" << "\t" << "id" << "\t" <<   "pos" << "\t"
                             << "freq" << "\t" << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl << "\t"
                             << "ihh1_left" << "\t" << "ihh1_right" << "\t" << "ihh0_left" << "\t" << "ihh0_right" << endl;
         std::vector< std::future<IhhComponents> > results;
@@ -921,7 +920,7 @@ void IHS::main() {
                     unstandardized_iHS = log10(ihh1 / ihh0);
                 }
 
-                *fout << entry.locusName << "\t"
+                *fout << entry.chr << "\t" << entry.locusName << "\t"
                     << entry.physicalPos << "\t"
                     << freq1 << "\t"
                     << ihh1 << "\t"

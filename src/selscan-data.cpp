@@ -6,25 +6,25 @@ void HapMap::initParamsInHap(HapData &hapData){
     hapData.MISSING_ALLOWED = p.MISSING_ALLOWED;
     hapData.unphased = p.UNPHASED;
     hapData.MULTI_MAF = p.MULTI_MAF;
-
-    //hapData.MULTI_CHR = p.MULTI_CHR;
-    // if(p.MULTI_CHR){
-    //     cerr<<"Multi-chromosome support enabled."<<endl;
-    //     // MULTI-chromosome support added
+    hapData.MULTI_CHR = p.MULTI_CHR;
+    if(p.MULTI_CHR){
+        cerr<<"Multi-chromosome support enabled."<<endl;
         
-    //     if(p.CHR_LIST!=""){
-    //         std::stringstream ss(p.CHR_LIST);
-    //         std::string item;
-    //         while (std::getline(ss, item, ',')) { // Split the input string by commas
-    //             if(item!="")
-    //                 chr_set.insert(item);
-    //         }
-    //     }
+        // MULTI-chromosome support added
+        
+        if(p.CHR_LIST!=""){
+            std::stringstream ss(p.CHR_LIST);
+            std::string item;
+            while (std::getline(ss, item, ',')) { // Split the input string by commas
+                if(item!="")
+                    chr_set.insert(item);
+            }
+        }
 
-    //     if(chr_set.empty()){
-    //         cerr<<"ERROR: No valid chromosome list provided.\n";
-    //     }
-    // }
+        if(chr_set.empty()){
+            cerr<<"ERROR: No valid chromosome list provided.\n";
+        }
+    }
 
     // if we are in multi param mode, or using xp, we want to set the MAF cutoff to the minimum
     this->MIN_MAF_CUTOFF = p.MAF;
@@ -443,6 +443,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             if(i == 1){
                 if(physpos == std::stoi(junk)){
                     std::cerr<<"WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos<<"\n";
+                    LOG("WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos<<"\n");
                     skip_due_to_duplicate_pos += 1;
                 }else{
                     skip_due_to_duplicate_pos = 0;
@@ -466,6 +467,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                         HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
                     }else{
                         std::cerr<<"WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos << "\n";
+                        LOG("WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos << "\n");
                         skip_due_to_missing = true;
                     }
                 }
@@ -476,6 +478,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                     HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
                 }else{
                     std::cerr<<"WARNING: Unphased entries detected (/ is used). To use this site, run with --unphased flag for correct results. Skipping.\n";
+                    LOG("WARNING: Unphased entries detected (/ is used). To use this site, run with --unphased flag for correct results. Skipping.\n");
                     skip_due_to_missing = true;
                 }
             }
@@ -506,25 +509,28 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             std::string chrom, pos, id, ref, alt, rest;
             if (!(ss2 >> chrom >> pos >> id >> ref >> alt)) {
                 std::cerr << "Malformed line: " << line << "\n";
+                LOG("Malformed line: " << line << "\n");
                 continue;
             }else{
                 // Skip multi-allelic sites,  Keep only SNPs (both REF and ALT are single-nucleotide) //if (ref.length() != 1 || alt.length() != 1) { this keeps biallelic indels too
                 if ((ref != "A" && ref != "C" && ref != "G" && ref != "T") ||
                     (alt != "A" && alt != "C" && alt != "G" && alt != "T")) {
                     std::cerr << "WARNING: Non-biallelic or non-SNP site skipped at pos: " << pos <<" " << ref << " " << alt << "\n";
+                    LOG("WARNING: Non-biallelic or non-SNP site skipped at pos: " << pos <<" " << ref << " " << alt << "\n");
                     skip_due_to_multiallelic = true;
                 }                
             }
         }
 
-        // bool skipreason2 = false;
-        // if(p.MULTI_CHR){ 
-        //     if(chr_set.empty()){
-        //         //cerr<<"WARNING: No chromosome list provided. Running analysis on all chromosomes.\n";
-        //     }else{
-        //         skipreason2 = (chr_set.find(chr) != chr_set.end());
-        //     }
-        // }
+        bool skipreason2 = false;
+        if(p.MULTI_CHR){ 
+            if(chr_set.empty()){
+                cerr<<"WARNING: No chromosome list provided. Running analysis on all chromosomes.\n";
+                LOG("WARNING: No chromosome list provided. Running analysis on all chromosomes.\n");
+            }else{
+                skipreason2 = (chr_set.find(chr) != chr_set.end());
+            }
+        }
 
         if (p.CALC_XP || p.CALC_XPNSL) 
             skip_due_to_maf = 0;
@@ -582,6 +588,8 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
     if(p.SKIP && !p.CALC_XP &&  !p.CALC_XPNSL){
         LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n");
+    }   else{
+        LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF << ".\n");
     }
    
     int nhaps = p.UNPHASED ? (current_ngts ) : (current_ngts ) * 2;
@@ -688,7 +696,7 @@ bool HapMap::shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles_pe
     
     return skip_due_to_maf;
 
-    /* UNCOMMENT if missing data is allowed
+    /* DISABLED@FEATURE_MISSING: UNCOMMENT if missing data is allowed
     bool skip_due_to_missing = false; // Skip based on missingness threshold
     if (p.MISSING_ALLOWED) {
         const double ALLOWED_MISSING_PERC = 1.0; // 100% allowed unless explicitly used

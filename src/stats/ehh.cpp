@@ -257,12 +257,13 @@ void EHH::main(string query){
         calc_ehh_unidirection_unphased(locus, true); // downstream
         calc_ehh_unidirection_unphased(locus, false); // upstream
 
-        (*fout) << std::fixed <<   "pdist\tgdist\tehh2\tehh0\tcehh\tehh" << "\n";
+        (*fout) << std::fixed <<   "chr\tpdist\tgdist\tehh2\tehh0\tcehh\tehh" << "\n";
         for (int i = 0; i < numSnps; i++){
             if(!output[i].print){
                 continue;
             }
-            (*fout) << std::fixed <<   output[i].pdist  << "\t"
+            (*fout) << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
+            <<   output[i].pdist  << "\t"
             <<  output[i].gdist << "\t"
             << output[i].ehh2 << "\t"
             << output[i].ehh0  << "\t"
@@ -279,7 +280,7 @@ void EHH::main(string query){
         calc_ehh_unidirection(locus, true); // downstream
         calc_ehh_unidirection(locus, false); // upstream
 
-        (*fout) << std::fixed <<   "pdist\tgdist\tderEHH\tancEHH\tEHH" << "\n";
+        (*fout) << std::fixed <<   "chr\tpdist\tgdist\tderEHH\tancEHH\tEHH" << "\n";
         for (int i = 0; i < numSnps; i++){
             if(output[i].print == false){
                 continue;
@@ -290,7 +291,8 @@ void EHH::main(string query){
             // << output[i].ehh0  << "\t"
             // << output[i].ehh  << "";
             // (cout) << endl;
-            (*fout) << std::fixed <<   output[i].pdist  << "\t"
+            (*fout) << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
+            <<   output[i].pdist  << "\t"
             <<  output[i].gdist << "\t"
             << output[i].ehh1 << "\t"
             << output[i].ehh0  << "\t"

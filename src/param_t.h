@@ -49,8 +49,8 @@ struct param_main{
     bool CALC_PI;
     int PI_WIN;
 
-    // bool MULTI_CHR;
-    // string CHR_LIST;
+    bool MULTI_CHR;
+    string CHR_LIST;
 
     string benchmark_flag = "NO_XOR";//XOR
     string benchmark_flag2 = ""; //"FLIP";

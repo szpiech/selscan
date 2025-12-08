@@ -267,10 +267,10 @@ int runToolSelscan(int argc, char *argv[])
     (*flog) << "\n";
 
 
-    // if(p.MULTI_CHR){
-    //     (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
-    //     cerr << "WARNING: Running in multi-chromosome mode.\n";
-    // }
+    if(p.MULTI_CHR){
+        (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
+        cerr << "WARNING: Running in multi-chromosome mode.\n";
+    }
 
     if(p.MULTI_PARAMS){
         //TODON

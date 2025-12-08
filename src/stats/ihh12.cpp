@@ -56,6 +56,8 @@
 //     // double normfac = twice_num_pair(nhaps);
 // }
 
+
+
 void IHH12::findMaxTwo(int* arr, int n, int &max1, int &max2) {
     // Initialize max1 and max2 to the smallest possible values
     max1 = 0;
@@ -165,7 +167,8 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
     while(true){
 
         bool edgeBreak = false;
-        edgeBreak = (downstream)? (i-1 < 0) : (i+1 >= numSnps);
+        //edgeBreak = (downstream)? (i-1 < 0) : (i+1 >= numSnps); //change v3
+        edgeBreak = nextLocOutOfBounds(i, downstream); 
 
         if(edgeBreak) {
             {std::lock_guard<std::mutex> lock(mutex_log);
@@ -194,9 +197,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         // if(physicalDistance(i, locus, downstream) >= max_extend){ //check if currentLocus is beyond 1Mb
         //     break;
         // }
-
-
-
 
         double distance =  geneticDistance(i, prev_index, downstream);
         double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, prev_index, downstream) );
@@ -279,9 +279,7 @@ void IHH12::main()
         HANDLE_ERROR("Unphased analysis not supported for iHH12 calculations.");
     }
 
-
     std::cerr << "Starting iHH12 calculations."<<endl;
-
 
     ThreadPool pool(p.numThreads);
     std::vector< std::future<double> > results;
@@ -294,12 +292,13 @@ void IHH12::main()
     }
 
     int i = 0;
-    (*fout) << "id\tpos\tp1\tihh12\n";
+    (*fout) << "chr\tid\tpos\tp1\tihh12\n";
     for(auto && result: results){ // this is a blocking call
         double ihh12 = result.get(); 
 
         if(ihh12 != skipLocusDouble()){
-            (*fout) << hm->mapData->mapEntries[i].locusName << "\t"
+            (*fout) << hm->mapData->mapEntries[i].chr << "\t"
+            << hm->mapData->mapEntries[i].locusName << "\t"
                     << hm->mapData->mapEntries[i].physicalPos << "\t"
                     //<< hm->mapData->mapEntries[i].geneticPos << "\t"
                     << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"

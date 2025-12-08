@@ -55,7 +55,7 @@ class SelscanStats {
             //else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
         }
         if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + p.query;
-        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + p.query;
+        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + p.query_ehh12;
         if (p.ALT) outFilename += ".alt";
         return outFilename;
     }
@@ -92,6 +92,7 @@ class SelscanStats {
             statname == "ehh"    ? "EHH." :
             statname == "pi"     ? "PI." :
             statname == "ihh12"  ? "iHH12." :
+            statname == "ehh12"    ? "EHH12." :
             "Unknown statistic."
         ));
         LOG("=====");
@@ -351,26 +352,34 @@ class SelscanStats {
         }
 
         bool nextLocOutOfBounds(int locus, bool downstream){
-            if(!downstream){
-                if(locus+1 >= hm->hapData->nloci){
-                    return true;
-                }
-                // when hm->p.MULTI_CHR is enabled
-                // if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
-                //     cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
-                //     return true;
-                // }
-            }else{
+            if(downstream){ 
                 if(locus-1 < 0){
                     return true;
                 }
-                // if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
-                //     cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
-                //     return true;
-                // }
+            }else{
+                if(locus+1 >= hm->hapData->nloci){
+                    return true;
+                }
             }
+
+            if(p.MULTI_CHR){
+                if(downstream){
+                    if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
+                        cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
+                        return true;
+                    }
+                }else{
+                    if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
+                        cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
+                        return true;
+                    }
+                }
+            }
+            
             return false;
         }
+
+        
 
         // // hm->p.MULTI_CHR
         // int getChrIdxFromLoc(int locus){

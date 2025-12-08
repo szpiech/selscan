@@ -196,11 +196,17 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             break;
         }
 
-        if(downstream){
-            if (--i < 0) break;
-        }else{
-            if (++i >= numSnps) break;
+        // if(downstream){
+        //     if (--i < 0) break;
+        // }else{
+        //     if (++i >= numSnps) break;
+        // }
+        bool edgeBreak = nextLocOutOfBounds(i, downstream);
+        if(edgeBreak) {
+            break;
         }
+
+
 
         if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
         {
@@ -477,7 +483,9 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             break;
         }
 
-        if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
+        //if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
+        bool edgeBreak = nextLocOutOfBounds(i, downstream);
+        if(edgeBreak)
         {
             {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
@@ -494,11 +502,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
             break;
         }
 
-        if(downstream){
-            if (--i < 0) break;
-        }else{
-            if (++i >= numSnps) break;
-        }
+        i = downstream ? i - 1 : i + 1;
+        // if(downstream){
+        //     if (--i < 0) break;
+        // }else{
+        //     if (++i >= numSnps) break;
+        // }
 
         if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
         {
@@ -608,8 +617,8 @@ void XPIHH::main()
     if (p.CALC_XP) LOG("Starting XP-EHH calculations.");
     if (p.CALC_XPNSL) LOG("Starting XP-nSL calculations.");
 
-    if (p.CALC_XP) (*fout) << "id\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
-    if (p.CALC_XPNSL) (*fout) << "id\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
+    if (p.CALC_XP) (*fout) << "chr\tcid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
+    if (p.CALC_XPNSL) (*fout) << "chr\tid\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
 
     if(numThreads==1){
         for (int i = 0; i < nloci; i++)
@@ -620,14 +629,14 @@ void XPIHH::main()
             
             if ( !skipLocus(ihh_p1_p2))
             {
-                (*fout) << hm->mapData->mapEntries[i].locusName << "\t"
+                (*fout) << hm->mapData->mapEntries[i].chr << "\t" << hm->mapData->mapEntries[i].locusName << "\t"
                         << hm->mapData->mapEntries[i].physicalPos << "\t"
                         << hm->mapData->mapEntries[i].geneticPos << "\t"
                         << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"
                         << ihh_p1 << "\t"
                         << hm->hapData2->calcFreq(i) << "\t"  //<< freq2[i] << "\t"
-                        << ihh_p2 << "\t";
-                (*fout) << log10(ihh_p1 / ihh_p2) << endl;
+                        << ihh_p2 << "\t"
+                        << log10(ihh_p1 / ihh_p2) << endl;
             }
         }
     }else{
@@ -646,9 +655,9 @@ void XPIHH::main()
             double ihh_p1 = ihh_p1_p2.first;
             double ihh_p2 = ihh_p1_p2.second;
 
-            if (  !skipLocus(ihh_p1_p2))
+            if (!skipLocus(ihh_p1_p2))
             {
-                (*fout) << hm->mapData->mapEntries[locus].locusName << "\t"
+                (*fout) << hm->mapData->mapEntries[locus].chr << "\t" << hm->mapData->mapEntries[locus].locusName << "\t"
                         << hm->mapData->mapEntries[locus].physicalPos << "\t"
                         << hm->mapData->mapEntries[locus].geneticPos << "\t"
                         << hm->hapData->calcFreq(locus) << "\t"  //<< freq1[i] << "\t"
@@ -683,5 +692,16 @@ pair<double, double> XPIHH::calc_xpihh(int locus)
         return skipLocusPair();
     }
 
-    return make_pair(left.first+right.first, left.second+right.second);
+    double ihh1 = (left.first + right.first);
+    double ihh2 = (left.second + right.second);
+
+    if(ihh1 == 0 || ihh2 == 0){
+        {std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: ihh is zero. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock
+            
+        return skipLocusPair();
+    }
+
+    return make_pair(ihh1, ihh2);
 }

@@ -304,9 +304,9 @@ const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 // const bool DEFAULT_MISSING_FLAG = false;
 // const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
-// const string ARG_MULTI_CHR = "--multi-chr";
-// const string DEFAULT_MULTI_CHR = "__NO_CHR__";
-// const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
+const string ARG_MULTI_CHR = "--multi-chr";
+const string DEFAULT_MULTI_CHR = "__ALL_CHR__";
+const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
 
 // @UNCOMMENT
 // const string ARG_IMPUTE_FLAG = "--impute";
