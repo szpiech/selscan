@@ -238,6 +238,12 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
+05JAN2026 - selscan v3.0.0-alpha.1
+
+In selscan v3.0 pre-release: 
+
+- Fixed: `ihs` calculation with `--bp-win` was incorrectly producing zero nonzero windows (note: binaries are not updated)
+
 26SEP2025 - selscan v2.1.1 - Bug fixes for the fast and memory-efficient version introduced in v2.1:
 
     - Refined cutoff handling for edge cases, improving correlation with v2.0 outputs.
