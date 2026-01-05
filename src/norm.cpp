@@ -696,6 +696,10 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         int numSNPs = 0;
         int numCrit = 0;
         double maxAbs = -99999.9;
+
+        //skip header line
+        string header;
+        getline(fin, header);
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> name;

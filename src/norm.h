@@ -129,15 +129,17 @@ struct BinData {
 
 class SelscanNorm{
     public:
-    const string VERSION = "3.0";
+    const string VERSION = "3.0-alpha.1";
 
-    const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
+    const string PREAMBLE = " -- norm: a program for downstream analysis of selscan output\n\
     Source code and binaries can be found at\n\
     \t<https://www.github.com/szpiech/selscan>\n\
     \n\
     Citations:\n\
     \n\
-    selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
+    selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
+         ZA Szpiech (2024) Bioinformatics 40: btae006.\n\
+         A Rahman, TQ Smith, and ZA Szpiech (2025). bioRxiv, pp.2025-04.\n\
     iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
         N Garud et al. (2015) PLoS Genetics, 11: 1–32.\n\
     nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
