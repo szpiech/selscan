@@ -87,7 +87,7 @@ struct BinData {
 
 class SelscanNorm{
     public:
-    const string VERSION = "3.0-alpha.1";
+    const string VERSION = "3.0-alpha.2";
 
     const string PREAMBLE = " -- norm: a program for downstream analysis of selscan output\n\
     Source code and binaries can be found at\n\
@@ -549,7 +549,7 @@ class SelscanNorm{
 
         //print header
         if(XP){
-            fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc\ttop_score\tbottom_score\toverlap_genes\n";  
+            fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc_top\tperc_bottom\ttop_score\tbottom_score\toverlap_genes\n";  
         }else{
             fout<<"start\tend\tnSNPs\tfrac_extreme\tperc\tscore\toverlap_genes\n";  
         }

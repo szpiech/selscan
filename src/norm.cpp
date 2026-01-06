@@ -144,7 +144,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
 
 
-    if(XPNSL) XPEHH = true;
+
 
     if (numBins <= 0)
     {
@@ -180,6 +180,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         cerr << "ERROR: Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
         return 1;
     }
+
+    if(XPNSL) XPEHH = true;
 
     // cout<<("=== Parameters ===\n");
     // cout<<params.flagWasSet(ARG_FILES)<<endl;
