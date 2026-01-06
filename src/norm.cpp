@@ -1723,7 +1723,7 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
     // 3. Read until we find the header that starts with "bin"
     while (std::getline(in, line)) {
             if(!XPORSOFT){
-                if (line.rfind("bin\tnum\mean\variance", 0) == 0) {  // starts with "bin"
+                if (line.rfind("bin\tnum\tmean\tvariance", 0) == 0) {  // starts with "bin"
                     headerFound = true;
                     break;
                 }
