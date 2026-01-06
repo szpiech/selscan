@@ -87,7 +87,7 @@ struct BinData {
 
 class SelscanNorm{
     public:
-    const string VERSION = "3.0-alpha.2";
+    const string VERSION = "3.0-alpha.3";
 
     const string PREAMBLE = " -- norm: a program for downstream analysis of selscan output\n\
     Source code and binaries can be found at\n\
