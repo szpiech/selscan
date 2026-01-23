@@ -30,7 +30,7 @@ OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 all: selscan
 
 # Build selscan binary
-selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o norm.o gzstream.o thread_pool.o 
+selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o norm.o gene.o gzstream.o thread_pool.o 
 	$(CC) $(G++FLAG) -o selscan $^ $(LINK_OPTS_SELSCAN) $(LINK_OPTS_NORM)
 
 # Build norm binary
@@ -52,6 +52,10 @@ binom.o: binom.cpp binom.h
 
 norm.o: norm.cpp norm.h
 	$(CC) $(G++FLAG) -c $< $(I_PATH) $(LINK_OPTS_NORM)
+
+gene.o: gene.cpp gene.h
+	$(CC) $(G++FLAG) -c $< $(I_PATH) $(LINK_OPTS_NORM)
+	
 
 param_t.o: param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c $<

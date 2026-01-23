@@ -4,6 +4,9 @@
 // #include <gsl/gsl_statistics_double.h>
 // #include <gsl/gsl_interp.h>
 
+//TODO
+// TODO: winfile allow multiple windows
+
 
 //int main(int argc, char *argv[])
 int SelscanNorm::runToolNorm(int argc, char *argv[])
@@ -77,7 +80,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
 
     // read window file
-    vector<string> windowFile = params.getStringListFlag(ARG_WIN_FILE);
+    vector<string> windowFiles = params.getStringListFlag(ARG_WIN_FILE);
     //string windowFile = params.getStringFlag(ARG_WIN_FILE);
     string geneBedFile = params.getStringFlag(ARG_BED);
     bool ANNOTATE_WINDOWS = params.flagWasSet(ARG_WIN_FILE);// && params.flagWasSet(ARG_BED);
@@ -89,10 +92,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     ///// ***** BLOCK START : ALLOWING GENE BASED ANALYSIS ***** /////
     //
     //
-    bool DO_NORM = (nfiles > 0);                       // if input stat files provided
-    bool DO_WINDOW = (winSize > 0);                    // user gave --winsize → do window-based stats
-    bool DO_GENE = this->USE_GENE_BED;                // user gave --bed
-    bool HAVE_WINFILE = (ANNOTATE_WINDOWS);           // user gave --win-file
+    bool DO_NORM = (nfiles > 0);                       // if input stat files (.out) provided
+    bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
+    bool DO_GENE = this->USE_GENE_BED;                // user gave --bed (.bed)
+    bool HAVE_WINFILE = (ANNOTATE_WINDOWS);           // user gave --win-file ::: TODO throw error if both --win-file and --bp-win provided (.windows)
     //
     // CASE 1: Just normalization
     //
@@ -162,11 +165,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             cerr << "ERROR: --gene-bed must be provided with --annotate-win to annotate windows.\n";
             return 1;
         }
-        if(geneBedFile == DEFAULT_BED || ANNOTATE_WINDOWS == false || windowFile[0] == DEFAULT_WIN_FILE){
+        if(geneBedFile == DEFAULT_BED || ANNOTATE_WINDOWS == false || windowFiles[0] == DEFAULT_WIN_FILE){
             cerr << "ERROR: --gene-bed and --annotate-win must be provided to annotate windows.\n";
             return 1;
         }
-        cerr << "Annotating " << windowFile.size() <<" windows " << " with genes from " << geneBedFile << "\n";
+        cerr << "Annotating " << windowFiles.size() <<" windows " << " with genes from " << geneBedFile << "\n";
         // string statName;
         // if(IHS) statName = "ihs";
         // if(NSL) statName = "nsl";
@@ -178,7 +181,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         int nfiles = filename.size();
 
         bool XP = (XPEHH || XPNSL);
-        annotateWindows(geneBedFile, windowFile, XP);
+        genex.annotateWindows(geneBedFile, windowFiles, XP);
         return 0;
     }
 
@@ -188,7 +191,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             return 1;
         }
         cerr << "Running permutation test with target genes from " << geneSetA << " and background genes from " << geneSetB << "\n";
-        perm_test(geneSetA, geneSetB);
+        genex.perm_test(geneSetA, geneSetB);
         return 0;
     }
 
@@ -432,7 +435,12 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         delete [] variance;
         delete [] n;
 
-        if (BPWIN) analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
+        if (BPWIN) analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs); //require .norm files
+
+        if(DO_GENE){ // require .norm files + .bed files + .windows files
+            bool XP = (XPEHH || XPNSL);
+            //TODO: annotateWindows(geneBedFile, {outfilename[0]}, XP);
+        }
         //if(SNPWIN) analyzeSNPWindows(outfilename,fileLoci,nfiles,snpWinSize);
 
         
@@ -2319,199 +2327,3 @@ bool SelscanNorm::isint(string str)
     return 1;
 }
 
-
-std::pair<double,double> SelscanNorm::fit_length_regression(
-    const std::vector<double> &lengths,
-    const std::vector<double> &scores)
-{
-    size_t n = lengths.size();
-    size_t p = 2; // intercept + log(length)
-
-    // Collect valid entries
-    std::vector<size_t> valid_idx;
-    valid_idx.reserve(n);
-    for (size_t i = 0; i < n; i++) {
-        if (abs(scores[i]) != MISSING_SCORE)
-            valid_idx.push_back(i);
-    }
-
-    size_t m = valid_idx.size();
-    if (m == 0) return {0.0, 0.0}; // nothing to fit
-
-    gsl_matrix *X = gsl_matrix_alloc(m, p);
-    gsl_vector *y = gsl_vector_alloc(m);
-    gsl_vector *c = gsl_vector_alloc(p);
-    gsl_matrix *cov = gsl_matrix_alloc(p, p);
-    double chisq;
-
-    for (size_t j = 0; j < m; j++) {
-        size_t i = valid_idx[j];
-        gsl_matrix_set(X, j, 0, 1.0);
-        gsl_matrix_set(X, j, 1, std::log(lengths[i]));
-        gsl_vector_set(y, j, scores[i]);
-    }
-
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(m, p);
-    gsl_multifit_linear(X, y, c, cov, &chisq, work);
-    gsl_multifit_linear_free(work);
-
-    double beta0 = gsl_vector_get(c, 0);
-    double beta1 = gsl_vector_get(c, 1);
-
-    gsl_matrix_free(X);
-    gsl_matrix_free(cov);
-    gsl_vector_free(y);
-    gsl_vector_free(c);
-
-    return {beta0, beta1};
-}
-
-std::vector<double> SelscanNorm::compute_length_residuals(
-    const std::vector<double> &lengths,
-    const std::vector<double> &scores,
-    double beta0,
-    double beta1)
-{
-    size_t n = lengths.size();
-    std::vector<double> residuals(n, -1.0);
-
-    for (size_t i = 0; i < n; i++) {
-        if (abs(scores[i]) != MISSING_SCORE) {
-            double pred = beta0 + beta1 * std::log(lengths[i]);
-            residuals[i] = scores[i] - pred;
-        }
-    }
-
-    return residuals;
-}
-
-// if any part of gene overlaps a window, mark that window as overlapping the gene
-// if a window overlaps multiple genes, list all genes in the annotation (comma-separated?), 
-/**
- * Regresses score ~ intercept + log(length) using GSL
- * and returns residuals (length-corrected scores).
- *
- * @param lengths  Vector of gene lengths
- * @param scores   Vector of per-gene scores
- * @return residuals vector (score corrected for length)
- */
-std::vector<double> SelscanNorm::regress_out_length(
-    const std::vector<double> &lengths,
-    const std::vector<double> &scores) 
-{
-    size_t n = lengths.size();
-    size_t p = 2; // intercept + log(length)
-
-    // First collect only valid (score != -1) entries
-    std::vector<size_t> valid_idx;
-    valid_idx.reserve(n);
-    for (size_t i = 0; i < n; i++) {
-        if (abs(scores[i]) != MISSING_SCORE) {
-            valid_idx.push_back(i);
-        }
-    }
-
-    size_t m = valid_idx.size(); // number of valid points
-    if (m == 0) {
-        // nothing to fit, just return original
-        return scores;
-    }
-
-    gsl_matrix *X = gsl_matrix_alloc(m, p);
-    gsl_vector *y = gsl_vector_alloc(m);
-    gsl_vector *c = gsl_vector_alloc(p);
-    gsl_matrix *cov = gsl_matrix_alloc(p, p);
-    double chisq;
-
-    // Fill design matrix and response with only valid data
-    for (size_t j = 0; j < m; j++) {
-        size_t i = valid_idx[j];
-        gsl_matrix_set(X, j, 0, 1.0);                  // intercept
-        gsl_matrix_set(X, j, 1, std::log(lengths[i])); // log(length)
-        gsl_vector_set(y, j, scores[i]);
-    }
-
-    // Fit linear regression
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(m, p);
-    gsl_multifit_linear(X, y, c, cov, &chisq, work);
-    gsl_multifit_linear_free(work);
-
-    double beta0 = gsl_vector_get(c, 0);
-    double beta1 = gsl_vector_get(c, 1);
-
-    // Compute residuals (keep same size as input)
-    std::vector<double> residuals(n, -1.0);
-    for (size_t j = 0; j < m; j++) {
-        size_t i = valid_idx[j];
-        double pred = beta0 + beta1 * std::log(lengths[i]);
-        residuals[i] = scores[i] - pred;
-    }
-
-    // Shift residuals so the minimum valid one is 0
-    // double minResidual = std::numeric_limits<double>::max();
-    // for (double r : residuals) {
-    //     if (r != -1.0) minResidual = std::min(minResidual, r);
-    // }
-    // if (minResidual < 0.0) {
-    //     for (auto &r : residuals) {
-    //         if (r != -1.0) r -= minResidual;
-    //     }
-    // }
-
-    // Free memory
-    gsl_matrix_free(X);
-    gsl_matrix_free(cov);
-    gsl_vector_free(y);
-    gsl_vector_free(c);
-
-    return residuals;
-}
-
-// std::vector<double> SelscanNorm::regress_out_length(const std::vector<double> &lengths,
-//                                        const std::vector<double> &scores) {
-//     size_t n = lengths.size();
-//     size_t p = 2; // intercept + log(length)
-
-    
-//     gsl_matrix *X = gsl_matrix_alloc(n, p);
-//     gsl_vector *y = gsl_vector_alloc(n);
-//     gsl_vector *c = gsl_vector_alloc(p);
-//     gsl_matrix *cov = gsl_matrix_alloc(p, p);
-//     double chisq;
-
-//     // Fill design matrix and response
-//     for (size_t i = 0; i < n; i++) {
-//         gsl_matrix_set(X, i, 0, 1.0);                  // intercept
-//         gsl_matrix_set(X, i, 1, std::log(lengths[i])); // log(length)
-//         gsl_vector_set(y, i, scores[i]);
-//     }
-
-//     // Fit linear regression
-//     gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(n, p);
-//     gsl_multifit_linear(X, y, c, cov, &chisq, work);
-//     gsl_multifit_linear_free(work);
-
-//     double beta0 = gsl_vector_get(c, 0);
-//     double beta1 = gsl_vector_get(c, 1);
-
-//     // Compute residuals
-//     std::vector<double> residuals(n);
-//     for (size_t i = 0; i < n; i++) {
-//         double pred = beta0 + beta1 * std::log(lengths[i]);
-//         residuals[i] = scores[i] - pred;
-//     }
-
-//     //After computing residuals, shift them so the minimum is 0
-//     double minResidual = *std::min_element(residuals.begin(), residuals.end());
-//     if (minResidual < 0.0) {
-//         for (auto &r : residuals) r -= minResidual;
-//     }
-//     // Free memory
-//     gsl_matrix_free(X);
-//     gsl_matrix_free(cov);
-//     gsl_vector_free(y);
-//     gsl_vector_free(c);
-
-    
-//     return residuals;
-// }
