@@ -1,6 +1,6 @@
 
 #include "gene.h"
-
+#include <unordered_map>
 #include "gzstream.h"
 
 // bed
@@ -82,7 +82,7 @@ void GeneAnalyzer::readGenesFromBed(std::string bedfile, std::vector<Gene> &gene
     std::string line;
 
     // Temporary storage: gene_name -> vector of entries
-    std::map<std::string, std::vector<Gene>> geneMap;
+    std::map<std::string, std::vector<Gene> > geneMap;
 
     while (std::getline(infile, line)) {
         if (line.empty()) continue; // skip empty lines
@@ -498,7 +498,7 @@ void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> 
                 });
 
     
-    std::unordered_map<std::string, std::vector<GeneNoChr>> genes_by_chr; // Organize genes by chromosome
+    std::unordered_map<std::string, std::vector<GeneNoChr> > genes_by_chr; // Organize genes by chromosome
     for (const auto &g : genes)
     {
         GeneNoChr gnc{g.start, g.end, g.name};
