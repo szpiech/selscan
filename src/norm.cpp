@@ -439,7 +439,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         if(DO_GENE){ // require .norm files + .bed files + .windows files
             bool XP = (XPEHH || XPNSL);
-            //TODO: annotateWindows(geneBedFile, {outfilename[0]}, XP);
+            //genex.annotateWindows(geneBedFile, {outfilename[0]}, XP);
+
         }
         //if(SNPWIN) analyzeSNPWindows(outfilename,fileLoci,nfiles,snpWinSize);
 

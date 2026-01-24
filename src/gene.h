@@ -27,6 +27,7 @@
 #include <gsl/gsl_multifit.h>
 
 
+
 using namespace std;
 
 struct Window {
@@ -58,29 +59,46 @@ struct GeneNoChr
     std::string name;
 };
 
-struct GeneInfo
-{
-    std::string chrom;
-    int merged_length;
-    double max_score;
-};
+// struct GeneInfo
+// {
+//     std::string chrom;
+//     int merged_length;
+//     double max_score;
+// };
 
 struct GeneTableEntry
 {
-    double maxScore;
-    int exonicLength = 0;
+    double maxScore = -99999;
+    int lengthSpan = 0;
     int nWin = 0;
-    int geneEnd;
+    //int geneEnd;
+    int windowFileId = -1;
+};
+
+struct GeneTableEntryTrue
+{
+    double maxScore = -99999;
+    int lengthSpan = 0;
+    int nWin = 0;
+    string geneId;
 };
 
 class GeneAnalyzer
 {
 private:
-    void readGenes(std::string bedfile, std::vector<Gene> &genes);
+    void readGenesFromBed(std::string bedfile, std::vector<Gene> &genes, bool canonical = false);
+    void readGenesFromGTF(std::string gtffile, std::vector<Gene> &genes,  bool useTranscripts = false, bool canonical = false);
     std::vector<Gene> genes;
     const int MISSING_SCORE = 99999;   
 
 public:
+
+    inline double compute_length_residual(
+    const double length,
+    const double score,
+    double beta0,
+    double beta1);
+
     std::vector<double> regress_out_length(const std::vector<double> &lengths,
                                            const std::vector<double> &scores); // Score_length_corrected
 
