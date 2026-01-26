@@ -78,6 +78,7 @@ void GeneAnalyzer::readGenesFromBed(std::string bedfile, std::vector<Gene> &gene
         std::cerr << "ERROR: could not open file " << bedfile << "\n";
         std::exit(EXIT_FAILURE);
     }
+    cout<<"Reading gene annotations from BED file: " << bedfile << "\n";
 
     std::string line;
 
@@ -92,15 +93,23 @@ void GeneAnalyzer::readGenesFromBed(std::string bedfile, std::vector<Gene> &gene
         int start, end;
 
         if (!(iss >> chrom >> start >> end >> name)) {
-            std::cerr << "Warning: malformed line skipped -> " << line << "\n";
+            std::cerr << "Warning: malformed/header line skipped -> " << line << "\n";
             continue;
         }
 
-        // Convert BED 0-based start, 1-based end → internal 0-based inclusive
-        int convertedEnd = end - 1;
+        //check that start is a number, check that start is less than end
+        if (start < 0 || end <= start) {
+            std::cerr << "Warning: invalid start/end skipped -> " << line << "\n";
+            continue;
+        }
+
+        // Convert BED 0-based start, 1-based end → internal 1-based inclusive
+        int convertedEnd = end;
+        int convertedStart = start + 1;
+
 
         std::string key = chrom + "|" + name;
-        geneMap[key].push_back({chrom, start, convertedEnd, name});
+        geneMap[key].push_back({chrom, convertedStart, convertedEnd, name});
     }
 
     infile.close();
@@ -128,7 +137,7 @@ void GeneAnalyzer::readGenesFromBed(std::string bedfile, std::vector<Gene> &gene
                 if (g.end   > maxEnd)   maxEnd   = g.end;
                 // Optional: check all chroms are same
             }
-            genes.push_back({chrom, minStart, maxEnd, kv.first});
+            genes.push_back({chrom, minStart, maxEnd, entries[0].name});
         }
     }
 }
@@ -486,7 +495,14 @@ std::pair<double,double> GeneAnalyzer::fit_length_regression(
 void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> windowFiles, bool XP){
     std::map<std::string, GeneTableEntry> geneTableMap; // AGGREGATE ALL SCORES
     readGenesFromBed(geneBedFile, genes); // deduplicated genes from bed, default take gene span
+    //readGenesFromGTF(geneBedFile, genes, true, true); // deduplicated genes from gtf, default take gene span
+//printGenes(genes, "genes_from_bed.txt");
+//  for (const auto &g : genes) {
+//         std::string GENE_ID = g.chrom + ":" + g.name;
+//         cout << "Gene: " << GENE_ID << " " << g.start << "-" << g.end << "\n";
+//     }
 
+//     exit(EXIT_FAILURE); // TEMP
     std::sort(genes.begin(), genes.end(),
                 [](const Gene &a, const Gene &b)
                 {
@@ -508,10 +524,22 @@ void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> 
     int numGenesFromAllFiles = genes.size();
     genes.clear();
 
+    bool WINDOW_FROM_NORM = true;
     std::string line;
     for (size_t windowFileId = 0; windowFileId < windowFiles.size(); ++windowFileId)
     {
-        const auto &windowFile = windowFiles[windowFileId];
+        string windowFile = windowFiles[windowFileId];
+
+        if(WINDOW_FROM_NORM) {
+            std::size_t pos = windowFile.find(".norm");
+            if (pos != std::string::npos) {
+                windowFile = windowFile.substr(0, pos + 5); // 5 = length of ".norm"
+                std::cout << windowFile << "\n";
+            }
+
+        }
+
+
 
         std::ifstream winFile(windowFile);
         if (!winFile)
@@ -538,26 +566,76 @@ void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> 
             std::string score_str;
             std::string score_str_bottom;
 
-            // fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc\ttop_score\tbottom_score\n";
-            if (XP)
-            {
-                // 1	100001	1931	0.00517866	0	100	100	2.703	-0.623614
-                iss >> w.chrom >> w.start >> w.end >> w.nSNPs >> w.frac_max >> w.frac_min >> w.perc_top >> w.perc_bottom >> score_str >> score_str_bottom;
-            }
-            else
-            {
-                iss >> w.chrom >> w.start >> w.end >> w.nSNPs >> w.frac_max >> w.perc_top >> score_str;
-                // cout<<"Read window: "<< w.start << "-" << w.end << " nSNPs: "<< w.nSNPs << " frac_max: "<< w.frac_max << " perc: "<< w.perc << " score: "<< score_str << "\n";
-            }
-            w.score_max = (score_str == "NA") ? -MISSING_SCORE : std::stod(score_str);
-            if (XP)
-            {
-                w.score_min = (score_str_bottom == "NA") ? MISSING_SCORE : std::stod(score_str_bottom);
-            }
 
+            if(WINDOW_FROM_NORM) {
+                //chr	id	pos	freq	ihh1	ihh0	ihs	norm_ihs	crit
+                string chr;
+                string junk;
+                string score_str;
+                int pos;
+                iss >> chr >> junk >> pos >>junk>> junk >>junk >> junk >> score_str >> junk;
+                //cout<<"Read window: "<< chr << ", " << pos << ", "<< score_str << "\n";
+
+                 //if(window has no valid score just skip it
+                if(score_str!="NA"){
+                    try{
+                        w.score_max = abs(std::stod(score_str));
+                    } catch (const std::exception&) {
+                        std::cerr << "Warning: invalid score '" << score_str
+                                << "' — using missing value\n";
+                        w.score_max = -MISSING_SCORE;
+                        continue; // skip windows with invalid scores
+                    }
+                    w.score_max = abs(std::stod(score_str));
+                    w.chrom = chr;
+                    w.start = pos;
+                    w.end = pos + 1;
+                    w.nSNPs +=1;
+                }
+
+            }else{
+                // fout<<"start\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc\ttop_score\tbottom_score\n";
+                if (XP)
+                {
+                    // 1	100001	1931	0.00517866	0	100	100	2.703	-0.623614
+                    iss >> w.chrom >> w.start >> w.end >> w.nSNPs >> w.frac_max >> w.frac_min >> w.perc_top >> w.perc_bottom >> score_str >> score_str_bottom;
+                }
+                else
+                {
+                    iss >> w.chrom >> w.start >> w.end >> w.nSNPs >> w.frac_max >> w.perc_top >> score_str;
+                    // cout<<"Read window: "<< w.start << "-" << w.end << " nSNPs: "<< w.nSNPs << " frac_max: "<< w.frac_max << " perc: "<< w.perc << " score: "<< score_str << "\n";
+                }
+                 //if window has no valid score just skip it
+
+                try {
+                    w.score_max = std::stod(score_str);
+                } catch (const std::exception&) {
+                    std::cerr << "Warning: invalid score '" << score_str
+                            << "' — using missing value\n";
+                    w.score_max = -MISSING_SCORE;
+                    continue; // skip windows with invalid scores
+                }
+
+
+            
+
+                if (XP)
+                {
+                    //TODO
+                    w.score_min = (score_str_bottom == "NA") ? MISSING_SCORE : std::stod(score_str_bottom);
+                }
+
+
+            }
+            
             w.overlap_genes = "";
             windows.push_back(w);
+        }
 
+        
+        for (auto &w : windows)
+        {
+            //cout<<"Window: "<< w.chrom << ":" << w.start << "-" << w.end << " Score: " << w.score_max << "\n";
             // check chromosome, only get vector of genes for that chromosome
             std::string chrom_from_win = w.chrom; // Need to get chromosome from window file if available
             auto it = genes_by_chr.find(chrom_from_win);
@@ -569,76 +647,83 @@ void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> 
             const auto &genes = it->second;
 
             // Two-pointer approach
+            //cout<<"Tow pointer gene-window overlap check for chromosome: "<< chrom_from_win << "\n";
             size_t gene_idx = 0;
-            for (auto &w : windows)
+            std::string ov;
+
+            // Advance gene_idx to the first gene that might overlap
+            while (gene_idx < genes.size() && genes[gene_idx].end <= w.start)
             {
-                std::string ov;
-
-                // Advance gene_idx to the first gene that might overlap
-                while (gene_idx < genes.size() && genes[gene_idx].end <= w.start)
-                {
-                    gene_idx++;
-                }
-
-                // Check overlapping genes starting from current gene_idx
-                size_t j = gene_idx;
-                std::string GENE_ID = chrom_from_win + ":" + genes[j].name;
-
-                while (j < genes.size() && genes[j].start < w.end)
-                {
-                    if ((w.end > genes[j].start && w.start < genes[j].end))
-                    { // overlaps
-                        if (!ov.empty())
-                            ov += ", ";
-                        ov += genes[j].name;
-
-                        // geneScores[GENE_ID].push_back(w.score_max);
-                        //  geneScores[genes[j].name].push_back(w.score_max);
-                        //  geneLengthsMap[genes[j].name].push_back(genes[j].end - genes[j].start + 1);
-
-                        if (true)
-                        { // if((w.score_max) != MISSING_SCORE){
-                            // if a region did not see any overlap (no scores assigned) we exlude that from analysis
-                            if (geneTableMap.find(GENE_ID) != geneTableMap.end())
-                            { // if exists, check if new score is higher, if higher, update
-                                double existing_score = geneTableMap[GENE_ID].maxScore;
-                                if (w.perc_top > existing_score)
-                                {
-                                    geneTableMap[GENE_ID].maxScore = w.perc_top;
-                                }
-
-                                //assume multiple transcripts
-                                // if (genes[j].start > geneTableMap[GENE_ID].geneEnd)
-                                // { // non-overlapping
-                                //     geneTableMap[GENE_ID].exonicLength += genes[j].end - genes[j].start + 1;
-                                //     // geneStart_by_gene_id[GENE_ID] = genes[j].start;
-                                //     geneTableMap[GENE_ID].geneEnd = genes[j].end;
-                                // }
-                                // else
-                                // { // new gene region overlaps with previous
-                                //     if (genes[j].end > geneTableMap[GENE_ID].geneEnd)
-                                //     {
-                                //         geneTableMap[GENE_ID].exonicLength += genes[j].end - geneTableMap[GENE_ID].geneEnd;
-                                //         geneTableMap[GENE_ID].geneEnd = genes[j].end;
-                                //     }
-                                // }
-                                // total += curEnd - curStart + 1;
-                            }
-                            else
-                            { // first score for that gene
-                                geneTableMap[GENE_ID].windowFileId = windowFileId;
-                                geneTableMap[GENE_ID].maxScore = w.perc_top;
-                                geneTableMap[GENE_ID].lengthSpan = genes[j].end - genes[j].start + 1; // inlcusive both
-                                //geneTableMap[GENE_ID].geneEnd = genes[j].end;
-                            }
-                            geneTableMap[GENE_ID].nWin += 1;
-                        }
-                    }
-                    j++;
-                }
-
-                w.overlap_genes = ov == "" ? "-" : ov;
+                gene_idx++;
             }
+
+            // Check overlapping genes starting from current gene_idx
+            size_t j = gene_idx;
+            std::string GENE_ID = chrom_from_win + "|" + genes[j].name;
+
+            while (j < genes.size() && genes[j].start < w.end)
+            {
+                if ((w.end > genes[j].start && w.start < genes[j].end))
+                { // overlaps
+                    if (!ov.empty())
+                        ov += ", ";
+                    ov += genes[j].name;
+
+                    // geneScores[GENE_ID].push_back(w.score_max);
+                    //  geneScores[genes[j].name].push_back(w.score_max);
+                    //  geneLengthsMap[genes[j].name].push_back(genes[j].end - genes[j].start + 1);
+
+                    if (true)
+                    { // if((w.score_max) != MISSING_SCORE){
+                        // if a region did not see any overlap (no scores assigned) we exlude that from analysis
+                        if (geneTableMap.find(GENE_ID) != geneTableMap.end())
+                        { // if exists, check if new score is higher, if higher, update
+                            double existing_score = geneTableMap[GENE_ID].maxScore;
+                            if (w.score_max > existing_score)
+                            {
+                                //geneTableMap[GENE_ID].maxScore = w.perc_top;
+                                geneTableMap[GENE_ID].maxScore = w.score_max;
+                            }
+
+                            //assume multiple transcripts
+                            // if (genes[j].start > geneTableMap[GENE_ID].geneEnd)
+                            // { // non-overlapping
+                            //     geneTableMap[GENE_ID].exonicLength += genes[j].end - genes[j].start + 1;
+                            //     // geneStart_by_gene_id[GENE_ID] = genes[j].start;
+                            //     geneTableMap[GENE_ID].geneEnd = genes[j].end;
+                            // }
+                            // else
+                            // { // new gene region overlaps with previous
+                            //     if (genes[j].end > geneTableMap[GENE_ID].geneEnd)
+                            //     {
+                            //         geneTableMap[GENE_ID].exonicLength += genes[j].end - geneTableMap[GENE_ID].geneEnd;
+                            //         geneTableMap[GENE_ID].geneEnd = genes[j].end;
+                            //     }
+                            // }
+                            // total += curEnd - curStart + 1;
+                        }
+                        else
+                        { // first score for that gene
+                            geneTableMap[GENE_ID].windowFileId = windowFileId;
+                            //geneTableMap[GENE_ID].maxScore = w.perc_top;
+                            geneTableMap[GENE_ID].maxScore = w.score_max;
+                            geneTableMap[GENE_ID].lengthSpan = genes[j].end - genes[j].start + 1; // inlcusive both
+
+                            
+                            //geneTableMap[GENE_ID].geneEnd = genes[j].end;
+                        }
+                        if(w.score_max > 2){
+                           // geneTableMap[GENE_ID].meanScore += w.score_max;
+                            geneTableMap[GENE_ID].meanScore += 1;
+                        }
+                        
+                        geneTableMap[GENE_ID].nWin += 1;
+                    }
+                }
+                j++;
+            }
+
+            w.overlap_genes = ov == "" ? "-" : ov;
         }
 
         // print header
@@ -708,7 +793,7 @@ void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> 
                 cerr << "ERROR: " << genetablefile << " " << strerror(errno);
                 exit(EXIT_FAILURE);
             }
-            genetable << "gene\tlen\tnwin\tmax\tmax_lenreg\n";  //gene   mean   sd   nwin   max   max_lenreg
+            genetable << "chr\tgene\tlen\tnwin\tmax\tmax_lenreg\n";  //gene   mean   sd   nwin   max   max_lenreg
             int i = 0;
 
             //TODO: FIX ORDER
@@ -724,7 +809,9 @@ void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> 
                 double maxScore = row.maxScore;
                 double len = row.lengthSpan;
                 double res_score = compute_length_residual(len, maxScore, beta.first, beta.second);
-                if(abs(maxScore)!=MISSING_SCORE) genetable << chr << "\t" << gene_name << "\t" << len << "\t" << nwin << "\t" << maxScore << "\t" << res_score << "\t" <<"\n";
+                double mean = row.meanScore*1.0 / nwin;
+                //if(abs(maxScore)!=MISSING_SCORE) 
+                genetable << chr << "\t" << gene_name << "\t" << len << "\t" << nwin << "\t" << maxScore << "\t" << res_score << "\t" << mean << "\n";
             }
 
             genetable.close();
@@ -837,11 +924,14 @@ void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &gene
             }
         }
 
-        // Convert GTF (1-based inclusive) → internal (0-based inclusive)
-        int convertedStart = start - 1;
-        int convertedEnd   = end - 1;
+        // Convert GTF (1-based inclusive) //internal 1 based inclusive same // internal (0-based inclusive)
+        int convertedStart = start; // - 1;
+        int convertedEnd   = end; // - 1;
 
         if (!useTranscripts) {
+            if (!(attributes.find("\"protein_coding\"") != std::string::npos)) {
+                continue;
+            }
             if (feature != "gene") continue;
         } else {
             if (feature != "transcript") continue;

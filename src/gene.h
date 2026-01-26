@@ -34,7 +34,7 @@ struct Window {
     std::string chrom;
     int start;
     int end;
-    int nSNPs;
+    int nSNPs = 0;
     double frac_max;
     double frac_min;
     double perc_top;
@@ -73,6 +73,7 @@ struct GeneTableEntry
     int nWin = 0;
     //int geneEnd;
     int windowFileId = -1;
+    double meanScore = 0.0;
 };
 
 struct GeneTableEntryTrue
@@ -81,6 +82,7 @@ struct GeneTableEntryTrue
     int lengthSpan = 0;
     int nWin = 0;
     string geneId;
+    double meanScore = 0.0;
 };
 
 class GeneAnalyzer

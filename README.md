@@ -243,6 +243,9 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 In selscan v3.0 pre-release: 
 
 - Fixed: `ihs` calculation with `--bp-win` was incorrectly producing zero nonzero windows (note: binaries are not updated)
+- Added: chr column added
+- Fixed: 'nan' reported in xp stats
+- Fixed: trunc-ok message showing wrong in xp unphased
 
 26SEP2025 - selscan v2.1.1 - Bug fixes for the fast and memory-efficient version introduced in v2.1:
 
