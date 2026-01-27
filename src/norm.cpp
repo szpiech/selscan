@@ -40,6 +40,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED); //added in v3
     
     params.addListFlag(ARG_WIN_FILES, DEFAULT_WIN_FILES, "", HELP_WIN_FILES);
+    params.addListFlag(ARG_NORM_FILES, DEFAULT_NORM_FILES, "", HELP_NORM_FILES); //added in v3
+    
     //params.addFlag(ARG_WIN_FILE, DEFAULT_WIN_FILE, "", HELP_WIN_FILE); //added in v3
     
     params.addFlag(ARG_GENE_SETA, DEFAULT_GENE_SETA, "", HELP_GENE_SETA); //added in v3
@@ -58,11 +60,15 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     int numBins = params.getIntFlag(ARG_FREQ_BINS);
     vector<string> filename = params.getStringListFlag(ARG_FILES);
-    int nfiles = filename.size();
-    int winSize = params.getIntFlag(ARG_WINSIZE);
+    
+
+
+
+
+    const int winSize = params.getIntFlag(ARG_WINSIZE);
     string infoOutfile = params.getStringFlag(ARG_LOG);
-    int numQBins = params.getIntFlag(ARG_QBINS);
-    int minSNPs = params.getIntFlag(ARG_MINSNPS);
+    const int numQBins = params.getIntFlag(ARG_QBINS);
+    const int minSNPs = params.getIntFlag(ARG_MINSNPS);
     // int snpWinSize = params.getIntFlag(ARG_SNPWINSIZE);
         // bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
     bool BPWIN = params.getBoolFlag(ARG_BPWIN);
@@ -84,111 +90,25 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     // read window file
     vector<string> windowFiles = params.getStringListFlag(ARG_WIN_FILES);
+    vector<string> normFiles = params.getStringListFlag(ARG_NORM_FILES);
+
     //string windowFile = params.getStringFlag(ARG_WIN_FILE);
+    
     string geneBedFile = params.getStringFlag(ARG_BED);
-    bool ANNOTATE_WINDOWS = params.flagWasSet(ARG_WIN_FILES);// && params.flagWasSet(ARG_BED);
+
+    bool HAVE_WINFILE = params.flagWasSet(ARG_WIN_FILES);// && params.flagWasSet(ARG_BED);
+    bool HAVE_NORMFILE = params.flagWasSet(ARG_NORM_FILES);// && params.flagWasSet(ARG_BED);
+
     string geneSetA = params.getStringFlag(ARG_GENE_SETA);
     string geneSetB = params.getStringFlag(ARG_GENE_SETB);
     bool PERMUTE_TEST = params.flagWasSet(ARG_GENE_SETA) && params.flagWasSet(ARG_GENE_SETB);
     
 
-    ///// ***** BLOCK START : ALLOWING GENE BASED ANALYSIS ***** /////
-    //
-    //
-    bool DO_NORM = (nfiles > 0);                       // if input stat files (.out) provided
-    bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
-    bool DO_GENE = this->USE_GENE_BED;                // user gave --gene-bed (.bed)
-    bool HAVE_WINFILE = (ANNOTATE_WINDOWS);           // user gave --win-file ::: TODO throw error if both --win-file and --bp-win provided (.windows)
-    
-    
-    //
-    // CASE 1: Just normalization
-    //
-    // if (DO_NORM && !DO_WINDOW && !DO_GENE) {
-    //     cerr << "[selscan-norm] Running normalization only...\n";
-    //     // return runNormalization(params);
-    // }
+    GeneAnalyzer genex;
+    //--win-files + --gene-bed 
+    //--files + --gene-bed/gtf/gff3
+    //--norm-files + --gene-bed/gtf/gff3 + --bp-win
 
-    // //
-    // // CASE 2: Normalization + window
-    // //
-    // if (DO_NORM && DO_WINDOW && !DO_GENE) {
-    //     cerr << "[selscan-norm] Running normalization + window...\n";
-    //     // string winOut = runNormalization(params);
-    //     // runWindow(winOut, winSize);
-    //     return 0;
-    // }
-
-    // //
-    // // CASE 3: Already-normalized file, window only
-    // //
-    // if (!DO_NORM && DO_WINDOW && !DO_GENE) {
-    //     cerr << "[selscan-norm] Running windowing only...\n";
-    //     // runWindow(params.getStringListFlag(ARG_FILES)[0], winSize);
-    //     return 0;
-    // }
-
-    // //
-    // // CASE 4: Normalization + window + gene
-    // //
-    // if (DO_NORM && DO_WINDOW && DO_GENE && !HAVE_WINFILE) {
-    //     cerr << "[selscan-norm] Running normalization + window + gene...\n";
-    //     // string winOut = runNormalization(params);
-    //     // string winFile = runWindow(winOut, winSize);
-    //     //annotateWindows(geneBedFile, {winFile}, (XPEHH || XPNSL));
-    //     return 0;
-    // }
-
-    // //
-    // // CASE 5: Already-normalized + window + gene
-    // //
-    // if (!DO_NORM && DO_WINDOW && DO_GENE && !HAVE_WINFILE) {
-    //     cerr << "[selscan-norm] Running window + gene...\n";
-    //     // string winFile = runWindow(params.getStringListFlag(ARG_FILES)[0], winSize);
-    //     // annotateWindows(geneBedFile, {winFile}, (XPEHH || XPNSL));
-    //     return 0;
-    // }
-
-    // //
-    // // CASE 6: Gene annotation with precomputed window file
-    // //
-    // if (DO_GENE && HAVE_WINFILE && !DO_WINDOW) {
-    //     cerr << "[selscan-norm] Gene annotation on precomputed windows...\n";
-    //     // annotateWindows(geneBedFile, windowFile, (XPEHH || XPNSL));
-    //     return 0;
-    // }
-
-
-
-    if(ANNOTATE_WINDOWS){
-        if(IHS + XPEHH + NSL + SOFT + XPNSL != 1){
-            cerr << "ERROR: Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
-            return 1;
-        }
-        
-        if(!this->USE_GENE_BED){
-            cerr << "ERROR: --gene-bed must be provided with --annotate-win to annotate windows.\n";
-            return 1;
-        }
-        if(geneBedFile == DEFAULT_BED || ANNOTATE_WINDOWS == false || windowFiles[0] == DEFAULT_WIN_FILES){
-            cerr << "ERROR: --gene-bed and --annotate-win must be provided to annotate windows.\n";
-            return 1;
-        }
-        cerr << "Annotating " << windowFiles.size() <<" windows " << " with genes from " << geneBedFile << "\n";
-        // string statName;
-        // if(IHS) statName = "ihs";
-        // if(NSL) statName = "nsl";
-        // if(XPEHH) statName = "xpehh";
-        // if(XPNSL) statName = "xpnsl";
-        // if(SOFT) statName = "ihh12";
-
-        vector<string> filename = params.getStringListFlag(ARG_FILES);
-        int nfiles = filename.size();
-
-        bool XP = (XPEHH || XPNSL);
-        //genex.annotateWindows(geneBedFile, windowFiles, XP);
-        return 0;
-    }
 
     if(PERMUTE_TEST){
         if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
@@ -264,50 +184,98 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     // cout<<("=== Parameters ===\n");
     // cout<<params.flagWasSet(ARG_FILES)<<endl;
     
-    if( filename[0] == DEFAULT_FILES ){
-        if( !ANNOTATE_WINDOWS ){
+    if( filename[0] == DEFAULT_FILES &&  normFiles[0]==DEFAULT_NORM_FILES &&  windowFiles[0]==DEFAULT_WIN_FILES ){
+
             cerr << "ERROR: Must provide at least one input file with " + ARG_FILES + " for normalization.\n";
             return 1;
-        }
+        
     }
 
-    if(ANNOTATE_WINDOWS && params.flagWasSet(ARG_FILES)){
-        cerr << "ERROR: Cannot provide input files with " + ARG_FILES + " when annotating windows.\n";
+
+    bool HAVE_FILES = (filename[0]!=DEFAULT_FILES);
+    HAVE_NORMFILE = (normFiles[0]!=DEFAULT_NORM_FILES);
+    HAVE_WINFILE = (windowFiles[0]!=DEFAULT_WIN_FILES);
+
+    ///// ***** BLOCK START : ALLOWING GENE BASED ANALYSIS ***** /////
+    //
+    //
+    bool DO_NORM = HAVE_FILES;                       // if input stat files (.out) provided
+    bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
+    bool DO_GENE = this->USE_GENE_BED;                // user gave --gene-bed (.bed)
+    //bool HAVE_WINFILE = (HAVE_WINFILE);           // user gave --win-file ::: TODO throw error if both --win-file and --bp-win provided (.windows)
+    
+
+
+    int nfiles;
+    if(HAVE_WINFILE){
+        nfiles = windowFiles.size();
+    }else if(HAVE_NORMFILE){
+        nfiles = normFiles.size();
+    }else{
+        nfiles = filename.size();
+    }
+
+
+    //cant prode normfile winfile with files
+    if( (HAVE_NORMFILE || HAVE_WINFILE) && HAVE_FILES ){
+        cerr << "ERROR: Cannot provide input files with " + ARG_FILES + " when providing " + ARG_NORM_FILES + " or " + ARG_WIN_FILES + ".\n";
         return 1;
     }
 
-
-    cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
-
-    string *outfilename = new string[nfiles];
-    int *fileLoci = new int[nfiles];
-
-    //ifstream* fin = new ifstream[nfiles];
-    //ofstream* fout = new ofstream[nfiles];
-
-    ifstream fin;
-
-    int totalLoci = 0;
-
-    //logging
-    flog.open(infoOutfile.c_str());
-    if (flog.fail())
-    {
-        cerr << "ERROR: " << infoOutfile << " " << strerror(errno) << endl;
+    //cant provide winfile with normfile
+    if( HAVE_NORMFILE && HAVE_WINFILE ){
+        cerr << "ERROR: Cannot provide both " + ARG_NORM_FILES + " and " + ARG_WIN_FILES + ".\n";
         return 1;
     }
 
-    for (int i = 0; i < argc; i++)
-    {
-        flog << argv[i] << " ";
+    if( HAVE_NORMFILE ){
+        nfiles = normFiles.size();
+        filename = normFiles;
     }
-    flog << "\n\n";
 
-    //flog << "Input files:\n";
+    if( HAVE_WINFILE ){
+        nfiles = windowFiles.size();
+        filename = windowFiles;
+    }
 
 
+
+
+    // if(ANNOTATE_WINDOWS && params.flagWasSet(ARG_FILES)){
+    //     cerr << "ERROR: Cannot provide input files with " + ARG_FILES + " when annotating windows.\n";
+    //     return 1;
+    // }
+
+
+    string *outfilename; 
+    int *fileLoci;
+    
     if(DO_NORM){
-    //For each file, open it, and check it for integrity
+        cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
+
+        outfilename = new string[nfiles];
+        fileLoci = new int[nfiles];
+        ifstream fin;
+
+        int totalLoci = 0;
+
+        //logging
+        flog.open(infoOutfile.c_str());
+        if (flog.fail())
+        {
+            cerr << "ERROR: " << infoOutfile << " " << strerror(errno) << endl;
+            return 1;
+        }
+
+        for (int i = 0; i < argc; i++)
+        {
+            flog << argv[i] << " ";
+        }
+        flog << "\n\n";
+
+        //flog << "Input files:\n";
+
+        //For each file, open it, and check it for integrity
         //Also record total number of lines so we can allocate
         //enough space for the array of paired data that will
         //be used to calculate E[X] and E[X^2]
@@ -439,10 +407,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
                 //fout[i].close();
             }
 
-            delete [] threshold;
-            delete [] mean;
-            delete [] variance;
-            delete [] n;
+
 
             
             
@@ -547,11 +512,66 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
            
         }
+
+        // delete [] threshold;
+        // delete [] mean;
+        // delete [] variance;
+        // delete [] n;
         flog.close();
     }
 
 
+
+
     if(BPWIN){ // start from .ihs.out, then require .norm files
+        if(DO_NORM){
+            cerr << "Using " << nfiles << " normalized output files for window-based analysis.\n";
+        }else{
+            cerr << "You have provided " << nfiles << " normalized files for window-based analysis.\n";
+            outfilename = new string[nfiles];
+            fileLoci = new int[nfiles];
+            ifstream fin;
+            int totalLoci = 0;
+                   //For each file, open it, and check it for integrity
+            //Also record total number of lines so we can allocate
+            //enough space for the array of paired data that will
+            //be used to calculate E[X] and E[X^2]
+            for (int i = 0; i < nfiles; i++)
+            {
+                fin.open(filename[i].c_str());
+                if (fin.fail())
+                {
+                    cerr << "ERROR: " << filename[i] << " " << strerror(errno);
+                    flog << "ERROR: " << filename[i] << " " << strerror(errno);
+                    return 1;
+                }
+                else
+                {
+                    cerr << "Opened " << filename[i] << endl;
+                    //flog << filename[i] << endl;
+                }
+
+                //check integrity of file and keep count of the number of lines
+                try
+                {
+                    if (IHS || NSL) fileLoci[i] = checkIHSfile(fin, true);
+                    if (SOFT) fileLoci[i] = checkIHH12file(fin, true);
+                    if (XPEHH) fileLoci[i] = checkXPEHHfile(fin, true);
+                    totalLoci += fileLoci[i];
+                }
+                catch (...)
+                {
+                    return 1;
+                }
+                fin.close();
+                outfilename[i] = filename[i]; //already .norm files
+            }
+
+            cerr << "\nTotal loci: " << totalLoci << endl; // across all files
+            flog << "\nTotal loci: " << totalLoci << endl; // across all files
+        }
+
+
         if(IHS || NSL){
             analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs); //require .norm files
         }
@@ -562,27 +582,49 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     bool XP = (XPEHH || XPNSL);
     if(DO_GENE){ 
-        if(BPWIN){ // require .norm files + .bed file + .windows files
-            vector<string> winFilenames(nfiles);
-            char str[10];
-            sprintf(str,"%d",winSize/1000);
+        vector<string> normFilenames(nfiles);
+        vector<string> winFilenames(nfiles);
+
+
+        if(HAVE_WINFILE){
+            cerr << "You have provided " << nfiles << " window files for gene annotation.\n";
+            genex.annotateWindows(geneBedFile, filename);
+        }else if(DO_NORM){
+            cerr << "Using " << nfiles << " normalized output files for gene-based analysis.\n";
             for (int i = 0; i < nfiles; i++)
             {
-                winFilenames[i] = outfilename[i];
-                winFilenames[i] += ".";
-                winFilenames[i] += str;
-                winFilenames[i] += "kb.windows";
-                cout<<"Window file for " << outfilename[i] << ": " << winFilenames[i] << "\n";
+                normFilenames[i] = outfilename[i];
             }
-
-            genex.annotateWindows(geneBedFile, winFilenames, XP);
         }else{
-            // annotate-win must be provided: TODO
-            genex.annotateWindows(geneBedFile, windowFiles, XP);
+            cerr << "You have provided " << nfiles << " normalized files for gene-based analysis.\n";
+            ifstream fin;
+            for (int i = 0; i < nfiles; i++)
+            {
+                fin.open(filename[i].c_str());
+                if (IHS || NSL) checkIHSfile(fin, true);
+                if (SOFT)  checkIHH12file(fin, true);
+                if (XPEHH) checkXPEHHfile(fin, true);
+                normFilenames[i] = normFiles[i];
+            }
+            fin.close();
+            
         }
+
+        if(BPWIN) {
+            for(int i = 0; i < nfiles; i++)
+            {
+                winFilenames[i] =  outfilename[i];
+            }
+            genex.annotateWindows(geneBedFile, winFilenames);
+        }
+
+        string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPEHH ? "xpehh" : (XPNSL ? "xpnsl" : "ihh12")));
+        genex.annotateSNPs(geneBedFile, normFilenames, XP, stat, minSNPs);
     }
             
 }
+
+
 
 
 /*
@@ -696,7 +738,8 @@ void SelscanNorm::skipCols(ifstream &fin, int numCols)
 
 void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
-    vector<string> chr(nfiles);
+    vector<string> chrs(nfiles);
+    
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
@@ -745,7 +788,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         getline(fin, header);
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> chr[i];
+            fin >> chrs[i];
             fin >> name;
             fin >> pos;
             fin >> freq;
@@ -922,7 +965,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
+                fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
                 continue;
             }
             double percentile = 100.0;
@@ -961,7 +1004,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
             }
             */
 
-            fout << chr[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+            fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
             if(maxAbsScore[i][j] == -99999.9){
                 fout << "NA" << endl;
             }
@@ -1076,7 +1119,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
 
 void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
-    vector<string> chr(nfiles);
+    vector<string> chrs(nfiles);
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
@@ -1128,6 +1171,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
         double min = 99999;
         for (int j = 0; j < fileLoci[i]; j++)
         {
+            fin >> chrs[i];
             fin >> name;
             fin >> pos;
             fin >> gpos;
@@ -1138,8 +1182,6 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             fin >> data;
             fin >> normedData;
             fin >> crit;
-
-            
 
             while (pos > winEnd)
             {
@@ -1266,8 +1308,6 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
                 topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
 
             }
-
-
 
             cerr << quantileBoundTop[bTop] << " "
                  << topWindowBoundaryTop[bTop]["1.0"] << " "
@@ -1398,16 +1438,16 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
-        fout<<"chr\tstart\tend\tnSNPs\tfrac_top\tfrac_bottom\tperc_top\tperc_bottom\ttop_score\tbottom_score\n";  
+        fout<<"chr\tstart\tend\tn_snps\tfrac_top\tfrac_bottom\tperc_top\tperc_bottom\ttop_score\tbottom_score\n";  
         cerr << "Creating window file " << winfilename[i] << endl; 
         flog << "Creating window file " << winfilename[i] << endl;
 
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
-            fout << chr[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
+            fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
             if (nSNPs[i][j] < minSNPs)
             {
-                fout << chr[i] << "\t-1\t-1\tNA\tNA" << endl;
+                fout << chrs[i] << "\t-1\t-1\tNA\tNA" << endl;
                 continue;
             }
 
@@ -1500,6 +1540,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
 
 void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
+    vector<string> chrs(nfiles);
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
@@ -1546,6 +1587,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
         int numCrit = 0;
         for (int j = 0; j < fileLoci[i]; j++)
         {
+            fin >> chrs[i];
             fin >> name;
             fin >> pos;
             fin >> freq1;
@@ -1686,7 +1728,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
-        fout<<"start\tend\tnSNPs\tfrac_extreme\tperc\tscore\tannotation\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
+        fout<<"chr\tstart\tend\tn_snps\tfrac_extreme\tperc\tscore\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
     
         cerr << "Creating window file " << winfilename[i] << endl;
         flog << "Creating window file " << winfilename[i] << endl;
@@ -1694,7 +1736,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" <<"\tNA"<< endl;
+                fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" <<"\tNA"<< endl;
                 continue;
             }
             double percentile = 100.0;
@@ -1732,7 +1774,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
                 percentile = 0.1;
             }
             */
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+            fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
             if(maxAbsScore[i][j] == -99999.9){
                 fout << "NA";
             }
@@ -2048,6 +2090,7 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
 
     for (int j = 0; j < fileLoci; j++)
     {
+        fin >> chr;
         fin >> name;
         fin >> pos;
         fin >> gpos;
@@ -2070,7 +2113,8 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
 
         if (numInBin >= 20)
         {
-            fout << name << "\t"
+            fout << chr << "\t" 
+                << name << "\t"
                  << pos << "\t"
                  << gpos << "\t"
                  << freq1 << "\t"
@@ -2157,47 +2201,110 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
     return;
 }
 
-//returns number of lines in file
-int SelscanNorm::checkIHSfile(ifstream &fin)
+// returns number of loci (lines) in IHS file
+int SelscanNorm::checkIHSfile(std::ifstream &fin, bool norm)
 {
-    string line;
-    int expected_cols = 7; // 6;
-    int expected_cols_alternate = 11; // 10; // this is the case if --ihs-detail is specified (four extra columns for iHH left/right and ancestral/derived)
+    std::string line;
+    
+    // Base expected column counts (unnormalized)
+    int expected_cols = 7;
+    int expected_cols_alternate = 11; // --ihs-detail
+
+    // Add norm + crit if normalized
+    if (norm) {
+        expected_cols += 2;
+        expected_cols_alternate += 2;
+    }
+
     int current_cols = 0;
 
-    //beginning of the file stream
-    int start = fin.tellg();
+    // beginning of the file stream
+    std::streampos start = fin.tellg();
 
     int nloci = 0;
-    
-    string header;
-    getline(fin, header); //added in v3, skip header line
-    //if header does not match expected format, throw error
-    const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+
+    // Skip header
+    std::string header;
+    std::getline(fin, header);
+
+    const std::string expectedHeader =
+        norm
+        ? "chr\tid\tpos\tfreq\tihh1\tihh0\tihs\tnorm_ihs\tcrit"
+        : "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+
     if (header != expectedHeader) {
-        cerr << "WARNING: Expected header '" << expectedHeader << "' but found '" << header << "' in IHS file.\n"; 
+        std::cerr << "WARNING: Expected header '" << expectedHeader
+                  << "' but found '" << header << "' in IHS file.\n";
     }
 
-    while (getline(fin, line))
+    while (std::getline(fin, line))
     {
+        if (line.empty()) continue;
+
         nloci++;
         current_cols = countFields(line);
-        if ((current_cols != expected_cols && current_cols != expected_cols_alternate) && nloci > 1)
+
+        if (current_cols != expected_cols &&
+            current_cols != expected_cols_alternate)
         {
-            cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " or " << expected_cols_alternate << " columns.\n";
+            std::cerr << "ERROR: line " << nloci
+                      << " has " << current_cols
+                      << " columns, but expected "
+                      << expected_cols << " or "
+                      << expected_cols_alternate << " columns.\n";
             throw 0;
         }
-        //previous_cols = current_cols;
     }
 
-    nloci--; //added in v3, skip header line
-
+    // rewind stream
     fin.clear();
     fin.seekg(start);
 
     return nloci;
 }
+
+
+// //returns number of lines in file
+// int SelscanNorm::checkIHSfile(ifstream &fin)
+// {
+//     string line;
+//     int expected_cols = 7; // 6;
+//     int expected_cols_alternate = 11; // 10; // this is the case if --ihs-detail is specified (four extra columns for iHH left/right and ancestral/derived)
+//     int current_cols = 0;
+
+//     //beginning of the file stream
+//     int start = fin.tellg();
+
+//     int nloci = 0;
+    
+//     string header;
+//     getline(fin, header); //added in v3, skip header line
+//     //if header does not match expected format, throw error
+//     const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+//     if (header != expectedHeader) {
+//         cerr << "WARNING: Expected header '" << expectedHeader << "' but found '" << header << "' in IHS file.\n"; 
+//     }
+
+//     while (getline(fin, line))
+//     {
+//         nloci++;
+//         current_cols = countFields(line);
+//         if ((current_cols != expected_cols && current_cols != expected_cols_alternate) && nloci > 1)
+//         {
+//             cerr << "ERROR: line " << nloci << " has " << current_cols
+//                  << " columns, but expected " << expected_cols << " or " << expected_cols_alternate << " columns.\n";
+//             throw 0;
+//         }
+//         //previous_cols = current_cols;
+//     }
+
+//     nloci--; //added in v3, skip header line
+
+//     fin.clear();
+//     fin.seekg(start);
+
+//     return nloci;
+// }
 
 void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[], string& chr)
 {
@@ -2231,31 +2338,55 @@ void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles
     return;
 }
 
-int SelscanNorm::checkXPEHHfile(ifstream &fin)
+// returns number of loci (lines) in XP-EHH file
+int SelscanNorm::checkXPEHHfile(std::ifstream &fin, bool norm)
 {
-    string line;
-    int expected_cols = 9; // 8;
-    int current_cols = 0;
+    std::string line;
 
-    //beginning of the file stream
-    int start = fin.tellg();
-
-    int nloci = 0;
-    while (getline(fin, line))
-    {
-        nloci++;
-        current_cols = countFields(line);
-        if ((current_cols != expected_cols) && nloci > 1)
-        {
-            cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " columns.\n";
-            throw 0;
-        }
-        //previous_cols = current_cols;
+    int expected_cols = 9; // raw XP-EHH
+    if (norm) {
+        expected_cols += 2; // norm_xpehh + crit
     }
 
-    nloci--;
+    int current_cols = 0;
 
+    // beginning of the file stream
+    std::streampos start = fin.tellg();
+
+    int nloci = 0;
+
+    // Skip header
+    std::string header;
+    std::getline(fin, header);
+
+    // const std::string expectedHeader =
+    //     norm
+    //     ? "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\tnorm_xpehh\tcrit"
+    //     : "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh";
+
+    // if (header != expectedHeader) {
+    //     std::cerr << "WARNING: Expected header '" << expectedHeader
+    //               << "' but found '" << header << "' in XP-EHH file.\n";
+    // }
+
+    while (std::getline(fin, line))
+    {
+        if (line.empty()) continue;
+
+        nloci++;
+        current_cols = countFields(line);
+
+        if (current_cols != expected_cols)
+        {
+            std::cerr << "ERROR: line " << nloci
+                      << " has " << current_cols
+                      << " columns, but expected "
+                      << expected_cols << " columns.\n";
+            throw 0;
+        }
+    }
+
+    // rewind stream
     fin.clear();
     fin.seekg(start);
 
@@ -2263,36 +2394,64 @@ int SelscanNorm::checkXPEHHfile(ifstream &fin)
 }
 
 
-int SelscanNorm::checkIHH12file(ifstream &fin)
+
+// returns number of loci (lines) in IHH12 file
+int SelscanNorm::checkIHH12file(std::ifstream &fin, bool norm)
 {
-    string line;
-    int expected_cols = 5; // 4;
-    int current_cols = 0;
+    std::string line;
 
-    //beginning of the file stream
-    int start = fin.tellg();
+    int expected_cols = 5; // raw: chr id pos p1 ihh12
 
-    int nloci = 0;
-    while (getline(fin, line))
-    {
-        nloci++;
-        current_cols = countFields(line);
-        if ((current_cols != expected_cols) && nloci > 1)
-        {
-            cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " columns.\n";
-            throw 0;
-        }
-        //previous_cols = current_cols;
+    // Add norm + crit if normalized
+    if (norm) {
+        expected_cols += 2; // norm_ihh12 + crit
     }
 
-    nloci--;
+    int current_cols = 0;
 
+    // beginning of the file stream
+    std::streampos start = fin.tellg();
+
+    int nloci = 0;
+
+    // Skip header
+    std::string header;
+    std::getline(fin, header);
+
+    // const std::string expectedHeader =
+    //     norm
+    //     ? "chr\tid\tpos\tp1\tihh12\tnorm_ihh12\tcrit"
+    //     : "chr\tid\tpos\tp1\tihh12";
+
+    // if (header != expectedHeader) {
+    //     std::cerr << "WARNING: Expected header '" << expectedHeader
+    //               << "' but found '" << header << "' in IHH12 file.\n";
+    // }
+
+    while (std::getline(fin, line))
+    {
+        if (line.empty()) continue;
+
+        nloci++;
+        current_cols = countFields(line);
+
+        if (current_cols != expected_cols)
+        {
+            std::cerr << "ERROR: line " << nloci
+                      << " has " << current_cols
+                      << " columns, but expected "
+                      << expected_cols << " columns.\n";
+            throw 0;
+        }
+    }
+
+    // rewind stream
     fin.clear();
     fin.seekg(start);
 
     return nloci;
 }
+
 
 void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[], string& chr)
 {
@@ -2333,6 +2492,7 @@ void SelscanNorm::readAllIHH12(vector<string> filename, int fileLoci[], int nfil
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> chr;
+            fin >> junk;
             fin >> junk;
             fin >> freq1[overallCount];
             fin >> score[overallCount];

@@ -44,6 +44,12 @@ struct Window {
     std::string overlap_genes;
 };
 
+struct SNP {
+    int pos;
+    double score;
+    std::string overlap_genes;
+};
+
 struct Gene
 {
     std::string chrom;
@@ -71,18 +77,19 @@ struct GeneTableEntry
     double maxScore = -99999;
     int lengthSpan = 0;
     int nWin = 0;
-    //int geneEnd;
+    int geneEnd;
+
     int windowFileId = -1;
     double meanScore = 0.0;
-};
+    double varScore = 0.0;
 
-struct GeneTableEntryTrue
-{
-    double maxScore = -99999;
-    int lengthSpan = 0;
-    int nWin = 0;
-    string geneId;
-    double meanScore = 0.0;
+    vector<double> scores;
+
+    //for xp
+    double minScore = 99999;
+
+    int n_crit_top = 0;
+    int n_crit_bottom = 0;
 };
 
 class GeneAnalyzer
@@ -90,7 +97,7 @@ class GeneAnalyzer
 private:
     void readGenesFromBed(std::string bedfile, std::vector<Gene> &genes, bool canonical = false);
     void readGenesFromGTF(std::string gtffile, std::vector<Gene> &genes,  bool useTranscripts = false, bool canonical = false);
-    std::vector<Gene> genes;
+    //std::vector<Gene> genes;
     const int MISSING_SCORE = 99999;   
 
 public:
@@ -191,8 +198,12 @@ public:
 
         return scores;
     }
+    void annotateSNPs(std::string geneBedFile,
+                                  std::vector<std::string> windowFiles,
+                                  bool XP, string stat,
+                                  int minSNPs);
 
-    void annotateWindows(std::string geneBedFile, vector<std::string> windowFiles, bool XP);
+    void annotateWindows(std::string geneBedFile, vector<std::string> windowFiles);
 };
 
 // std::vector<double> SelscanNorm::regress_out_length(const std::vector<double> &lengths,
