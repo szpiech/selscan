@@ -288,7 +288,7 @@ std::pair<double,double> GeneAnalyzer::fit_length_regression(
 }
 
 
-void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
+void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                                   std::vector<std::string> normFiles,
                                   bool XP, string stat,
                                   int minSNPs)
@@ -305,11 +305,14 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
 
     cout<<"Reading norm files for annotation...\n";
     
-    bool GENERATE_ANNOTATED_NORM = true;
+    bool GENERATE_ANNOTATED_NORM = false;
 
     std::map<std::string, GeneTableEntry> geneTableMap; // aggregate gene scores
     vector<Gene> genes; // all genes from all chromosomes
-    readGenesFromBed(geneBedFile, genes); // deduplicated genes from bed
+    if(useGTF)
+        readGenesFromGTF(geneFile, genes); // deduplicated genes from gtf, default take gene span
+    else
+        readGenesFromBed(geneFile, genes); // deduplicated genes from bed, default take gene span
 
     std::sort(genes.begin(), genes.end(),
               [](const Gene &a, const Gene &b) {
@@ -334,7 +337,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
         std::ifstream normFile(normFilePath);
         if (!normFile)
         {
-            std::cerr << "ERROR: could not open file " << normFilePath << "\n";
+            std::cerr << "ERROR: could not open norm file " << normFilePath << "\n";
             exit(EXIT_FAILURE);
         }
 
@@ -454,7 +457,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
                         {
                             //gene.windowFileId = normFileId;
                             if(XP){
-                                gene.minScore = norm_score;
+                                //gene.minScore = norm_score;
                                 gene.maxScore = norm_score;
                             }else{
                                 gene.maxScore = abs(norm_score);
@@ -466,8 +469,8 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
                         else
                         {
                             if(XP){
-                                if (norm_score < gene.minScore)
-                                    gene.minScore = norm_score;
+                                // if (norm_score < gene.minScore)
+                                //     gene.minScore = norm_score;
                                 
                                 if(norm_score > gene.maxScore)
                                     gene.maxScore = norm_score;
@@ -511,7 +514,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
     {
         std::vector<double> geneLengths;
         std::vector<double> geneScoresMax;
-        std::vector<double> geneScoresMin;
+        //std::vector<double> geneScoresMin;
 
 
         for (const auto &[gene, row] : geneTableMap)
@@ -520,16 +523,17 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
 
             geneLengths.push_back(row.lengthSpan);
             geneScoresMax.push_back(row.maxScore);
-            if(XP){
-                geneScoresMin.push_back(row.minScore);
-            }
+            // if(XP){
+            //     geneScoresMin.push_back(row.minScore);
+            // }
         }
 
         std::pair<double,double> beta = fit_length_regression(geneLengths, geneScoresMax);
-        std::pair<double,double> beta_min;
         
-        if(XP)
-            beta_min = fit_length_regression(geneLengths, geneScoresMin);
+        //std::pair<double,double> beta_min;
+        
+        // if(XP)
+        //     beta_min = fit_length_regression(geneLengths, geneScoresMin);
 
         std::cout << "Fitted length regression: score = " << beta.first
                   << " + " << beta.second << " * log(length)\n";
@@ -538,7 +542,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
         if (SINGLE_GENE_TABLE)
         {
             std::ofstream genetable;
-            std::string genetablefile = geneBedFile + "." + stat + ".genetable";
+            std::string genetablefile = geneFile + "." + stat + ".genetable";
             genetable.open(genetablefile.c_str());
             if (genetable.fail())
             {
@@ -546,15 +550,17 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
                 exit(EXIT_FAILURE);
             }
 
-            if(XP){
-
-                genetable << "chr\tstart\tend\tgene\tlen\tnsnps\tmean_score\t"
-                             "nsnps_crit_top\ttop_score\ttop_score_adj\t"
-                             "nsnps_crit_bottom\tbottom_score\tbottom_score_adj\n";
-            }else{
-                genetable << "chr\tstart\tend\tgene\tlen\tnsnps\tmean_score\t"
+            genetable << "chr\tstart\tend\tgene\tlen\tnsnps\tmean_score\t"
                          "nsnps_crit\ttop_score\ttop_score_adj\n";
-            }
+
+            // if(XP){
+
+            //     genetable << "chr\tstart\tend\tgene\tlen\tnsnps\tmean_score\t"
+            //                  "nsnps_crit_top\ttop_score\ttop_score_adj\t"
+            //                  "nsnps_crit_bottom\tbottom_score\tbottom_score_adj\n";
+            // }else{
+                
+            // }
 
 
             for (const auto &[gene, row] : geneTableMap)
@@ -571,7 +577,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
                 if (nwin < minSNPs) continue;
 
                 double res_score = compute_length_residual(len, maxScore, beta.first, beta.second);
-                double res_score_min = compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
+                //double res_score_min = compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
                 
                 int geneEnd = row.geneEnd;
                 int geneStart = geneEnd - static_cast<int>(len) + 1;
@@ -591,18 +597,18 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
                 //             "nsnps_crit\ttop_score\ttop_score_adj\n";
                 // }
                 
-                if(XP){
-                    genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
-                          << gene_name << "\t" << len << "\t" << nwin << "\t"
-                          << mean << "\t"   
-                          << row.n_crit_top <<"\t" << maxScore << "\t" << res_score << "\t"
-                          << row.n_crit_bottom <<"\t" << row.minScore << "\t" << res_score_min  << "\n";
-                }else{
-                    genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
+                genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
                           << gene_name << "\t" << len << "\t" << nwin << "\t"
                           << mean << "\t" << row.n_crit_top << "\t" 
                           << maxScore << "\t" << res_score << "\t" << "\n";
-                }
+
+                // if(XP){
+                //     genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
+                //           << gene_name << "\t" << len << "\t" << nwin << "\t"
+                //           << mean << "\t"   
+                //           << row.n_crit_top <<"\t" << maxScore << "\t" << res_score << "\t"
+                //           << row.n_crit_bottom <<"\t" << row.minScore << "\t" << res_score_min  << "\n";
+                // }
                 
             }
 
@@ -613,10 +619,14 @@ void GeneAnalyzer::annotateSNPs(std::string geneBedFile,
 }
 
 
-void GeneAnalyzer::annotateWindows(std::string geneBedFile, vector<std::string> windowFiles){
+void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std::string> windowFiles){
     
     vector<Gene> genes; // all genes from all chromosomes
-     readGenesFromBed(geneBedFile, genes); // deduplicated genes from bed, default take gene span
+
+    if(useGTF)
+        readGenesFromGTF(geneFile, genes, true, true); // deduplicated genes from gtf, default take gene span
+    else
+        readGenesFromBed(geneFile, genes); // deduplicated genes from bed, default take gene span
     //readGenesFromGTF(geneBedFile, genes, true, true); // deduplicated genes from gtf, default take gene span
 
 

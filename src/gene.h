@@ -198,12 +198,12 @@ public:
 
         return scores;
     }
-    void annotateSNPs(std::string geneBedFile,
+    void annotateSNPs(std::string geneFile, bool useGTF,
                                   std::vector<std::string> windowFiles,
                                   bool XP, string stat,
                                   int minSNPs);
 
-    void annotateWindows(std::string geneBedFile, vector<std::string> windowFiles);
+    void annotateWindows(std::string geneFile, bool useGTF, vector<std::string> windowFiles);
 };
 
 // std::vector<double> SelscanNorm::regress_out_length(const std::vector<double> &lengths,

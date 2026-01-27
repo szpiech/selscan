@@ -178,10 +178,16 @@ class SelscanNorm{
     "If provided, frequency-bin or mean/variance normalization is applied from the log-input file.\n"
     "Cannot be used together with --bins.\n"
     "Default: __logfile__.\n";
+
+
     const string ARG_BED = "--gene-bed"; // CHR START END GENE 
     const string DEFAULT_BED = "__filebed__"; 
-    const string HELP_BED = "Provide a .bed file (<chr> <start> <end> <gene>) with gene annotations. "
-                             "Used in conjunction with --annotate-win.";
+    const string HELP_BED = "Provide a .bed file (<chr> <start> <end> <gene>) with gene annotations. ";
+
+
+    const string ARG_GTF = "--gene-gtf";
+    const string DEFAULT_GTF = "__filegtf__";
+    const string HELP_GTF = "Provide a .gtf file with gene annotations.  Supports gzipped files";
 
     const string ARG_WIN_FILES = "--win-files";
     const string DEFAULT_WIN_FILES = "__filewin__";
@@ -212,9 +218,6 @@ class SelscanNorm{
     const int MISSING = -9999;
 
     bool FINE_PERCENTILE = false;
-    string GENE_BED = "";
-
-    bool USE_GENE_BED = false;
 
     //returns number of lines in file
     //throws 0 if the file fails

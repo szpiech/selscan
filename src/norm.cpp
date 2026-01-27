@@ -38,7 +38,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     params.addFlag(ARG_LOG_INPUT, DEFAULT_LOG_INPUT, "", HELP_LOG_INPUT); //added in v3
     params.addFlag(ARG_FINE_PERCENTILE, DEFAULT_FINE_PERCENTILE, "", HELP_FINE_PERCENTILE); //added in v3
     params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED); //added in v3
-    
+    params.addFlag(ARG_GTF, DEFAULT_GTF, "", HELP_GTF); //added in v3.1
+
     params.addListFlag(ARG_WIN_FILES, DEFAULT_WIN_FILES, "", HELP_WIN_FILES);
     params.addListFlag(ARG_NORM_FILES, DEFAULT_NORM_FILES, "", HELP_NORM_FILES); //added in v3
     
@@ -84,9 +85,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     bool XPNSL = params.getBoolFlag(ARG_XPNSL);
 
     this->FINE_PERCENTILE = params.getBoolFlag(ARG_FINE_PERCENTILE);
-    this->GENE_BED = params.getStringFlag(ARG_BED);
-    this->USE_GENE_BED = params.flagWasSet(ARG_BED);
-
 
     // read window file
     vector<string> windowFiles = params.getStringListFlag(ARG_WIN_FILES);
@@ -95,6 +93,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     //string windowFile = params.getStringFlag(ARG_WIN_FILE);
     
     string geneBedFile = params.getStringFlag(ARG_BED);
+    string geneGTFFile = params.getStringFlag(ARG_GTF);
 
     bool HAVE_WINFILE = params.flagWasSet(ARG_WIN_FILES);// && params.flagWasSet(ARG_BED);
     bool HAVE_NORMFILE = params.flagWasSet(ARG_NORM_FILES);// && params.flagWasSet(ARG_BED);
@@ -110,6 +109,16 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     //--norm-files + --gene-bed/gtf/gff3 + --bp-win
 
 
+    bool useGTF = (geneGTFFile != DEFAULT_GTF);
+    bool useBED = (geneBedFile != DEFAULT_BED);
+    //check that both gtf and bed arent provided
+    if(useGTF && useBED){
+        cerr << "ERROR: Cannot provide both " + ARG_BED + " and " + ARG_GTF + " Use one for gene annotations.\n";
+        return 1;
+    }
+
+    string geneFile = useGTF ? geneGTFFile : geneBedFile;
+    
     if(PERMUTE_TEST){
         if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
             cerr << "ERROR: --gene-target and --gene-background must be provided to run permutation test.\n";
@@ -201,7 +210,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     //
     bool DO_NORM = HAVE_FILES;                       // if input stat files (.out) provided
     bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
-    bool DO_GENE = this->USE_GENE_BED;                // user gave --gene-bed (.bed)
+    bool DO_GENE = useBED || useGTF;                // user gave --gene-bed (.bed)
     //bool HAVE_WINFILE = (HAVE_WINFILE);           // user gave --win-file ::: TODO throw error if both --win-file and --bp-win provided (.windows)
     
 
@@ -588,7 +597,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         if(HAVE_WINFILE){
             cerr << "You have provided " << nfiles << " window files for gene annotation.\n";
-            genex.annotateWindows(geneBedFile, filename);
+            
+            genex.annotateWindows(geneFile, useGTF, filename);
+            
+            
         }else if(DO_NORM){
             cerr << "Using " << nfiles << " normalized output files for gene-based analysis.\n";
             for (int i = 0; i < nfiles; i++)
@@ -615,11 +627,17 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             {
                 winFilenames[i] =  outfilename[i];
             }
-            genex.annotateWindows(geneBedFile, winFilenames);
+            genex.annotateWindows(geneFile, useGTF, winFilenames);
+            
         }
 
-        string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPEHH ? "xpehh" : (XPNSL ? "xpnsl" : "ihh12")));
-        genex.annotateSNPs(geneBedFile, normFilenames, XP, stat, minSNPs);
+
+        if(!HAVE_WINFILE){
+            string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPEHH ? "xpehh" : (XPNSL ? "xpnsl" : "ihh12")));
+            genex.annotateSNPs(geneFile, true, normFilenames, XP, stat, minSNPs);
+            
+        }
+        
     }
             
 }
