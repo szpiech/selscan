@@ -106,7 +106,7 @@ class SelscanNorm{
     \t<locus name> <physical pos> <freq1> <ihh12>";
 
     const string ARG_LOG = "--log";
-    const string DEFAULT_LOG = "logfile";
+    const string DEFAULT_LOG = "__logfile__";
     const string HELP_LOG = "The log file name.";
 
     const string ARG_WINSIZE = "--winsize";
@@ -178,6 +178,13 @@ class SelscanNorm{
     "If provided, frequency-bin or mean/variance normalization is applied from the log-input file.\n"
     "Cannot be used together with --bins.\n"
     "Default: __logfile__.\n";
+
+    // const string ARG_LOG_OUTPUT = "--log-output-only";
+    // const string DEFAULT_LOG_OUTPUT = "__logfile__";
+    // const string HELP_LOG_OUTPUT =     "Don't perform normalization, just output .\n"
+    // "If provided, frequency-bin or mean/variance normalization is applied from the log-input file.\n"
+    // "Cannot be used together with --bins.\n"
+    // "Default: __logfile__.\n";
 
 
     const string ARG_BED = "--gene-bed"; // CHR START END GENE 

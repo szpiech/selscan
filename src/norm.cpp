@@ -107,8 +107,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     //--norm-files + --gene-bed/gtf/gff3 + --bp-win
 
 
-    bool useGTF = (geneGTFFile != DEFAULT_GTF);
-    bool useBED = (geneBedFile != DEFAULT_BED);
+    bool useGTF = false;
+    bool useBED = false;
+    if(geneGTFFile != DEFAULT_GTF) useGTF = true;
+    if(geneBedFile != DEFAULT_BED) useBED = true;
+    
     //check that both gtf and bed arent provided
     if(useGTF && useBED){
         cerr << "ERROR: Cannot provide both " + ARG_BED + " and " + ARG_GTF + " Use one for gene annotations.\n";
@@ -194,10 +197,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     // cout<<params.flagWasSet(ARG_FILES)<<endl;
     
     if( filename[0] == DEFAULT_FILES &&  normFiles[0]==DEFAULT_NORM_FILES &&  windowFiles[0]==DEFAULT_WIN_FILES ){
-
-            cerr << "ERROR: Must provide at least one input file with " + ARG_FILES + " for normalization.\n";
-            return 1;
-        
+        cerr << "ERROR: Must provide at least one input file with " + ARG_FILES + " for normalization.\n";
+        return 1;
     }
 
 
@@ -579,9 +580,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     bool XP = (XPEHH || XPNSL);
     if(DO_GENE){ 
+        cerr << "Annotating " << nfiles << "files with " << geneFile << "\n";
+        
         vector<string> normFilenames(nfiles);
         vector<string> winFilenames(nfiles);
-
 
         if(HAVE_WINFILE){
             cerr << "You have provided " << nfiles << " window files for gene annotation.\n";
@@ -590,8 +592,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             
             
         }else if(DO_NORM){
-            cerr << "Using " << nfiles << " normalized output files for gene-based analysis.\n";
-            for (int i = 0; i < nfiles; i++)
+            cerr << "Using " << filename.size() << " normalized output files for gene-based analysis.\n";
+            for (int i = 0; i < filename.size() ; i++)
             {
                 normFilenames[i] = outfilename[i];
             }
