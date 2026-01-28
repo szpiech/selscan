@@ -62,10 +62,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     int numBins = params.getIntFlag(ARG_FREQ_BINS);
     vector<string> filename = params.getStringListFlag(ARG_FILES);
     
-
-
-
-
     const int winSize = params.getIntFlag(ARG_WINSIZE);
     string infoOutfile = params.getStringFlag(ARG_LOG);
     const int numQBins = params.getIntFlag(ARG_QBINS);
@@ -95,12 +91,14 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     string geneBedFile = params.getStringFlag(ARG_BED);
     string geneGTFFile = params.getStringFlag(ARG_GTF);
 
-    bool HAVE_WINFILE = params.flagWasSet(ARG_WIN_FILES);// && params.flagWasSet(ARG_BED);
-    bool HAVE_NORMFILE = params.flagWasSet(ARG_NORM_FILES);// && params.flagWasSet(ARG_BED);
+    //bool HAVE_WINFILE; //= params.flagWasSet(ARG_WIN_FILES);
+    //bool HAVE_NORMFILE; // = params.flagWasSet(ARG_NORM_FILES);
 
     string geneSetA = params.getStringFlag(ARG_GENE_SETA);
     string geneSetB = params.getStringFlag(ARG_GENE_SETB);
-    bool PERMUTE_TEST = params.flagWasSet(ARG_GENE_SETA) && params.flagWasSet(ARG_GENE_SETB);
+
+    
+    bool PERMUTE_TEST = (geneSetA != DEFAULT_GENE_SETA) && (geneSetB != DEFAULT_GENE_SETB);
     
 
     GeneAnalyzer genex;
@@ -118,18 +116,22 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }
 
     string geneFile = useGTF ? geneGTFFile : geneBedFile;
-    
+    bool LOG_INPUT =  params.flagWasSet(ARG_LOG_INPUT);
+
+
+
     if(PERMUTE_TEST){
-        if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
-            cerr << "ERROR: --gene-target and --gene-background must be provided to run permutation test.\n";
-            return 1;
-        }
+        cerr << "Performing permutation test between gene sets.\n";
+        // if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
+        //     cerr << "ERROR: --gene-target and --gene-background must be provided to run permutation test.\n";
+        //     return 1;
+        // }
         cerr << "Running permutation test with target genes from " << geneSetA << " and background genes from " << geneSetB << "\n";
         genex.perm_test(geneSetA, geneSetB);
         return 0;
     }
 
-    if(params.flagWasSet(ARG_FREQ_BINS) && params.flagWasSet(ARG_LOG_INPUT)){
+    if(params.flagWasSet(ARG_FREQ_BINS) && LOG_INPUT){
         cerr << "ERROR: Options --log-input and --bins cannot be used together. "
          << "--log-input already provides frequency bin information.\n";
         exit(1);
@@ -141,15 +143,13 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         exit(1);
     }
        
-    if(params.flagWasSet(ARG_QBINS) && params.flagWasSet(ARG_LOG_INPUT)){
+    if(params.flagWasSet(ARG_QBINS) && LOG_INPUT){
         cerr << "ERROR: Options --log-input and --qbins cannot be used together. "
          << "--log-input already provides quantile bin information.\n";
         exit(1);
     }
 
-    bool LOG_INPUT =  params.flagWasSet(ARG_LOG_INPUT);
-
-
+    
 
     if (numBins <= 0)
     {
@@ -201,19 +201,13 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }
 
 
-    bool HAVE_FILES = (filename[0]!=DEFAULT_FILES);
-    HAVE_NORMFILE = (normFiles[0]!=DEFAULT_NORM_FILES);
-    HAVE_WINFILE = (windowFiles[0]!=DEFAULT_WIN_FILES);
+    bool HAVE_FILES = (filename[0]!=DEFAULT_FILES); // user gave files (e.g., .ihs.out, .nsl.out, etc.)
+    bool HAVE_NORMFILE = (normFiles[0]!=DEFAULT_NORM_FILES); // user gave normfile
+    bool HAVE_WINFILE = (windowFiles[0]!=DEFAULT_WIN_FILES); // user gave winfile
 
-    ///// ***** BLOCK START : ALLOWING GENE BASED ANALYSIS ***** /////
-    //
-    //
     bool DO_NORM = HAVE_FILES;                       // if input stat files (.out) provided
     bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
     bool DO_GENE = useBED || useGTF;                // user gave --gene-bed (.bed)
-    //bool HAVE_WINFILE = (HAVE_WINFILE);           // user gave --win-file ::: TODO throw error if both --win-file and --bp-win provided (.windows)
-    
-
 
     int nfiles;
     if(HAVE_WINFILE){
@@ -223,7 +217,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }else{
         nfiles = filename.size();
     }
-
 
     //cant prode normfile winfile with files
     if( (HAVE_NORMFILE || HAVE_WINFILE) && HAVE_FILES ){
@@ -246,14 +239,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         nfiles = windowFiles.size();
         filename = windowFiles;
     }
-
-
-
-
-    // if(ANNOTATE_WINDOWS && params.flagWasSet(ARG_FILES)){
-    //     cerr << "ERROR: Cannot provide input files with " + ARG_FILES + " when annotating windows.\n";
-    //     return 1;
-    // }
 
 
     string *outfilename; 
@@ -640,6 +625,9 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         
     }
             
+
+    delete [] outfilename;
+    delete [] fileLoci;
 }
 
 
