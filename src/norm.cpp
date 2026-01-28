@@ -7,7 +7,6 @@
 //TODO
 // TODO: winfile allow multiple windows
 
-
 //int main(int argc, char *argv[])
 int SelscanNorm::runToolNorm(int argc, char *argv[])
 {
@@ -633,6 +632,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     delete [] outfilename;
     delete [] fileLoci;
+
+    return 1;
 }
 
 
