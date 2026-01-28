@@ -331,6 +331,7 @@ int main(int argc, char* argv[]) {
         char** subArgv = argv + 1;
         SelscanNorm snorm;
         int exitval = snorm.runToolNorm(subArgc, subArgv);
+        cout<<"EXIT VALUE: "<<exitval<<endl;
         return exitval;
     } else {
         return runToolSelscan(argc, argv);
