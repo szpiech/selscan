@@ -232,9 +232,9 @@ class SelscanNorm{
     int checkXPEHHfile(ifstream &fin, bool norm = false);
     int checkIHH12file(ifstream &fin, bool norm = false);
 
-    void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[], string& chr);
-    void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[], string& chr);
-    void readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[], string& chr);
+    void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[]);
+    void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[]);
+    void readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[]);
 
     void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
 

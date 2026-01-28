@@ -323,7 +323,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             double *freq = new double[totalLoci];
             double *score = new double[totalLoci];
             //read in all data
-            readAllIHS(filename, fileLoci, nfiles, freq, score, chr);
+            readAllIHS(filename, fileLoci, nfiles, freq, score);
 
             double *mean = new double[numBins];
             double *variance = new double[numBins];
@@ -417,8 +417,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             if(XPEHH) freq2 = new double[totalLoci];
             double *score = new double[totalLoci];
             //read in all data
-            if(XPEHH) readAllXPEHH(filename, fileLoci, nfiles, freq1, freq2, score, chr);
-            if(SOFT) readAllIHH12(filename, fileLoci, nfiles, freq1, score, chr);
+            if(XPEHH) readAllXPEHH(filename, fileLoci, nfiles, freq1, freq2, score);
+            if(SOFT) readAllIHH12(filename, fileLoci, nfiles, freq1, score);
             numBins = 1;
             double *mean = new double[numBins];
             double *variance = new double[numBins];
@@ -633,7 +633,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     delete [] outfilename;
     delete [] fileLoci;
 
-    return 1;
+    return 0;
 }
 
 
@@ -2161,7 +2161,7 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
         throw 1;
     }
 
-    string name, header;
+    string chr, name, header;
     int pos;
     double gpos, freq1, data, normedData, ihh1, ihh2;;
     int numInBin = 0;
@@ -2179,6 +2179,7 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
 
     for (int j = 0; j < fileLoci; j++)
     {
+        fin >> chr;
         fin >> name;
         fin >> pos;
         fin >> freq1;
@@ -2197,7 +2198,8 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
 
         if (numInBin >= 20)
         {
-            fout << name << "\t"
+            fout << chr << "\t"
+                 << name << "\t"
                  << pos << "\t"
                  << freq1 << "\t"
                  << data << "\t"
@@ -2239,15 +2241,15 @@ int SelscanNorm::checkIHSfile(std::ifstream &fin, bool norm)
     std::string header;
     std::getline(fin, header);
 
-    const std::string expectedHeader =
-        norm
-        ? "chr\tid\tpos\tfreq\tihh1\tihh0\tihs\tnorm_ihs\tcrit"
-        : "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+    // const std::string expectedHeader =
+    //     norm
+    //     ? "chr\tid\tpos\tfreq\tihh1\tihh0\tihs\tnorm_ihs\tcrit"
+    //     : "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
 
-    if (header != expectedHeader) {
-        std::cerr << "WARNING: Expected header '" << expectedHeader
-                  << "' but found '" << header << "' in IHS file.\n";
-    }
+    // if (header != expectedHeader) {
+    //     std::cerr << "WARNING: Expected header '" << expectedHeader
+    //               << "' but found '" << header << "' in IHS file.\n";
+    // }
 
     while (std::getline(fin, line))
     {
@@ -2318,7 +2320,7 @@ int SelscanNorm::checkIHSfile(std::ifstream &fin, bool norm)
 //     return nloci;
 // }
 
-void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[], string& chr)
+void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
     //chr	id	pos	freq	ihh1	ihh0	ihs
     ifstream fin;
@@ -2334,7 +2336,7 @@ void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles
 
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> chr;
+            fin >> junk;
             fin >> junk;
             fin >> junk;
             fin >> freq[overallCount];
@@ -2465,7 +2467,7 @@ int SelscanNorm::checkIHH12file(std::ifstream &fin, bool norm)
 }
 
 
-void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[], string& chr)
+void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[])
 {
     ifstream fin;
     string junk;
@@ -2473,10 +2475,10 @@ void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfil
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(filename[i].c_str());
-        getline(fin, junk);
+        getline(fin, junk); //skip header line
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> chr;
+            fin >> junk;
             fin >> junk;
             fin >> junk;
             fin >> freq1[overallCount];
@@ -2492,22 +2494,24 @@ void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfil
     return;
 }
 
-void SelscanNorm::readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[], string& chr)
+void SelscanNorm::readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[])
 {
     ifstream fin;
     string junk;
     int overallCount = 0;
+
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(filename[i].c_str());
-        getline(fin, junk);
+        getline(fin, junk); //skip header line
+
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> chr;
-            fin >> junk;
-            fin >> junk;
-            fin >> freq1[overallCount];
-            fin >> score[overallCount];
+            fin >> junk; //chr
+            fin >> junk; //id
+            fin >> junk; //pos
+            fin >> freq1[overallCount]; //p1
+            fin >> score[overallCount]; //ihh12
             overallCount++;
         }
         fin.close();
