@@ -254,10 +254,13 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         int totalLoci = 0;
 
         //logging
+        if(infoOutfile == DEFAULT_LOG){
+            infoOutfile = "norm.log";
+        }
         flog.open(infoOutfile.c_str());
         if (flog.fail())
         {
-            cerr << "ERROR: " << infoOutfile << " " << strerror(errno) << endl;
+            cerr << "ERROR: Cannot open " << infoOutfile << " for logging " << strerror(errno) << endl;
             return 1;
         }
 
@@ -283,8 +286,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             fin.open(filename[i].c_str());
             if (fin.fail())
             {
-                cerr << "ERROR: " << infoOutfile << " " << strerror(errno);
-                flog << "ERROR: " << infoOutfile << " " << strerror(errno);
+                cerr << "ERROR: " << "Cannot open " << filename[i] << " " << endl; // << strerror(errno);
+                flog << "ERROR: " << "Cannot open " << filename[i] << " " << endl; // << strerror(errno);
                 return 1;
             }
             else
