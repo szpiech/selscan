@@ -196,15 +196,22 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             break;
         }
 
+
+        if(downstream){
+            if (--i < 0) break;
+        }else{
+            if (++i >= numSnps) break;
+        }
+
         // if(downstream){
         //     if (--i < 0) break;
         // }else{
         //     if (++i >= numSnps) break;
         // }
-        bool edgeBreak = nextLocOutOfBounds(i, downstream);
-        if(edgeBreak) {
-            break;
-        }
+        // bool edgeBreak = nextLocOutOfBounds(i, downstream);
+        // if(edgeBreak) {
+        //     break;
+        // }
 
 
 
