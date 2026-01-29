@@ -218,6 +218,10 @@ class SelscanNorm{
     const bool DEFAULT_FINE_PERCENTILE = false;
     const string HELP_FINE_PERCENTILE = "If set, will use fine grain percentiles (1,2,3,...,100) for normalization.";
 
+    const string ARG_LOG_ONLY = "--log-only";   
+    const bool DEFAULT_LOG_ONLY = false;
+    const string HELP_LOG_ONLY = "If set, outputs only the log file with normalization info (mean, variance) and skips normalized output. Useful with --log-input.";
+
     // const string ARG_NO_HEADER = "--no-header";
     // const bool DEFAULT_NO_HEADER = false;
     // const string HELP_NO_HEADER = "If set, will not include header in output files.";

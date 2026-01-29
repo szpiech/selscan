@@ -46,6 +46,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     
     params.addFlag(ARG_GENE_SETA, DEFAULT_GENE_SETA, "", HELP_GENE_SETA); //added in v3
     params.addFlag(ARG_GENE_SETB, DEFAULT_GENE_SETB, "", HELP_GENE_SETB); //added in v3
+
+    params.addFlag(ARG_LOG_ONLY, DEFAULT_LOG_ONLY, "", HELP_LOG_ONLY); //added in v3
     // params.addFlag(ARG_NO_HEADER, DEFAULT_NO_HEADER, "", HELP_NO_HEADER); //added in v3
 
     try
@@ -119,6 +121,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     string geneFile = useGTF ? geneGTFFile : geneBedFile;
     bool LOG_INPUT =  params.flagWasSet(ARG_LOG_INPUT);
+
+    bool LOG_ONLY = params.getBoolFlag(ARG_LOG_ONLY);
 
 
 
@@ -490,18 +494,27 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
                 flog << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
             }
 
+            // Only normalizing if necessary
+            if(!LOG_ONLY){
+                
+                if (FIRST){
+                    cerr << "Only normalizing first file as --first flag is set.\n";
+                    nfiles = 1;
+                }
 
-            //Read each file and create normed files.
-            if (FIRST) nfiles = 1;
-            for (int i = 0; i < nfiles; i++)
-            {
-                cerr << "Normalizing " << filename[i] << "\n";
-                if(XPEHH) normalizeXPEHHDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, XPNSL);
-                if(SOFT) normalizeIHH12DataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
-                //fin[i].close();
-                //fout[i].close();
+                //Read each file and create normed files.
+                for (int i = 0; i < nfiles; i++)
+                {
+                    cerr << "Normalizing " << filename[i] << "\n";
+                    if(XPEHH) normalizeXPEHHDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, XPNSL);
+                    if(SOFT) normalizeIHH12DataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
+                    //fin[i].close();
+                    //fout[i].close();
+                }
+            }else{
+                cerr << "Skipping outputting normalized output as --log-only flag is set.\n";
             }
-
+            
             delete [] threshold;
             delete [] mean;
             delete [] variance;
@@ -578,6 +591,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
 
     bool XP = (XPEHH || XPNSL);
+
+    if(LOG_ONLY) DO_GENE = false;
     if(DO_GENE){ 
         cerr << "Annotating " << nfiles << "files with " << geneFile << "\n";
         
