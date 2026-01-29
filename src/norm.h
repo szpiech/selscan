@@ -106,7 +106,7 @@ class SelscanNorm{
     \t<locus name> <physical pos> <freq1> <ihh12>";
 
     const string ARG_LOG = "--log";
-    const string DEFAULT_LOG = "__logfile__";
+    const string DEFAULT_LOG = "norm.log";
     const string HELP_LOG = "The log file name.";
 
     const string ARG_WINSIZE = "--winsize";

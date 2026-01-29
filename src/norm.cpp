@@ -120,12 +120,15 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }
 
     string geneFile = useGTF ? geneGTFFile : geneBedFile;
+
     bool LOG_INPUT =  params.flagWasSet(ARG_LOG_INPUT);
-
     bool LOG_ONLY = params.getBoolFlag(ARG_LOG_ONLY);
-
-
-
+    
+    if(params.getStringFlag(ARG_LOG_INPUT) == infoOutfile){
+        cerr << "ERROR: --log-input and --log cannot have the same filename: both are " << infoOutfile << "\n";
+        exit(EXIT_FAILURE);
+    }
+    
     if(PERMUTE_TEST){
         cerr << "Performing permutation test between gene sets.\n";
         // if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
@@ -257,10 +260,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         int totalLoci = 0;
 
-        //logging
-        if(infoOutfile == DEFAULT_LOG){
-            infoOutfile = "norm.log";
-        }
+
         flog.open(infoOutfile.c_str());
         if (flog.fail())
         {
