@@ -78,18 +78,16 @@ struct GeneTableEntry
     int lengthSpan = 0;
     int nWin = 0;
     int geneEnd;
+    int nsnps_crit_top = 0;
 
     int windowFileId = -1;
-    double meanScore = 0.0;
-    double varScore = 0.0;
-
-    vector<double> scores;
+    // double meanScore = 0.0;
+    // double varScore = 0.0;
+    // vector<double> scores;
 
     //for xp
     double minScore = 99999;
-
-    int n_crit_top = 0;
-    int n_crit_bottom = 0;
+    int nsnps_crit_bot = 0;
 };
 
 class GeneAnalyzer

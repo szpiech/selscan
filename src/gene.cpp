@@ -457,10 +457,11 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                         {
                             //gene.windowFileId = normFileId;
                             if(XP){
-                                //gene.minScore = norm_score;
+                                gene.minScore = norm_score;
                                 gene.maxScore = norm_score;
                             }else{
-                                gene.maxScore = abs(norm_score);
+                                double score_to_compare = (stat=="ihh12") ? norm_score : abs(norm_score);
+                                gene.maxScore = score_to_compare;
                             }
 
                             gene.lengthSpan = chrGenes[j].end - chrGenes[j].start + 1; // inclusive span
@@ -469,25 +470,26 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                         else
                         {
                             if(XP){
-                                // if (norm_score < gene.minScore)
-                                //     gene.minScore = norm_score;
+                                if (norm_score < gene.minScore)
+                                    gene.minScore = norm_score;
                                 
                                 if(norm_score > gene.maxScore)
                                     gene.maxScore = norm_score;
                             }else{
-                                if (abs(norm_score) > gene.maxScore)
-                                    gene.maxScore = abs(norm_score);
+                                double score_to_compare = (stat=="ihh12") ? norm_score : abs(norm_score);
+                                if(score_to_compare > gene.maxScore)
+                                    gene.maxScore = score_to_compare;
                             }
                         }
 
-                        gene.meanScore += norm_score;
+                        //gene.meanScore += norm_score;
                         //gene.scores.push_back(norm_score);
                         gene.nWin += 1;
 
                         if(crit == 1){
-                            gene.n_crit_top += 1.0;
+                            gene.nsnps_crit_top += 1.0;
                         }else if(crit == -1){
-                            gene.n_crit_bottom += 1.0;
+                            gene.nsnps_crit_bot += 1.0;
                         }
                     }
                 }
@@ -514,7 +516,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
     {
         std::vector<double> geneLengths;
         std::vector<double> geneScoresMax;
-        //std::vector<double> geneScoresMin;
+        std::vector<double> geneScoresMin;
 
 
         for (const auto &[gene, row] : geneTableMap)
@@ -523,17 +525,17 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
 
             geneLengths.push_back(row.lengthSpan);
             geneScoresMax.push_back(row.maxScore);
-            // if(XP){
-            //     geneScoresMin.push_back(row.minScore);
-            // }
+            if(XP){
+                geneScoresMin.push_back(row.minScore);
+            }
         }
 
         std::pair<double,double> beta = fit_length_regression(geneLengths, geneScoresMax);
         
-        //std::pair<double,double> beta_min;
+        std::pair<double,double> beta_min;
         
-        // if(XP)
-        //     beta_min = fit_length_regression(geneLengths, geneScoresMin);
+        if(XP)
+            beta_min = fit_length_regression(geneLengths, geneScoresMin);
 
         std::cout << "Fitted length regression: score = " << beta.first
                   << " + " << beta.second << " * log(length)\n";
@@ -550,17 +552,17 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                 exit(EXIT_FAILURE);
             }
 
-            genetable << "chr\tstart\tend\tgene\tlen\tnsnps\tmean_score\t"
-                         "nsnps_crit\ttop_score\ttop_score_adj\n";
 
-            // if(XP){
 
-            //     genetable << "chr\tstart\tend\tgene\tlen\tnsnps\tmean_score\t"
-            //                  "nsnps_crit_top\ttop_score\ttop_score_adj\t"
-            //                  "nsnps_crit_bottom\tbottom_score\tbottom_score_adj\n";
-            // }else{
-                
-            // }
+            if(XP){
+
+                genetable << "chr\tstart\tend\tgene\tlen\tnsnps\t"
+                             "frac_crit_top\ttop_score\ttop_score_adj\t"
+                             "frac_crit_bottom\tbottom_score\tbottom_score_adj\n";
+            }else{
+                genetable << "chr\tstart\tend\tgene\tlen\tnsnps\t"
+                         "frac_crit\ttop_score\ttop_score_adj\n"; 
+            }  
 
 
             for (const auto &[gene, row] : geneTableMap)
@@ -572,12 +574,13 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                 int nwin = row.nWin;          // here: number of SNP records contributing
                 double maxScore = row.maxScore;
                 double len = row.lengthSpan;
-                double mean = row.meanScore / nwin;
+                
+                //double mean = row.meanScore / nwin;
 
                 if (nwin < minSNPs) continue;
 
                 double res_score = compute_length_residual(len, maxScore, beta.first, beta.second);
-                //double res_score_min = compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
+                double res_score_min = compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
                 
                 int geneEnd = row.geneEnd;
                 int geneStart = geneEnd - static_cast<int>(len) + 1;
@@ -599,16 +602,15 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                 
                 genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
                           << gene_name << "\t" << len << "\t" << nwin << "\t"
-                          << mean << "\t" << row.n_crit_top << "\t" 
+                          << row.nsnps_crit_top*1.0/nwin << "\t" 
                           << maxScore << "\t" << res_score << "\t" << "\n";
 
-                // if(XP){
-                //     genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
-                //           << gene_name << "\t" << len << "\t" << nwin << "\t"
-                //           << mean << "\t"   
-                //           << row.n_crit_top <<"\t" << maxScore << "\t" << res_score << "\t"
-                //           << row.n_crit_bottom <<"\t" << row.minScore << "\t" << res_score_min  << "\n";
-                // }
+                if(XP){
+                    genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
+                          << gene_name << "\t" << len << "\t" << nwin << "\t"
+                          << row.nsnps_crit_top*1.0/nwin <<"\t" << maxScore << "\t" << res_score << "\t"
+                          << row.nsnps_crit_bot*1.0/nwin <<"\t" << row.minScore << "\t" << res_score_min  << "\n";
+                }
                 
             }
 
@@ -740,7 +742,7 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
     }
 }
 
-// deduplicate genes from GTF/GFF3 by gene_name (or gene_id/Name/ID if not present)
+// deduplicate genes from GTF/GFF3 by gene_name (or gene_id/Name/ID if not present) - only protein-coding genes
 void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &genes,
                                     bool useTranscripts, bool canonical)
 {
