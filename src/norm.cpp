@@ -2493,9 +2493,10 @@ void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfil
         getline(fin, junk); //skip header line
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> junk;
-            fin >> junk;
-            fin >> junk;
+            fin >> junk; //chr
+            fin >> junk; //id
+            fin >> junk; //pos
+            fin >> junk; //gpos
             fin >> freq1[overallCount];
             fin >> junk;
             fin >> freq2[overallCount];

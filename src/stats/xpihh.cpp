@@ -624,7 +624,7 @@ void XPIHH::main()
     if (p.CALC_XP) LOG("Starting XP-EHH calculations.");
     if (p.CALC_XPNSL) LOG("Starting XP-nSL calculations.");
 
-    if (p.CALC_XP) (*fout) << "chr\tcid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
+    if (p.CALC_XP) (*fout) << "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
     if (p.CALC_XPNSL) (*fout) << "chr\tid\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
 
     if(numThreads==1){
