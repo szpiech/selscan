@@ -2219,7 +2219,8 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
                  << freq1 << "\t"
                  << data << "\t"
                  << normedData << "\t";
-            if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
+            //if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
+            if (normedData >= upperCutoff) fout << "1\n";
             else fout << "0\n";
         }
     }
