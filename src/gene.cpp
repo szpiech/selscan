@@ -600,16 +600,19 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                 //             "nsnps_crit\ttop_score\ttop_score_adj\n";
                 // }
                 
-                genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
-                          << gene_name << "\t" << len << "\t" << nwin << "\t"
-                          << row.nsnps_crit_top*1.0/nwin << "\t" 
-                          << maxScore << "\t" << res_score << "\t" << "\n";
+                
 
                 if(XP){
                     genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
                           << gene_name << "\t" << len << "\t" << nwin << "\t"
                           << row.nsnps_crit_top*1.0/nwin <<"\t" << maxScore << "\t" << res_score << "\t"
                           << row.nsnps_crit_bot*1.0/nwin <<"\t" << row.minScore << "\t" << res_score_min  << "\n";
+                }else{
+                    genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
+                          << gene_name << "\t" << len << "\t" << nwin << "\t"
+                          << row.nsnps_crit_top*1.0/nwin << "\t" 
+                          << maxScore << "\t" << res_score << "\t" << "\n";
+
                 }
                 
             }
