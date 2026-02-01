@@ -551,6 +551,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             }
         }
 
+
         if (skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
                 skiplist.push(nloci_before_filtering-1);
                 skipcount++;

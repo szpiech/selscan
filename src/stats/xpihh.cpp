@@ -688,6 +688,23 @@ void XPIHH::main()
 */
 pair<double, double> XPIHH::calc_xpihh(int locus)
 {
+
+    if(p.UNPHASED){
+        if(hm->hapData->get_n_c0(locus) + hm->hapData2->get_n_c0(locus) == 0  || hm->hapData->get_n_c2(locus) + hm->hapData2->get_n_c2(locus) == 0 ){  ){
+            {std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock
+            return skipLocusPair();
+        }
+    }else{
+        if (hm->hapData->get_n_c1(locus)  + hm->hapData2->get_n_c1(locus) == 0 || hm->hapData->get_n_c0(locus)  + hm->hapData2->get_n_c0(locus) == 0 ){
+            {std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock{
+            return skipLocusPair();
+        }
+    }
+    
     //works for both phased and unphased
     pair<double, double> right = calc_ehh_unidirection(locus, false);
     if(skipLocus(right)){
