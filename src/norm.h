@@ -61,6 +61,8 @@ class SelscanNorm{
     public:
 
     GeneAnalyzer genex;
+    int WINOFFSET;
+
     
     const string VERSION = "3.0-alpha.1";
 
@@ -113,6 +115,11 @@ class SelscanNorm{
     const int DEFAULT_WINSIZE = 100000;
     const string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage\n\
     \tof extreme SNPs.";
+
+
+    const string ARG_WINOFFSET= "--win-offset";
+    const int DEFAULT_WINOFFSET = 0;
+    const string HELP_WINOFFSET = "The starting offset for non-overlapping windows. Defaults to 0.";
 
     const string ARG_QBINS = "--qbins";
     const int DEFAULT_QBINS = 10;
@@ -222,6 +229,7 @@ class SelscanNorm{
     const bool DEFAULT_LOG_ONLY = false;
     const string HELP_LOG_ONLY = "If set, outputs only the log file with normalization info (mean, variance) and skips normalized output. Useful with --log-input.";
 
+    
     // const string ARG_NO_HEADER = "--no-header";
     // const bool DEFAULT_NO_HEADER = false;
     // const string HELP_NO_HEADER = "If set, will not include header in output files.";

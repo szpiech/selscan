@@ -19,6 +19,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     params.addListFlag(ARG_FILES, DEFAULT_FILES, "", HELP_FILES);
     params.addFlag(ARG_LOG, DEFAULT_LOG, "", HELP_LOG);
     params.addFlag(ARG_WINSIZE, DEFAULT_WINSIZE, "", HELP_WINSIZE);
+    params.addFlag(ARG_WINOFFSET, DEFAULT_WINOFFSET, "SILENT", HELP_WINOFFSET);
+
+
+
     params.addFlag(ARG_QBINS, DEFAULT_QBINS, "", HELP_QBINS);
     params.addFlag(ARG_MINSNPS, DEFAULT_MINSNPS, "", HELP_MINSNPS);
     // params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "SILENT", HELP_SNPWIN);
@@ -59,7 +63,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         return 1;
     }
 
-
+    this->WINOFFSET = params.getIntFlag(ARG_WINOFFSET);
     int numBins = params.getIntFlag(ARG_FREQ_BINS);
     vector<string> filename = params.getStringListFlag(ARG_FILES);
     
@@ -804,7 +808,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         winfilename[i] += "kb.windows";
 
         //Load information into vectors for analysis
-        int winStart = 1;
+        int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;
@@ -1189,7 +1193,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
         winfilename[i] += "kb.windows";
 
         //Load information into vectors for analysis
-        int winStart = 1;
+        int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCritTop = 0;
@@ -1608,7 +1612,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
         winfilename[i] += "kb.windows";
 
         //Load information into vectors for analysis
-        int winStart = 1;
+        int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;

@@ -951,7 +951,16 @@ void IHS::main() {
  * @return Pair of iHS-like values: (derived_score, ancestral_score)
  */
 std::pair<double, double> IHS::calc_ihh1(int locus) {
-
+    if(hm->hapData->get_maf(locus)==0){
+        {
+            string reason = "monomorphic";
+                std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") is " 
+                << reason << ". Skipping this locus." << std::endl;
+            }
+        return skipLocusPair();
+    }
     if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
         {
                 string reason = "MAF < " + std::to_string(p.MAF);
@@ -1039,6 +1048,18 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
  * @return IhhComponents with directional values for derived and ancestral alleles.
  */
 IhhComponents IHS::calc_ihh1_details(int locus) {
+
+        
+        if(hm->hapData->get_maf(locus)==0){
+        {
+                string reason = "monomorphic";
+                    std::lock_guard<std::mutex> lock(mutex_log);
+                    (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                    << " (pos " << hm->mapData->mapEntries[locus].physicalPos << ") is " 
+                    << reason << ". Skipping this locus." << std::endl;
+                }
+            return {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
+        }
     if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
     {
         string reason = "MAF < " + std::to_string(p.MAF);
