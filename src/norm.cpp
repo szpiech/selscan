@@ -1477,7 +1477,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
             if (nSNPs[i][j] < minSNPs)
             {
-                fout << "\t-1\t-1\tNA\tNA" << endl;
+                fout << "-1\t-1\tNA\tNA" << endl;
                 continue;
             }
 
