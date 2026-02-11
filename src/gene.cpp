@@ -629,7 +629,7 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
     vector<Gene> genes; // all genes from all chromosomes
 
     if(useGTF)
-        readGenesFromGTF(geneFile, genes, true, true); // deduplicated genes from gtf, default take gene span
+        readGenesFromGTF(geneFile, genes, false, true); // deduplicated genes from gtf, default take gene span
     else
         readGenesFromBed(geneFile, genes); // deduplicated genes from bed, default take gene span
     //readGenesFromGTF(geneBedFile, genes, true, true); // deduplicated genes from gtf, default take gene span
