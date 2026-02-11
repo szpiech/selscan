@@ -746,162 +746,6 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
 }
 
 // deduplicate genes from GTF/GFF3 by gene_name (or gene_id/Name/ID if not present) - only protein-coding genes
-void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &genes,
-                                    bool useTranscripts, bool canonical)
-{
-    igzstream infile;
-    std::cerr << "Opening " << gtffile << "...\n";
-    infile.open(gtffile.c_str());
-
-    if (!infile) {
-        std::cerr << "ERROR: could not open file " << gtffile << "\n";
-        std::exit(EXIT_FAILURE);
-    }
-
-    auto isGff3Attributes = [](const std::string& attr) -> bool {
-        // heuristic: GFF3 looks like key=value;key=value and usually has '='
-        // GTF usually has key "value";
-        return (attr.find('=') != std::string::npos);
-    };
-
-    auto getGtfAttr = [](const std::string& attr, const std::string& key) -> std::string {
-        // expects: key "VALUE"
-        size_t pos = attr.find(key);
-        if (pos == std::string::npos) return "NA";
-        size_t firstQuote = attr.find('"', pos);
-        if (firstQuote == std::string::npos) return "NA";
-        size_t secondQuote = attr.find('"', firstQuote + 1);
-        if (secondQuote == std::string::npos) return "NA";
-        return attr.substr(firstQuote + 1, secondQuote - firstQuote - 1);
-    };
-
-    auto getGff3Attr = [](const std::string& attr, const std::string& key) -> std::string {
-        // expects: key=VALUE;key2=VALUE2
-        std::string pat = key + "=";
-        size_t p = attr.find(pat);
-        if (p == std::string::npos) return "NA";
-        p += pat.size();
-        size_t q = attr.find(';', p);
-        std::string val = attr.substr(p, (q == std::string::npos ? attr.size() : q) - p);
-
-        // Some GFF3 values can be URL-encoded; we leave as-is (safe).
-        // Also sometimes ID looks like "gene:XYZ"; keep as-is.
-        return val.empty() ? "NA" : val;
-    };
-
-    auto isProteinCoding = [&](const std::string& attributes) -> bool {
-        if (!isGff3Attributes(attributes)) {
-            // GTF
-            if (attributes.find("gene_biotype \"protein_coding\"") != std::string::npos) return true;
-            if (attributes.find("gene_type \"protein_coding\"") != std::string::npos) return true;
-            // fallback (looser)
-            if (attributes.find("\"protein_coding\"") != std::string::npos) return true;
-            return false;
-        } else {
-            // GFF3
-            if (attributes.find("biotype=protein_coding") != std::string::npos) return true;
-            if (attributes.find("gene_biotype=protein_coding") != std::string::npos) return true;
-            if (attributes.find("gene_type=protein_coding") != std::string::npos) return true;
-            return false;
-        }
-    };
-
-    std::string line;
-    // key -> vector of spans {chrom, start, end, geneName}
-    std::map<std::string, std::vector<Gene>> geneMap;
-
-    while (std::getline(infile, line)) {
-        if (line.empty() || line[0] == '#') continue;
-
-        std::istringstream iss(line);
-        std::string chrom, source, feature, score, strand, frame;
-        int start, end;
-
-        if (!(iss >> chrom >> source >> feature >> start >> end >> score >> strand >> frame))
-            continue;
-
-        std::string attributes;
-        std::getline(iss, attributes); // remainder (starts with whitespace)
-
-        // --- Decide format based on attributes ---
-        const bool isGFF3 = isGff3Attributes(attributes);
-
-        // --- Filter feature type ---
-        if (!useTranscripts) {
-            if (feature != "gene") continue;
-            // Only keep protein-coding genes
-            if (!isProteinCoding(attributes)) continue;
-        } else {
-            // GTF: transcript, GFF3: mRNA is common (also "transcript" sometimes)
-            if (!(feature == "transcript" || feature == "mRNA")) continue;
-            // Optional: you *may* still want protein-coding only here too:
-            // if (!isProteinCoding(attributes)) continue;
-        }
-
-        // --- Extract gene identifier/name ---
-        std::string geneName = "NA";
-        if (!isGFF3) {
-            // GTF
-            geneName = getGtfAttr(attributes, "gene_name");
-            if (geneName == "NA") geneName = getGtfAttr(attributes, "gene_id");
-        } else {
-            // GFF3
-            geneName = getGff3Attr(attributes, "Name");
-            if (geneName == "NA") geneName = getGff3Attr(attributes, "gene_name");
-            if (geneName == "NA") {
-                // fall back to ID
-                geneName = getGff3Attr(attributes, "ID");
-            }
-        }
-
-        if (geneName == "NA") continue;
-
-        // Convert coordinates:
-        // GTF and GFF3 are 1-based inclusive.
-        // Your internal representation appears to be 1-based inclusive too, so keep as-is.
-        int convertedStart = start;
-        int convertedEnd   = end;
-
-        std::string key = chrom + "|" + geneName;
-        geneMap[key].push_back({chrom, convertedStart, convertedEnd, geneName});
-    }
-
-    infile.close();
-
-    // --- Collapse / deduplicate ---
-    genes.clear();
-    genes.reserve(geneMap.size());
-
-    for (auto &kv : geneMap) {
-        auto &entries = kv.second;
-        if (entries.empty()) continue;
-
-        if (canonical) {
-            // Pick the longest entry; tie-breaker = first
-            auto longestIt = std::max_element(entries.begin(), entries.end(),
-                                              [](const Gene &a, const Gene &b) {
-                                                  return (a.end - a.start) < (b.end - b.start);
-                                              });
-            genes.push_back(*longestIt);
-        } else {
-            // Take min start / max end across all entries
-            int minStart = entries[0].start;
-            int maxEnd   = entries[0].end;
-            std::string chrom0 = entries[0].chrom;
-            std::string geneName0 = entries[0].name;
-
-            for (const auto &g : entries) {
-                if (g.start < minStart) minStart = g.start;
-                if (g.end   > maxEnd)   maxEnd   = g.end;
-            }
-            genes.push_back({chrom0, minStart, maxEnd, geneName0});
-        }
-    }
-}
-
-
-
-// // deduplicate genes from GTF by gene_name (or gene_id if gene_name not present)
 // void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &genes,
 //                                     bool useTranscripts, bool canonical)
 // {
@@ -914,53 +758,111 @@ void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &gene
 //         std::exit(EXIT_FAILURE);
 //     }
 
-//     std::string line;
+//     auto isGff3Attributes = [](const std::string& attr) -> bool {
+//         // heuristic: GFF3 looks like key=value;key=value and usually has '='
+//         // GTF usually has key "value";
+//         return (attr.find('=') != std::string::npos);
+//     };
 
-//     // Temporary storage: gene_name -> vector of spans {chrom, start, end}
+//     auto getGtfAttr = [](const std::string& attr, const std::string& key) -> std::string {
+//         // expects: key "VALUE"
+//         size_t pos = attr.find(key);
+//         if (pos == std::string::npos) return "NA";
+//         size_t firstQuote = attr.find('"', pos);
+//         if (firstQuote == std::string::npos) return "NA";
+//         size_t secondQuote = attr.find('"', firstQuote + 1);
+//         if (secondQuote == std::string::npos) return "NA";
+//         return attr.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+//     };
+
+//     auto getGff3Attr = [](const std::string& attr, const std::string& key) -> std::string {
+//         // expects: key=VALUE;key2=VALUE2
+//         std::string pat = key + "=";
+//         size_t p = attr.find(pat);
+//         if (p == std::string::npos) return "NA";
+//         p += pat.size();
+//         size_t q = attr.find(';', p);
+//         std::string val = attr.substr(p, (q == std::string::npos ? attr.size() : q) - p);
+
+//         // Some GFF3 values can be URL-encoded; we leave as-is (safe).
+//         // Also sometimes ID looks like "gene:XYZ"; keep as-is.
+//         return val.empty() ? "NA" : val;
+//     };
+
+//     auto isProteinCoding = [&](const std::string& attributes) -> bool {
+//         if (!isGff3Attributes(attributes)) {
+//             // GTF
+//             if (attributes.find("gene_biotype \"protein_coding\"") != std::string::npos) return true;
+//             if (attributes.find("gene_type \"protein_coding\"") != std::string::npos) return true;
+//             // fallback (looser)
+//             if (attributes.find("\"protein_coding\"") != std::string::npos) return true;
+//             return false;
+//         } else {
+//             // GFF3
+//             if (attributes.find("biotype=protein_coding") != std::string::npos) return true;
+//             if (attributes.find("gene_biotype=protein_coding") != std::string::npos) return true;
+//             if (attributes.find("gene_type=protein_coding") != std::string::npos) return true;
+//             return false;
+//         }
+//     };
+
+//     std::string line;
+//     // key -> vector of spans {chrom, start, end, geneName}
 //     std::map<std::string, std::vector<Gene>> geneMap;
 
 //     while (std::getline(infile, line)) {
 //         if (line.empty() || line[0] == '#') continue;
 
 //         std::istringstream iss(line);
-//         std::string chrom, source, feature, score, strand, frame, attributes;
+//         std::string chrom, source, feature, score, strand, frame;
 //         int start, end;
 
 //         if (!(iss >> chrom >> source >> feature >> start >> end >> score >> strand >> frame))
 //             continue;
 
-//         std::getline(iss, attributes);
+//         std::string attributes;
+//         std::getline(iss, attributes); // remainder (starts with whitespace)
 
-//         // Extract gene_name
-//         std::string geneName = "NA";
-//         size_t pos = attributes.find("gene_name");
-//         if (pos != std::string::npos) {
-//             size_t firstQuote = attributes.find('"', pos);
-//             size_t secondQuote = attributes.find('"', firstQuote + 1);
-//             geneName = attributes.substr(firstQuote + 1, secondQuote - firstQuote - 1);
-//         } else {
-//             pos = attributes.find("gene_id");
-//             if (pos != std::string::npos) {
-//                 size_t firstQuote = attributes.find('"', pos);
-//                 size_t secondQuote = attributes.find('"', firstQuote + 1);
-//                 geneName = attributes.substr(firstQuote + 1, secondQuote - firstQuote - 1);
-//             }
-//         }
+//         // --- Decide format based on attributes ---
+//         const bool isGFF3 = isGff3Attributes(attributes);
 
-//         // Convert GTF (1-based inclusive) //internal 1 based inclusive same // internal (0-based inclusive)
-//         int convertedStart = start; // - 1;
-//         int convertedEnd   = end; // - 1;
-
+//         // --- Filter feature type ---
 //         if (!useTranscripts) {
-//             if (!(attributes.find("\"protein_coding\"") != std::string::npos)) {
-//                 continue;
-//             }
 //             if (feature != "gene") continue;
+//             // Only keep protein-coding genes
+//             if (!isProteinCoding(attributes)) continue;
 //         } else {
-//             if (feature != "transcript") continue;
+//             // GTF: transcript, GFF3: mRNA is common (also "transcript" sometimes)
+//             if (!(feature == "transcript" || feature == "mRNA")) continue;
+//             // Optional: you *may* still want protein-coding only here too:
+//             // if (!isProteinCoding(attributes)) continue;
 //         }
 
-//         string key = chrom + "|" + geneName;
+//         // --- Extract gene identifier/name ---
+//         std::string geneName = "NA";
+//         if (!isGFF3) {
+//             // GTF
+//             geneName = getGtfAttr(attributes, "gene_name");
+//             if (geneName == "NA") geneName = getGtfAttr(attributes, "gene_id");
+//         } else {
+//             // GFF3
+//             geneName = getGff3Attr(attributes, "Name");
+//             if (geneName == "NA") geneName = getGff3Attr(attributes, "gene_name");
+//             if (geneName == "NA") {
+//                 // fall back to ID
+//                 geneName = getGff3Attr(attributes, "ID");
+//             }
+//         }
+
+//         if (geneName == "NA") continue;
+
+//         // Convert coordinates:
+//         // GTF and GFF3 are 1-based inclusive.
+//         // Your internal representation appears to be 1-based inclusive too, so keep as-is.
+//         int convertedStart = start;
+//         int convertedEnd   = end;
+
+//         std::string key = chrom + "|" + geneName;
 //         geneMap[key].push_back({chrom, convertedStart, convertedEnd, geneName});
 //     }
 
@@ -968,28 +870,126 @@ void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &gene
 
 //     // --- Collapse / deduplicate ---
 //     genes.clear();
+//     genes.reserve(geneMap.size());
+
 //     for (auto &kv : geneMap) {
 //         auto &entries = kv.second;
+//         if (entries.empty()) continue;
 
 //         if (canonical) {
-//             // Pick the **longest entry**; if multiple longest, pick the first
+//             // Pick the longest entry; tie-breaker = first
 //             auto longestIt = std::max_element(entries.begin(), entries.end(),
 //                                               [](const Gene &a, const Gene &b) {
 //                                                   return (a.end - a.start) < (b.end - b.start);
 //                                               });
 //             genes.push_back(*longestIt);
 //         } else {
-//             // Take **min start / max end** across all entries
+//             // Take min start / max end across all entries
 //             int minStart = entries[0].start;
 //             int maxEnd   = entries[0].end;
-//             std::string chrom = entries[0].chrom;
+//             std::string chrom0 = entries[0].chrom;
+//             std::string geneName0 = entries[0].name;
 
 //             for (const auto &g : entries) {
 //                 if (g.start < minStart) minStart = g.start;
 //                 if (g.end   > maxEnd)   maxEnd   = g.end;
-//                 // Optional: check all chroms are same
 //             }
-//             genes.push_back({chrom, minStart, maxEnd, kv.first});
+//             genes.push_back({chrom0, minStart, maxEnd, geneName0});
 //         }
 //     }
 // }
+
+
+
+// // deduplicate genes from GTF by gene_name (or gene_id if gene_name not present)
+void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &genes,
+                                    bool useTranscripts, bool canonical)
+{
+    igzstream infile;
+    std::cerr << "Opening " << gtffile << "...\n";
+    infile.open(gtffile.c_str());
+
+    if (!infile) {
+        std::cerr << "ERROR: could not open file " << gtffile << "\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    std::string line;
+
+    // Temporary storage: gene_name -> vector of spans {chrom, start, end}
+    std::map<std::string, std::vector<Gene>> geneMap;
+
+    while (std::getline(infile, line)) {
+        if (line.empty() || line[0] == '#') continue;
+
+        std::istringstream iss(line);
+        std::string chrom, source, feature, score, strand, frame, attributes;
+        int start, end;
+
+        if (!(iss >> chrom >> source >> feature >> start >> end >> score >> strand >> frame))
+            continue;
+
+        std::getline(iss, attributes);
+
+        // Extract gene_name
+        std::string geneName = "NA";
+        size_t pos = attributes.find("gene_name");
+        if (pos != std::string::npos) {
+            size_t firstQuote = attributes.find('"', pos);
+            size_t secondQuote = attributes.find('"', firstQuote + 1);
+            geneName = attributes.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+        } else {
+            pos = attributes.find("gene_id");
+            if (pos != std::string::npos) {
+                size_t firstQuote = attributes.find('"', pos);
+                size_t secondQuote = attributes.find('"', firstQuote + 1);
+                geneName = attributes.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+            }
+        }
+
+        // Convert GTF (1-based inclusive) //internal 1 based inclusive same // internal (0-based inclusive)
+        int convertedStart = start; // - 1;
+        int convertedEnd   = end; // - 1;
+
+        if (!useTranscripts) {
+            if (!(attributes.find("\"protein_coding\"") != std::string::npos)) {
+                continue;
+            }
+            if (feature != "gene") continue;
+        } else {
+            if (feature != "transcript") continue;
+        }
+
+        string key = chrom + "|" + geneName;
+        geneMap[key].push_back({chrom, convertedStart, convertedEnd, geneName});
+    }
+
+    infile.close();
+
+    // --- Collapse / deduplicate ---
+    genes.clear();
+    for (auto &kv : geneMap) {
+        auto &entries = kv.second;
+
+        if (canonical) {
+            // Pick the **longest entry**; if multiple longest, pick the first
+            auto longestIt = std::max_element(entries.begin(), entries.end(),
+                                              [](const Gene &a, const Gene &b) {
+                                                  return (a.end - a.start) < (b.end - b.start);
+                                              });
+            genes.push_back(*longestIt);
+        } else {
+            // Take **min start / max end** across all entries
+            int minStart = entries[0].start;
+            int maxEnd   = entries[0].end;
+            std::string chrom = entries[0].chrom;
+
+            for (const auto &g : entries) {
+                if (g.start < minStart) minStart = g.start;
+                if (g.end   > maxEnd)   maxEnd   = g.end;
+                // Optional: check all chroms are same
+            }
+            genes.push_back({chrom, minStart, maxEnd, kv.first});
+        }
+    }
+}
