@@ -305,7 +305,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
 
     cout<<"Reading norm files for annotation...\n";
     
-    bool GENERATE_ANNOTATED_NORM = false;
+    bool GENERATE_ANNOTATED_NORM = true;
 
     std::map<std::string, GeneTableEntry> geneTableMap; // aggregate gene scores
     vector<Gene> genes; // all genes from all chromosomes
@@ -636,25 +636,22 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
 
 
     std::sort(genes.begin(), genes.end(),
-    [](const Gene &a, const Gene &b)
-    {
-        if (a.chrom != b.chrom)
-            return a.chrom < b.chrom; // lexicographic chromosome order
-        if (a.start != b.start)
-            return a.start < b.start; // sort by start
-        return a.end < b.end;         // sort by end
-    });
+              [](const Gene &a, const Gene &b) {
+                  if (a.chrom != b.chrom) return a.chrom < b.chrom;
+                  if (a.start != b.start) return a.start < b.start;
+                  return a.end < b.end;
+              });
 
-    
-    std::unordered_map<std::string, std::vector<GeneNoChr> > genes_by_chr; // Organize genes by chromosome
+    // Organize genes by chromosome
+    std::unordered_map<std::string, std::vector<GeneNoChr>> genes_by_chr;
     for (const auto &g : genes)
     {
-        GeneNoChr gnc{g.start, g.end, g.name};
-        genes_by_chr[g.chrom].push_back(gnc);
+        genes_by_chr[g.chrom].push_back(GeneNoChr{g.start, g.end, g.name});
     }
 
-    int numGenesFromAllFiles = genes.size();
     genes.clear();
+    // int numGenesFromAllFiles = genes.size();
+    // genes.clear();
 
     std::string windowLine;
     for (size_t windowFileId = 0; windowFileId < windowFiles.size(); ++windowFileId)
@@ -709,29 +706,29 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
                 std::cerr << "WARNING: chromosome " << w_chrom << " not found in gene BED file.\n";
             }else{
                 //chr found in bed file
-                const auto &genes2 = it->second;
+                const auto &chrGenes = it->second;
 
                 // Two-pointer approach
                 size_t gene_idx = 0;
                 std::string ov;
 
                 // Advance gene_idx to the first gene that might overlap
-                while (gene_idx < genes2.size() && genes2[gene_idx].end <= w_start)
+                while (gene_idx < chrGenes.size() && chrGenes[gene_idx].end <= w_start)
                 {
                     gene_idx++;
                 }
 
                 // Check overlapping genes starting from current gene_idx
                 size_t j = gene_idx;
-                std::string GENE_ID = w_chrom + "|" + genes2[j].name;
+                std::string GENE_ID = w_chrom + "|" + chrGenes[j].name;
 
-                while (j < genes2.size() && genes2[j].start < w_end)
+                while (j < chrGenes.size() && chrGenes[j].start < w_end)
                 {
-                    if ((w_end > genes2[j].start && w_start < genes2[j].end))
+                    if ((w_end > chrGenes[j].start && w_start < chrGenes[j].end))
                     { // overlaps
                         if (!ov.empty())
                             ov += ", ";
-                        ov += genes2[j].name;
+                        ov += chrGenes[j].name;
                     }
                     j++;
                 }
