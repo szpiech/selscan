@@ -64,7 +64,7 @@ class SelscanNorm{
     int WINOFFSET;
 
     
-    const string VERSION = "3.0-alpha.1";
+    const string VERSION = "3.0.0";
 
     const string PREAMBLE = " -- norm: a program for downstream analysis of selscan output\n\
     Source code and binaries can be found at\n\
@@ -201,7 +201,7 @@ class SelscanNorm{
 
     const string ARG_GTF = "--gene-gtf";
     const string DEFAULT_GTF = "__filegtf__";
-    const string HELP_GTF = "Provide a .gtf file with gene annotations.  Supports gzipped files";
+    const string HELP_GTF = "Provide a .gtf file with gene annotations. Extracts protein-coding genes only. Supports gzipped files";
 
     const string ARG_WIN_FILES = "--win-files";
     const string DEFAULT_WIN_FILES = "__filewin__";

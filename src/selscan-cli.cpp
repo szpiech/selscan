@@ -68,14 +68,14 @@ void initalizeParameters(param_t &params,int argc, char *argv[]){
 
 
     //params.addFlag(ARG_LOW_MEM, DEFAULT_LOW_MEM, "", HELP_LOW_MEM);
-    params.addFlag(ARG_MULTI_CHR, DEFAULT_MULTI_CHR, "", HELP_MULTI_CHR);
+    params.addFlag(ARG_MULTI_CHR, DEFAULT_MULTI_CHR, "SILENT", HELP_MULTI_CHR);
 
     params.addFlag(ARG_PI_WIN, DEFAULT_PI_WIN, "", HELP_PI_WIN);
     params.addFlag(ARG_WAGH, DEFAULT_WAGH, "", HELP_WAGH);
 
     params.addFlag(ARG_MULTI_PARAMS, DEFAULT_MULTI_PARAMS, "", HELP_MULTI_PARAMS);
 
-    params.addFlag(ARG_EHHS, DEFAULT_EHHS, "", HELP_EHHS);
+    params.addFlag(ARG_EHHS, DEFAULT_EHHS, "SILENT", HELP_EHHS);
 
 
 

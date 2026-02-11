@@ -603,19 +603,16 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         vector<string> normFilenames(nfiles);
         vector<string> winFilenames(nfiles);
 
-        if(HAVE_WINFILE){
+        if(HAVE_WINFILE){ //--win-files
             cerr << "You have provided " << nfiles << " window files for gene annotation.\n";
-            
             genex.annotateWindows(geneFile, useGTF, filename);
-            
-            
-        }else if(DO_NORM){
+        }else if(DO_NORM){ // --files but not --win-files
             cerr << "Using " << filename.size() << " normalized output files for gene-based analysis.\n";
             for (int i = 0; i < filename.size() ; i++)
             {
                 normFilenames[i] = outfilename[i];
             }
-        }else{
+        }else{ // no --files, no --win-files, but maybe --norm-files
             cerr << "You have provided " << nfiles << " normalized files for gene-based analysis.\n";
             ifstream fin;
             for (int i = 0; i < nfiles; i++)
@@ -630,7 +627,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             
         }
 
-        if(BPWIN) {
+        if(BPWIN) { // must be with --norm-files or --files
             for(int i = 0; i < nfiles; i++)
             {
                 winFilenames[i] =  outfilename[i];
@@ -648,9 +645,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         
     }
             
-
-    delete [] outfilename;
-    delete [] fileLoci;
+    if(!HAVE_WINFILE && !DO_NORM){
+         delete [] outfilename;
+         delete [] fileLoci;
+    }
+       
 
     return 0;
 }

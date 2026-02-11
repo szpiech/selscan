@@ -48,14 +48,14 @@ class SelscanStats {
 
         int numThreads;
 
-    string get_filename_base(string statname){
+    string get_filename_base(string statname, string queryfile =""){
         string outFilename = p.outFilename + "." + statname;
         if(statname == "pi"){
             outFilename += "." + to_string(p.PI_WIN) + "bp";
             //else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
         }
-        if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + p.query;
-        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + p.query_ehh12;
+        if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + queryfile;
+        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + queryfile;
         if (p.ALT) outFilename += ".alt";
         return outFilename;
     }
@@ -70,8 +70,8 @@ class SelscanStats {
     //     }
     // }
 
-    void init_global_fout(string statname){
-        string outFilename = get_filename_base(statname);
+    void init_global_fout(string statname, string querylist=""){
+        string outFilename = get_filename_base(statname, querylist);
         fout_obj.open(outFilename+".out");
         fout = &fout_obj;
 

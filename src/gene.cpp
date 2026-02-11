@@ -305,7 +305,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
 
     cout<<"Reading norm files for annotation...\n";
     
-    bool GENERATE_ANNOTATED_NORM = true;
+    bool GENERATE_ANNOTATED_NORM = false;
 
     std::map<std::string, GeneTableEntry> geneTableMap; // aggregate gene scores
     vector<Gene> genes; // all genes from all chromosomes

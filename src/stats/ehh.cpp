@@ -242,64 +242,97 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
  * @brief Calculate the EHH for a single locus
  * @param query The query locus name
 */
-void EHH::main(string query){
-    init_global_fout("ehh");
+void EHH::main(string query_list){
+    
     init_output_and_querymap();
+    //init_global_fout("ehh",query);
 
     int numSnps = hm->mapData->nloci;
 
-    int locus = this->queryFound(query);
-    if(locus == -1){
-        return;
+    std::vector<std::string> tokens;
+    std::stringstream ss(query_list);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        if (token.empty()) {
+            throw std::invalid_argument("Empty token found in query string.");
+        }
+
+        tokens.push_back(token);
     }
 
-    if(p.UNPHASED){
-        calc_ehh_unidirection_unphased(locus, true); // downstream
-        calc_ehh_unidirection_unphased(locus, false); // upstream
+    // Extra check: no trailing comma
+    if (!query_list.empty() && query_list.back() == ',') {
+        throw std::invalid_argument("Query string ends with a comma.");
+    }
 
-        (*fout) << std::fixed <<   "chr\tpdist\tgdist\tehh2\tehh0\tcehh\tehh" << "\n";
-        for (int i = 0; i < numSnps; i++){
-            if(!output[i].print){
-                continue;
-            }
-            (*fout) << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
-            <<   output[i].pdist  << "\t"
-            <<  output[i].gdist << "\t"
-            << output[i].ehh2 << "\t"
-            << output[i].ehh0  << "\t"
-            << output[i].cehh  << "\t"
-            << output[i].ehh  << "";
-            (*fout) << endl;
+    
+    for(const string& query: tokens){
+
+        int locus = this->queryFound(query);
+        if(locus == -1){
+            continue; // skip if query locus not found
         }
+
+        string outFilename = get_filename_base("ehh", query);
+        ofstream ehhOUT(outFilename+".out");
+
+        if(p.UNPHASED){
+            calc_ehh_unidirection_unphased(locus, true); // downstream
+            calc_ehh_unidirection_unphased(locus, false); // upstream
+
+            ehhOUT << std::fixed <<   "chr\tpdist\tgdist\tehh2\tehh0\tcehh\tehh" << "\n";
+            for (int i = 0; i < numSnps; i++){
+                if(!output[i].print){
+                    continue;
+                }
+                ehhOUT << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
+                <<   output[i].pdist  << "\t"
+                <<  output[i].gdist << "\t"
+                << output[i].ehh2 << "\t"
+                << output[i].ehh0  << "\t"
+                << output[i].cehh  << "\t"
+                << output[i].ehh  << "";
+                ehhOUT << endl;
+            }
         
-    }else{
-        for (int i = 0; i < numSnps; i++){
-            (output[i].print = false);
-        }
-
-        calc_ehh_unidirection(locus, true); // downstream
-        calc_ehh_unidirection(locus, false); // upstream
-
-        (*fout) << std::fixed <<   "chr\tpdist\tgdist\tderEHH\tancEHH\tEHH" << "\n";
-        for (int i = 0; i < numSnps; i++){
-            if(output[i].print == false){
-                continue;
+        }else{
+            for (int i = 0; i < numSnps; i++){
+                (output[i].print = false);
             }
-            // (cout) << std::fixed <<   output[i].pdist  << "\t"
-            // <<  output[i].gdist << "\t"
-            // << output[i].ehh1 << "\t"
-            // << output[i].ehh0  << "\t"
-            // << output[i].ehh  << "";
-            // (cout) << endl;
-            (*fout) << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
-            <<   output[i].pdist  << "\t"
-            <<  output[i].gdist << "\t"
-            << output[i].ehh1 << "\t"
-            << output[i].ehh0  << "\t"
-            << output[i].ehh  << "";
-            (*fout) << endl;
+
+            calc_ehh_unidirection(locus, true); // downstream
+            calc_ehh_unidirection(locus, false); // upstream
+
+            ehhOUT << std::fixed <<   "chr\tpdist\tgdist\tderEHH\tancEHH\tEHH" << "\n";
+            for (int i = 0; i < numSnps; i++){
+                if(output[i].print == false){
+                    continue;
+                }
+                // (cout) << std::fixed <<   output[i].pdist  << "\t"
+                // <<  output[i].gdist << "\t"
+                // << output[i].ehh1 << "\t"
+                // << output[i].ehh0  << "\t"
+                // << output[i].ehh  << "";
+                // (cout) << endl;
+                ehhOUT << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
+                <<   output[i].pdist  << "\t"
+                <<  output[i].gdist << "\t"
+                << output[i].ehh1 << "\t"
+                << output[i].ehh0  << "\t"
+                << output[i].ehh  << "";
+                ehhOUT << endl;
+            }
         }
+        ehhOUT.close();
     }
+
+    
+
+
+
+
+    
 }
 
 
