@@ -709,29 +709,29 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
                 std::cerr << "WARNING: chromosome " << w_chrom << " not found in gene BED file.\n";
             }else{
                 //chr found in bed file
-                const auto &genes = it->second;
+                const auto &genes2 = it->second;
 
                 // Two-pointer approach
                 size_t gene_idx = 0;
                 std::string ov;
 
                 // Advance gene_idx to the first gene that might overlap
-                while (gene_idx < genes.size() && genes[gene_idx].end <= w_start)
+                while (gene_idx < genes2.size() && genes2[gene_idx].end <= w_start)
                 {
                     gene_idx++;
                 }
 
                 // Check overlapping genes starting from current gene_idx
                 size_t j = gene_idx;
-                std::string GENE_ID = w_chrom + "|" + genes[j].name;
+                std::string GENE_ID = w_chrom + "|" + genes2[j].name;
 
-                while (j < genes.size() && genes[j].start < w_end)
+                while (j < genes2.size() && genes2[j].start < w_end)
                 {
-                    if ((w_end > genes[j].start && w_start < genes[j].end))
+                    if ((w_end > genes2[j].start && w_start < genes2[j].end))
                     { // overlaps
                         if (!ov.empty())
                             ov += ", ";
-                        ov += genes[j].name;
+                        ov += genes2[j].name;
                     }
                     j++;
                 }
