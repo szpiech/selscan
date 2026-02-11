@@ -2113,9 +2113,9 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
 
     getline(fin, header);
     if (XPNSL){
-        fout << header + "\tnormxpnsl\tcrit\n"; 
+        fout << header + "\tnorm_xpnsl\tcrit\n"; 
     } else{
-        fout << header + "\tnormxpehh\tcrit\n";  
+        fout << header + "\tnorm_xpehh\tcrit\n";  
     } 
 
     for (int j = 0; j < fileLoci; j++)
@@ -2193,7 +2193,7 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
         exit(EXIT_FAILURE);
     }
 
-    fout << header + "\tnormihh12\tcrit\n";
+    fout << header + "\tnorm_ihh12\tcrit\n";
 
     for (int j = 0; j < fileLoci; j++)
     {
