@@ -292,7 +292,7 @@ void IHH12::main()
     }
 
     int i = 0;
-    (*fout) << "chr\tid\tpos\tp1\tihh12\n";
+    (*fout) << "chr\tid\tpos\tfreq\tihh12\n";
     for(auto && result: results){ // this is a blocking call
         double ihh12 = result.get(); 
 

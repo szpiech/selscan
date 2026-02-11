@@ -2186,7 +2186,7 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
 
     getline(fin, header);
 
-    const std::string expectedHeader = "chr\tid\tpos\tp1\tihh12";
+    const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh12";
     if (header != expectedHeader) {     //check that header matches expected format
         flog << "ERROR: Expected header '" << expectedHeader << "' but found '" << header << "' in file " << filename << "\n";
         cerr << "ERROR: Expected header '" << expectedHeader << "' but found '" << header << "' in file " << filename << "\n";
