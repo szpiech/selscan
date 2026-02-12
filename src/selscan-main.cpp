@@ -86,12 +86,14 @@ string getLogFileName(param_main &p){
     if (p.CALC_SOFT){
         statname = "ihh12";
     }
-    if(p.SINGLE_EHH){
-        statname = statname + "." + p.query;
-    }
-    if(p.SINGLE_EHH12){
-        statname = statname + "." + p.query_ehh12;
-    }
+    // if(p.SINGLE_EHH){
+    //     //statname = statname + "." + p.query;
+    //     statname = "ehh";
+    // }
+    // if(p.SINGLE_EHH12){
+    //     //statname = statname + "." + p.query_ehh12;
+    //     statname = "ehh12";
+    // }
     return p.outFilename + "." + statname + ".log";
 }
 
@@ -270,10 +272,10 @@ int runToolSelscan(int argc, char *argv[])
     (*flog) << "\n";
 
 
-    // if(p.MULTI_CHR){
-    //     (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
-    //     cerr << "WARNING: Running in multi-chromosome mode.\n";
-    // }
+    if(p.MULTI_CHR){
+        (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
+        cerr << "WARNING: Running in multi-chromosome mode.\n";
+    }
 
     if(p.MULTI_PARAMS){
         //TODON

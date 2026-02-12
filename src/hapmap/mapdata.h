@@ -13,7 +13,7 @@ struct MapEntry
     int physicalPos; // uint64_t physicalPos;
     double geneticPos;
     string locusName;
-    string chr;
+    string chr = ".";
     int locId;
     //bool skipLocus = false;
 };

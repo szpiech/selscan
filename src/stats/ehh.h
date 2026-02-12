@@ -33,6 +33,7 @@ class EHH : public SelscanStats {
         map<string, int> locus_query_map;
         map<int, int> locus_query_map_position;
 
+
         void init_output_and_querymap(){
             this->output.resize(hm->mapData->nloci);
             for(int i = 0; i < hm->mapData->nloci; i++){
