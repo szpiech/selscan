@@ -1,3 +1,9 @@
+<!-- badges: start -->
+[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](https://shields.io/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+<!--badges: end -->
+
+
 # selscan -- a program to calculate EHH-based scans for positive selection in genomes
 
 Copyright (C) 2014  Zachary A Szpiech
@@ -12,7 +18,7 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 ## 📚 Citations
 ```
 A Rahman, TQ Smith, ZA Szpiech. (2025) Fast and Memory-Efficient Dynamic Programming Approach for
-	Large-Scale EHH-Based Selection Scans. bioRxiv doi: 10.1101/2025.04.09.647986.
+	Large-Scale EHH-Based Selection Scans. Molecular biology and evolution, 42(11), msaf275.
 ZA Szpiech (2024) selscan 2.0: scanning for sweeps in unphased data. Bioinformatics, 40(1), btae006.
 	doi: https://doi.org/10.1093/bioinformatics/btae006
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
@@ -238,11 +244,10 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
-05JAN2026 - selscan v3.0.0-alpha.1
+11FEB2026 - selscan v3.0.0
 
 In selscan v3.0 pre-release: 
-
-- Fixed: `ihs` calculation with `--bp-win` was incorrectly producing zero nonzero windows (note: binaries are not updated)
+- Fixed: `ihs` calculation with `--bp-win` was incorrectly producing zero nonzero windows 
 - Added: chr column added
 - Fixed: 'nan' reported in xp stats
 - Fixed: trunc-ok message showing wrong in xp unphased
