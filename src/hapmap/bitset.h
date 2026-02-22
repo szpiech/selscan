@@ -15,7 +15,7 @@
 //     #include <x86intrin.h> // For __builtin_popcountll and __builtin_ctzl
 #endif
 
-constexpr size_t alignment = alignof(uint64_t); // Alignment boundary
+constexpr size_t alignment = 64; //alignof(uint64_t); // Alignment boundary
 
 using namespace std;
 class MyBitset{
@@ -30,21 +30,20 @@ class MyBitset{
         this->nbits = nbits;
         this->nwords = (nbits/WORDSZ) + 1; //idea: do ceil
 
-                // Calculate aligned size
-        size_t alignedSize = ((nbits + 63) / 64) * 8; // Assuming 64-bit alignment for uint64_t
-        
-                // Allocate aligned memory
-            #ifdef _WIN32
-                bits = static_cast<uint64_t*>(_aligned_malloc(alignedSize, alignment));
-            #else
-                if (posix_memalign(reinterpret_cast<void**>(&bits), alignment, alignedSize) != 0) {
-                    bits = nullptr;
-                }
-            #endif
+        size_t alignedSize = nwords * sizeof(uint64_t); // Calculate the total size needed for nwords
+
+
+        // Allocate aligned memory
+        #ifdef _WIN32
+            bits = static_cast<uint64_t*>(_aligned_malloc(alignedSize, alignment));
+        #else
+            if (posix_memalign(reinterpret_cast<void**>(&bits), alignment, alignedSize) != 0) {
+                bits = nullptr;
+            }
+        #endif
 
         // Allocate aligned memory
         //bits = reinterpret_cast<uint64_t*>(std::aligned_alloc(alignment, alignedSize));
-        
         
         if (!bits) {
             throw std::bad_alloc();
