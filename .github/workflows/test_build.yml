@@ -1,8 +1,9 @@
-name: C++ CI (Selective: test_all or binary tags)
+name: Test and build binaries
 
 on:
   push:
-    branches: bugfix_2_1_2
+    branches:
+      - bugfix_2_1_2
 
 jobs:
   build:
@@ -48,32 +49,30 @@ jobs:
             bin_dir: bin/win
             tag: "[binary_win]"
 
-    # MATRIX SELECTION LOGIC
-    #
-    # Case 1: Any [binary_*] tag exists → run ONLY matching OS job(s)
-    # Case 2: No binary tags, but 'test_all' exists → run ALL jobs
-    # Otherwise → run nothing
+    # MATRIX SELECTION LOGIC (step-level via strategy)
+    # - If any [binary_*] tag exists -> run ONLY matching OS job(s)
+    # - Else if 'test_all' exists -> run ALL
+    # - Else -> skip everything
     if: >
       (
         (
-          contains(github.event.head_commit.message, '[binary_linux]') ||
-          contains(github.event.head_commit.message, '[binary_mac_arm]') ||
-          contains(github.event.head_commit.message, '[binary_mac]') ||
-          contains(github.event.head_commit.message, '[binary_osx]') ||
-          contains(github.event.head_commit.message, '[binary_win]')
+          contains(github.event.head_commit.message || '', '[binary_linux]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac]') ||
+          contains(github.event.head_commit.message || '', '[binary_osx]') ||
+          contains(github.event.head_commit.message || '', '[binary_win]')
         )
-        && contains(github.event.head_commit.message, matrix.tag)
       )
       ||
       (
         !(
-          contains(github.event.head_commit.message, '[binary_linux]') ||
-          contains(github.event.head_commit.message, '[binary_mac_arm]') ||
-          contains(github.event.head_commit.message, '[binary_mac]') ||
-          contains(github.event.head_commit.message, '[binary_osx]') ||
-          contains(github.event.head_commit.message, '[binary_win]')
+          contains(github.event.head_commit.message || '', '[binary_linux]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac]') ||
+          contains(github.event.head_commit.message || '', '[binary_osx]') ||
+          contains(github.event.head_commit.message || '', '[binary_win]')
         )
-        && contains(github.event.head_commit.message, 'test_all')
+        && contains(github.event.head_commit.message || '', 'test_all')
       )
 
     steps:
@@ -118,11 +117,11 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S mingw-w64-x86_64-gsl --noconfirm
-          mkdir -p "${{ github.workspace }}"/lib/win32
-          cp /mingw64/lib/libgsl.a "${{ github.workspace }}"/lib/win32/
-          cp /mingw64/lib/libgslcblas.a "${{ github.workspace }}"/lib/win32/
-          mkdir -p "${{ github.workspace }}"/include/gsl
-          cp /mingw64/include/gsl/* "${{ github.workspace }}"/include/gsl/
+          mkdir -p "${{ github.workspace }}/lib/win32"
+          cp /mingw64/lib/libgsl.a "${{ github.workspace }}/lib/win32/"
+          cp /mingw64/lib/libgslcblas.a "${{ github.workspace }}/lib/win32/"
+          mkdir -p "${{ github.workspace }}/include/gsl"
+          cp /mingw64/include/gsl/* "${{ github.workspace }}/include/gsl/"
 
       - name: Build selscan (Windows)
         if: matrix.kind == 'windows'
@@ -139,10 +138,10 @@ jobs:
           ./norm.exe --help
 
       # ===========================
-      # Publish binaries (ONLY when binary tag present)
+      # Publish binaries
       # ===========================
       - name: Set up Git credentials
-        if: contains(github.event.head_commit.message, matrix.tag)
+        if: contains(github.event.head_commit.message || '', '[binary_') || contains(github.event.head_commit.message || '', 'test_all')
         shell: bash
         run: |
           git config --global user.name "GitHub Actions"
@@ -150,7 +149,7 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
       - name: Commit & push binary (Linux/macOS)
-        if: matrix.kind == 'posix' && contains(github.event.head_commit.message, matrix.tag)
+        if: matrix.kind == 'posix' && contains(github.event.head_commit.message || '', matrix.tag)
         shell: bash
         run: |
           mkdir -p "${{ matrix.bin_dir }}"
@@ -161,7 +160,7 @@ jobs:
           git push
 
       - name: Commit & push binary (Windows)
-        if: matrix.kind == 'windows' && contains(github.event.head_commit.message, matrix.tag)
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
         shell: bash
         run: |
           mkdir -p "${{ matrix.bin_dir }}"
