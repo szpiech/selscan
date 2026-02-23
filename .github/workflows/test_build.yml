@@ -48,31 +48,7 @@ jobs:
             makefile: Makefile_win
             bin_dir: bin/win
             tag: "[binary_win]"
-
-    # IMPORTANT: this must be under the job (here), not top-level.
-  if: >
-      (
-        (
-          contains(github.event.head_commit.message || '', '[binary_linux]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac]') ||
-          contains(github.event.head_commit.message || '', '[binary_osx]') ||
-          contains(github.event.head_commit.message || '', '[binary_win]')
-        )
-        && contains(github.event.head_commit.message || '', matrix.tag)
-      )
-      ||
-      (
-        !(
-          contains(github.event.head_commit.message || '', '[binary_linux]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac]') ||
-          contains(github.event.head_commit.message || '', '[binary_osx]') ||
-          contains(github.event.head_commit.message || '', '[binary_win]')
-        )
-        && contains(github.event.head_commit.message || '', 'test_all')
-      )
-
+        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,13 +64,13 @@ jobs:
 
       # POSIX build/test
       - name: Build selscan (Linux/macOS)
-        if: matrix.kind == 'posix'
+        if: matrix.kind == 'posix' && contains(github.event.head_commit.message || '', matrix.tag)
         working-directory: src/
         shell: bash
         run: make -f ${{ matrix.makefile }} -j
 
       - name: Test selscan (Linux/macOS)
-        if: matrix.kind == 'posix'
+        if: matrix.kind == 'posix' && contains(github.event.head_commit.message || '', matrix.tag)
         working-directory: src/
         shell: bash
         run: |
@@ -103,7 +79,7 @@ jobs:
 
       # Windows build/test
       - name: Set Up MSYS2
-        if: matrix.kind == 'windows'
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
         uses: msys2/setup-msys2@v2
         with:
           msystem: clang64
@@ -114,7 +90,7 @@ jobs:
             mingw-w64-clang-x86_64-toolchain
 
       - name: Install GSL (Windows)
-        if: matrix.kind == 'windows'
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
         shell: msys2 {0}
         run: |
           pacman -S mingw-w64-x86_64-gsl --noconfirm
@@ -125,13 +101,13 @@ jobs:
           cp /mingw64/include/gsl/* "${{ github.workspace }}/include/gsl/"
 
       - name: Build selscan (Windows)
-        if: matrix.kind == 'windows'
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
         shell: msys2 {0}
         working-directory: src/
         run: make -f ${{ matrix.makefile }} -j
 
       - name: Test selscan (Windows)
-        if: matrix.kind == 'windows'
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
         shell: msys2 {0}
         working-directory: src/
         run: |
