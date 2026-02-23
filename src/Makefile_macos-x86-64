@@ -1,5 +1,4 @@
 #for osx systems
-
 CC = g++ -std=c++17  -w -Wno-psabi
 G++FLAG = -O3 -m64 -ftree-vectorize
 
