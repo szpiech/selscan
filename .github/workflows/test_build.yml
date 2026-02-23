@@ -49,6 +49,16 @@ jobs:
             bin_dir: bin/win
             tag: "[binary_win]"
 
+    # IMPORTANT: this must be under the job (here), not top-level.
+    
+    if: >
+      contains(github.event.head_commit.message || '', 'test_all') ||
+      contains(github.event.head_commit.message || '', '[binary_linux]') ||
+      contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
+      contains(github.event.head_commit.message || '', '[binary_mac]') ||
+      contains(github.event.head_commit.message || '', '[binary_osx]') ||
+      contains(github.event.head_commit.message || '', '[binary_win]')
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
