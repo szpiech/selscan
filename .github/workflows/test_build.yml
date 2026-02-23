@@ -49,41 +49,20 @@ jobs:
             bin_dir: bin/win
             tag: "[binary_win]"
 
-    # MATRIX SELECTION LOGIC (step-level via strategy)
-    # - If any [binary_*] tag exists -> run ONLY matching OS job(s)
-    # - Else if 'test_all' exists -> run ALL
-    # - Else -> skip everything
-    if: >
-      (
-        (
-          contains(github.event.head_commit.message || '', '[binary_linux]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac]') ||
-          contains(github.event.head_commit.message || '', '[binary_osx]') ||
-          contains(github.event.head_commit.message || '', '[binary_win]')
-        )
-      )
-      ||
-      (
-        !(
-          contains(github.event.head_commit.message || '', '[binary_linux]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
-          contains(github.event.head_commit.message || '', '[binary_mac]') ||
-          contains(github.event.head_commit.message || '', '[binary_osx]') ||
-          contains(github.event.head_commit.message || '', '[binary_win]')
-        )
-        && contains(github.event.head_commit.message || '', 'test_all')
-      )
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      # ===========================
-      # POSIX (Linux + macOS)
-      # ===========================
+      # Debug (optional but very useful to confirm what GitHub sees)
+      - name: Debug tags
+        shell: bash
+        run: |
+          echo "COMMIT MESSAGE: ${{ github.event.head_commit.message }}"
+          echo "MATRIX TAG: ${{ matrix.tag }}"
+
+      # POSIX build/test
       - name: Build selscan (Linux/macOS)
         if: matrix.kind == 'posix'
         working-directory: src/
@@ -98,9 +77,7 @@ jobs:
           ./selscan --help
           ./norm --help
 
-      # ===========================
-      # WINDOWS
-      # ===========================
+      # Windows build/test
       - name: Set Up MSYS2
         if: matrix.kind == 'windows'
         uses: msys2/setup-msys2@v2
@@ -137,11 +114,9 @@ jobs:
           ./selscan.exe --help
           ./norm.exe --help
 
-      # ===========================
-      # Publish binaries
-      # ===========================
+      # Publish only when the matching binary tag is present
       - name: Set up Git credentials
-        if: contains(github.event.head_commit.message || '', '[binary_') || contains(github.event.head_commit.message || '', 'test_all')
+        if: contains(github.event.head_commit.message || '', matrix.tag)
         shell: bash
         run: |
           git config --global user.name "GitHub Actions"
