@@ -36,7 +36,7 @@ jobs:
             tag: "[binary_mac]"
 
           - label: osx-intel
-            runner: macos-13
+            runner: macos-14
             kind: posix
             makefile: Makefile_macos-x86-64
             bin_dir: bin/osx
@@ -50,15 +50,29 @@ jobs:
             tag: "[binary_win]"
 
     # IMPORTANT: this must be under the job (here), not top-level.
-    
-    if: >
-      contains(github.event.head_commit.message || '', 'test_all') ||
-      contains(github.event.head_commit.message || '', '[binary_linux]') ||
-      contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
-      contains(github.event.head_commit.message || '', '[binary_mac]') ||
-      contains(github.event.head_commit.message || '', '[binary_osx]') ||
-      contains(github.event.head_commit.message || '', '[binary_win]')
-      
+  if: >
+      (
+        (
+          contains(github.event.head_commit.message || '', '[binary_linux]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac]') ||
+          contains(github.event.head_commit.message || '', '[binary_osx]') ||
+          contains(github.event.head_commit.message || '', '[binary_win]')
+        )
+        && contains(github.event.head_commit.message || '', matrix.tag)
+      )
+      ||
+      (
+        !(
+          contains(github.event.head_commit.message || '', '[binary_linux]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac_arm]') ||
+          contains(github.event.head_commit.message || '', '[binary_mac]') ||
+          contains(github.event.head_commit.message || '', '[binary_osx]') ||
+          contains(github.event.head_commit.message || '', '[binary_win]')
+        )
+        && contains(github.event.head_commit.message || '', 'test_all')
+      )
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
