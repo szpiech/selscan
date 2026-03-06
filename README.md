@@ -11,8 +11,7 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 
 ## 📚 Citations
 ```
-A Rahman, TQ Smith, ZA Szpiech. (2025) Fast and Memory-Efficient Dynamic Programming Approach for
-	Large-Scale EHH-Based Selection Scans. bioRxiv doi: 10.1101/2025.04.09.647986.
+A Rahman, TQ Smith, ZA Szpiech. (2025) Fast and Memory-Efficient Dynamic Programming Approach for Large-Scale EHH-Based Selection Scans. Molecular biology and evolution 42.11 (2025): msaf275. doi: https://doi.org/10.1093/molbev/msaf275
 ZA Szpiech (2024) selscan 2.0: scanning for sweeps in unphased data. Bioinformatics, 40(1), btae006.
 	doi: https://doi.org/10.1093/bioinformatics/btae006
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
