@@ -92,6 +92,7 @@ class SelscanStats {
             statname == "ehh"    ? "EHH." :
             statname == "pi"     ? "PI." :
             statname == "ihh12"  ? "iHH12." :
+            statname == "ehh12"  ? "EHH12." :
             "Unknown statistic."
         ));
         LOG("=====");

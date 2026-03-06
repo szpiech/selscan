@@ -1,4 +1,4 @@
-name: Test and build binaries
+name: Test & Build binaries
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
             tag: "[binary_mac]"
 
           - label: osx-intel
-            runner: macos-14
+            runner: macos-26-intel
             kind: posix
             makefile: Makefile_macos-x86-64
             bin_dir: bin/osx

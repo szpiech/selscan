@@ -238,6 +238,14 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
+06MAR2026 - selscan v2.1.2 - Bug fixes for the scalable version v2.1+: 
+	- Removed NaNs from output (fixed issue #152).
+	- Fixed a bug affecting input where number of haplotypes is a multiple of 64 causing crashes (fixed issue #154).
+	- Updated binaries for compatibility with older macOS versions.
+	- Fixed filename for EHH12 output and log.
+	- Skips VCF entries with multiple records at the same genomic position.
+	- MAF filtering now correctly affects iHH12 (was previously ignored).
+
 26SEP2025 - selscan v2.1.1 - Bug fixes for the fast and memory-efficient version introduced in v2.1:
 
     - Refined cutoff handling for edge cases, improving correlation with v2.0 outputs.

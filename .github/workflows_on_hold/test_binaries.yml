@@ -33,7 +33,7 @@ jobs:
             exe_ext: ""
 
           - label: osx-intel
-            runner: macos-12
+            runner: macos-26-intel
             bin_dir: bin/osx
             exe_ext: ""
 
