@@ -49,5 +49,4 @@ jobs:
       - name: Test selscan installation
         working-directory: ${{ matrix.bin_dir }}
         run: |
-          ./norm${{ matrix.exe_ext }} --help  | head -n 5
-          ./selscan${{ matrix.exe_ext }} --help  | head -n 5
+          ./selscan${{ matrix.exe_ext }} --help  
