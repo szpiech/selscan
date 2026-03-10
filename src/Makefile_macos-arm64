@@ -5,8 +5,7 @@ CC = g++
 #clang++ and g++ are both supported
 
 # Optimization and architecture flags  and language standard setup
-G++FLAG = -O3 -m64 -arch arm64 -ftree-vectorize -w -Wno-psabi -std=c++17 
-# -mmacosx-version-min=10.14
+G++FLAG = -O3 -m64 -arch arm64 -ftree-vectorize -w -Wno-psabi -std=c++17 -mmacosx-version-min=10.14
 
 #G++FLAG = -DDEBUG -O0 -g -w -Wno-psabi -std=c++17 
 # -O3              : Maximum optimization level
