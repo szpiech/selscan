@@ -1,16 +1,16 @@
-name: C++ CI OSX # This workflow will build and test the C++ code on Intel-based macOS Runners using GitHub Actions. # Use macOS 13 (Ventura) for Intel-based Runners. These runners provide a 4-core Intel processor, 14 GB of RAM, and 14 GB of SSD storage. 
+name: C++ CI OSX 8 # This workflow will build and test the C++ code on Intel-based macOS Runners using GitHub Actions. # Use macOS 13 (Ventura) for Intel-based Runners. These runners provide a 4-core Intel processor, 14 GB of RAM, and 14 GB of SSD storage. 
 
 on:
   push:
       branches:
-      - bug_low_mac
+      - bugfix_2_1_2
   pull_request:
       branches:
-      - bug_low_mac
+      - bugfix_2_1_2
 
 jobs:
     build:
-      runs-on: macos-13
+      runs-on: macos-12
       if: (contains(github.event.head_commit.message, '[run ci]') || contains(github.event.head_commit.message, '[binary_osx]'))
 
       steps:

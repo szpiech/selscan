@@ -29,7 +29,7 @@ void HapMap::initParamsInHap(HapData &hapData){
     // if we are in multi param mode, or using xp, we want to set the MAF cutoff to the minimum
     this->MIN_MAF_CUTOFF = p.MAF;
 
-    if(p.CALC_IHS || p.CALC_NSL){
+    if(p.CALC_IHS || p.CALC_NSL || p.CALC_SOFT){
         if(p.MULTI_MAF){
             for (const auto& param : ps) {
                 if(param.MAF < MIN_MAF_CUTOFF){
@@ -442,7 +442,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             
             if(i == 1){
                 if(physpos == std::stoi(junk)){
-                    std::cerr<<"WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos<<"\n";
+                    LOG("WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos);
                     skip_due_to_duplicate_pos += 1;
                 }else{
                     skip_due_to_duplicate_pos = 0;
@@ -465,7 +465,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                     if(!p.MULTI_ALLELIC){
                         HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
                     }else{
-                        std::cerr<<"WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos << "\n";
+                        LOG("WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos);
                         skip_due_to_missing = true;
                     }
                 }
@@ -475,7 +475,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                 if(!p.MULTI_ALLELIC){
                     HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
                 }else{
-                    std::cerr<<"WARNING: Unphased entries detected (/ is used). To use this site, run with --unphased flag for correct results. Skipping.\n";
+                    LOG("WARNING: Unphased entries detected (/ is used). To use this site, run with --unphased flag for correct results. Skipping." << " Pos: " << physpos);
                     skip_due_to_missing = true;
                 }
             }

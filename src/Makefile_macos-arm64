@@ -6,6 +6,8 @@ CC = g++
 
 # Optimization and architecture flags  and language standard setup
 G++FLAG = -O3 -m64 -arch arm64 -ftree-vectorize -w -Wno-psabi -std=c++17 
+#-mmacosx-version-min=10.14
+
 #G++FLAG = -DDEBUG -O0 -g -w -Wno-psabi -std=c++17 
 # -O3              : Maximum optimization level
 # -m64             : Generate 64-bit code
@@ -29,7 +31,7 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 # Build all targets
-all: selscan norm
+all: norm selscan
 
 # Build selscan binary
 selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o

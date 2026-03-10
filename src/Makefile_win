@@ -44,8 +44,9 @@ OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 all : selscan norm 
 
 selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
-	$(CC) $(G++FLAG) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)
-	
+	$(CC) $(G++FLAG_NORM) $(LINK_OPTS_LATER) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)  $(LINK_OPTS)
+#	$(CC) $(G++FLAG_NORM) $(LINK_OPTS_LATER) -o norm norm.o param_t.o $(LINK_OPTS)
+
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 

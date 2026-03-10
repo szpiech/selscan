@@ -155,6 +155,12 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
     ehhdata.init(hm->hapData->nhaps, hm->hapData->hapEntries[locus].hapbitset);
     ehhdata.initialize_core(p.ALT);
+    if(ehhdata.n_c[0] == 0 || ehhdata.n_c[1] == 0){
+        //LOG("WARNING: no polymorphism at pos "<< hm->mapData->mapEntries[locus].physicalPos << " . Skipping.");
+        return skipLocusDouble();
+    }
+
+
     ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
     ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 

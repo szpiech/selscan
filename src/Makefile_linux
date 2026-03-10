@@ -1,5 +1,4 @@
 # Makefile for selscan (Linux)
-
 # Compiler settings
 CC = g++                                      # Use GNU C++ compiler
 G++FLAG = -O3 -m64 -mmmx -msse -msse2 --std=c++17 -lm -ftree-vectorize
