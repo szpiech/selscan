@@ -29,7 +29,7 @@ void HapMap::initParamsInHap(HapData &hapData){
     // if we are in multi param mode, or using xp, we want to set the MAF cutoff to the minimum
     this->MIN_MAF_CUTOFF = p.MAF;
 
-    if(p.CALC_IHS || p.CALC_NSL || p.CALC_SOFT){
+    if(p.CALC_IHS || p.CALC_NSL){
         if(p.MULTI_MAF){
             for (const auto& param : ps) {
                 if(param.MAF < MIN_MAF_CUTOFF){
@@ -383,288 +383,945 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 }
 
 
-//tested-> unphased - lowmem, phased - lowmem
-void HapMap::readHapDataVCF(string filename, HapData& hapData)
+
+VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
 {
-    //RELATED FLAGS: ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
-    
-    initParamsInHap(hapData);
+    VCFPass1Result result;
 
     igzstream fin;
-    queue<size_t> skiplist;
-
-    // PHASE 1: Counting so that inititalization is smooth
-    LOG("Opening " << filename << " to count number of haplotypes and loci...");
-
     fin.open(filename.c_str());
-
-    if (fin.fail())
-    {
+    if (fin.fail()) {
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
     }
 
-    int numMapCols = 9;
+    constexpr int numMapCols = 9;
     string line;
-    size_t nloci_before_filtering = 0;
-    int prev_ngts = -1;
-    int current_ngts = 0;
-
-    int skipcount = 0;
 
     int physpos = -1;
     int physpos_first_duplicated_id = -1;
     int skip_due_to_duplicate_pos = 0;
-    //int num_meta_data_lines = 0;
-    while (getline(fin, line))  //Counts number of haps (cols) and number of loci (rows)
+
+    auto find_field_end = [](const char* p, const char* end) -> const char* {
+        while (p < end && *p != '\t') ++p;
+        return p;
+    };
+
+    auto parse_int_fast = [](const char* s, const char* e) -> int {
+        int x = 0;
+        for (const char* p = s; p < e; ++p) {
+            x = x * 10 + (*p - '0');
+        }
+        return x;
+    };
+
+    auto count_samples_from_header = [&](const string& header_line) -> int {
+        int tabs = 0;
+        for (char c : header_line)
+            if (c == '\t') ++tabs;
+        return (tabs + 1) - numMapCols;
+    };
+
+    auto is_snp_base = [](const char* s, const char* e) -> bool {
+        if (e - s != 1) return false;
+        char c = *s;
+        return c=='A'||c=='C'||c=='G'||c=='T';
+    };
+
+    while (getline(fin, line))
     {
+        if (line.empty()) continue;
+
         if (line[0] == '#') {
-            continue; //num_meta_data_lines++;
+            if (line.rfind("#CHROM",0) == 0) {
+                result.current_ngts = count_samples_from_header(line);
+            }
+            continue;
         }
 
-        nloci_before_filtering++;
-        current_ngts = countFields(line) - numMapCols;
+        result.nloci_before_filtering++;
 
-        /********/
-        string junk;
-        string chr;
-        char allele1, allele2, separator;
-        std::stringstream ss(line);
+        // bool ALLOW_XP_LOCI_MISMATCH = false; // for now, assume all loci mismatch in XP mode, and rely on physpos-based skipping to identify shared loci. This is because in XP mode we want to keep all loci that are present in either VCF, even if they are not shared. So we will disable the NUM_LOCI_MISMATCH check and just rely on physpos-based skipping to identify shared loci.
+        // if((p.CALC_XP || p.CALC_XPNSL) && ALLOW_XP_LOCI_MISMATCH ){
+        //     result.physpos.push_back(physpos);
+        // }
+
+        const char* pcur = line.c_str();
+        const char* end  = pcur + line.size();
+
+        const char* field_starts[numMapCols];
+        const char* field_ends[numMapCols];
+
+        for (int col = 0; col < numMapCols; ++col) {
+            field_starts[col] = pcur;
+            field_ends[col]   = find_field_end(pcur,end);
+            pcur = field_ends[col];
+            if (pcur < end) ++pcur;
+        }
+
+        int new_physpos = parse_int_fast(field_starts[1], field_ends[1]);
+
+        if (physpos == new_physpos)
+            skip_due_to_duplicate_pos++;
+        else {
+            skip_due_to_duplicate_pos = 0;
+            physpos_first_duplicated_id = result.nloci_before_filtering - 1;
+        }
+
+        physpos = new_physpos;
+
+        bool skip_due_to_missing = false;
+        bool skip_due_to_multiallelic = false;
+
         int number_of_1s = 0;
         int number_of_2s = 0;
 
-        bool skip_due_to_missing = false;
-
-        for (int i = 0; i < numMapCols; i++) {
-            ss >> junk;
-            if(i==0){
-                chr = junk;
-            } 
-            
-            if(i == 1){
-                if(physpos == std::stoi(junk)){
-                    LOG("WARNING: VCF file appears to have duplicate entries for same genomic position. Skipping. Pos: "<< physpos << " " << skip_due_to_duplicate_pos);
-                    skip_due_to_duplicate_pos += 1;
-                }else{
-                    skip_due_to_duplicate_pos = 0;
-                    physpos_first_duplicated_id = nloci_before_filtering - 1;
-                }
-                physpos = std::stoi(junk);
+        if (p.MULTI_ALLELIC) {
+            if (!is_snp_base(field_starts[3],field_ends[3]) ||
+                !is_snp_base(field_starts[4],field_ends[4])) {
+                skip_due_to_multiallelic = true;
             }
         }
 
-        for (int field = 0; field < current_ngts; field++)
+        int seen_ngts = 0;
+
+        if (p.UNPHASED)
         {
-            ss >> junk;
-            allele1 = junk[0];
-            separator = junk[1];
-            allele2 = junk[2];
+            while (pcur < end && seen_ngts < result.current_ngts)
+            {
+                const char* g = pcur;
 
-            if(!p.MISSING_ALLOWED){
-                if ( (allele1 != '0' && allele1 != '1') || (allele2 != '0' && allele2 != '1') )
-                {
-                    if(!p.MULTI_ALLELIC){
-                        HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2);
-                    }else{
-                        LOG("WARNING: Alleles must be coded 0 or 1 only. Found alleles " << allele1 << separator << allele2<< " Skipping site. Pos: " << physpos);
-                        skip_due_to_missing = true;
-                    }
-                }
-            }
-            
-            if(separator != '|' && !p.UNPHASED){
-                if(!p.MULTI_ALLELIC){
-                    HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
-                }else{
-                    LOG("WARNING: Unphased entries detected (/ is used). To use this site, run with --unphased flag for correct results. Skipping." << " Pos: " << physpos);
-                    skip_due_to_missing = true;
-                }
-            }
+                if (end-g >= 3) {
+                    char a1 = g[0];
+                    char a2 = g[2];
 
-            if(p.UNPHASED){
-                if (allele1 == '1' && allele2 == '1'){
-                    number_of_2s++;
+                    int v1 = (a1=='1');
+                    int v2 = (a2=='1');
+
+                    int sum = v1+v2;
+
+                    if (sum==2) number_of_2s++;
+                    else if (sum==1) number_of_1s++;
                 }
-                else if (allele1 == '1' || allele2 == '1'){
-                    number_of_1s++;
+
+                while (pcur < end && *pcur!='\t') ++pcur;
+                if (pcur < end) ++pcur;
+
+                seen_ngts++;
+            }
+        }
+        else
+        {
+            while (pcur < end && seen_ngts < result.current_ngts)
+            {
+                const char* g = pcur;
+
+                if (end-g >= 3) {
+                    char a1 = g[0];
+                    char a2 = g[2];
+
+                    number_of_1s += (a1=='1');
+                    number_of_1s += (a2=='1');
                 }
-            }else{
-                if(allele1 == '1'){
-                    number_of_1s++;
-                }
-                if(allele2 == '1'){
-                    number_of_1s++;
-                }
+
+                while (pcur < end && *pcur!='\t') ++pcur;
+                if (pcur < end) ++pcur;
+
+                seen_ngts++;
             }
         }
 
-        int nalleles_per_loc = current_ngts*2;
+        // -------- store counts per locus --------
+        result.num_1s.push_back(number_of_1s);
+        result.num_2s.push_back(number_of_2s);
+
+        int nalleles_per_loc = result.current_ngts * 2;
         bool skip_due_to_maf = shouldSkipLocus(number_of_1s, number_of_2s, nalleles_per_loc);
-        bool skip_due_to_multiallelic = false;
 
-        if(p.MULTI_ALLELIC){
-            std::stringstream ss2(line);
-            std::string chrom, pos, id, ref, alt, rest;
-            if (!(ss2 >> chrom >> pos >> id >> ref >> alt)) {
-                std::cerr << "Malformed line: " << line << "\n";
-                continue;
-            }else{
-                // Skip multi-allelic sites,  Keep only SNPs (both REF and ALT are single-nucleotide) //if (ref.length() != 1 || alt.length() != 1) { this keeps biallelic indels too
-                if ((ref != "A" && ref != "C" && ref != "G" && ref != "T") ||
-                    (alt != "A" && alt != "C" && alt != "G" && alt != "T")) {
-                    std::cerr << "WARNING: Non-biallelic or non-SNP site skipped at pos: " << pos <<" " << ref << " " << alt << "\n";
-                    skip_due_to_multiallelic = true;
-                }                
+        if (p.CALC_XP || p.CALC_XPNSL)
+            skip_due_to_maf = false;
+
+        if (skip_due_to_duplicate_pos == 1) {
+            if (result.skiplist.empty() ||
+                result.skiplist.back() != (size_t)physpos_first_duplicated_id)
+            {
+                result.skiplist.push(result.nloci_before_filtering-2);
+                result.skipcount++;
             }
         }
 
-        // bool skipreason2 = false;
-        // if(p.MULTI_CHR){ 
-        //     if(chr_set.empty()){
-        //         //cerr<<"WARNING: No chromosome list provided. Running analysis on all chromosomes.\n";
-        //     }else{
-        //         skipreason2 = (chr_set.find(chr) != chr_set.end());
-        //     }
-        // }
-
-        if (p.CALC_XP || p.CALC_XPNSL) 
-            skip_due_to_maf = 0;
-
-        // if(!skip_due_to_maf && !skip_due_to_multiallelic && !skip_due_to_missing && skip_due_to_duplicate_pos == 1){ // also remove first instance of duplicate position
-        //     skiplist.push(physpos_first_duplicated_id);
-        //     skipcount++;
-        // }
-
-        if(skip_due_to_duplicate_pos == 1){ // it means that this is the second instance of duplicate position
-            //ensure it was not already addeed to skiplist for some other reason
-            if( skiplist.empty() || skiplist.back() != physpos_first_duplicated_id){                
-                if(physpos_first_duplicated_id != nloci_before_filtering-2){
-                    HANDLE_ERROR("Logic error in duplicate position handling.");
-                }
-                skiplist.push(nloci_before_filtering-2);
-                skipcount++;
-            }
-        }
-
-        if (skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
-                skiplist.push(nloci_before_filtering-1);
-                skipcount++;
-        } 
-
-
-
-        /*********/
-        if (prev_ngts < 0)
+        if (skip_due_to_maf || skip_due_to_multiallelic ||
+            skip_due_to_missing || skip_due_to_duplicate_pos)
         {
-            prev_ngts = current_ngts;
-            continue;
+            result.skiplist.push(result.nloci_before_filtering-1);
+            result.skipcount++;
         }
-        else if (prev_ngts != current_ngts)
-        {
-            HANDLE_ERROR("line " + std::to_string(nloci_before_filtering) +
-                          " of " + filename + " has " + std::to_string(current_ngts) +
-                          " fields, but the previous line has " + std::to_string(prev_ngts) + ".");
-        }
-        prev_ngts = current_ngts;
     }
 
-    fin.clear(); // clear error flags
-    //fin.seekg(fileStart);
     fin.close();
+    return result;
+}
 
 
-    //PHASE 2: Load according to first pass information
+void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFPass1Result& pass1)
+{
+    igzstream fin;
     fin.open(filename.c_str());
-
-    if (fin.fail())
-    {
+    if (fin.fail()) {
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
     }
 
-    if(p.SKIP && !p.CALC_XP &&  !p.CALC_XPNSL){
-        LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n");
+    constexpr int numMapCols = 9;   // fixed VCF columns before genotype fields
+    string line;
+
+    // Skip current field and land on first char of next field
+    auto skip_to_next_field = [](const char* p, const char* end) -> const char* {
+        while (p < end && *p != '\t') ++p;
+        if (p < end) ++p;
+        return p;
+    };
+
+    if (p.SKIP && !p.CALC_XP && !p.CALC_XPNSL) {
+        LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
     }
-   
-    int nhaps = p.UNPHASED ? (current_ngts ) : (current_ngts ) * 2;
-    LOG("Loading " << nhaps << " haplotypes and " << nloci_before_filtering-skipcount << " loci. Skipped "<<skipcount << " loci \n");
-    hapData.initHapData(nhaps, nloci_before_filtering-skipcount);
 
-    string junk;
-    char allele1, allele2;
-    bool skipLine = false; // to skip metadata lines
 
-    hapData.skipQueue = skiplist; 
-    size_t nloci_after_filtering = 0;
+    const int nhaps = p.UNPHASED ? pass1.current_ngts : pass1.current_ngts * 2;
 
-    for (size_t locus = 0; locus < nloci_before_filtering; locus++)
-    {
-        for (int i = 0; i < numMapCols; i++) {
-            fin >> junk;
-            if (i == 0 && junk[0] == '#') { // to skip metadata lines
-                skipLine = true;
-                break;
-            }
+    LOG("Loading " << nhaps
+                   << " haplotypes and " << (pass1.nloci_before_filtering - pass1.skipcount)
+                   << " loci."); 
+
+    if(p.CALC_XP || p.CALC_XPNSL){
+        LOG("XP mode: MAF-based filtering is disabled.");
+        if(pass1.skipcount > 0)
+            LOG(pass1.skipcount << " loci will be skipped.");
+
+    }else{
+        if (p.SKIP) {
+            LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
+            LOG("Removed " << pass1.skipcount << " low frequency variants from haplotype data.");
+        } else {
+            LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF << ".");
         }
+    }
 
-        if (skipLine) { // to skip metadata lines
-            getline(fin, junk);
-            skipLine = false;
-            locus--;
+    // allocate exact size after filtering
+    hapData.initHapData(nhaps, pass1.nloci_before_filtering - pass1.skipcount);
+
+    // preserve your old behavior
+    hapData.skipQueue = pass1.skiplist;
+
+    // local copy because we consume it during pass 2
+    queue<size_t> skiplist = pass1.skiplist;
+
+    size_t locus = 0;                  // locus index in original file order
+    size_t nloci_after_filtering = 0;  // locus index in filtered HapData
+
+    while (getline(fin, line))
+    {
+        if (line.empty()) continue;
+        if (line[0] == '#') continue;
+
+        // skip loci identified in pass 1
+        if (!skiplist.empty() && skiplist.front() == locus) {
+            skiplist.pop();
+            locus++;
             continue;
         }
 
-        if(!skiplist.empty()){
-            if(skiplist.front() == locus){
-                skiplist.pop();    
-                getline(fin, junk);
-                continue;
-            }
+        const char* pcur = line.c_str();
+        const char* end  = pcur + line.size();
+
+        // skip first 9 fixed VCF columns and land on first genotype field
+        for (int col = 0; col < numMapCols; ++col) {
+            pcur = skip_to_next_field(pcur, end);
         }
 
-        for (int field = 0; field <  current_ngts ; field++)
+        if (p.UNPHASED)
         {
-            fin >> junk;
-            allele1 = junk[0];
-            allele2 = junk[2];
+            // in unphased mode, each sample contributes one diploid state
+            for (int field = 0; field < pass1.current_ngts; ++field)
+            {
+                // assume GT starts at first 3 chars: 0|1, 1/0, 0|1:...
+                const int a1 = (pcur[0] == '1');
+                const int a2 = (pcur[2] == '1');
+                const int sum = a1 + a2;
 
-            if(p.UNPHASED){
-                if (allele1 == '1' && allele2 == '1'){
+                if (sum == 2) {
                     hapData.addAllele2(nloci_after_filtering, field);
-                }
-                else if (allele1 == '1' || allele2 == '1'){
+                } else if (sum == 1) {
                     hapData.addAllele1(nloci_after_filtering, field);
                 }
-            }else{ // phased
-                if(allele1 == '1'){
-                    hapData.addAllele1(nloci_after_filtering, 2*field);
-                }
-                if(allele2 == '1'){
-                    hapData.addAllele1(nloci_after_filtering, 2*field+1);
-                }   
+
+                while (pcur < end && *pcur != '\t') ++pcur;
+                if (pcur < end) ++pcur;
             }
         }
+        else
+        {
+            // in phased mode, each sample contributes two haplotypes
+            for (int field = 0; field < pass1.current_ngts; ++field)
+            {
+                const int a1 = (pcur[0] == '1');
+                const int a2 = (pcur[2] == '1');
+
+                if (a1) hapData.addAllele1(nloci_after_filtering, 2 * field);
+                if (a2) hapData.addAllele1(nloci_after_filtering, 2 * field + 1);
+
+                while (pcur < end && *pcur != '\t') ++pcur;
+                if (pcur < end) ++pcur;
+            }
+        }
+
         nloci_after_filtering++;
+        locus++;
+    }
+
+    if(p.CALC_XP || p.CALC_XPNSL){
+        LOG("Done removing " << pass1.skipcount << " loci due to duplicate positions.");
+    }else{
+        if (p.SKIP) {
+            LOG("Done removing " << pass1.skipcount << " low frequency variants from haplotype data.");
+        }
     }
     
-    if(p.SKIP){
-        LOG("Removed " << skipcount << " low frequency variants from haplotype data.");
-    }
+
     LOG("====");
     fin.close();
 
-    // // // @:::DEBUG_BLOCK
-    // for(int locus_after_filter = 0; locus_after_filter < 1; locus_after_filter++){
-    //     cout<<locus_after_filter<<"::: ";
-    //     for(int i=0; i< hapEntries[locus_after_filter].positions.size(); i++){
-    //         cout<<hapEntries[locus_after_filter].positions[i]<<" ";
-    //     }
-    //     cout<<endl;
-        
-    //     cout<<locus_after_filter<<":::*";
-    //     for(int i=0; i< hapEntries[locus_after_filter].positions2.size(); i++){
-    //         cout<<hapEntries[locus_after_filter].positions2[i]<<" ";
-    //     }
-    //     cout<<endl;
+
+}
+
+
+void HapMap::readHapDataVCFXP(string filename, string filename2, HapData& hapData, HapData& hapData2)
+{
+    // RELATED FLAGS:
+    // ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
+
+    initParamsInHap(hapData);
+    initParamsInHap(hapData2);
+
+
+    LOG("Opening " << filename << " to count number of haplotypes and loci...");
+
+    VCFPass1Result pass1_h1 = readHapDataVCF_pass1(filename);
+    VCFPass1Result pass1_h2 = readHapDataVCF_pass1(filename2);
+    // if(!pass1_h1.skiplist.empty() || !pass1_h2.skiplist.empty()){
+    //     HANDLE_ERROR("XP should have no skipped loci due to MAF filtering.");
     // }
+    //but skip maybe due to duplicate positions
+
+    bool NUM_LOCI_MISMATCH = (pass1_h1.nloci_before_filtering != pass1_h2.nloci_before_filtering);
+    // for (int pid = 0; pid < pass1_h1.nloci_before_filtering ; pid++) {
+    //     if (pass1_h1.physpos[pid] != pass1_h2.physpos[pid]) {
+    //         NUM_LOCI_MISMATCH = true;
+    //         break;
+    //     }
+    // }
+    if(NUM_LOCI_MISMATCH) {
+        LOG("ERROR: The two VCF files have different sets of loci.");
+        cout<<"File 1: " << filename << " has " << pass1_h1.nloci_before_filtering << " loci, with " << pass1_h1.skipcount << " skipped due to MAF or duplicates.\n";
+        cout<<"File 2: " << filename2 << " has " << pass1_h2.nloci_before_filtering << " loci, with " << pass1_h2.skipcount << " skipped due to MAF or duplicates.\n";
+       exit(EXIT_FAILURE);
+
+//        LOG("WARNING: The two VCF files have different sets of loci. Will identify shared loci and skip non-shared ones.");
+    } else {
+        LOG("The two VCF files contain the same number of loci. Calculations are performed assuming they represent the same set of loci.");
+    }
+    
+    // if (NUM_LOCI_MISMATCH) {            
+    //     size_t i = 0;
+    //     size_t j = 0;
+
+    //     while (i < pass1_h1.physpos.size() && j < pass1_h2.physpos.size()) {
+
+    //         if (pass1_h1.physpos[i] == pass1_h2.physpos[j]) {
+    //             // value appears in both
+    //             i++;
+    //             j++;
+    //         }
+    //         else if (pass1_h1.physpos[i] < pass1_h2.physpos[j]) {
+    //             // h1 value not present in h2
+    //             pass1_h1.skiplist.push(i);
+    //             i++;
+    //         }
+    //         else {
+    //             // h2 value not present in h1
+    //             pass1_h2.skiplist.push(j);
+    //             j++;
+    //         }
+    //     }
+
+    //     // remaining elements in h1
+    //     while (i < pass1_h1.physpos.size()) {
+    //         pass1_h1.skiplist.push(i);
+    //         i++;
+    //     }
+
+    //     // remaining elements in h2
+    //     while (j < pass1_h2.physpos.size()) {
+    //         pass1_h2.skiplist.push(j);
+    //         j++;
+    //     }    
+    // }
+
+    //if the two vcfs differ in number of loci, we should handle that case. For now we assume they are the same.
+
+    if (NUM_LOCI_MISMATCH)
+    {
+        vector<size_t> new_skip_h1;
+        vector<size_t> new_skip_h2;
+
+
+        const int total_alleles_h1 = 2 * pass1_h1.current_ngts; // a genotype is like 0|1, so 2 alleles per genotype
+        const int total_alleles_h2 = 2 * pass1_h2.current_ngts;
+        const int total_alleles_joint = total_alleles_h1 + total_alleles_h2;
+        size_t i = 0;
+        size_t j = 0;
+       
+        while (i < pass1_h1.physpos.size() || j < pass1_h2.physpos.size())
+        {
+
+            // Decide next genomic position to process
+            int pos;
+            if (i < pass1_h1.physpos.size() && j < pass1_h2.physpos.size())
+            {
+                pos = std::min(pass1_h1.physpos[i], pass1_h2.physpos[j]);
+            }
+            else if (i < pass1_h1.physpos.size())
+            {
+                pos = pass1_h1.physpos[i];
+            }
+            else
+            {
+                pos = pass1_h2.physpos[j];
+            }
+
+            // Find full run of this position in h1
+            size_t i_start = i;
+            while (i < pass1_h1.physpos.size() && pass1_h1.physpos[i] == pos)
+            {
+                i++;
+            }
+            size_t i_end = i;
+            size_t count_h1 = i_end - i_start;
+
+            // Find full run of this position in h2
+            size_t j_start = j;
+            while (j < pass1_h2.physpos.size() && pass1_h2.physpos[j] == pos)
+            {
+                j++;
+            }
+            size_t j_end = j;
+            size_t count_h2 = j_end - j_start;
+
+            // ----------------------------------------------------
+            // Case 1: duplicated anywhere -> skip from everywhere
+            // ----------------------------------------------------
+            if (count_h1 > 1 || count_h2 > 1)
+            {
+                for (size_t k = i_start; k < i_end; k++)
+                {
+                    new_skip_h1.push_back(k);
+                }
+                for (size_t k = j_start; k < j_end; k++)
+                {
+                    new_skip_h2.push_back(k);
+                }
+                continue;
+            }
+
+            // ----------------------------------------------------
+            // Case 2: exists only in h1
+            // ----------------------------------------------------
+            if (count_h1 == 1 && count_h2 == 0)
+            {
+                new_skip_h1.push_back(i_start);
+                continue;
+            }
+
+            // ----------------------------------------------------
+            // Case 3: exists only in h2
+            // ----------------------------------------------------
+            if (count_h1 == 0 && count_h2 == 1)
+            {
+                new_skip_h2.push_back(j_start);
+                continue;
+            }
+
+            // ----------------------------------------------------
+            // Case 4: shared exactly once in both files
+            // ----------------------------------------------------
+            if (count_h1 == 1 && count_h2 == 1)
+            {
+
+                // int derived_h1, derived_h2, total_derived;
+
+                // if (p.UNPHASED)
+                // {
+                //     // unphased:
+                //     //   num_1s = heterozygotes (one derived allele)
+                //     //   num_2s = hom-derived genotypes (two derived alleles)
+                //     derived_h1 = pass1_h1.num_1s[i_start] + 2 * pass1_h1.num_2s[i_start];
+                //     derived_h2 = pass1_h2.num_1s[j_start] + 2 * pass1_h2.num_2s[j_start];
+                // }
+                // else
+                // {
+                //     // phased:
+                //     //   num_1s already counts derived haplotypes
+                //     derived_h1 = pass1_h1.num_1s[i_start];
+                //     derived_h2 = pass1_h2.num_1s[j_start];
+                // }
+
+                // total_derived = derived_h1 + derived_h2;
+
+                // // monomorphic if all alleles are ancestral or all are derived
+                // if (total_derived == 0 || total_derived == total_alleles_joint)
+                // {
+                //     new_skip_h1.push_back(i_start);
+                //     new_skip_h2.push_back(j_start);
+                // }
+            }
+        }
+
+        // Rebuild queues safely with old + new skips
+        rebuild_skipqueue_with_new_skips(pass1_h1.skiplist, new_skip_h1);
+        rebuild_skipqueue_with_new_skips(pass1_h2.skiplist, new_skip_h2);
+    }
+
+    else{
+        // --------------------------------------------------------
+        // Step 1: detect loci that become monomorphic when
+        // combining hapData and hapData2
+        // --------------------------------------------------------
+        vector<size_t> new_skip_h1;
+        vector<size_t> new_skip_h2;
+
+        for (int i = 0; i < pass1_h1.nloci_before_filtering; i++) {
+
+            int total_c1   = pass1_h1.num_1s[i] + pass1_h2.num_1s[i];
+            int total_haps = pass1_h1.current_ngts + pass1_h2.current_ngts;
+
+            // monomorphic if all alleles are ancestral or all derived
+            if (total_c1 == 0 || total_c1 == total_haps) {
+                new_skip_h1.push_back(i);
+                new_skip_h2.push_back(i); // two copy for simple logic
+                //cout<<"Locus " << i << " is monomorphic in combined data. Will skip from both files." << endl;
+            }
+        }
+        rebuild_skipqueue_with_new_skips(pass1_h1.skiplist, new_skip_h1);
+        rebuild_skipqueue_with_new_skips(pass1_h2.skiplist, new_skip_h2);
+    }
+
+    if(pass1_h2.nloci_before_filtering - pass1_h2.skiplist.size() == 0){
+        HANDLE_ERROR("After filtering, no loci remain in reference VCF. Please check your input files.");
+    }else if(pass1_h1.nloci_before_filtering - pass1_h1.skiplist.size() == 0){
+        HANDLE_ERROR("After filtering, no loci remain in query VCF. Please check your input files.");
+    }else{
+        LOG("After filtering, " << pass1_h1.nloci_before_filtering - pass1_h1.skiplist.size() << " loci remain in query VCF.");
+        LOG("After filtering, " << pass1_h2.nloci_before_filtering - pass1_h2.skiplist.size() << " loci remain in reference VCF.");
+    }
+
+    pass1_h1.skipcount = pass1_h1.skiplist.size();
+    pass1_h2.skipcount = pass1_h2.skiplist.size();
+    readHapDataVCF_pass2(filename, hapData, pass1_h1);
+    readHapDataVCF_pass2(filename2, hapData2, pass1_h2);
+
+}
+
+void HapMap::readHapDataVCF(string filename, HapData& hapData)
+{
+    // RELATED FLAGS:
+    // ARG_SKIP, ARG_KEEP, ARG_UNPHASED, ARG_LOW_MEM, ARG_MAF, ARG_MISSING
+
+    initParamsInHap(hapData);
+
+    igzstream fin;
+    queue<size_t> skiplist;   // keep your original queue-based skip structure
+
+    LOG("Opening " << filename << " to count number of haplotypes and loci...");
+
+    fin.open(filename.c_str());
+    if (fin.fail()) {
+        HANDLE_ERROR("Failed to open " + filename + " for reading.");
+    }
+
+    constexpr int numMapCols = 9;   // standard fixed VCF columns before sample GT fields
+    string line;
+
+    size_t nloci_before_filtering = 0;   // number of variant records seen
+    size_t skipcount = 0;                // number of records skipped
+    int current_ngts = -1;               // number of genotype/sample columns
+
+    // duplicate-position tracking
+    int physpos = -1;
+    int physpos_first_duplicated_id = -1;
+    int skip_due_to_duplicate_pos = 0;
+
+    // ------------------------------------------------------------
+    // Small helpers for fast manual parsing
+    // ------------------------------------------------------------
+
+    // Return pointer to the end of current tab-delimited field
+    auto find_field_end = [](const char* p, const char* end) -> const char* {
+        while (p < end && *p != '\t') ++p;
+        return p;
+    };
+
+    // Skip current field and land on first char of next field
+    auto skip_to_next_field = [](const char* p, const char* end) -> const char* {
+        while (p < end && *p != '\t') ++p;
+        if (p < end) ++p;
+        return p;
+    };
+
+    // Fast integer parse for POS column
+    auto parse_int_fast = [](const char* s, const char* e) -> int {
+        int x = 0;
+        for (const char* p = s; p < e; ++p) {
+            x = x * 10 + (*p - '0');
+        }
+        return x;
+    };
+
+    // Determine number of sample columns from #CHROM header line
+    auto count_samples_from_header = [&](const string& header_line) -> int {
+        int tabs = 0;
+        for (char c : header_line) {
+            if (c == '\t') ++tabs;
+        }
+        // total columns = tabs + 1, genotype columns = total - 9
+        return (tabs + 1) - numMapCols;
+    };
+
+    // True only for single-base SNP alleles A/C/G/T
+    auto is_snp_base = [](const char* s, const char* e) -> bool {
+        if (e - s != 1) return false;
+        const char c = *s;
+        return c == 'A' || c == 'C' || c == 'G' || c == 'T';
+    };
+
+    // ============================================================
+    // PASS 1:
+    //   - find number of samples
+    //   - count loci
+    //   - decide which loci to skip
+    //   - fill skiplist queue
+    // ============================================================
+    while (getline(fin, line))
+    {
+        if (line.empty()) continue;
+
+        // Skip metadata/header lines. Parse #CHROM once to get sample count.
+        if (line[0] == '#') {
+            if (line.rfind("#CHROM", 0) == 0) {
+                current_ngts = count_samples_from_header(line);
+                if (current_ngts <= 0) {
+                    HANDLE_ERROR("Failed to determine number of samples from VCF header in " + filename);
+                }
+            }
+            continue;
+        }
+
+        if (current_ngts < 0) {
+            HANDLE_ERROR("VCF header (#CHROM line) not found before variant data in " + filename);
+        }
+
+        nloci_before_filtering++;
+
+        const char* pcur = line.c_str();
+        const char* end  = pcur + line.size();
+
+        // Parse first 9 fixed VCF columns once.
+        const char* field_starts[numMapCols];
+        const char* field_ends[numMapCols];
+
+        for (int col = 0; col < numMapCols; ++col) {
+            field_starts[col] = pcur;
+            field_ends[col]   = find_field_end(pcur, end);
+            pcur = field_ends[col];
+            if (pcur < end) ++pcur;
+        }
+
+        // POS column
+        const int new_physpos = parse_int_fast(field_starts[1], field_ends[1]);
+
+        // Duplicate-position logic
+        if (physpos == new_physpos) {
+            skip_due_to_duplicate_pos += 1;
+        } else {
+            skip_due_to_duplicate_pos = 0;
+            physpos_first_duplicated_id = static_cast<int>(nloci_before_filtering - 1);
+        }
+        physpos = new_physpos;
+
+        bool skip_due_to_missing = false;
+        bool skip_due_to_multiallelic = false;
+
+        int number_of_1s = 0;
+        int number_of_2s = 0;
+
+        // If MULTI_ALLELIC mode is enabled, keep only simple SNPs.
+        // This matches your earlier logic of skipping non-biallelic/non-SNP sites.
+        if (p.MULTI_ALLELIC) {
+            const char* ref_s = field_starts[3];
+            const char* ref_e = field_ends[3];
+            const char* alt_s = field_starts[4];
+            const char* alt_e = field_ends[4];
+
+            if (!is_snp_base(ref_s, ref_e) || !is_snp_base(alt_s, alt_e)) {
+                skip_due_to_multiallelic = true;
+            }
+        }
+
+        // Parse genotype/sample fields.
+        // We only inspect the leading GT part, assuming fields look like:
+        //   0|1
+        //   0/1
+        //   0|1:...
+        //   1/1:...
+        //
+        // Like your original code, this does NOT fully parse multi-digit allele IDs.
+        int seen_ngts = 0;
+
+        if (p.UNPHASED)
+        {
+            // Unphased mode: treat genotype as diploid state per sample
+            while (pcur < end && seen_ngts < current_ngts)
+            {
+                const char* g = pcur;
+
+                // Need at least GT chars at positions 0,1,2
+                if (end - g >= 3) {
+                    const char allele1   = g[0];
+                    const char separator = g[1];
+                    const char allele2   = g[2];
+
+                    // Missing / bad alleles
+                    if (!p.MISSING_ALLOWED) {
+                        if ((allele1 != '0' && allele1 != '1') ||
+                            (allele2 != '0' && allele2 != '1'))
+                        {
+                            if (!p.MULTI_ALLELIC) {
+                                HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles "
+                                             << allele1 << separator << allele2);
+                            } else {
+                                skip_due_to_missing = true;
+                            }
+                        }
+                    }
+
+                    // If UNPHASED is on, '/' is allowed. If not, this still accepts '|'.
+                    // No extra action needed here except for malformed alleles above.
+
+                    // Branch-light genotype decode:
+                    // '0' -> 0, '1' -> 1
+                    const int a1 = (allele1 == '1');
+                    const int a2 = (allele2 == '1');
+                    const int sum = a1 + a2;
+
+                    if (sum == 2) {
+                        number_of_2s++;
+                    } else if (sum == 1) {
+                        number_of_1s++;
+                    }
+                } else {
+                    if (!p.MULTI_ALLELIC) {
+                        HANDLE_ERROR("Malformed genotype field at pos " << physpos);
+                    } else {
+                        skip_due_to_missing = true;
+                    }
+                }
+
+                // Move to next sample field
+                while (pcur < end && *pcur != '\t') ++pcur;
+                if (pcur < end) ++pcur;
+                seen_ngts++;
+            }
+        }
+        else
+        {
+            // Phased mode: count haplotypes separately and reject '/' unless allowed by your old logic
+            while (pcur < end && seen_ngts < current_ngts)
+            {
+                const char* g = pcur;
+
+                if (end - g >= 3) {
+                    const char allele1   = g[0];
+                    const char separator = g[1];
+                    const char allele2   = g[2];
+
+                    if (!p.MISSING_ALLOWED) {
+                        if ((allele1 != '0' && allele1 != '1') ||
+                            (allele2 != '0' && allele2 != '1'))
+                        {
+                            if (!p.MULTI_ALLELIC) {
+                                HANDLE_ERROR("Alleles must be coded 0 or 1 only. Found alleles "
+                                             << allele1 << separator << allele2);
+                            } else {
+                                skip_due_to_missing = true;
+                            }
+                        }
+                    }
+
+                    if (separator != '|') {
+                        if (!p.MULTI_ALLELIC) {
+                            HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
+                        } else {
+                            skip_due_to_missing = true;
+                        }
+                    }
+
+                    const int a1 = (allele1 == '1');
+                    const int a2 = (allele2 == '1');
+
+                    number_of_1s += a1 + a2;
+                } else {
+                    if (!p.MULTI_ALLELIC) {
+                        HANDLE_ERROR("Malformed genotype field at pos " << physpos);
+                    } else {
+                        skip_due_to_missing = true;
+                    }
+                }
+
+                while (pcur < end && *pcur != '\t') ++pcur;
+                if (pcur < end) ++pcur;
+                seen_ngts++;
+            }
+        }
+
+        if (seen_ngts != current_ngts) {
+            HANDLE_ERROR("line " + std::to_string(nloci_before_filtering) +
+                         " of " + filename + " has " + std::to_string(seen_ngts) +
+                         " genotype fields, but header indicates " + std::to_string(current_ngts) + ".");
+        }
+
+        const int nalleles_per_loc = current_ngts * 2;
+        bool skip_due_to_maf = shouldSkipLocus(number_of_1s, number_of_2s, nalleles_per_loc);
+
+        // Preserve your existing XP/XPNSL behavior
+        if (p.CALC_XP || p.CALC_XPNSL) {
+            skip_due_to_maf = false;
+        }
+
+        // If this is the second occurrence of a duplicate position,
+        // also push the first occurrence to the skiplist.
+        if (skip_due_to_duplicate_pos == 1) {
+            if (skiplist.empty() || skiplist.back() != static_cast<size_t>(physpos_first_duplicated_id)) {
+                if (physpos_first_duplicated_id != static_cast<int>(nloci_before_filtering - 2)) {
+                    HANDLE_ERROR("Logic error in duplicate position handling.");
+                }
+                skiplist.push(nloci_before_filtering - 2);
+                skipcount++;
+            }
+        }
+
+        // Push current locus if any filter says skip
+        if (skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
+            skiplist.push(nloci_before_filtering - 1);
+            skipcount++;
+        }
+    }
+
+    fin.clear();
+    fin.close();
+
+    // ============================================================
+    // PASS 2:
+    //   - allocate HapData exactly
+    //   - reread file
+    //   - skip loci in skiplist
+    //   - load alleles into HapData
+    // ============================================================
+    fin.open(filename.c_str());
+    if (fin.fail()) {
+        HANDLE_ERROR("Failed to open " + filename + " for reading.");
+    }
+
+    if (p.SKIP && !p.CALC_XP && !p.CALC_XPNSL) {
+        LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".\n");
+    }
+
+    const int nhaps = p.UNPHASED ? current_ngts : current_ngts * 2;
+
+    LOG("Loading " << nhaps
+                   << " haplotypes and " << (nloci_before_filtering - skipcount)
+                   << " loci. Skipped " << skipcount << " loci \n");
+
+    hapData.initHapData(nhaps, nloci_before_filtering - skipcount);
+
+    // Preserve your old behavior
+    hapData.skipQueue = skiplist;
+
+    size_t locus = 0;
+    size_t nloci_after_filtering = 0;
+
+    while (getline(fin, line))
+    {
+        if (line.empty()) continue;
+        if (line[0] == '#') continue;
+
+        // Skip loci identified in pass 1
+        if (!skiplist.empty() && skiplist.front() == locus) {
+            skiplist.pop();
+            locus++;
+            continue;
+        }
+
+        const char* pcur = line.c_str();
+        const char* end  = pcur + line.size();
+
+        // Skip first 9 fixed VCF columns and land on first genotype field
+        for (int col = 0; col < numMapCols; ++col) {
+            pcur = skip_to_next_field(pcur, end);
+        }
+
+        if (p.UNPHASED)
+        {
+            // In unphased mode, one sample contributes one diploid state
+            for (int field = 0; field < current_ngts; ++field)
+            {
+                // Branch-light decode of GT
+                const int a1 = (pcur[0] == '1');
+                const int a2 = (pcur[2] == '1');
+                const int sum = a1 + a2;
+
+                if (sum == 2) {
+                    hapData.addAllele2(nloci_after_filtering, field);
+                } else if (sum == 1) {
+                    hapData.addAllele1(nloci_after_filtering, field);
+                }
+
+                while (pcur < end && *pcur != '\t') ++pcur;
+                if (pcur < end) ++pcur;
+            }
+        }
+        else
+        {
+            // In phased mode, each sample contributes two haplotypes
+            for (int field = 0; field < current_ngts; ++field)
+            {
+                const int a1 = (pcur[0] == '1');
+                const int a2 = (pcur[2] == '1');
+
+                if (a1) hapData.addAllele1(nloci_after_filtering, 2 * field);
+                if (a2) hapData.addAllele1(nloci_after_filtering, 2 * field + 1);
+
+                while (pcur < end && *pcur != '\t') ++pcur;
+                if (pcur < end) ++pcur;
+            }
+        }
+
+        nloci_after_filtering++;
+        locus++;
+    }
+
+    if (p.SKIP) {
+        LOG("Removed " << skipcount << " low frequency variants from haplotype data.");
+    }
+
+    LOG("====");
+    fin.close();
 }
 
 // Decide whether to skip a locus based on MAF and missing data
@@ -988,12 +1645,13 @@ void HapMap::loadHapMapData(){
     else if (p.VCF) {
         if (p.CALC_XP || p.CALC_XPNSL)
         {
-            readHapDataVCF(p.vcfFilename, *hapData);
-            readHapDataVCF(p.vcfFilename2, *hapData2);
-            if (hapData->nloci != hapData2->nloci)
-            {
-                HANDLE_ERROR("Haplotypes from " + p.vcfFilename + " and " + p.vcfFilename2 + " do not have the same number of loci.");
-            }
+            // readHapDataVCF(p.vcfFilename, *hapData); //query_vcf
+            // readHapDataVCF(p.vcfFilename2, *hapData2); //ref_vcf
+            readHapDataVCFXP(p.vcfFilename, p.vcfFilename2,  *hapData, *hapData2); // read both vcfs together and determine skiplists based on both
+            // if (hapData->nloci != hapData2->nloci)
+            // {
+            //     HANDLE_ERROR("Haplotypes from " + p.vcfFilename + " and " + p.vcfFilename2 + " do not have the same number of loci.");
+            // }
         }else{
             readHapDataVCF(p.vcfFilename, *hapData);
         }

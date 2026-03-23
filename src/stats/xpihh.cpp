@@ -667,11 +667,25 @@ void XPIHH::main()
     LOG("Finished XP-EHH.");
 }
 
-/**
- * populate ihh_p1 and ihh_p2 at the end with correct values
-*/
 pair<double, double> XPIHH::calc_xpihh(int locus)
 {
+
+    // if(p.UNPHASED){
+    //     if(hm->hapData->get_n_c0(locus) + hm->hapData2->get_n_c0(locus) == 0  || hm->hapData->get_n_c2(locus) + hm->hapData2->get_n_c2(locus) == 0 ){  
+    //         {std::lock_guard<std::mutex> lock(mutex_log);
+    //             (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+    //         }//unlock
+    //         return skipLocusPair();
+    //     }
+    // }else{
+    //     if (hm->hapData->get_n_c1(locus)  + hm->hapData2->get_n_c1(locus) == 0 || hm->hapData->get_n_c0(locus)  + hm->hapData2->get_n_c0(locus) == 0 ){
+    //         {std::lock_guard<std::mutex> lock(mutex_log);
+    //             (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+    //         }//unlock{
+    //         return skipLocusPair();
+    //     }
+    // }
+    
     //works for both phased and unphased
     pair<double, double> right = calc_ehh_unidirection(locus, false);
     if(skipLocus(right)){
@@ -683,5 +697,17 @@ pair<double, double> XPIHH::calc_xpihh(int locus)
         return skipLocusPair();
     }
 
-    return make_pair(left.first+right.first, left.second+right.second);
+    double ihh1 = (left.first + right.first);
+    double ihh2 = (left.second + right.second);
+
+    if(ihh1 == 0 || ihh2 == 0){
+        char which_zero = (ihh1 == 0) ? '1' : '2';
+        {std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: At position " << hm->mapData->mapEntries[locus].physicalPos << ", ihh" << which_zero << " is zero. Skipping calculation.\n";
+        }//unlock
+            
+        return skipLocusPair();
+    }
+
+    return make_pair(ihh1, ihh2);
 }
