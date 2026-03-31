@@ -1,6 +1,7 @@
 #for osx systems
 CC = g++ -std=c++17  -w -Wno-psabi
-G++FLAG = -O3 -m64 -ftree-vectorize -arch x86_64 -mmacosx-version-min=10.14
+G++FLAG = -O3 -m64 -ftree-vectorize -arch x86_64 
+#-mmacosx-version-min=10.14
 
 I_PATH = -I../include
 L_PATH = ../lib/osx
