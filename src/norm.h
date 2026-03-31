@@ -73,15 +73,17 @@ class SelscanNorm{
     Citations:\n\
     \n\
     selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
-         ZA Szpiech (2024) Bioinformatics 40: btae006.\n\
-         A Rahman, TQ Smith, and ZA Szpiech (2025). bioRxiv, pp.2025-04.\n\
+            ZA Szpiech (2024) Bioinformatics 40: btae006.\n\
+            A Rahman, TQ Smith, and ZA Szpiech (2025). MBE, 42(11), msaf275.\n\
+            A Rahman, TQ Smith, and ZA Szpiech (2026). HPGG, 6(2), 0005. https://doi.org/10.47248/hpgg2606020005.\n\
     iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
-        N Garud et al. (2015) PLoS Genetics, 11: 1–32.\n\
-    nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
-    XP-nSL: Szpiech et al. (2020) bioRxiv doi: \n\
-            https://doi.org/10.1101/2020.05.19.104380.\n\
-    XP-EHH: PC Sabeti et al. (2007) Nature, 449: 913–918.\n\
-    iHS: BF Voight et al. (2006) PLoS Biology, 4: e72.\n\
+        N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
+    nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
+    XP-nSL: Szpiech et al. (2021) Evol Lett 5: 408-421.\n\
+    XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.\n\
+            K Wagh et al. (2012) PloS ONE 7: e44751.\n\
+    iHS: BF Voight et al. (2006) PLoS Biology 4: e72.\n\
+    EHH: PC Sabeti et al. (2002) Nature 419: 832–837.\n\
     \n\
     To normalize selscan output across frequency bins:\n\
     \n\
