@@ -1,0 +1,53 @@
+name: C++ CI Test Binary (All) 
+
+on:
+  push:
+    branches: bugfix_2_1_2 
+  pull_request:
+    branches: bugfix_2_1_2 
+
+jobs:
+  testbin:
+    name: Test binary ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+
+    if: contains(github.event.head_commit.message, '[testbin]')
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux
+            runner: ubuntu-latest
+            bin_dir: bin/linux
+            exe_ext: ""
+
+          - label: macos-arm64
+            runner: macos-latest
+            bin_dir: bin/macos-arm64
+            exe_ext: ""
+
+          - label: macos
+            runner: macos-latest
+            bin_dir: bin/macos
+            exe_ext: ""
+
+          - label: osx-intel
+            runner: macos-26-intel
+            bin_dir: bin/osx
+            exe_ext: ""
+
+          - label: windows
+            runner: windows-latest
+            bin_dir: bin/win
+            exe_ext: ".exe"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test selscan installation
+        working-directory: ${{ matrix.bin_dir }}
+        run: |
+          ./selscan${{ matrix.exe_ext }} --help  
+          ./norm${{ matrix.exe_ext }} --help  

@@ -15,47 +15,25 @@
 //     #include <x86intrin.h> // For __builtin_popcountll and __builtin_ctzl
 #endif
 
-constexpr size_t alignment = 64; //alignof(uint64_t); // Alignment boundary
 
 using namespace std;
+
+
 class MyBitset{
     public:
     uint64_t* bits;
     int nbits;  // number of bits
     int nwords;
-    int WORDSZ = 64;
+    static constexpr int WORDSZ = 64;
     int num_1s = 0;
 
     MyBitset(int nbits){
         this->nbits = nbits;
-        this->nwords = (nbits/WORDSZ) + 1; //idea: do ceil
-
-        size_t alignedSize = nwords * sizeof(uint64_t); // Calculate the total size needed for nwords
-
-
-        // Allocate aligned memory
-        #ifdef _WIN32
-            bits = static_cast<uint64_t*>(_aligned_malloc(alignedSize, alignment));
-        #else
-            if (posix_memalign(reinterpret_cast<void**>(&bits), alignment, alignedSize) != 0) {
-                bits = nullptr;
-            }
-        #endif
-
-        // Allocate aligned memory
-        //bits = reinterpret_cast<uint64_t*>(std::aligned_alloc(alignment, alignedSize));
-        
+        this->nwords = (nbits + WORDSZ - 1) / WORDSZ; // true ceil
+        bits = (uint64_t*)calloc(nwords, sizeof(uint64_t));
         if (!bits) {
-            throw std::bad_alloc();
-        }
-
-        // Clear the memory
-        std::memset(bits, 0, alignedSize);
-
-        //bits = new uint64_t[nwords];
-        for (int i = 0; i < nwords; i++)
-        {
-            bits[i] = 0;
+            cerr << "ERROR: Memory allocation failed for MyBitset with nbits = " << nbits << endl;
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -117,6 +95,19 @@ class MyBitset{
         for (int k = 0; k < nwords; k++) {
             sum += __builtin_popcountll ((uint64_t)bits[k]);
         }
+
+        
+        return sum;
+    }
+
+    int count_1s_fast(){
+        int sum = 0;
+        uint64_t* p = bits;
+        uint64_t* end = bits + nwords;
+
+        while (p != end)
+            sum += __builtin_popcountll(*p++);
+
         return sum;
     }
 
@@ -203,7 +194,8 @@ class MyBitset{
             cerr << "Error: bit out of range: " << bit<< " "<<nbits-1 << endl;
             throw (EXIT_FAILURE);
         }
-        bits[bit/WORDSZ] |= (uint64_t) 1 << (bit % WORDSZ);
+        //bits[bit/WORDSZ] |= (uint64_t) 1 << (bit % WORDSZ);
+        bits[bit >> 6] |= (uint64_t)1 << (bit & 63);
     }
 
     void clear_bit(int bit){
@@ -244,9 +236,20 @@ class MyBitset{
         (*fout) << endl;
     }
 
+    // Copy only the raw bit data into an already-initialized bitset.
+    // Assumes this bitset already has the correct size.
+    void copy_bits_from(const MyBitset& other){
+        if (nbits != other.nbits || nwords != other.nwords) {
+            cerr << "ERROR: bitset sizes do not match in copy_bits_from()" << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        std::memcpy(bits, other.bits, nwords * sizeof(uint64_t));
+        num_1s = other.num_1s;
+    }
 
     ~MyBitset(){
-        delete [] bits;
+        free(bits);
     }
 
 };

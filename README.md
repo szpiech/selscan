@@ -17,8 +17,10 @@ thus reported as log(iHH1/iHH0) based on the coding you have provided.
 
 ## 📚 Citations
 ```
-A Rahman, TQ Smith, ZA Szpiech. (2025) Fast and Memory-Efficient Dynamic Programming Approach for
-	Large-Scale EHH-Based Selection Scans. Molecular biology and evolution, 42(11), msaf275.
+A Rahman, TQ Smith, ZA Szpiech. (2026) Human Population Genetics and Genomics. 2026;6(2):0005. 
+	doi: https://doi.org/10.47248/hpgg2606020005
+A Rahman, TQ Smith, ZA Szpiech. (2025) Fast and Memory-Efficient Dynamic Programming Approach for Large-Scale EHH-Based Selection Scans. 
+	Molecular biology and evolution, 42(11), msaf275.
 ZA Szpiech (2024) selscan 2.0: scanning for sweeps in unphased data. Bioinformatics, 40(1), btae006.
 	doi: https://doi.org/10.1093/bioinformatics/btae006
 ZA Szpiech and RD Hernandez (2014) selscan: an efficient multi-threaded program 
@@ -244,13 +246,25 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
-11FEB2026 - selscan v3.0.0
+31MAR2026 - selscan v3.0.0: Normalization and downstream analysis enhanced. 
+    - NEW: Normalization integrated: The normalization functionality is now included directly in selscan as the subcommand "selscan norm".
+    - NEW: New features added for gene-based analyses: BED/GTF files can be provided for annotating windows and per gene scores.
+    - Fixed: --trunc-ok message corrected for XP unphased
+    - Added a chromosome column to all selscan outputs; all output files now include a header line describing the columns. (WARNING: this breaks compatibility with previous selscan versions, which did not include headers for iHS/nSL or chr column. Scripts or pipelines expecting no header/chr column will need to be updated.)
+    
+31MAR2026 - selscan v2.1.3 - Performance and Output Fixes
+    - Fixed issue #152: NaN values are now properly removed from output of XPEHH/XPnSL. 
+        (Note: this was intended in the previous release but was not applied correctly.)
+    - Corrected an unintended memory increase from the previous release (v2.1.2); program now runs faster on low-memory systems.
+    - For XPEHH/XPnSL, sites not segregating in the combined population are filtered for faster data loading and improved performance.
 
-In selscan v3.0 pre-release: 
-- Fixed: `ihs` calculation with `--bp-win` was incorrectly producing zero nonzero windows 
-- Added: chr column added
-- Fixed: 'nan' reported in xp stats
-- Fixed: trunc-ok message showing wrong in xp unphased
+10MAR2026 - selscan v2.1.2 - Bug fixes for the scalable version v2.1+: 
+	- Removed NaNs from output (fixed issue #152).
+	- Fixed a bug affecting input where number of haplotypes is a multiple of 64 causing crashes (fixed issue #154).
+	- Updated binaries for compatibility with older macOS versions.
+	- Fixed filename for EHH12 output and log.
+	- Skips VCF entries with multiple records at the same genomic position.
+	- MAF filtering now correctly affects iHH12 (was previously ignored).
 
 26SEP2025 - selscan v2.1.1 - Bug fixes for the fast and memory-efficient version introduced in v2.1:
 
