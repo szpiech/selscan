@@ -6,17 +6,17 @@ CXXFLAGS = -O3 -m64 -mmmx -msse -msse2 --std=c++17 -lm -ftree-vectorize
 # -O3              : Maximize optimization
 # -m64             : Generate 64-bit code
 # -mmmx            : Enable MMX instructions
-# -msse -msse2     : Enable SSE and SSE2 vectorization
+# -msse -msse2     : Enable SSE/SSE2 vectorization
 # --std=c++17      : Use C++17 standard
-# -lm              : Link with math library
-# -ftree-vectorize : Enable loop vectorization for performance
+# -lm              : Link math library
+# -ftree-vectorize : Enable loop vectorization
 
 # Include and library directories
 I_PATH = -I../include
 L_PATH = ../lib/linux
 
-# Linking options (add -no-pie to avoid PIE issues with static GSL)
-LINK_OPTS = -pthread -lz -L$(L_PATH) -lgsl -lgslcblas -no-pie
+# Linking options (static GSL + no-PIE)
+LINK_OPTS = -pthread -lz $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a -no-pie
 
 # Object files
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
@@ -29,7 +29,7 @@ all: selscan
 selscan: selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o norm.o gene.o gzstream.o thread_pool.o
 	$(CC) $(CXXFLAGS) -o $@ $^ $(LINK_OPTS)
 
-# Compilation rules
+# Compilation rules for top-level files
 %.o: %.cpp %.h
 	$(CC) $(CXXFLAGS) -c $< $(I_PATH)
 
