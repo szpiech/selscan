@@ -1,4 +1,4 @@
-name: Test and Build binaries
+name: Test and Build binaries binary_mac
 
 on:
   push:
