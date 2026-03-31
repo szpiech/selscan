@@ -29,7 +29,7 @@ void HapMap::initParamsInHap(HapData &hapData){
     // if we are in multi param mode, or using xp, we want to set the MAF cutoff to the minimum
     this->MIN_MAF_CUTOFF = p.MAF;
 
-    if(p.CALC_IHS || p.CALC_NSL){
+    if(p.CALC_IHS || p.CALC_NSL || p.CALC_SOFT){
         if(p.MULTI_MAF){
             for (const auto& param : ps) {
                 if(param.MAF < MIN_MAF_CUTOFF){
