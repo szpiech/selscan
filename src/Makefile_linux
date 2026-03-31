@@ -1,4 +1,4 @@
-# Makefile for selscan (Linux)
+# Makefile for selscan (Linux) - single executable version
 
 # Compiler
 CXX = g++
@@ -9,16 +9,17 @@ CXXFLAGS = -O3 -m64 -mmmx -msse -msse2 -std=c++17 -ftree-vectorize -fno-pie
 # Link flags (non-PIE)
 LDFLAGS = -no-pie
 
-# Include path
+# Include and library paths
 I_PATH = -I../include
+L_PATH = ../lib/linux
 
-# Libraries for selscan
-LDLIBS = -lm -pthread -lz
+# Libraries
+LDLIBS = -lm -pthread -lz -L$(L_PATH) -lgsl -lgslcblas
 
 # Object files
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
-OBJS = selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o
+OBJS = selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o norm.o gene.o gzstream.o thread_pool.o
 
 # Default target
 all: selscan
@@ -39,6 +40,12 @@ selscan-cli.o: selscan-cli.cpp selscan-cli.h
 
 binom.o: binom.cpp binom.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+norm.o: norm.cpp norm.h
+	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+
+gene.o: gene.cpp gene.h
+	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
 
 param_t.o: param_t.cpp param_t.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
