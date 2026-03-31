@@ -1,5 +1,5 @@
 <!-- badges: start -->
-[![Version](https://img.shields.io/badge/version-2.1.2-green.svg)](https://shields.io/)
+[![Version](https://img.shields.io/badge/version-2.1.3-green.svg)](https://shields.io/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <!--badges: end -->
 
