@@ -41,11 +41,12 @@ OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
 
 
-all : selscan
+all : selscan 
 
-selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o norm.o gzstream.o thread_pool.o 
-	$(CC) $(G++FLAG) -o selscan selscan-main.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o norm.o gzstream.o thread_pool.o  $(G++FLAG_NORM) $(LINK_OPTS_LATER) $(LINK_OPTS2)
-	
+selscan : selscan-main.o $(OBJ_STATS) selscan-data.o $(OBJ_HAPMAP) selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o 
+	$(CC) $(G++FLAG_NORM) $(LINK_OPTS_LATER) -o selscan selscan-main.o norm.o $(OBJ_STATS) selscan-data.o  $(OBJ_HAPMAP)  selscan-cli.o binom.o param_t.o gzstream.o thread_pool.o $(LINK_OPTS2)  $(LINK_OPTS)
+#	$(CC) $(G++FLAG_NORM) $(LINK_OPTS_LATER) -o norm norm.o param_t.o $(LINK_OPTS)
+
 selscan-main.o : selscan-main.cpp
 	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
 
@@ -67,17 +68,8 @@ selscan-cli.o : selscan-cli.cpp selscan-cli.h
 binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
-# norm : norm.o param_t.o
-# 	$(CC) -o norm norm.o param_t.o $(LINK_OPTS)
-
-# norm.o : norm.cpp
-# 	$(CC) $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
-
-# norm : norm.o param_t.o
-# 	$(CC) $(G++FLAG_NORM) -o norm norm.o param_t.o $(LINK_OPTS)
-
-norm.o: norm.cpp norm.h
-	$(CC) $(FLAG_NORM) -c $< $(I_PATH) $(LINK_OPTS)
+norm.o : norm.cpp
+	$(CC) $(G++FLAG_NORM) -c norm.cpp $(I_PATH_NORM)
 
 param_t.o : param_t.cpp param_t.h
 	$(CC) $(G++FLAG) -c param_t.cpp
