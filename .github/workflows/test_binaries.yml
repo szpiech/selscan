@@ -3,8 +3,6 @@ name: C++ CI Test Binary (All)
 on:
   push:
     branches: release_v3 
-  pull_request:
-    branches: release_v3 
 
 jobs:
   testbin:

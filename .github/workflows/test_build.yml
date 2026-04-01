@@ -16,7 +16,7 @@ jobs:
       matrix:
         include:
           - label: linux
-            runner: ubuntu-latest
+            runner: ubuntu-20.04
             kind: posix
             makefile: Makefile_linux
             bin_dir: bin/linux
