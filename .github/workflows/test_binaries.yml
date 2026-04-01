@@ -1,4 +1,4 @@
-name: C++ CI Test Binary (All)
+name: C++ CI Test Binary (All) -
 
 on:
   push:
