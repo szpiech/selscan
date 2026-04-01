@@ -50,4 +50,4 @@ jobs:
         working-directory: ${{ matrix.bin_dir }}
         run: |
           ./selscan${{ matrix.exe_ext }} --help  
-          ./selscan norm${{ matrix.exe_ext }} --help  
+          ./selscan${{ matrix.exe_ext }} norm --help  
