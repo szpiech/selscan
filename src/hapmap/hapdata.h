@@ -16,50 +16,50 @@
 
 using namespace std;
 
-class MissingInfo{
-    public:
-        // int i = -1;
-        // int j = -1;
-        int length_from_core = -1;
-        int num_samples = -1;
-        double p0 = -1;
-        double p1 = -1;
-        double p2 = -1;
-        char verdict = 'N'; //0,1,2 for tie
+// class MissingInfo{
+//     public:
+//         // int i = -1;
+//         // int j = -1;
+//         int length_from_core = -1;
+//         int num_samples = -1;
+//         double p0 = -1;
+//         double p1 = -1;
+//         double p2 = -1;
+//         char verdict = 'N'; //0,1,2 for tie
 
-        MissingInfo(int length_from_core, int num_samples, double p0, double p1){
-            // this->i = i;
-            // this->j = j;
-            this->length_from_core = length_from_core;
-            this->num_samples = num_samples;
-            this->p0 = p0;
-            this->p1 = p1;
-            this->verdict = (p0 > p1)? '0' : '1';
-            this->verdict = (abs(p0-p1)<0.0001)? 'T' :  this->verdict;
-        }
+//         MissingInfo(int length_from_core, int num_samples, double p0, double p1){
+//             // this->i = i;
+//             // this->j = j;
+//             this->length_from_core = length_from_core;
+//             this->num_samples = num_samples;
+//             this->p0 = p0;
+//             this->p1 = p1;
+//             this->verdict = (p0 > p1)? '0' : '1';
+//             this->verdict = (abs(p0-p1)<0.0001)? 'T' :  this->verdict;
+//         }
 
-        MissingInfo(int length_from_core, int num_samples, double p0, double p1, double p2){
-            // this->i = i;
-            // this->j = j;
-            this->length_from_core = length_from_core;
-            this->num_samples = num_samples;
-            this->p0 = p0;
-            this->p1 = p1;
-            this->p2 = p2;
-            this->verdict =  '2';
-            if (p0 >= p1 && p0 >= p2) this->verdict =  '0';
-            if (p1 >= p0 && p1 >= p2) this->verdict =  '1';
-            if( (abs(p0-p1)<0.0001 && p0>=p2) || (abs(p1-p2)<0.0001  && p1>=p0) || (abs(p0-p2)<0.0001 && p0>=p1)){
-                this->verdict = 'T';
-            }
-            //this->verdict = (abs(p0-p1)<0.0001)? 'T' :  this->verdict;
-        }
-        void print(std::mutex& map_mutex){
-            std::lock_guard<std::mutex> lock(map_mutex);
-            cout<<length_from_core<<" "<< num_samples << " "<<p0<<" "<<p1<<" "<<verdict<<endl;
-        }
+//         MissingInfo(int length_from_core, int num_samples, double p0, double p1, double p2){
+//             // this->i = i;
+//             // this->j = j;
+//             this->length_from_core = length_from_core;
+//             this->num_samples = num_samples;
+//             this->p0 = p0;
+//             this->p1 = p1;
+//             this->p2 = p2;
+//             this->verdict =  '2';
+//             if (p0 >= p1 && p0 >= p2) this->verdict =  '0';
+//             if (p1 >= p0 && p1 >= p2) this->verdict =  '1';
+//             if( (abs(p0-p1)<0.0001 && p0>=p2) || (abs(p1-p2)<0.0001  && p1>=p0) || (abs(p0-p2)<0.0001 && p0>=p1)){
+//                 this->verdict = 'T';
+//             }
+//             //this->verdict = (abs(p0-p1)<0.0001)? 'T' :  this->verdict;
+//         }
+//         void print(std::mutex& map_mutex){
+//             std::lock_guard<std::mutex> lock(map_mutex);
+//             cout<<length_from_core<<" "<< num_samples << " "<<p0<<" "<<p1<<" "<<verdict<<endl;
+//         }
 
-};
+// };
 
 #define FACTION_ON_ALL_SET_BITS(hapbitset, ACTION)         \
     for (int k = 0; k < (hapbitset->nwords); k++) {             \
@@ -88,20 +88,24 @@ struct HapEntry
 class HapData
 {
 public:
-    map< pair<int, int> , vector<MissingInfo> > missingMatrix;
-    std::mutex map_mutex;  
 
-    void xor_for_phased_and_unphased(); //experimental
+    // DISABLED@FEATURE_MISSING_SUPPORT
+    //map< pair<int, int> , vector<MissingInfo> > missingMatrix;
+    //std::mutex map_mutex;  
+
+    // DISABLED@FEATURE_XOR_FOR_SPEEDUP_SUPPORT 
+    //void xor_for_phased_and_unphased(); //experimental
 
     struct HapEntry* hapEntries = NULL; //vector of haplotype entries
     int nloci;
     int nhaps;
     bool unphased = false;
     bool MISSING_ALLOWED = false;
-    // bool MULTI_CHR = false;
+    
+    bool MULTI_CHR = false;
     bool MULTI_MAF = false;
-
-    // string MULTI_CHR_LIST = "";
+    string MULTI_CHR_LIST = "";
+    
     // double MAF;
     // bool SKIP;
     // int num_threads;
@@ -113,125 +117,127 @@ public:
 
     ~HapData();
 
-    /// @brief 
-    /// @param i : hapIndex
-    /// @param j : locusIndex
-    /// @param length_from_core 
-    /// @param num_samples 
-    /// @param p0 
-    /// @param p1 
-    void insert_into_missing_matrix(int i, int j, int length_from_core, int num_samples, double p0, double p1){
-        std::lock_guard<std::mutex> lock(map_mutex);
-        {
-            if(missingMatrix.find(make_pair(i,j)) == missingMatrix.end()){
-                missingMatrix[make_pair(i,j)] = vector<MissingInfo>();
-                
-            }
-            missingMatrix[make_pair(i,j)].push_back(MissingInfo(length_from_core, num_samples, p0, p1));
-        }
-        
-    }
 
-        /// @brief 
-    /// @param i : hapIndex
-    /// @param j : locusIndex
-    /// @param length_from_core 
-    /// @param num_samples 
-    /// @param p0 
-    /// @param p1 
-    void insert_into_missing_matrix(int i, int j, int length_from_core, int num_samples, double p0, double p1, double p2){
-        std::lock_guard<std::mutex> lock(map_mutex);
-        {
-            if(missingMatrix.find(make_pair(i,j)) == missingMatrix.end()){
-                missingMatrix[make_pair(i,j)] = vector<MissingInfo>();
+
+    // /// @brief 
+    // /// @param i : hapIndex
+    // /// @param j : locusIndex
+    // /// @param length_from_core 
+    // /// @param num_samples 
+    // /// @param p0 
+    // /// @param p1 
+    // void insert_into_missing_matrix(int i, int j, int length_from_core, int num_samples, double p0, double p1){
+    //     std::lock_guard<std::mutex> lock(map_mutex);
+    //     {
+    //         if(missingMatrix.find(make_pair(i,j)) == missingMatrix.end()){
+    //             missingMatrix[make_pair(i,j)] = vector<MissingInfo>();
                 
-            }
-            missingMatrix[make_pair(i,j)].push_back(MissingInfo(length_from_core, num_samples, p0, p1, p2));
-        }
+    //         }
+    //         missingMatrix[make_pair(i,j)].push_back(MissingInfo(length_from_core, num_samples, p0, p1));
+    //     }
         
-    }
+    // }
+
+    //     /// @brief 
+    // /// @param i : hapIndex
+    // /// @param j : locusIndex
+    // /// @param length_from_core 
+    // /// @param num_samples 
+    // /// @param p0 
+    // /// @param p1 
+    // void insert_into_missing_matrix(int i, int j, int length_from_core, int num_samples, double p0, double p1, double p2){
+    //     std::lock_guard<std::mutex> lock(map_mutex);
+    //     {
+    //         if(missingMatrix.find(make_pair(i,j)) == missingMatrix.end()){
+    //             missingMatrix[make_pair(i,j)] = vector<MissingInfo>();
+                
+    //         }
+    //         missingMatrix[make_pair(i,j)].push_back(MissingInfo(length_from_core, num_samples, p0, p1, p2));
+    //     }
+        
+    // }
     
+    // void assignVerdict(){
+    //     lock_guard<mutex> lock(map_mutex);
+    //     {
+    //         if(!unphased){
+    //             for(auto && [key, value]: missingMatrix){
+    //                 double count1 = 0;
+    //                 double count0 = 0;
+    //                 for(auto && info: value){
+    //                     //cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " "<<info.p0<<" "<<info.p1<<" "<<info.verdict<<endl;
+    //                     //info.print(std::ref(map_mutex));
+    //                     // if(info.verdict == '0'){
+    //                     //     count0++;
+    //                     // }else if(info.verdict == '1'){
+    //                     //     count1+=;
+    //                     // }
+    //                     count1+=info.p1;
+    //                     count0+=info.p0;
+    //                     // if(count0>count1){
+    //                     //     hapEntries[key.second].hapbitset->set_bit(key.first);
+    //                     // }
+    //                 }
+    //                 if(count1>count0){
+    //                     hapEntries[key.second].hapbitset->set_bit(key.first);
+    //                     hapEntries[key.second].hapbitset->num_1s++;
+    //                 }
+    //             }
+    //         }else{
+    //             for(auto && [key, value]: missingMatrix){
+    //                 double count1 = 0;
+    //                 double count0 = 0;
+    //                 double count2 = 0;
+    //                 for(auto && info: value){
+    //                     cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " p0"<<info.p0<<" p1"<<info.p1<<" p2"<<info.p2<<" v"<<info.verdict<<endl;
+    //                     //info.print(std::ref(map_mutex));
+    //                     // if(info.verdict == '0'){
+    //                     //     count0++;
+    //                     // }else if(info.verdict == '1'){
+    //                     //     count1++;
+    //                     // }else if(info.verdict == '2'){
+    //                     //     count2++;
+    //                     // }
+    //                      count1+=info.p1;
+    //                     count0+=info.p0;
+    //                     count2+=info.p2;
 
-    void assignVerdict(){
-        lock_guard<mutex> lock(map_mutex);
-        {
-            if(!unphased){
-                for(auto && [key, value]: missingMatrix){
-                    double count1 = 0;
-                    double count0 = 0;
-                    for(auto && info: value){
-                        //cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " "<<info.p0<<" "<<info.p1<<" "<<info.verdict<<endl;
-                        //info.print(std::ref(map_mutex));
-                        // if(info.verdict == '0'){
-                        //     count0++;
-                        // }else if(info.verdict == '1'){
-                        //     count1+=;
-                        // }
-                        count1+=info.p1;
-                        count0+=info.p0;
-                        // if(count0>count1){
-                        //     hapEntries[key.second].hapbitset->set_bit(key.first);
-                        // }
-                    }
-                    if(count1>count0){
-                        hapEntries[key.second].hapbitset->set_bit(key.first);
-                        hapEntries[key.second].hapbitset->num_1s++;
-                    }
-                }
-            }else{
-                for(auto && [key, value]: missingMatrix){
-                    double count1 = 0;
-                    double count0 = 0;
-                    double count2 = 0;
-                    for(auto && info: value){
-                        cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " p0"<<info.p0<<" p1"<<info.p1<<" p2"<<info.p2<<" v"<<info.verdict<<endl;
-                        //info.print(std::ref(map_mutex));
-                        // if(info.verdict == '0'){
-                        //     count0++;
-                        // }else if(info.verdict == '1'){
-                        //     count1++;
-                        // }else if(info.verdict == '2'){
-                        //     count2++;
-                        // }
-                         count1+=info.p1;
-                        count0+=info.p0;
-                        count2+=info.p2;
+    //                     // if(count1>=count0 && count1>=count2){
+    //                     //     hapEntries[key.second].hapbitset->set_bit(key.first);
+    //                     //     hapEntries[key.second].hapbitset->num_1s++;
+    //                     //     //addAllele1(key.second, key.first);  
+    //                     // }else if(count2>=count0 && count2>=count1){
+    //                     //     //addAllele2(key.second, key.first);  
+    //                     //     hapEntries[key.second].xorbitset->set_bit(key.first);
+    //                     //     hapEntries[key.second].xorbitset->num_1s++;
+    //                     // }
+    //                 }
+    //                 if(count1>=count0 && count1>=count2){
+    //                         hapEntries[key.second].hapbitset->set_bit(key.first);
+    //                         hapEntries[key.second].hapbitset->num_1s++;
+    //                         //addAllele1(key.second, key.first);  
+    //                     }else if(count2>=count0 && count2>=count1){
+    //                         //addAllele2(key.second, key.first);  
+    //                         hapEntries[key.second].xorbitset->set_bit(key.first);
+    //                         hapEntries[key.second].xorbitset->num_1s++;
+    //                     }
+    //             }
+    //         }
+    //     }
+    // }
 
-                        // if(count1>=count0 && count1>=count2){
-                        //     hapEntries[key.second].hapbitset->set_bit(key.first);
-                        //     hapEntries[key.second].hapbitset->num_1s++;
-                        //     //addAllele1(key.second, key.first);  
-                        // }else if(count2>=count0 && count2>=count1){
-                        //     //addAllele2(key.second, key.first);  
-                        //     hapEntries[key.second].xorbitset->set_bit(key.first);
-                        //     hapEntries[key.second].xorbitset->num_1s++;
-                        // }
-                    }
-                    if(count1>=count0 && count1>=count2){
-                            hapEntries[key.second].hapbitset->set_bit(key.first);
-                            hapEntries[key.second].hapbitset->num_1s++;
-                            //addAllele1(key.second, key.first);  
-                        }else if(count2>=count0 && count2>=count1){
-                            //addAllele2(key.second, key.first);  
-                            hapEntries[key.second].xorbitset->set_bit(key.first);
-                            hapEntries[key.second].xorbitset->num_1s++;
-                        }
-                }
-            }
-        }
-    }
+    // void printMissingMatrix(){
+    //     lock_guard<mutex> lock(map_mutex);
+    //     {
+    //         for(auto && [key, value]: missingMatrix){
+    //             for(auto && info: value){
+    //                 cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " "<<info.p0<<" "<<info.p1<<" "<<info.verdict<<endl;
+    //             }
+    //         }
+    //     }   
+    // }
 
-    void printMissingMatrix(){
-        lock_guard<mutex> lock(map_mutex);
-        {
-            for(auto && [key, value]: missingMatrix){
-                for(auto && info: value){
-                    cout<<key.first<<", "<<key.second <<" "<<info.length_from_core<<" "<< info.num_samples << " "<<info.p0<<" "<<info.p1<<" "<<info.verdict<<endl;
-                }
-            }
-        }
-        
-    }
+    
 
     //allocates the 2-d array and populated it with -9,
     /** Sets up structure according to nhaps and nloci
@@ -239,15 +245,12 @@ public:
     */
     void initHapData(int nhaps, int nloci);
     void releaseHapData();
-    
-
 
     // void readHapDataVCF_bitset(string filename);
     // void readHapData_bitset(string filename);
 
 
     void print(int nloci=0){
-
         //open filestream
         ofstream happrintFile("happrint.txt");
         if(!happrintFile.is_open()){
@@ -306,38 +309,6 @@ public:
                  cout<< set_bit_pos << " " << locus_after_filter<< " " <<" "<<1 <<endl;
             });
         }
-
-
-
-        /*
-        for (int i = 0; i < 3; i++)
-        {
-            cout << "Locus: " << i << endl;
-            cout << "Flipped: " << hapEntries[i].flipped << endl;
-            cout << "Xors: ";
-            for (int j = 0; j < hapEntries[i].xors.size(); j++)
-            {
-                cout << hapEntries[i].xors[j] << " ";
-            }
-            cout << endl;
-            cout << "Positions: ";
-            for (int j = 0; j < hapEntries[i].positions.size(); j++)
-            {
-                cout << hapEntries[i].positions[j] << " ";
-            }
-            cout << endl;
-
-            // if(hapEntries[i].positions2.size()>0){
-            //     cout << "Positions2: ";
-            //     for (int j = 0; j < hapEntries[i].positions2.size(); j++)
-            //     {
-            //         cout << hapEntries[i].positions2[j] << " ";
-            //     }
-            //     cout << endl;
-            // }
-            
-        }
-        */
     }
     
 
@@ -359,12 +330,12 @@ public:
         return (freq / total);
     }
 
-    double calcMissingFreq(int locus){
-        if(!MISSING_ALLOWED){
-            throw "missing not allowed";
-        }
-        return hapEntries[locus].xorbitset->num_1s / (double) nhaps;
-    }
+    // double calcMissingFreq(int locus){
+    //     if(!MISSING_ALLOWED){
+    //         throw "missing not allowed";
+    //     }
+    //     return hapEntries[locus].xorbitset->num_1s / (double) nhaps;
+    // }
 
     inline int get_n_c2(int locus)
     {
@@ -388,7 +359,6 @@ public:
                 throw "not implemented";
             }else{
                 return nhaps - hapEntries[locus].hapbitset->num_1s;
-
             }
             // // if flip was enabled
             // int non_flipped_1s = 0;
@@ -396,7 +366,6 @@ public:
             // int result = hapEntries[locus].flipped ? non_flipped_1s : nhaps - non_flipped_1s;
             // return result;
         }
-        
     }
 
     inline int get_n_c1(int locus)
@@ -446,27 +415,25 @@ public:
             int mac = min(n_c1, n_c0);
             return mac / (double) total;
         }
-        
     }
 
-    inline int get_n_c_missing(int locus)
-    {
-        if(unphased){
-            return hapEntries[locus].missbitset->num_1s;
-        }
-        return hapEntries[locus].xorbitset->num_1s;
-    }
+    // inline int get_n_c_missing(int locus)
+    // {
+    //     if(unphased){
+    //         return hapEntries[locus].missbitset->num_1s;
+    //     }
+    //     return hapEntries[locus].xorbitset->num_1s;
+    // }
 
-    void addAlleleMissing(int locus, int hapId){
-        if(unphased){
-            hapEntries[locus].missbitset->set_bit(hapId);
-            hapEntries[locus].missbitset->num_1s+= 1;
-        }else{
-            hapEntries[locus].xorbitset->set_bit(hapId);
-            hapEntries[locus].xorbitset->num_1s+= 1;
-        }
-        
-    }
+    // void addAlleleMissing(int locus, int hapId){
+    //     if(unphased){
+    //         hapEntries[locus].missbitset->set_bit(hapId);
+    //         hapEntries[locus].missbitset->num_1s+= 1;
+    //     }else{
+    //         hapEntries[locus].xorbitset->set_bit(hapId);
+    //         hapEntries[locus].xorbitset->num_1s+= 1;
+    //     }
+    // }
 
     void addAllele1(int locus, int hapId){
         hapEntries[locus].hapbitset->set_bit(hapId);

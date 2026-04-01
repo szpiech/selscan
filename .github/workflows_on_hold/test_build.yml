@@ -1,0 +1,149 @@
+name: Test and Build binaries [binary_linux] + [binary_mac_arm] + [binary_mac] + [binary_osx] + [binary_win]
+
+
+on:
+  push:
+    branches:
+      - release_v3
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux
+            runner: ubuntu-20.04
+            kind: posix
+            makefile: Makefile_linux
+            bin_dir: bin/linux
+            tag: "[binary_linux]"
+
+          - label: macos-arm64
+            runner: macos-latest
+            kind: posix
+            makefile: Makefile_macos-arm64
+            bin_dir: bin/macos-arm64
+            tag: "[binary_mac_arm]"
+
+          - label: macos
+            runner: macos-latest
+            kind: posix
+            makefile: Makefile_macos
+            bin_dir: bin/macos
+            tag: "[binary_mac]"
+
+          - label: osx-intel
+            runner: macos-26-intel
+            kind: posix
+            makefile: Makefile_macos-x86-64
+            bin_dir: bin/osx
+            tag: "[binary_osx]"
+
+          - label: windows
+            runner: windows-latest
+            kind: windows
+            makefile: Makefile_win
+            bin_dir: bin/win
+            tag: "[binary_win]"
+        
+    steps:
+      - name: Checkout code
+        if: contains(github.event.head_commit.message || '', matrix.tag)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Debug (optional but very useful to confirm what GitHub sees)
+      - name: Debug tags
+        if: contains(github.event.head_commit.message || '', matrix.tag)
+        shell: bash
+        run: |
+          echo "COMMIT MESSAGE: ${{ github.event.head_commit.message }}"
+          echo "MATRIX TAG: ${{ matrix.tag }}"
+
+      # POSIX build/test
+      - name: Build selscan (Linux/macOS)
+        if: matrix.kind == 'posix' && contains(github.event.head_commit.message || '', matrix.tag)
+        working-directory: src/
+        shell: bash
+        run: make -f ${{ matrix.makefile }} -j
+
+      - name: Test selscan (Linux/macOS)
+        if: matrix.kind == 'posix' && contains(github.event.head_commit.message || '', matrix.tag)
+        working-directory: src/
+        shell: bash
+        run: |
+          ./selscan --help
+          ./selscan norm --help
+
+      # Windows build/test
+      - name: Set Up MSYS2
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-clang-x86_64-toolchain
+
+      - name: Install GSL (Windows)
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
+        shell: msys2 {0}
+        run: |
+          pacman -S mingw-w64-x86_64-gsl --noconfirm
+          mkdir -p "${{ github.workspace }}/lib/win32"
+          cp /mingw64/lib/libgsl.a "${{ github.workspace }}/lib/win32/"
+          cp /mingw64/lib/libgslcblas.a "${{ github.workspace }}/lib/win32/"
+          mkdir -p "${{ github.workspace }}/include/gsl"
+          cp /mingw64/include/gsl/* "${{ github.workspace }}/include/gsl/"
+
+      - name: Build selscan (Windows)
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
+        shell: msys2 {0}
+        working-directory: src/
+        run: make -f ${{ matrix.makefile }} -j
+
+      - name: Test selscan (Windows)
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
+        shell: msys2 {0}
+        working-directory: src/
+        run: |
+          ./selscan.exe --help
+          ./selscan.exe norm --help
+
+      # Publish only when the matching binary tag is present
+      - name: Set up Git credentials
+        if: contains(github.event.head_commit.message || '', matrix.tag)
+        shell: bash
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: Commit & push binary (Linux/macOS)
+        if: matrix.kind == 'posix' && contains(github.event.head_commit.message || '', matrix.tag)
+        shell: bash
+        run: |
+          mkdir -p "${{ matrix.bin_dir }}"
+          cp src/selscan "${{ matrix.bin_dir }}/"
+          git add "${{ matrix.bin_dir }}"
+          git commit -m "Adding bin to ${{ matrix.bin_dir }}" || echo "No changes to commit"
+          git push
+
+      - name: Commit & push binary (Windows)
+        if: matrix.kind == 'windows' && contains(github.event.head_commit.message || '', matrix.tag)
+        shell: bash
+        run: |
+          mkdir -p "${{ matrix.bin_dir }}"
+          cp src/selscan.exe "${{ matrix.bin_dir }}/"
+          git add "${{ matrix.bin_dir }}"
+          git add include/gsl
+          git add lib/win32
+          git commit -m "Adding bin to ${{ matrix.bin_dir }} (and GSL)" || echo "No changes to commit"
+          git push

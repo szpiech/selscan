@@ -49,8 +49,10 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
         bool breakReachedEdge = false;
         breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
+        
+        
         if(breakReachedEdge){ //nextLocus < 0 || nextLocus >= numSnps to avoid going to negative
-            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
+            //(*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
             break;
         }
 
@@ -86,38 +88,65 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
     }
 }
 
-void EHH12::main(string query){
-    init_global_fout("ehh12");
+void EHH12::main(string query_list){
+    //init_global_fout("ehh12");
     init_output_and_querymap();
     
     int numSnps = hm->mapData->nloci;
 
-    int locus = this->queryFound(query);
-    if(locus == -1){
-        return;
-    }
+    std::vector<std::string> tokens;
+    std::stringstream ss(query_list);
+    std::string token;
 
-    if(p.UNPHASED){
-        HANDLE_ERROR("--unphased and --ehh12 not compatible");
-    }else{
-        calc_ehh12_unidirection(locus, true); // downstream
-        calc_ehh12_unidirection(locus, false); // upstream
-
-        (*fout) << std::fixed <<   "pdist\tgdist\tehh1\tehh12\tehh2d1" << "\n";
-        for (int i = 0; i < numSnps; i++){
-            if(!output[i].print){
-                continue;
-            }
-
-            fout->precision(6);
-            (*fout) << std::fixed <<   output[i].pdist  << "\t"
-            <<  output[i].gdist << "\t"
-            << output[i].ehh1 << "\t"
-            << output[i].ehh12  << "\t"
-            << output[i].ehh2d1  << "";
-            (*fout) << endl;
+    while (std::getline(ss, token, ',')) {
+        if (token.empty()) {
+            throw std::invalid_argument("Empty token found in query string.");
         }
+
+        tokens.push_back(token);
     }
+
+    // Extra check: no trailing comma
+    if (!query_list.empty() && query_list.back() == ',') {
+        throw std::invalid_argument("Query string ends with a comma.");
+    }
+
+
+    for(const string& query: tokens){
+        int locus = this->queryFound(query);
+        if(locus == -1){
+            continue;
+        }
+
+        string outFilename = get_filename_base("ehh12", query);
+        ofstream ehhOUT(outFilename+".out");
+
+        if(p.UNPHASED){
+            HANDLE_ERROR("--unphased and --ehh12 not compatible");
+        }else{
+            calc_ehh12_unidirection(locus, true); // downstream
+            calc_ehh12_unidirection(locus, false); // upstream
+
+            ehhOUT << std::fixed <<   "chr\tpdist\tgdist\tehh1\tehh12\tehh2d1" << "\n";
+            for (int i = 0; i < numSnps; i++){
+                if(!output[i].print){
+                    continue;
+                }
+
+                ehhOUT.precision(6);
+                ehhOUT << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
+                <<   output[i].pdist  << "\t"
+                <<  output[i].gdist << "\t"
+                << output[i].ehh1 << "\t"
+                << output[i].ehh12  << "\t"
+                << output[i].ehh2d1  << "";
+                ehhOUT << endl;
+            }
+        }
+        ehhOUT.close();
+    }
+
+    
 }
 
 void EHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, EHH12_ehh_data* ehhdata){

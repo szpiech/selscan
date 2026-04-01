@@ -49,7 +49,7 @@
 #include <ctime>
 #include <cmath>
 
-// #include <norm.cpp>
+#include "norm.h"
 
 using namespace std;
 
@@ -86,12 +86,14 @@ string getLogFileName(param_main &p){
     if (p.CALC_SOFT){
         statname = "ihh12";
     }
-    if(p.SINGLE_EHH){
-        statname = statname + "." + p.query;
-    }
-    if(p.SINGLE_EHH12){
-        statname = statname + "." + p.query_ehh12;
-    }
+    // if(p.SINGLE_EHH){
+    //     //statname = statname + "." + p.query;
+    //     statname = "ehh";
+    // }
+    // if(p.SINGLE_EHH12){
+    //     //statname = statname + "." + p.query_ehh12;
+    //     statname = "ehh12";
+    // }
     return p.outFilename + "." + statname + ".log";
 }
 
@@ -270,10 +272,10 @@ int runToolSelscan(int argc, char *argv[])
     (*flog) << "\n";
 
 
-    // if(p.MULTI_CHR){
-    //     (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
-    //     cerr << "WARNING: Running in multi-chromosome mode.\n";
-    // }
+    if(p.MULTI_CHR){
+        (*flog)<<"WARNING: Running in multi-chromosome mode.\n";
+        cerr << "WARNING: Running in multi-chromosome mode.\n";
+    }
 
     if(p.MULTI_PARAMS){
         //TODON
@@ -319,20 +321,20 @@ int runToolSelscan(int argc, char *argv[])
 
 // ------------------- Main Dispatcher -------------------
 int main(int argc, char* argv[]) {
-    return runToolSelscan(argc, argv);
-    // if (argc < 2) {
-    //     // No subcommand, run original ToolA with no arguments
-    //     return runToolSelscan(0, nullptr);
-    // }
+    //return runToolSelscan(argc, argv);
+    if (argc < 2) {
+        // No subcommand, run original selscan with no arguments
+        return runToolSelscan(0, nullptr);
+    }
 
-    // std::string firstArg = argv[1];
-    // if (firstArg == "norm") {
-    //     // Pass remaining arguments to subcommand B
-    //     int subArgc = argc - 2;
-    //     char** subArgv = argv + 2;
-    //     return runToolNorm(subArgc, subArgv);
-    // } else {
-    //     // No subcommand, treat all arguments as ToolA arguments
-    //     return runToolSelscan(argc - 1, argv + 1);
-    // }
+    std::string firstArg = argv[1];
+    if (firstArg == "norm") {
+        int subArgc = argc - 1;
+        char** subArgv = argv + 1;
+        SelscanNorm snorm;
+        int exitval = snorm.runToolNorm(subArgc, subArgv);
+        return exitval;
+    } else {
+        return runToolSelscan(argc, argv);
+    }
 }

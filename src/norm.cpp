@@ -1,187 +1,32 @@
-/* norm -- a program for downstream analysis of iHS scores calculated by selscan
-   Copyright (C) 2014  Zachary A Szpiech
+#include "norm.h"
+#include <deque>
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+// #include <gsl/gsl_statistics_double.h>
+// #include <gsl/gsl_interp.h>
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
-
-#include <iostream>
-#include <fstream>
-#include <map>
-#include <cmath>
-#include <cstdlib>
-#include <cctype>
-#include <vector>
-#include <cstring>
-#include <gsl/gsl_statistics.h>
-#include <gsl/gsl_sort.h>
-#include "param_t.h"
-
-using namespace std;
-
-const string VERSION = "1.3.1";
-
-const string PREAMBLE = " -- a program for downstream analysis of selscan output\n\
-Source code and binaries can be found at\n\
-\t<https://www.github.com/szpiech/selscan>\n\
-\n\
-Citations:\n\
-\n\
-selscan: ZA Szpiech and RD Hernandez (2014) MBE, 31: 2824-2827.\n\
-iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
-       N Garud et al. (2015) PLoS Genetics, 11: 1–32.\n\
-nSL: A Ferrer-Admetlla, et al. (2014) MBE, 31: 1275-1291.\n\
-XP-nSL: Szpiech et al. (2020) bioRxiv doi: \n\
-        https://doi.org/10.1101/2020.05.19.104380.\n\
-XP-EHH: PC Sabeti et al. (2007) Nature, 449: 913–918.\n\
-iHS: BF Voight et al. (2006) PLoS Biology, 4: e72.\n\
-\n\
-To normalize selscan output across frequency bins:\n\
-\n\
-./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>\n\
-\n\
-To normalize selscan output and analyze non-overlapping windows of fixed bp for \n\
-extreme scores:\n\
-\n\
-./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win\n";
-
-const string ARG_FREQ_BINS = "--bins";
-const int DEFAULT_FREQ_BINS = 100;
-const string HELP_FREQ_BINS = "The number of frequency bins in [0,1] for score normalization.";
-
-const string ARG_FILES = "--files";
-const string DEFAULT_FILES = "infile";
-const string HELP_FILES = "A list of files delimited by whitespace for\n\
-\tjoint normalization.\n\
-\tExpected format for iHS or nSL files (no header):\n\
-\t<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>\n\
-\tExpected format for XP-EHH files (one line header):\n\
-\t<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>\n\
-\tExpected format for iHH12 files (one line header):\n\
-\t<locus name> <physical pos> <freq1> <ihh12>";
-
-const string ARG_LOG = "--log";
-const string DEFAULT_LOG = "logfile";
-const string HELP_LOG = "The log file name.";
-
-const string ARG_WINSIZE = "--winsize";
-const int DEFAULT_WINSIZE = 100000;
-const string HELP_WINSIZE = "The non-overlapping window size for calculating the percentage\n\
-\tof extreme SNPs.";
-
-const string ARG_QBINS = "--qbins";
-const int DEFAULT_QBINS = 10;
-const string HELP_QBINS = "Outlying windows are binned by number of sites within each\n\
-\twindow.  This is the number of quantile bins to use.";
-
-const string ARG_MINSNPS = "--min-snps";
-const int DEFAULT_MINSNPS = 10;
-const string HELP_MINSNPS = "Only consider a bp window if it has at least this many SNPs.";
-
-const string ARG_SNPWIN = "--snp-win";
-const bool DEFAULT_SNPWIN = false;
-const string HELP_SNPWIN = "<not implemented> If set, will use windows of a constant\n\
-\tSNP size with varying bp length.";
-
-const string ARG_SNPWINSIZE = "--snp-win-size";
-const int DEFAULT_SNPWINSIZE = 50;
-const string HELP_SNPWINSIZE = "<not implemented> The number of SNPs in a window.";
-
-const string ARG_BPWIN = "--bp-win";
-const bool DEFAULT_BPWIN = false;
-const string HELP_BPWIN = "If set, will use windows of a constant bp size with varying\n\
-\tnumber of SNPs.";
-
-const string ARG_IHS = "--ihs";
-const bool DEFAULT_IHS = false;
-const string HELP_IHS = "Do iHS normalization.";
-
-const string ARG_NSL = "--nsl";
-const bool DEFAULT_NSL = false;
-const string HELP_NSL = "Do nSL normalization.";
-
-const string ARG_XPEHH = "--xpehh";
-const bool DEFAULT_XPEHH = false;
-const string HELP_XPEHH = "Do XP-EHH normalization.";
-
-const string ARG_XPNSL = "--xpnsl";
-const bool DEFAULT_XPNSL = false;
-const string HELP_XPNSL = "Do XP-nSL normalization.";
-
-const string ARG_SOFT = "--ihh12";
-const bool DEFAULT_SOFT = false;
-const string HELP_SOFT = "Do ihh12 normalization.";
-
-const string ARG_FIRST = "--first";
-const bool DEFAULT_FIRST = false;
-const string HELP_FIRST = "Output only the first file's normalization.";
-
-const string ARG_CRIT_NUM = "--crit-val";
-const double DEFAULT_CRIT_NUM = 2;
-const string HELP_CRIT_NUM = "Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.";
-
-const string ARG_CRIT_PERCENT = "--crit-percent";
-const double DEFAULT_CRIT_PERCENT = -1;
-const string HELP_CRIT_PERCENT = "Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.\n\
-\tNot used by default.";
-
-
-const int MISSING = -9999;
-
-//returns number of lines in file
-//throws 0 if the file fails
-int checkIHSfile(ifstream &fin);
-int checkXPEHHfile(ifstream &fin);
-int checkIHH12file(ifstream &fin);
-
-void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[]);
-void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[]);
-void readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[]);
-
-void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[]);
-
-void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff);
-void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool XPNSL);
-void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff);
-
-void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
-void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
-void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs);
-
-int countCols(ifstream &fin);
-int colsToSkip(ifstream &fin, int numCols);
-void skipCols(ifstream &fin, int numCols);
-
-int countFields(const string &str);
-bool isint(string str);
-
-ofstream flog;
+//TODO
+// TODO: winfile allow multiple windows
 
 //int main(int argc, char *argv[])
-int runToolNorm(int argc, char *argv[])
+int SelscanNorm::runToolNorm(int argc, char *argv[])
 {
-    cerr << "norm v" + VERSION + "\n";
+    cerr << "selscan v" + VERSION + "\n";
+    cerr << "Subcommand: norm\n";
+    cerr << "================\n";
     param_t params;
     params.setPreamble(PREAMBLE);
     params.addFlag(ARG_FREQ_BINS, DEFAULT_FREQ_BINS, "", HELP_FREQ_BINS);
     params.addListFlag(ARG_FILES, DEFAULT_FILES, "", HELP_FILES);
     params.addFlag(ARG_LOG, DEFAULT_LOG, "", HELP_LOG);
     params.addFlag(ARG_WINSIZE, DEFAULT_WINSIZE, "", HELP_WINSIZE);
+    params.addFlag(ARG_WINOFFSET, DEFAULT_WINOFFSET, "SILENT", HELP_WINOFFSET);
+
+
+
     params.addFlag(ARG_QBINS, DEFAULT_QBINS, "", HELP_QBINS);
     params.addFlag(ARG_MINSNPS, DEFAULT_MINSNPS, "", HELP_MINSNPS);
-    params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "SILENT", HELP_SNPWIN);
-    params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "SILENT", HELP_SNPWINSIZE);
+    // params.addFlag(ARG_SNPWIN, DEFAULT_SNPWIN, "SILENT", HELP_SNPWIN);
+    // params.addFlag(ARG_SNPWINSIZE, DEFAULT_SNPWINSIZE, "SILENT", HELP_SNPWINSIZE);
     params.addFlag(ARG_BPWIN, DEFAULT_BPWIN, "", HELP_BPWIN);
     params.addFlag(ARG_FIRST, DEFAULT_FIRST, "", HELP_FIRST);
     params.addFlag(ARG_CRIT_NUM, DEFAULT_CRIT_NUM, "", HELP_CRIT_NUM);
@@ -193,6 +38,22 @@ int runToolNorm(int argc, char *argv[])
     params.addFlag(ARG_XPNSL, DEFAULT_XPNSL, "", HELP_XPNSL);
 
 
+    params.addFlag(ARG_LOG_INPUT, DEFAULT_LOG_INPUT, "", HELP_LOG_INPUT); //added in v3
+    params.addFlag(ARG_FINE_PERCENTILE, DEFAULT_FINE_PERCENTILE, "", HELP_FINE_PERCENTILE); //added in v3
+    params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED); //added in v3
+    params.addFlag(ARG_GTF, DEFAULT_GTF, "", HELP_GTF); //added in v3.1
+
+    params.addListFlag(ARG_WIN_FILES, DEFAULT_WIN_FILES, "", HELP_WIN_FILES);
+    params.addListFlag(ARG_NORM_FILES, DEFAULT_NORM_FILES, "", HELP_NORM_FILES); //added in v3
+    
+    //params.addFlag(ARG_WIN_FILE, DEFAULT_WIN_FILE, "", HELP_WIN_FILE); //added in v3
+    
+    params.addFlag(ARG_GENE_SETA, DEFAULT_GENE_SETA, "", HELP_GENE_SETA); //added in v3
+    params.addFlag(ARG_GENE_SETB, DEFAULT_GENE_SETB, "", HELP_GENE_SETB); //added in v3
+
+    params.addFlag(ARG_LOG_ONLY, DEFAULT_LOG_ONLY, "", HELP_LOG_ONLY); //added in v3
+    // params.addFlag(ARG_NO_HEADER, DEFAULT_NO_HEADER, "", HELP_NO_HEADER); //added in v3
+
     try
     {
         params.parseCommandLine(argc, argv);
@@ -202,26 +63,106 @@ int runToolNorm(int argc, char *argv[])
         return 1;
     }
 
+    this->WINOFFSET = params.getIntFlag(ARG_WINOFFSET);
     int numBins = params.getIntFlag(ARG_FREQ_BINS);
     vector<string> filename = params.getStringListFlag(ARG_FILES);
-    int nfiles = filename.size();
-    int winSize = params.getIntFlag(ARG_WINSIZE);
+    
+    const int winSize = params.getIntFlag(ARG_WINSIZE);
     string infoOutfile = params.getStringFlag(ARG_LOG);
-    int numQBins = params.getIntFlag(ARG_QBINS);
-    int minSNPs = params.getIntFlag(ARG_MINSNPS);
-    int snpWinSize = params.getIntFlag(ARG_SNPWINSIZE);
+    const int numQBins = params.getIntFlag(ARG_QBINS);
+    const int minSNPs = params.getIntFlag(ARG_MINSNPS);
+    // int snpWinSize = params.getIntFlag(ARG_SNPWINSIZE);
+        // bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
     bool BPWIN = params.getBoolFlag(ARG_BPWIN);
-    bool SNPWIN = params.getBoolFlag(ARG_SNPWIN);
+
     bool FIRST = params.getBoolFlag(ARG_FIRST);
     double critNum = params.getDoubleFlag(ARG_CRIT_NUM);
     double critPercent = params.getDoubleFlag(ARG_CRIT_PERCENT);
+    
     bool IHS = params.getBoolFlag(ARG_IHS);
     bool NSL = params.getBoolFlag(ARG_NSL);
     bool SOFT = params.getBoolFlag(ARG_SOFT);
     bool XPEHH = params.getBoolFlag(ARG_XPEHH);
     bool XPNSL = params.getBoolFlag(ARG_XPNSL);
 
-    if(XPNSL) XPEHH = true;
+    this->FINE_PERCENTILE = params.getBoolFlag(ARG_FINE_PERCENTILE);
+
+    // read window file
+    vector<string> windowFiles = params.getStringListFlag(ARG_WIN_FILES);
+    vector<string> normFiles = params.getStringListFlag(ARG_NORM_FILES);
+
+    //string windowFile = params.getStringFlag(ARG_WIN_FILE);
+    
+    string geneBedFile = params.getStringFlag(ARG_BED);
+    string geneGTFFile = params.getStringFlag(ARG_GTF);
+
+    //bool HAVE_WINFILE; //= params.flagWasSet(ARG_WIN_FILES);
+    //bool HAVE_NORMFILE; // = params.flagWasSet(ARG_NORM_FILES);
+
+    string geneSetA = params.getStringFlag(ARG_GENE_SETA);
+    string geneSetB = params.getStringFlag(ARG_GENE_SETB);
+
+    
+    bool PERMUTE_TEST = (geneSetA != DEFAULT_GENE_SETA) && (geneSetB != DEFAULT_GENE_SETB);
+    
+
+    GeneAnalyzer genex;
+    //--win-files + --gene-bed 
+    //--files + --gene-bed/gtf/gff3
+    //--norm-files + --gene-bed/gtf/gff3 + --bp-win
+
+
+    bool useGTF = false;
+    bool useBED = false;
+    if(geneGTFFile != DEFAULT_GTF) useGTF = true;
+    if(geneBedFile != DEFAULT_BED) useBED = true;
+    
+    //check that both gtf and bed arent provided
+    if(useGTF && useBED){
+        cerr << "ERROR: Cannot provide both " + ARG_BED + " and " + ARG_GTF + " Use one for gene annotations.\n";
+        return 1;
+    }
+
+    string geneFile = useGTF ? geneGTFFile : geneBedFile;
+
+    bool LOG_INPUT =  params.flagWasSet(ARG_LOG_INPUT);
+    bool LOG_ONLY = params.getBoolFlag(ARG_LOG_ONLY);
+    
+    if(params.getStringFlag(ARG_LOG_INPUT) == infoOutfile){
+        cerr << "ERROR: --log-input and --log cannot have the same filename: both are " << infoOutfile << "\n";
+        exit(EXIT_FAILURE);
+    }
+    
+    if(PERMUTE_TEST){
+        cerr << "Performing permutation test between gene sets.\n";
+        // if(geneSetA == DEFAULT_GENE_SETA || geneSetB == DEFAULT_GENE_SETB){
+        //     cerr << "ERROR: --gene-target and --gene-background must be provided to run permutation test.\n";
+        //     return 1;
+        // }
+        cerr << "Running permutation test with target genes from " << geneSetA << " and background genes from " << geneSetB << "\n";
+        genex.perm_test(geneSetA, geneSetB);
+        return 0;
+    }
+
+    if(params.flagWasSet(ARG_FREQ_BINS) && LOG_INPUT){
+        cerr << "ERROR: Options --log-input and --bins cannot be used together. "
+         << "--log-input already provides frequency bin information.\n";
+        exit(1);
+    }
+
+    if(params.flagWasSet(ARG_FREQ_BINS) && (params.flagWasSet(ARG_XPEHH) || params.flagWasSet(ARG_XPNSL) || params.flagWasSet(ARG_SOFT))){
+        cerr << "ERROR: Options --bins and --xpehh/--xpnsl/--ihh12 cannot be used together. "
+         << "Frequency bins are only used for iHS and nSL normalization.\n";
+        exit(1);
+    }
+       
+    if(params.flagWasSet(ARG_QBINS) && LOG_INPUT){
+        cerr << "ERROR: Options --log-input and --qbins cannot be used together. "
+         << "--log-input already provides quantile bin information.\n";
+        exit(1);
+    }
+
+    
 
     if (numBins <= 0)
     {
@@ -252,262 +193,470 @@ int runToolNorm(int argc, char *argv[])
         cerr << "ERROR: Critical percentile must be in (0,1).\n";
         return 1;
     }
-
     
-    if(IHS + XPEHH + NSL + SOFT!= 1){
-        cerr << "Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
-        return 1;
-    }
-    cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
-
-    string *outfilename = new string[nfiles];
-    int *fileLoci = new int[nfiles];
-
-    //ifstream* fin = new ifstream[nfiles];
-    //ofstream* fout = new ofstream[nfiles];
-
-    ifstream fin;
-
-    int totalLoci = 0;
-
-    //logging
-    flog.open(infoOutfile.c_str());
-    if (flog.fail())
-    {
-        cerr << "ERROR: " << infoOutfile << " " << strerror(errno) << endl;
+    if(IHS + XPEHH + NSL + SOFT + XPNSL != 1){
+        cerr << "ERROR: Must specify exactly one of " + ARG_IHS + ", " + ARG_XPEHH + "," + ARG_NSL + "," + ARG_SOFT + "," + ARG_XPNSL + ".\n";
         return 1;
     }
 
-    for (int i = 0; i < argc; i++)
-    {
-        flog << argv[i] << " ";
+
+    if(XPNSL) XPEHH = true;
+
+
+    // cout<<("=== Parameters ===\n");
+    // cout<<params.flagWasSet(ARG_FILES)<<endl;
+    
+    if( filename[0] == DEFAULT_FILES &&  normFiles[0]==DEFAULT_NORM_FILES &&  windowFiles[0]==DEFAULT_WIN_FILES ){
+        cerr << "ERROR: Must provide at least one input file with " + ARG_FILES + " for normalization.\n";
+        return 1;
     }
-    flog << "\n\n";
 
-    //flog << "Input files:\n";
 
-    //For each file, open it, and check it for integrity
-    //Also record total number of lines so we can allocate
-    //enough space for the array of paired data that will
-    //be used to calculate E[X] and E[X^2]
-    for (int i = 0; i < nfiles; i++)
-    {
-        char str[10];
-        sprintf(str, "%d", numBins);
-        if(IHS || NSL) outfilename[i] = filename[i] + "." + str + "bins.norm";
-        if(XPEHH || SOFT) outfilename[i] = filename[i] + ".norm";
+    bool HAVE_FILES = (filename[0]!=DEFAULT_FILES); // user gave files (e.g., .ihs.out, .nsl.out, etc.)
+    bool HAVE_NORMFILE = (normFiles[0]!=DEFAULT_NORM_FILES); // user gave normfile
+    bool HAVE_WINFILE = (windowFiles[0]!=DEFAULT_WIN_FILES); // user gave winfile
+
+    bool DO_NORM = HAVE_FILES;                       // if input stat files (.out) provided
+    bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
+    bool DO_GENE = useBED || useGTF;                // user gave --gene-bed (.bed)
+
+    int nfiles;
+    if(HAVE_WINFILE){
+        nfiles = windowFiles.size();
+    }else if(HAVE_NORMFILE){
+        nfiles = normFiles.size();
+    }else{
+        nfiles = filename.size();
+    }
+
+    //cant prode normfile winfile with files
+    if( (HAVE_NORMFILE || HAVE_WINFILE) && HAVE_FILES ){
+        cerr << "ERROR: Cannot provide input files with " + ARG_FILES + " when providing " + ARG_NORM_FILES + " or " + ARG_WIN_FILES + ".\n";
+        return 1;
+    }
+
+    //cant provide winfile with normfile
+    if( HAVE_NORMFILE && HAVE_WINFILE ){
+        cerr << "ERROR: Cannot provide both " + ARG_NORM_FILES + " and " + ARG_WIN_FILES + ".\n";
+        return 1;
+    }
+
+    if( HAVE_NORMFILE ){
+        nfiles = normFiles.size();
+        filename = normFiles;
+    }
+
+    if( HAVE_WINFILE ){
+        nfiles = windowFiles.size();
+        filename = windowFiles;
+    }
+
+
+    string *outfilename; 
+    int *fileLoci;
+    
+    if(DO_NORM){
+        cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
+
+        outfilename = new string[nfiles];
+        fileLoci = new int[nfiles];
+        ifstream fin;
+
+        int totalLoci = 0;
+
+
+        flog.open(infoOutfile.c_str());
+        if (flog.fail())
+        {
+            cerr << "ERROR: Cannot open " << infoOutfile << " for logging " << strerror(errno) << endl;
+            return 1;
+        }
+
+        for (int i = 0; i < argc; i++)
+        {
+            flog << argv[i] << " ";
+        }
+        flog << "\n\n";
+
+        //flog << "Input files:\n";
+
+        //For each file, open it, and check it for integrity
+        //Also record total number of lines so we can allocate
+        //enough space for the array of paired data that will
+        //be used to calculate E[X] and E[X^2]
+        for (int i = 0; i < nfiles; i++)
+        {
+            char str[10];
+            sprintf(str, "%d", numBins);
+            if(IHS || NSL) outfilename[i] = filename[i] + "." + str + "bins.norm";
+            if(XPEHH || SOFT) outfilename[i] = filename[i] + ".norm";
+            
+            fin.open(filename[i].c_str());
+            if (fin.fail())
+            {
+                cerr << "ERROR: " << "Cannot open " << filename[i] << " " << endl; // << strerror(errno);
+                flog << "ERROR: " << "Cannot open " << filename[i] << " " << endl; // << strerror(errno);
+                return 1;
+            }
+            else
+            {
+                cerr << "Opened " << filename[i] << endl;
+                //flog << filename[i] << endl;
+            }
+
+            //check integrity of file and keep count of the number of lines
+            try
+            {
+                if (IHS || NSL) fileLoci[i] = checkIHSfile(fin);
+                if (SOFT) fileLoci[i] = checkIHH12file(fin);
+                if (XPEHH) fileLoci[i] = checkXPEHHfile(fin);
+                totalLoci += fileLoci[i];
+            }
+            catch (...)
+            {
+                return 1;
+            }
+            fin.close();
+        }
+
+        cerr << "\nTotal loci: " << totalLoci << endl; // across all files
+        flog << "\nTotal loci: " << totalLoci << endl; // across all files
+
+
+        string chr;
+        //@NORMLOGINPUT
+        if (IHS || NSL)
+        {
+            cerr << "Reading all data.\n";
+            double *freq = new double[totalLoci];
+            double *score = new double[totalLoci];
+            //read in all data
+            readAllIHS(filename, fileLoci, nfiles, freq, score);
+
+            double *mean = new double[numBins];
+            double *variance = new double[numBins];
+            int *n = new int[numBins];
+
+            double minFreq;
+            double maxFreq;
+            double step;
+
+            //This would use the empirical range to draw bin boundaries
+            //gsl_stats_minmax(&minFreq,&maxFreq,freq,1,totalLoci);
+
+            //This uses the possible range to draw bin boundaries
+            minFreq = 0.0;
+            maxFreq = 1.0;
+
+            step = (maxFreq - minFreq) / double(numBins);
+
+            double *threshold = new double[numBins];
+
+            for (int b = 0; b < numBins; b++)
+            {
+                threshold[b] = minFreq + (b + 1) * step;
+            }
+
+            cerr << "Calculating mean and variance per frequency bin:\n\n";
+            if(LOG_INPUT){
+                cerr << "Using frequency bins from " << params.getStringFlag(ARG_LOG_INPUT) << "\n";
+                flog << "Using frequency bins from " << params.getStringFlag(ARG_LOG_INPUT) << "\n";
+
+                getMeanVarBinsFromLog(params.getStringFlag(ARG_LOG_INPUT),
+                                        freq, score, totalLoci,
+                                        mean, variance,  n, numBins, threshold, (XPNSL|| XPEHH|| SOFT));
+            }else{
+                getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold);
+
+            }
+
+            gsl_sort(score, 1, totalLoci);
+
+            double upperCutoff, lowerCutoff;
+
+            if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
+            {
+                upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
+                lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
+
+                cerr << "\nTop cutoff: " << upperCutoff << endl;
+                cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
+                flog << "\nTop cutoff: " << upperCutoff << endl;
+                flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
+            }
+            else
+            {
+                upperCutoff = critNum;
+                lowerCutoff = -critNum;
+            }
+            delete [] freq;
+            delete [] score;
+
+            //Output bins info to file.
+            cerr << "bin\tnum\tmean\tvariance\n";
+            flog << "bin\tnum\tmean\tvariance\n";
+            for (int i = 0; i < numBins; i++)
+            {
+                cerr << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+                flog << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+            }
+
+
+            //Read each file and create normed files.
+            if (FIRST) nfiles = 1;
+            for (int i = 0; i < nfiles; i++)
+            {
+                cerr << "Normalizing " << filename[i] << "\n";
+                normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, NSL);
+                //fin[i].close();
+                //fout[i].close();
+            }
+
+
+
+            
+            
+        }
+        else if (XPEHH || SOFT) {
+
+            cerr << "Reading all data.\n";
+            double *freq1 = new double[totalLoci];
+            double *freq2;
+            if(XPEHH) freq2 = new double[totalLoci];
+            double *score = new double[totalLoci];
+            //read in all data
+            if(XPEHH) readAllXPEHH(filename, fileLoci, nfiles, freq1, freq2, score);
+            if(SOFT) readAllIHH12(filename, fileLoci, nfiles, freq1, score);
+            numBins = 1;
+            double *mean = new double[numBins];
+            double *variance = new double[numBins];
+            int *n = new int[numBins];
+
+            double minFreq;
+            double maxFreq;
+            double step;
+
+            //This would use the empirical range to draw bin boundaries
+            //gsl_stats_minmax(&minFreq,&maxFreq,freq,1,totalLoci);
+
+            //This uses the possible range to draw bin boundaries
+            minFreq = 0.0;
+            maxFreq = 1.0;
+
+            step = (maxFreq - minFreq) / double(numBins);
+
+            double *threshold = new double[numBins];
+
+            for (int b = 0; b < numBins; b++)
+            {
+                threshold[b] = minFreq + (b + 1) * step;
+            }
+
+            cerr << "Calculating mean and variance:\n\n";
+
+            if(LOG_INPUT){
+                cerr << "Using frequency bins from " << params.getStringFlag(ARG_LOG_INPUT) << "\n";
+                flog << "Using frequency bins from " << params.getStringFlag(ARG_LOG_INPUT) << "\n";
+
+                getMeanVarBinsFromLog(params.getStringFlag(ARG_LOG_INPUT),
+                                        freq1, score, totalLoci,
+                                        mean, variance,  n, numBins, threshold, (XPNSL|| XPEHH|| SOFT));
+            }else{
+                getMeanVarBins(freq1, score, totalLoci, mean, variance, n, numBins, threshold);
+            }
+            
+
+            gsl_sort(score, 1, totalLoci);
+
+            double upperCutoff, lowerCutoff;
+
+            if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
+            {
+                upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
+                lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
+
+                cerr << "\nTop cutoff: " << upperCutoff << endl;
+                cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
+                flog << "\nTop cutoff: " << upperCutoff << endl;
+                flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
+            }
+            else
+            {
+                upperCutoff = critNum;
+                lowerCutoff = -critNum;
+            }
+            delete [] freq1;
+            if (XPEHH) delete [] freq2;
+            delete [] score;
+
+            //Output bins info to file.
+            cerr << "num\tmean\tvariance\n";
+            flog << "num\tmean\tvariance\n";
+            for (int i = 0; i < numBins; i++)
+            {
+                cerr << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+                flog << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+            }
+
+            // Only normalizing if necessary
+            if(!LOG_ONLY){
+                
+                if (FIRST){
+                    cerr << "Only normalizing first file as --first flag is set.\n";
+                    nfiles = 1;
+                }
+
+                //Read each file and create normed files.
+                for (int i = 0; i < nfiles; i++)
+                {
+                    cerr << "Normalizing " << filename[i] << "\n";
+                    if(XPEHH) normalizeXPEHHDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, XPNSL);
+                    if(SOFT) normalizeIHH12DataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
+                    //fin[i].close();
+                    //fout[i].close();
+                }
+            }else{
+                cerr << "Skipping outputting normalized output as --log-only flag is set.\n";
+            }
+            
+            delete [] threshold;
+            delete [] mean;
+            delete [] variance;
+            delete [] n;
+
+           
+        }
+
+        // delete [] threshold;
+        // delete [] mean;
+        // delete [] variance;
+        // delete [] n;
+        flog.close();
+    }
+
+
+
+
+    if(BPWIN){ // start from .ihs.out, then require .norm files
+        if(DO_NORM){
+            cerr << "Using " << nfiles << " normalized output files for window-based analysis.\n";
+        }else{
+            cerr << "You have provided " << nfiles << " normalized files for window-based analysis.\n";
+            outfilename = new string[nfiles];
+            fileLoci = new int[nfiles];
+            ifstream fin;
+            int totalLoci = 0;
+                   //For each file, open it, and check it for integrity
+            //Also record total number of lines so we can allocate
+            //enough space for the array of paired data that will
+            //be used to calculate E[X] and E[X^2]
+            for (int i = 0; i < nfiles; i++)
+            {
+                fin.open(filename[i].c_str());
+                if (fin.fail())
+                {
+                    cerr << "ERROR: " << filename[i] << " " << strerror(errno);
+                    flog << "ERROR: " << filename[i] << " " << strerror(errno);
+                    return 1;
+                }
+                else
+                {
+                    cerr << "Opened " << filename[i] << endl;
+                    //flog << filename[i] << endl;
+                }
+
+                //check integrity of file and keep count of the number of lines
+                try
+                {
+                    if (IHS || NSL) fileLoci[i] = checkIHSfile(fin, true);
+                    if (SOFT) fileLoci[i] = checkIHH12file(fin, true);
+                    if (XPEHH) fileLoci[i] = checkXPEHHfile(fin, true);
+                    totalLoci += fileLoci[i];
+                }
+                catch (...)
+                {
+                    return 1;
+                }
+                fin.close();
+                outfilename[i] = filename[i]; //already .norm files
+            }
+
+            cerr << "\nTotal loci: " << totalLoci << endl; // across all files
+            flog << "\nTotal loci: " << totalLoci << endl; // across all files
+        }
+
+
+        if(IHS || NSL){
+            analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs); //require .norm files
+        }
+        if (XPEHH) analyzeXPEHHBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
+        if (SOFT) analyzeIHH12BPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
+    }
+
+
+    bool XP = (XPEHH || XPNSL);
+
+    if(LOG_ONLY) DO_GENE = false;
+    if(DO_GENE){ 
+        cerr << "Annotating " << nfiles << "files with " << geneFile << "\n";
         
-        fin.open(filename[i].c_str());
-        if (fin.fail())
-        {
-            cerr << "ERROR: " << infoOutfile << " " << strerror(errno);
-            flog << "ERROR: " << infoOutfile << " " << strerror(errno);
-            return 1;
-        }
-        else
-        {
-            cerr << "Opened " << filename[i] << endl;
-            //flog << filename[i] << endl;
+        vector<string> normFilenames(nfiles);
+        vector<string> winFilenames(nfiles);
+
+        if(HAVE_WINFILE){ //--win-files
+            cerr << "You have provided " << nfiles << " window files for gene annotation.\n";
+            genex.annotateWindows(geneFile, useGTF, filename);
+        }else if(DO_NORM){ // --files but not --win-files
+            cerr << "Using " << filename.size() << " normalized output files for gene-based analysis.\n";
+            for (int i = 0; i < filename.size() ; i++)
+            {
+                normFilenames[i] = outfilename[i];
+            }
+        }else{ // no --files, no --win-files, but maybe --norm-files
+            cerr << "You have provided " << nfiles << " normalized files for gene-based analysis.\n";
+            ifstream fin;
+            for (int i = 0; i < nfiles; i++)
+            {
+                fin.open(filename[i].c_str());
+                if (IHS || NSL) checkIHSfile(fin, true);
+                if (SOFT)  checkIHH12file(fin, true);
+                if (XPEHH) checkXPEHHfile(fin, true);
+                normFilenames[i] = normFiles[i];
+            }
+            fin.close();
+            
         }
 
-        //check integrity of file and keep count of the number of lines
-        try
-        {
-            if (IHS || NSL) fileLoci[i] = checkIHSfile(fin);
-            if (SOFT) fileLoci[i] = checkIHH12file(fin);
-            if (XPEHH) fileLoci[i] = checkXPEHHfile(fin);
-            totalLoci += fileLoci[i];
+        if(BPWIN) { // must be with --norm-files or --files
+            for(int i = 0; i < nfiles; i++)
+            {
+                winFilenames[i] =  outfilename[i];
+            }
+            genex.annotateWindows(geneFile, useGTF, winFilenames);
+            
         }
-        catch (...)
-        {
-            return 1;
+
+
+        if(!HAVE_WINFILE){
+            string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPEHH ? "xpehh" : (XPNSL ? "xpnsl" : "ihh12")));
+            genex.annotateSNPs(geneFile, true, normFilenames, XP, stat, minSNPs);
+            
         }
-        fin.close();
+        
     }
-
-    cerr << "\nTotal loci: " << totalLoci << endl;
-    flog << "\nTotal loci: " << totalLoci << endl;
-
-    if (IHS || NSL)
-    {
-        cerr << "Reading all data.\n";
-        double *freq = new double[totalLoci];
-        double *score = new double[totalLoci];
-        //read in all data
-        readAllIHS(filename, fileLoci, nfiles, freq, score);
-
-        double *mean = new double[numBins];
-        double *variance = new double[numBins];
-        int *n = new int[numBins];
-
-        double minFreq;
-        double maxFreq;
-        double step;
-
-        //This would use the empirical range to draw bin boundaries
-        //gsl_stats_minmax(&minFreq,&maxFreq,freq,1,totalLoci);
-
-        //This uses the possible range to draw bin boundaries
-        minFreq = 0.0;
-        maxFreq = 1.0;
-
-        step = (maxFreq - minFreq) / double(numBins);
-
-        double *threshold = new double[numBins];
-
-        for (int b = 0; b < numBins; b++)
-        {
-            threshold[b] = minFreq + (b + 1) * step;
-        }
-
-        cerr << "Calculating mean and variance per frequency bin:\n\n";
-        getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold);
-
-        gsl_sort(score, 1, totalLoci);
-
-        double upperCutoff, lowerCutoff;
-
-        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
-        {
-            upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
-            lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
-
-            cerr << "\nTop cutoff: " << upperCutoff << endl;
-            cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
-            flog << "\nTop cutoff: " << upperCutoff << endl;
-            flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
-        }
-        else
-        {
-            upperCutoff = critNum;
-            lowerCutoff = -critNum;
-        }
-        delete [] freq;
-        delete [] score;
-
-        //Output bins info to file.
-        cerr << "bin\tnum\tmean\tvariance\n";
-        flog << "bin\tnum\tmean\tvariance\n";
-        for (int i = 0; i < numBins; i++)
-        {
-            cerr << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
-            flog << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
-        }
-
-
-        //Read each file and create normed files.
-        if (FIRST) nfiles = 1;
-        for (int i = 0; i < nfiles; i++)
-        {
-            cerr << "Normalizing " << filename[i] << "\n";
-            normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
-            //fin[i].close();
-            //fout[i].close();
-        }
-
-        delete [] threshold;
-        delete [] mean;
-        delete [] variance;
-        delete [] n;
-
-        if (BPWIN) analyzeIHSBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
-        //if(SNPWIN) analyzeSNPWindows(outfilename,fileLoci,nfiles,snpWinSize);
+            
+    if(!HAVE_WINFILE && !DO_NORM){
+         delete [] outfilename;
+         delete [] fileLoci;
     }
-    else if (XPEHH || SOFT) {
+       
 
-        cerr << "Reading all data.\n";
-        double *freq1 = new double[totalLoci];
-        double *freq2;
-        if(XPEHH) freq2 = new double[totalLoci];
-        double *score = new double[totalLoci];
-        //read in all data
-        if(XPEHH) readAllXPEHH(filename, fileLoci, nfiles, freq1, freq2, score);
-        if(SOFT) readAllIHH12(filename, fileLoci, nfiles, freq1, score);
-        numBins = 1;
-        double *mean = new double[numBins];
-        double *variance = new double[numBins];
-        int *n = new int[numBins];
-
-        double minFreq;
-        double maxFreq;
-        double step;
-
-        //This would use the empirical range to draw bin boundaries
-        //gsl_stats_minmax(&minFreq,&maxFreq,freq,1,totalLoci);
-
-        //This uses the possible range to draw bin boundaries
-        minFreq = 0.0;
-        maxFreq = 1.0;
-
-        step = (maxFreq - minFreq) / double(numBins);
-
-        double *threshold = new double[numBins];
-
-        for (int b = 0; b < numBins; b++)
-        {
-            threshold[b] = minFreq + (b + 1) * step;
-        }
-
-        cerr << "Calculating mean and variance:\n\n";
-        getMeanVarBins(freq1, score, totalLoci, mean, variance, n, numBins, threshold);
-
-        gsl_sort(score, 1, totalLoci);
-
-        double upperCutoff, lowerCutoff;
-
-        if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
-        {
-            upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
-            lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
-
-            cerr << "\nTop cutoff: " << upperCutoff << endl;
-            cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
-            flog << "\nTop cutoff: " << upperCutoff << endl;
-            flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
-        }
-        else
-        {
-            upperCutoff = critNum;
-            lowerCutoff = -critNum;
-        }
-        delete [] freq1;
-        if (XPEHH) delete [] freq2;
-        delete [] score;
-
-        //Output bins info to file.
-        cerr << "num\tmean\tvariance\n";
-        flog << "num\tmean\tvariance\n";
-        for (int i = 0; i < numBins; i++)
-        {
-            cerr << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
-            flog << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
-        }
-
-
-        //Read each file and create normed files.
-        if (FIRST) nfiles = 1;
-        for (int i = 0; i < nfiles; i++)
-        {
-            cerr << "Normalizing " << filename[i] << "\n";
-            if(XPEHH) normalizeXPEHHDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, XPNSL);
-            if(SOFT) normalizeIHH12DataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff);
-            //fin[i].close();
-            //fout[i].close();
-        }
-
-        delete [] threshold;
-        delete [] mean;
-        delete [] variance;
-        delete [] n;
-
-        if(BPWIN){
-            if (XPEHH) analyzeXPEHHBPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
-            if (SOFT) analyzeIHH12BPWindows(outfilename, fileLoci, nfiles, winSize, numQBins, minSNPs);
-        }
-    }
-    flog.close();
     return 0;
 }
+
+
+
+
 /*
 void analyzeSNPWindows(string normedfiles[],int fileLoci[], int nfiles, int snpWinSize)
 {
@@ -569,7 +718,7 @@ void analyzeSNPWindows(string normedfiles[],int fileLoci[], int nfiles, int snpW
 */
 
 // return number of columns in file
-int countCols(ifstream &fin)
+int SelscanNorm::countCols(ifstream &fin)
 {
     int current_cols = 0;
     int currentPos = fin.tellg();
@@ -591,7 +740,7 @@ int countCols(ifstream &fin)
     return current_cols;
 }
 
-int colsToSkip(ifstream &fin, int numCols)
+int SelscanNorm::colsToSkip(ifstream &fin, int numCols)
 {
     // determine the number of cols to skip 
     // (the number more than the number we care about: 6)
@@ -607,7 +756,7 @@ int colsToSkip(ifstream &fin, int numCols)
     return numberColsToSkip;
 }
 
-void skipCols(ifstream &fin, int numCols)
+void SelscanNorm::skipCols(ifstream &fin, int numCols)
 {
     string junk;
     
@@ -617,8 +766,10 @@ void skipCols(ifstream &fin, int numCols)
     }
 }
 
-void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
+    vector<string> chrs(nfiles);
+    
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
@@ -656,13 +807,18 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
         winfilename[i] += "kb.windows";
 
         //Load information into vectors for analysis
-        int winStart = 1;
+        int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;
         double maxAbs = -99999.9;
+
+        //skip header line
+        string header;
+        getline(fin, header);
         for (int j = 0; j < fileLoci[i]; j++)
         {
+            fin >> chrs[i];
             fin >> name;
             fin >> pos;
             fin >> freq;
@@ -754,9 +910,18 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
 
             //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
             //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
-            topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
-            topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
+            
+            if(FINE_PERCENTILE){
+                for(int p = 1; p <= 100; p++){
+                    string perc = to_string(p) + ".0";
+                    topWindowBoundary[b][perc] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 1.0 - double(p)/100.0);
+                }
+            }else{
+                topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
+                topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
 
+            }
+            
             cerr << quantileBound[b] << " "
                  //<< topWindowBoundary[b]["0.1"] << " "
                  //<< topWindowBoundary[b]["0.5"] << " "
@@ -778,8 +943,16 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
     gsl_sort(&(allFracCritPerWindow[start]), 1, count);
     //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
     //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
-    topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
-    topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
+    
+    if(FINE_PERCENTILE){
+        for(int p = 1; p <= 100; p++){
+            string perc = to_string(p) + ".0";
+            topWindowBoundary[b][perc] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 1.0 - double(p)/100.0);
+        }
+    }else{
+        topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
+        topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
+    }
 
     cerr << quantileBound[b] << " "
          //<< topWindowBoundary[b]["0.1"] << " "
@@ -796,6 +969,16 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
     delete [] allSNPsPerWindow;
     delete [] allFracCritPerWindow;
 
+    //USE_GENEBED_ADDSTART
+    // vector<Gene> genes;
+    // if(USE_GENE_BED){
+    //     readGenes(GENE_BED, genes);
+    //     std::sort(genes.begin(), genes.end(), [](auto& a, auto& b){ return a.start < b.start; });
+    // }
+    // std::map<string, std::vector<double>> geneScores;
+    // std::map<string, std::vector<double>> geneLengthsMap;
+    //USE_GENEBED_ADDEND
+
     for (int i = 0; i < nfiles; i++)
     {
         fout.open(winfilename[i].c_str());
@@ -806,11 +989,13 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
         }
         cerr << "Creating window file " << winfilename[i] << endl;
         flog << "Creating window file " << winfilename[i] << endl;
+        fout<<"chr\tstart\tend\tn_snps\tfrac_extreme\tperc\tscore\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
+    
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
+                fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
                 continue;
             }
             double percentile = 100.0;
@@ -819,14 +1004,25 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
                 if (nSNPs[i][j] <= quantileBound[b]) break;
             }
 
-            if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
-            {
-                percentile = 5.0;
+            if(FINE_PERCENTILE){
+                for(int p = 1; p <= 100; p++){
+                    string perc = to_string(p) + ".0";
+                    if (fracCrit[i][j] >= topWindowBoundary[b][perc]){
+                        percentile = double(p);
+                        break;
+                    }
+                }
+            }else{
+                if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
+                {
+                    percentile = 5.0;
+                }
+                else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
+                {
+                    percentile = 1.0;
+                }
             }
-            else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
-            {
-                percentile = 1.0;
-            }
+            
             /*
             else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
             {
@@ -837,16 +1033,108 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
                 percentile = 0.1;
             }
             */
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+
+            fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
             if(maxAbsScore[i][j] == -99999.9){
-                fout << "NA\n";
+                fout << "NA" << endl;
             }
             else{
                 fout << maxAbsScore[i][j] << endl;
             }
+
+            // if(!USE_GENE_BED || i != 0){
+            //     fout<<"\t-"<<endl; 
+            // }
+
+            // if(USE_GENE_BED && i == 0){ // only annotate first file if multiple files   
+            //     fout<<"\t";
+                
+            //     std::deque<Gene> active;
+            //     size_t g = 0;  // pointer for genes
+
+            //     int winStart = winStarts[i][j];
+            //     int winEnd   = winStart + winSize - 1;
+
+            //     while (!active.empty() && active.front().end < winStart) { // Remove genes that ended before this window
+            //         active.pop_front();
+            //     }
+                
+            //     while (g < genes.size() && genes[g].start <= winEnd) { // Add genes whose start is <= window end
+            //         active.push_back(genes[g]);
+            //         g++;
+            //     }
+
+            //     std::vector<std::string> overlaps; // Collect overlapping gene names
+            //     for (const auto& gene : active) {
+            //         if (gene.end >= winStart) {
+            //             overlaps.push_back(gene.name);
+            //             //=
+            //             geneScores[gene.name].push_back(maxAbsScore[i][j]);
+            //             geneLengthsMap[gene.name].push_back(gene.end - gene.start + 1);
+            //             //=
+            //         }
+            //     }
+
+            //     if (overlaps.empty()) {
+            //         fout << "-";
+            //     } else {
+            //         for (size_t i = 0; i < overlaps.size(); i++) {
+            //             fout << overlaps[i];
+            //             if (i < overlaps.size() - 1) fout << ", ";
+            //         }
+            //     }
+            //     fout << "\n";
+            // }
         }
+            
         fout.close();
+        
     }
+
+    
+
+  
+    // if(USE_GENE_BED){
+    //     vector<double> geneLengths;
+    //     //populate geneLengths from map
+    //     for (const auto& [gene, vals] : geneLengthsMap) {
+    //         if(vals.size() > 0){
+    //             geneLengths.push_back(geneLengthsMap[gene][0]); // all lengths are the same for a gene
+    //         }
+    //     }
+    //     vector<double> geneScoresMax;
+    //     for (const auto& [gene, vals] : geneScores) {
+    //         if(vals.size() > 0){
+    //             double* data = const_cast<double*>(vals.data()); // gsl requires non-const pointer
+    //             size_t n = vals.size();
+    //             double maxScore  = *std::max_element(vals.begin(), vals.end());
+    //             geneScoresMax.push_back(maxScore);
+    //         }
+    //     }
+    //     geneScoresMax = regress_out_length(geneLengths, geneScoresMax);
+
+    //     ofstream genetable; // output gene table with mean, sd, nwin, max, max_lenreg
+    //     string genetablefile = GENE_BED + ".genetable";
+    //     genetable.open(genetablefile.c_str());
+    //     if (genetable.fail())
+    //     {
+    //         cerr << "ERROR: " << genetablefile << " " << strerror(errno);
+    //         exit(EXIT_FAILURE);
+    //     }
+    //     genetable << "gene\tmean\tsd\tnwin\tmax\tmax_lenreg\n";  //gene   mean   sd   nwin   max   max_lenreg
+    //     int i = 0;
+    //     for (const auto& [gene, vals] : geneScores) {
+    //         double* data = const_cast<double*>(vals.data()); // gsl requires non-const pointer
+    //         size_t n = vals.size();
+    //         double maxScore  = *std::max_element(vals.begin(), vals.end());
+    //         double meanScore = gsl_stats_mean(data, 1, n);
+    //         double varScore  = 0; // for n = 1
+    //         if (n > 1) varScore = std::sqrt(gsl_stats_variance(data, 1, n)/n); 
+    //         genetable << gene << "\t" << meanScore << "\t" << varScore << "\t" << n << "\t" << maxScore << "\t" << geneScoresMax[i] << "\t" <<"\n";
+    //         i++;
+    //     }
+    //     genetable.close();
+    // }
 
     delete [] quantileBound;
     delete [] topWindowBoundary;
@@ -854,12 +1142,14 @@ void analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int w
     delete [] nSNPs;
     delete [] fracCrit;
     delete [] winfilename;
+    delete [] maxAbsScore; // added 
 
     return;
 }
 
-void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
+    vector<string> chrs(nfiles);
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
@@ -902,7 +1192,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
         winfilename[i] += "kb.windows";
 
         //Load information into vectors for analysis
-        int winStart = 1;
+        int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCritTop = 0;
@@ -911,6 +1201,7 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
         double min = 99999;
         for (int j = 0; j < fileLoci[i]; j++)
         {
+            fin >> chrs[i];
             fin >> name;
             fin >> pos;
             fin >> gpos;
@@ -1029,8 +1320,24 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
         {
             gsl_sort(&(allFracCritPerWindowTop[startTop]), 1, countTop);
 
-            topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
-            topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
+            // topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
+            // topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
+
+            if (FINE_PERCENTILE)
+            {
+                for (int p = 1; p <= 100; p++)
+                {
+                    string perc = to_string(p) + ".0";
+                    double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 1.0 - p / 100.0);
+                    topWindowBoundaryTop[bTop][perc] = key;
+                }
+            }
+            else
+            {
+                topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
+                topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
+
+            }
 
             cerr << quantileBoundTop[bTop] << " "
                  << topWindowBoundaryTop[bTop]["1.0"] << " "
@@ -1047,8 +1354,20 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     }
 
     gsl_sort(&(allFracCritPerWindowTop[startTop]), 1, countTop);
-    topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
-    topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
+
+    if(FINE_PERCENTILE){
+        for (int p = 1; p <= 100; p++)
+        {
+            string perc = to_string(p) + ".0";
+            double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 1.0 - p / 100.0);
+            topWindowBoundaryTop[bTop][perc] = key;
+        }
+    }
+    else{
+        topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
+        topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
+    }
+
 
     cerr << quantileBoundTop[bTop] << " "
          << topWindowBoundaryTop[bTop]["1.0"] << " "
@@ -1087,8 +1406,18 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
         {
             gsl_sort(&(allFracCritPerWindowBot[startBot]), 1, countBot);
 
-            topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
-            topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
+            // topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
+            // topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
+            if(FINE_PERCENTILE){
+                for(int p = 1; p<=100; p++){
+                    string perc = to_string(p)+".0";
+                    double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 1.0 - p/100.0);
+                    topWindowBoundaryBot[bBot][perc] = key;
+                }
+            }else{
+                topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
+                topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
+            }
 
             cerr << quantileBoundBot[bBot] << " "
                  << topWindowBoundaryBot[bBot]["1.0"] << " "
@@ -1105,8 +1434,19 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     }
 
     gsl_sort(&(allFracCritPerWindowBot[startBot]), 1, countBot);
-    topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
-    topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
+    // topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
+    // topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
+    if(FINE_PERCENTILE){
+        for(int p = 1; p<=100; p++){
+            string perc = to_string(p)+".0";
+            double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 1.0 - p/100.0);
+            topWindowBoundaryBot[bBot][perc] = key;
+        }
+    }else{
+        topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
+        topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
+    }
+
 
     cerr << quantileBoundBot[bBot] << " "
          << topWindowBoundaryBot[bBot]["1.0"] << " "
@@ -1128,11 +1468,13 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
-        cerr << "Creating window file " << winfilename[i] << endl;
+        fout<<"chr\tstart\tend\tn_snps\tfrac_top\tfrac_bottom\tperc_top\tperc_bottom\ttop_score\tbottom_score\n";  
+        cerr << "Creating window file " << winfilename[i] << endl; 
         flog << "Creating window file " << winfilename[i] << endl;
+
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
+            fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
             if (nSNPs[i][j] < minSNPs)
             {
                 fout << "-1\t-1\tNA\tNA" << endl;
@@ -1145,14 +1487,27 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 if (nSNPs[i][j] <= quantileBoundTop[bTop]) break;
             }
 
-            if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["5.0"] && fracCritTop[i][j] < topWindowBoundaryTop[bTop]["1.0"])
-            {
-                percentile = 5.0;
+
+            if(FINE_PERCENTILE){
+                for(int p = 1; p <= 100; p++){
+                    string perc = to_string(p) + ".0";
+                    if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop][perc]){
+                        percentile = double(p);
+                        break;
+                    }
+                }
+            }else{
+
+                if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["5.0"] && fracCritTop[i][j] < topWindowBoundaryTop[bTop]["1.0"])
+                {
+                    percentile = 5.0;
+                }
+                else if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
+                {
+                    percentile = 1.0;
+                }
             }
-            else if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
-            {
-                percentile = 1.0;
-            }
+            
             
             fout << percentile << "\t";
 
@@ -1162,13 +1517,22 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 if (nSNPs[i][j] <= quantileBoundBot[bBot]) break;
             }
 
-            if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["5.0"] && fracCritBot[i][j] < topWindowBoundaryBot[bBot]["1.0"])
-            {
-                percentile = 5.0;
-            }
-            else if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
-            {
-                percentile = 1.0;
+            if(FINE_PERCENTILE){
+                for(int p = 1; p <= 100; p++){
+                    string perc = to_string(p) + ".0";
+                    if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot][perc]){
+                        percentile = double(p);
+                        break;
+                    }
+                }
+            }else{
+                if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["5.0"] && fracCritBot[i][j] < topWindowBoundaryBot[bBot]["1.0"])        {
+                    percentile = 5.0;
+                }
+                else if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
+                {
+                    percentile = 1.0;
+                }
             }
             
             fout << percentile << "\t";
@@ -1204,14 +1568,16 @@ void analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     return;
 }
 
-void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
+void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
+    vector<string> chrs(nfiles);
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
     vector<int> *winStarts = new vector<int>[nfiles];
     vector<int> *nSNPs = new vector<int>[nfiles];
     vector<double> *fracCrit = new vector<double>[nfiles];
+    vector<double> *maxAbsScore = new vector<double>[nfiles];
 
     ifstream fin;
     ofstream fout;
@@ -1225,7 +1591,8 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     double gpos, freq1, ihh12, data, normedData;
     bool crit;
     int numWindows = 0;
-
+    double maxAbs = -99999.9;
+    
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(normedfiles[i].c_str());
@@ -1244,12 +1611,13 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
         winfilename[i] += "kb.windows";
 
         //Load information into vectors for analysis
-        int winStart = 1;
+        int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;
         for (int j = 0; j < fileLoci[i]; j++)
         {
+            fin >> chrs[i];
             fin >> name;
             fin >> pos;
             fin >> freq1;
@@ -1265,13 +1633,17 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 else fracCrit[i].push_back(double(numCrit) / double(numSNPs));
 
                 if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
+                maxAbsScore[i].push_back(maxAbs);
+                maxAbs = -99999.9;
 
                 winStart += winSize;
                 winEnd += winSize;
                 numSNPs = 0;
                 numCrit = 0;
+                
             }
 
+            if(normedData > maxAbs) maxAbs = normedData;
             numSNPs++;
             numCrit += crit;
         }
@@ -1386,13 +1758,15 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
             cerr << "ERROR: " << winfilename[i] << " " << strerror(errno);
             throw - 1;
         }
+        fout<<"chr\tstart\tend\tn_snps\tfrac_extreme\tperc\tscore\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
+    
         cerr << "Creating window file " << winfilename[i] << endl;
         flog << "Creating window file " << winfilename[i] << endl;
         for (int j = 0; j < nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
-                fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" << endl;
+                fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" <<"\tNA"<< endl;
                 continue;
             }
             double percentile = 100.0;
@@ -1401,14 +1775,25 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 if (nSNPs[i][j] <= quantileBound[b]) break;
             }
 
-            if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
-            {
-                percentile = 5.0;
+            if(FINE_PERCENTILE){
+                for(int p = 1; p <= 100; p++){
+                    string perc = to_string(p) + ".0";
+                    if (fracCrit[i][j] >= topWindowBoundary[b][perc]){
+                        percentile = double(p);
+                        break;
+                    }
+                }
+            }else{
+                if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
+                {
+                    percentile = 5.0;
+                }
+                else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
+                {
+                    percentile = 1.0;
+                }
             }
-            else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
-            {
-                percentile = 1.0;
-            }
+            
             /*
             else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
             {
@@ -1419,7 +1804,14 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
                 percentile = 0.1;
             }
             */
-            fout << winStarts[i][j] << "\t" << winStarts[i][j] + winSize << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << endl;
+            fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t" << percentile << "\t";
+            if(maxAbsScore[i][j] == -99999.9){
+                fout << "NA";
+            }
+            else{
+                fout << maxAbsScore[i][j] ;
+            }
+            fout<<endl;
         }
         fout.close();
     }
@@ -1431,11 +1823,16 @@ void analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], int nfiles, int
     delete [] fracCrit;
     delete [] winfilename;
 
+    delete [] maxAbsScore;
+
     return;
 }
 
-
-void getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[])
+//Calculates mean and variance for each frequency bin
+//and normalizes the data array based on these values
+//freq[]: derived allele frequency array
+//data[]: unnormalized score array  
+void SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[])
 {
     //initialize
     for (int b = 0; b < numBins; b++)
@@ -1488,10 +1885,121 @@ void getMeanVarBins(double freq[], double data[], int nloci, double mean[], doub
     return;
 }
 
+void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
+                                       double freq[], double data[], int nloci,
+                                       double mean[], double variance[], int n[],
+                                       int numBins, double threshold[], bool XPORSOFT)
+{
+    // 1. Initialize arrays
+    for (int b = 0; b < numBins; b++) {
+        n[b] = 0;
+        mean[b] = NAN;
+        variance[b] = NAN;
+    }
+
+    // 2. Open file
+    std::ifstream in(binFile);
+    if (!in) {
+        std::cerr << "Error: cannot open bin data file " << binFile << "\n";
+        exit(1);
+    }
+
+    std::string line;
+    bool headerFound = false;
+
+    // 3. Read until we find the header that starts with "bin"
+    while (std::getline(in, line)) {
+            if(!XPORSOFT){
+                if (line.rfind("bin\tnum\tmean\tvariance", 0) == 0) {  // starts with "bin"
+                    headerFound = true;
+                    break;
+                }
+            }else{
+                if (line.rfind("num\tmean\tvariance", 0) == 0) {  // starts with "num"
+                    headerFound = true;
+                    break;
+                }
+            }
+        
+    }
+
+    if (!headerFound) {
+        if(XPORSOFT){
+            std::cerr << "Error: no header starting with 'num\tmean\tvariance' found in " << binFile << "\n";
+            exit(1);
+            
+        }else{
+            std::cerr << "Error: no header starting with 'bin\tnum\tmean\tvariance' found in " << binFile << "\n";
+            exit(1);
+        }
+    }
+
+    // 4. Read the rest of the file (bin rows)
+    if(!XPORSOFT){
+        while (std::getline(in, line)) {
+            if (line.empty()) continue;
+
+            std::istringstream iss(line);
+            double bin;
+            int num;
+            double m, v;
+            if (!(iss >> bin >> num >> m >> v)) continue;
+
+            // Find the right bin slot by threshold match
+            for (int b = 0; b < numBins; b++) {
+                if (std::abs(bin - threshold[b]) < 1e-6) {
+                    n[b] = num;
+                    mean[b] = m;
+                    variance[b] = v;
+                    break;
+                }
+            }
+        }
+    }else{
+        if(numBins != 1){
+            std::cerr << "Error: XP-EHH or XP-nSL or iHH12 log file should contain stats for exactly one bin.\n";
+            exit(1);
+        }
+        int b = 0;
+        while (std::getline(in, line)) {
+            if (line.empty()) continue;
+
+            std::istringstream iss(line);
+            int num;
+            double m, v;
+            if (!(iss >> num >> m >> v)) continue;
+
+            if (b < numBins) {
+                n[b] = num;
+                mean[b] = m;
+                variance[b] = v;
+                b++;
+            }
+        }
+    }
+    
+    in.close();
+
+    // 5. Normalize the data using the precomputed stats
+    for (int i = 0; i < nloci; i++) {
+        if (data[i] == MISSING) continue;
+        for (int b = 0; b < numBins; b++) {
+            if (freq[i] < threshold[b]) {
+                if (n[b] > 1 && !std::isnan(mean[b]) && !std::isnan(variance[b])) {
+                    data[i] = (data[i] - mean[b]) / std::sqrt(variance[b]);
+                }
+                break;
+            }
+        }
+    }
+}
+
 //Reads a file, calculates the normalized score, and
 //outputs the original row plus normed score
-void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
+void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool NSL)
 {
+ 
+    //TODO FIX IHS DETAILS
     ifstream fin;
     ofstream fout;
 
@@ -1503,19 +2011,43 @@ void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci
         throw 1;
     }
 
-    string name;
+
+    string name, header;
     int pos;
+    string chr;
     double freq, data, normedData, ihh1, ihh2;;
     int numInBin = 0;
     string junk;
+    getline(fin, header);
+
+    const std::string expectedHeaderIHS = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+    const std::string expectedHeaderNSL = "chr\tid\tpos\tfreq\tihh1\tihh0\tnsl";
+
+
+    if (NSL){
+         if(expectedHeaderNSL != header){
+            cerr << "ERROR: Expected header '" << expectedHeaderNSL << "' but found '" << header << "' in file " << filename << "\n";
+            flog << "ERROR: Expected header '" << expectedHeaderNSL << "' but found '" << header << "' in file " << filename << "\n";
+            exit(EXIT_FAILURE);
+        }
+        fout << header + "\tnorm_nsl\tcrit\n"; 
+    } else{
+         if(expectedHeaderIHS != header){
+            cerr << "ERROR: Expected header '" << expectedHeaderIHS <<  "' but found '" << header << "' in file " << filename << "\n";
+            flog << "ERROR: Expected header '" << expectedHeaderIHS <<  "' but found '" << header << "' in file " << filename << "\n";
+            exit(EXIT_FAILURE);
+        }
+        fout << header + "\tnorm_ihs\tcrit\n";  
+    } 
 
     // determine the number of cols to skip 
     // (the number more than the number we care about: 6)
     int numColsToSkip = 0;
-    numColsToSkip = colsToSkip(fin, 6);
+    numColsToSkip = colsToSkip(fin, 7);
 
     for (int j = 0; j < fileLoci; j++)
     {
+        fin >> chr;
         fin >> name;
         fin >> pos;
         fin >> freq;
@@ -1539,7 +2071,8 @@ void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci
 
         if (numInBin >= 20)
         {
-            fout << name << "\t"
+            fout << chr << "\t" 
+                << name << "\t"
                  << pos << "\t"
                  << freq << "\t"
                  << ihh1 << "\t"
@@ -1557,7 +2090,7 @@ void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci
     return;
 }
 
-void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool XPNSL)
+void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool XPNSL)
 {
     ifstream fin;
     ofstream fout;
@@ -1570,20 +2103,24 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
         throw 1;
     }
 
+
+    
     string name, header;
     int pos;
+    string chr;
     double gpos, freq1, freq2, data, normedData, ihh1, ihh2;;
     int numInBin = 0;
 
     getline(fin, header);
     if (XPNSL){
-        fout << header + "\tnormxpnsl\tcrit\n"; 
+        fout << header + "\tnorm_xpnsl\tcrit\n"; 
     } else{
-        fout << header + "\tnormxpehh\tcrit\n";  
+        fout << header + "\tnorm_xpehh\tcrit\n";  
     } 
 
     for (int j = 0; j < fileLoci; j++)
     {
+        fin >> chr;
         fin >> name;
         fin >> pos;
         fin >> gpos;
@@ -1606,7 +2143,8 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
 
         if (numInBin >= 20)
         {
-            fout << name << "\t"
+            fout << chr << "\t" 
+                << name << "\t"
                  << pos << "\t"
                  << gpos << "\t"
                  << freq1 << "\t"
@@ -1627,7 +2165,8 @@ void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLo
     return;
 }
 
-void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
+
+void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
 {
     ifstream fin;
     ofstream fout;
@@ -1640,17 +2179,25 @@ void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLo
         throw 1;
     }
 
-    string name, header;
+    string chr, name, header;
     int pos;
     double gpos, freq1, data, normedData, ihh1, ihh2;;
     int numInBin = 0;
 
     getline(fin, header);
 
-    fout << header + "\tnormihh12\tcrit\n";
+    const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh12";
+    if (header != expectedHeader) {     //check that header matches expected format
+        flog << "ERROR: Expected header '" << expectedHeader << "' but found '" << header << "' in file " << filename << "\n";
+        cerr << "ERROR: Expected header '" << expectedHeader << "' but found '" << header << "' in file " << filename << "\n";
+        exit(EXIT_FAILURE);
+    }
+
+    fout << header + "\tnorm_ihh12\tcrit\n";
 
     for (int j = 0; j < fileLoci; j++)
     {
+        fin >> chr;
         fin >> name;
         fin >> pos;
         fin >> freq1;
@@ -1669,12 +2216,14 @@ void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLo
 
         if (numInBin >= 20)
         {
-            fout << name << "\t"
+            fout << chr << "\t"
+                 << name << "\t"
                  << pos << "\t"
                  << freq1 << "\t"
                  << data << "\t"
                  << normedData << "\t";
-            if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
+            //if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
+            if (normedData >= upperCutoff) fout << "1\n";
             else fout << "0\n";
         }
     }
@@ -1685,58 +2234,135 @@ void normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLo
     return;
 }
 
-//returns number of lines in file
-int checkIHSfile(ifstream &fin)
+// returns number of loci (lines) in IHS file
+int SelscanNorm::checkIHSfile(std::ifstream &fin, bool norm)
 {
-    string line;
-    int expected_cols = 6;
-    int expected_cols_alternate = 10; // this is the case if --ihs-detail is specified (four extra columns for iHH left/right and ancestral/derived)
-    int current_cols = 0;
+    std::string line;
+    
+    // Base expected column counts (unnormalized)
+    int expected_cols = 7;
+    int expected_cols_alternate = 11; // --ihs-detail
 
-    //beginning of the file stream
-    int start = fin.tellg();
-
-    int nloci = 0;
-    while (getline(fin, line))
-    {
-        nloci++;
-        current_cols = countFields(line);
-        if ((current_cols != expected_cols && current_cols != expected_cols_alternate) && nloci > 1)
-        {
-            cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " or " << expected_cols_alternate << " columns.\n";
-            throw 0;
-        }
-        //previous_cols = current_cols;
+    // Add norm + crit if normalized
+    if (norm) {
+        expected_cols += 2;
+        expected_cols_alternate += 2;
     }
 
+    int current_cols = 0;
+
+    // beginning of the file stream
+    std::streampos start = fin.tellg();
+
+    int nloci = 0;
+
+    // Skip header
+    std::string header;
+    std::getline(fin, header);
+
+    // const std::string expectedHeader =
+    //     norm
+    //     ? "chr\tid\tpos\tfreq\tihh1\tihh0\tihs\tnorm_ihs\tcrit"
+    //     : "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+
+    // if (header != expectedHeader) {
+    //     std::cerr << "WARNING: Expected header '" << expectedHeader
+    //               << "' but found '" << header << "' in IHS file.\n";
+    // }
+
+    while (std::getline(fin, line))
+    {
+        if (line.empty()) continue;
+
+        nloci++;
+        current_cols = countFields(line);
+
+        if (current_cols != expected_cols &&
+            current_cols != expected_cols_alternate)
+        {
+            std::cerr << "ERROR: line " << nloci
+                      << " has " << current_cols
+                      << " columns, but expected "
+                      << expected_cols << " or "
+                      << expected_cols_alternate << " columns.\n";
+            throw 0;
+        }
+    }
+
+    // rewind stream
     fin.clear();
     fin.seekg(start);
 
     return nloci;
 }
 
-void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
+
+// //returns number of lines in file
+// int SelscanNorm::checkIHSfile(ifstream &fin)
+// {
+//     string line;
+//     int expected_cols = 7; // 6;
+//     int expected_cols_alternate = 11; // 10; // this is the case if --ihs-detail is specified (four extra columns for iHH left/right and ancestral/derived)
+//     int current_cols = 0;
+
+//     //beginning of the file stream
+//     int start = fin.tellg();
+
+//     int nloci = 0;
+    
+//     string header;
+//     getline(fin, header); //added in v3, skip header line
+//     //if header does not match expected format, throw error
+//     const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
+//     if (header != expectedHeader) {
+//         cerr << "WARNING: Expected header '" << expectedHeader << "' but found '" << header << "' in IHS file.\n"; 
+//     }
+
+//     while (getline(fin, line))
+//     {
+//         nloci++;
+//         current_cols = countFields(line);
+//         if ((current_cols != expected_cols && current_cols != expected_cols_alternate) && nloci > 1)
+//         {
+//             cerr << "ERROR: line " << nloci << " has " << current_cols
+//                  << " columns, but expected " << expected_cols << " or " << expected_cols_alternate << " columns.\n";
+//             throw 0;
+//         }
+//         //previous_cols = current_cols;
+//     }
+
+//     nloci--; //added in v3, skip header line
+
+//     fin.clear();
+//     fin.seekg(start);
+
+//     return nloci;
+// }
+
+void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
+    //chr	id	pos	freq	ihh1	ihh0	ihs
     ifstream fin;
     string junk;
     int overallCount = 0;
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(filename[i].c_str());
+        getline(fin, junk); //added v3, skip header line
 
         int numColsToSkip = 0;
-        numColsToSkip = colsToSkip(fin, 6);
+        numColsToSkip = colsToSkip(fin, 7); // if it has extra columns, skip them
 
         for (int j = 0; j < fileLoci[i]; j++)
         {
+            fin >> junk;
             fin >> junk;
             fin >> junk;
             fin >> freq[overallCount];
             fin >> junk;
             fin >> junk;
             fin >> score[overallCount];
-            skipCols(fin, numColsToSkip);
+            skipCols(fin, numColsToSkip); // if it has extra columns, skip them
             overallCount++;
         }
         fin.close();
@@ -1745,31 +2371,55 @@ void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq
     return;
 }
 
-int checkXPEHHfile(ifstream &fin)
+// returns number of loci (lines) in XP-EHH file
+int SelscanNorm::checkXPEHHfile(std::ifstream &fin, bool norm)
 {
-    string line;
-    int expected_cols = 8;
-    int current_cols = 0;
+    std::string line;
 
-    //beginning of the file stream
-    int start = fin.tellg();
-
-    int nloci = 0;
-    while (getline(fin, line))
-    {
-        nloci++;
-        current_cols = countFields(line);
-        if ((current_cols != expected_cols) && nloci > 1)
-        {
-            cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " columns.\n";
-            throw 0;
-        }
-        //previous_cols = current_cols;
+    int expected_cols = 9; // raw XP-EHH
+    if (norm) {
+        expected_cols += 2; // norm_xpehh + crit
     }
 
-    nloci--;
+    int current_cols = 0;
 
+    // beginning of the file stream
+    std::streampos start = fin.tellg();
+
+    int nloci = 0;
+
+    // Skip header
+    std::string header;
+    std::getline(fin, header);
+
+    // const std::string expectedHeader =
+    //     norm
+    //     ? "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\tnorm_xpehh\tcrit"
+    //     : "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh";
+
+    // if (header != expectedHeader) {
+    //     std::cerr << "WARNING: Expected header '" << expectedHeader
+    //               << "' but found '" << header << "' in XP-EHH file.\n";
+    // }
+
+    while (std::getline(fin, line))
+    {
+        if (line.empty()) continue;
+
+        nloci++;
+        current_cols = countFields(line);
+
+        if (current_cols != expected_cols)
+        {
+            std::cerr << "ERROR: line " << nloci
+                      << " has " << current_cols
+                      << " columns, but expected "
+                      << expected_cols << " columns.\n";
+            throw 0;
+        }
+    }
+
+    // rewind stream
     fin.clear();
     fin.seekg(start);
 
@@ -1777,38 +2427,66 @@ int checkXPEHHfile(ifstream &fin)
 }
 
 
-int checkIHH12file(ifstream &fin)
+
+// returns number of loci (lines) in IHH12 file
+int SelscanNorm::checkIHH12file(std::ifstream &fin, bool norm)
 {
-    string line;
-    int expected_cols = 4;
-    int current_cols = 0;
+    std::string line;
 
-    //beginning of the file stream
-    int start = fin.tellg();
+    int expected_cols = 5; // raw: chr id pos p1 ihh12
 
-    int nloci = 0;
-    while (getline(fin, line))
-    {
-        nloci++;
-        current_cols = countFields(line);
-        if ((current_cols != expected_cols) && nloci > 1)
-        {
-            cerr << "ERROR: line " << nloci << " has " << current_cols
-                 << " columns, but expected " << expected_cols << " columns.\n";
-            throw 0;
-        }
-        //previous_cols = current_cols;
+    // Add norm + crit if normalized
+    if (norm) {
+        expected_cols += 2; // norm_ihh12 + crit
     }
 
-    nloci--;
+    int current_cols = 0;
 
+    // beginning of the file stream
+    std::streampos start = fin.tellg();
+
+    int nloci = 0;
+
+    // Skip header
+    std::string header;
+    std::getline(fin, header);
+
+    // const std::string expectedHeader =
+    //     norm
+    //     ? "chr\tid\tpos\tp1\tihh12\tnorm_ihh12\tcrit"
+    //     : "chr\tid\tpos\tp1\tihh12";
+
+    // if (header != expectedHeader) {
+    //     std::cerr << "WARNING: Expected header '" << expectedHeader
+    //               << "' but found '" << header << "' in IHH12 file.\n";
+    // }
+
+    while (std::getline(fin, line))
+    {
+        if (line.empty()) continue;
+
+        nloci++;
+        current_cols = countFields(line);
+
+        if (current_cols != expected_cols)
+        {
+            std::cerr << "ERROR: line " << nloci
+                      << " has " << current_cols
+                      << " columns, but expected "
+                      << expected_cols << " columns.\n";
+            throw 0;
+        }
+    }
+
+    // rewind stream
     fin.clear();
     fin.seekg(start);
 
     return nloci;
 }
 
-void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[])
+
+void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[])
 {
     ifstream fin;
     string junk;
@@ -1816,12 +2494,13 @@ void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double fr
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(filename[i].c_str());
-        getline(fin, junk);
+        getline(fin, junk); //skip header line
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> junk;
-            fin >> junk;
-            fin >> junk;
+            fin >> junk; //chr
+            fin >> junk; //id
+            fin >> junk; //pos
+            fin >> junk; //gpos
             fin >> freq1[overallCount];
             fin >> junk;
             fin >> freq2[overallCount];
@@ -1835,21 +2514,24 @@ void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double fr
     return;
 }
 
-void readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[])
+void SelscanNorm::readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[])
 {
     ifstream fin;
     string junk;
     int overallCount = 0;
+
     for (int i = 0; i < nfiles; i++)
     {
         fin.open(filename[i].c_str());
-        getline(fin, junk);
+        getline(fin, junk); //skip header line
+
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> junk;
-            fin >> junk;
-            fin >> freq1[overallCount];
-            fin >> score[overallCount];
+            fin >> junk; //chr
+            fin >> junk; //id
+            fin >> junk; //pos
+            fin >> freq1[overallCount]; //p1
+            fin >> score[overallCount]; //ihh12
             overallCount++;
         }
         fin.close();
@@ -1859,7 +2541,7 @@ void readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double fr
 }
 
 
-int countFields(const string &str)
+int SelscanNorm::countFields(const string &str)
 {
     string::const_iterator it;
     int result;
@@ -1881,7 +2563,7 @@ int countFields(const string &str)
     return numFields;
 }
 
-bool isint(string str)
+bool SelscanNorm::isint(string str)
 {
     for (string::iterator it = str.begin(); it != str.end(); it++)
     {
@@ -1891,8 +2573,3 @@ bool isint(string str)
     return 1;
 }
 
-
-
-int main(int argc, char *argv[]){
-    return runToolNorm(argc, argv);
-}

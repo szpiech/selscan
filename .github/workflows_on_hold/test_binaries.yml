@@ -1,10 +1,8 @@
-name: C++ CI Test Binary (All) -
+name: C++ CI Test Binary (All) 
 
 on:
   push:
-    branches: bugfix_2_1_2 
-  pull_request:
-    branches: bugfix_2_1_2 
+    branches: release_v3 
 
 jobs:
   testbin:
@@ -50,4 +48,4 @@ jobs:
         working-directory: ${{ matrix.bin_dir }}
         run: |
           ./selscan${{ matrix.exe_ext }} --help  
-          ./norm${{ matrix.exe_ext }} --help  
+          ./selscan${{ matrix.exe_ext }} norm --help  

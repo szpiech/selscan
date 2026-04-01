@@ -65,7 +65,7 @@ using namespace std;
 
 
 
-const string VERSION = "2.1.3";
+const string VERSION = "3.0.0";
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
@@ -76,7 +76,8 @@ Citations:\n\
 \n\
 selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
          ZA Szpiech (2024) Bioinformatics 40: btae006.\n\
-         A Rahman, TQ Smith, and ZA Szpiech (2025). MBE 42.11: msaf275.\n\
+         A Rahman, TQ Smith, and ZA Szpiech (2025). MBE, 42(11), msaf275.\n\
+         A Rahman, TQ Smith, and ZA Szpiech (2026). HPGG, 6(2), 0005. https://doi.org/10.47248/hpgg2606020005\n\
 iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
        N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
 nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
@@ -166,7 +167,7 @@ const string HELP_FILENAME_POP2_THAP = "A hapfile in IMPUTE hap format with one 
 const string ARG_FILENAME_MAP = "--map";
 const string DEFAULT_FILENAME_MAP = "__mapfile";
 const string HELP_FILENAME_MAP = "A mapfile with one row per variant site.\n\
-\tFormatted <chr#> <locusID> <genetic pos> <physical pos>.";
+\tFormatted <chr> <locusID> <genetic pos> <physical pos>.";
 
 const string ARG_PMAP = "--pmap";
 const bool DEFAULT_PMAP = false;
@@ -240,20 +241,20 @@ const string HELP_MAF = "If a site has a MAF below this value, the program will 
 
 const string ARG_EHH = "--ehh";
 const string DEFAULT_EHH = "__NO_LOCUS__";
-const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
-\tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified loci: locus1,locus2,locus3,... \n\
+Output: <chr> <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
 
 const string ARG_EHHS = "--ehhs";
 const string DEFAULT_EHHS = "-";
-const string HELP_EHHS = "Specifies one or more genomic coordinate ranges (in bp) for which EHH is computed. Works with --ihs or --nsl flag.\n\
-Format: start1-end1,start2-end2,... (e.g., 1000-2000,5000-6000).\n\
-Outputs a separate file for a single locus, if valid EHH values are present.\n\
-Output columns: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>.\n";
+const string HELP_EHHS = "Specifies one or more comma-separated genomic positions (in bp) for which EHH is computed. "
+"Format: pos1,pos2,pos3,... (e.g., 1500,5200,7800).\n"
+"Outputs a separate file for each specified locus if valid EHH values are present.\n"
+"Output columns: <chr> <physical dist> <genetic dist> <'1' EHH> <'0' EHH>.\n";
 
 const string ARG_EHH12 = "--ehh12";
 const string DEFAULT_EHH12 = "__NO_LOCUS__";
 const string HELP_EHH12 = "Calculate EHH12 of the '1' and '0' haplotypes at the specified\n\
-\tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+\tlocus. Output: <chr> <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
 
 const string ARG_QWIN = "--ehh-win";
 const int DEFAULT_QWIN = 100000;
@@ -282,7 +283,7 @@ const string HELP_KEEP = "Include low frequency variants in the construction of 
 
 const string ARG_MULTIALLELIC = "--filter-vcf";
 const bool DEFAULT_MULTIALLELIC = false;
-const string HELP_MULTIALLELIC = "Allows filtering of VCF files to remove non-biallelic sites and sites with missing data.";
+const string HELP_MULTIALLELIC = "Filter VCF to keep only biallelic SNPs with canonical alleles (A, C, G, T); excludes indels/MNPs/ambiguous bases.";
 
 
 const string ARG_TRUNC = "--trunc-ok";
@@ -304,9 +305,9 @@ const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
 // const bool DEFAULT_MISSING_FLAG = false;
 // const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
-// const string ARG_MULTI_CHR = "--multi-chr";
-// const string DEFAULT_MULTI_CHR = "__NO_CHR__";
-// const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
+const string ARG_MULTI_CHR = "--multi-chr";
+const string DEFAULT_MULTI_CHR = "__ALL_CHR__";
+const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
 
 // @UNCOMMENT
 // const string ARG_IMPUTE_FLAG = "--impute";
