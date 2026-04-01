@@ -52,7 +52,19 @@ using namespace std;
 
 const int MISSING = -9999;  // TO_BE_DELETED
 const char MISSING_CHAR = '9';  // TO_BE_DELETED
+struct VCFPass1Result {
+    queue<size_t> skiplist;
 
+    size_t nloci_before_filtering = 0;
+    size_t skipcount = 0;
+    int current_ngts = -1;
+
+    // allele counts per locus
+    vector<int> num_1s;
+    vector<int> num_2s;
+
+    vector<size_t> physpos;
+};
 class HapMap{
 public:
     /// @brief this parameter is used to store the command line arguments, but it has two copies, this one is hapmap specific, the other one is "run" specific. This is required for multi-stat calculation.
@@ -70,6 +82,13 @@ public:
     // ofstream* fout;
 
     std::atomic<int> currentProcessed = 0;
+
+
+
+    VCFPass1Result readHapDataVCF_pass1(string filename);
+    void readHapDataVCF_pass2(string filename, HapData& hapData, const VCFPass1Result& pass1);
+    void readHapDataVCFXP(string filename, string filename2, HapData& hapData, HapData& hapData2);
+
 
     char randomZeroOrOne() {
         // Create a random device to seed the generator
@@ -113,6 +132,32 @@ public:
             }
         }
         return make_pair(numFields, ones);
+    }
+
+
+    void rebuild_skipqueue_with_new_skips(queue<size_t>& skiplist, const vector<size_t>& new_skips)
+    {
+        vector<size_t> all_skips;
+
+        // Copy old skips out of queue
+        while (!skiplist.empty()) {
+            all_skips.push_back(skiplist.front());
+            skiplist.pop();
+        }
+
+        // Add new skips
+        for (size_t idx : new_skips) {
+            all_skips.push_back(idx);
+        }
+
+        // Sort + deduplicate
+        sort(all_skips.begin(), all_skips.end());
+        all_skips.erase(unique(all_skips.begin(), all_skips.end()), all_skips.end());
+
+        // Rebuild queue
+        for (size_t idx : all_skips) {
+            skiplist.push(idx);
+        }
     }
 
     int countFields(const string &str)

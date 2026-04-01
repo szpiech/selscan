@@ -1,5 +1,5 @@
 <!-- badges: start -->
-[![Version](https://img.shields.io/badge/version-2.1.2-green.svg)](https://shields.io/)
+[![Version](https://img.shields.io/badge/version-2.1.3-green.svg)](https://shields.io/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <!--badges: end -->
 
@@ -243,6 +243,12 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
+31MAR2026 - selscan v2.1.3 - Performance & Output Fixes
+	-  Fixed issue #152: NaN values are now properly removed from output of XPEHH/XPnSL.
+  (Note: this was intended in the previous release but was not applied correctly.)
+	- Corrected an unintended memory increase from the previous release (v2.1.2); program now runs faster on low-memory systems.
+	- For XPEHH/XPnSL, sites not segregating in the combined population are filtered for faster data loading and improved performance.
+
 10MAR2026 - selscan v2.1.2 - Bug fixes for the scalable version v2.1+: 
 	- Removed NaNs from output (fixed issue #152).
 	- Fixed a bug affecting input where number of haplotypes is a multiple of 64 causing crashes (fixed issue #154).
