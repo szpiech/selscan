@@ -76,7 +76,7 @@ binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
 norm.o: norm.cpp norm.h
-	$(CC) $(G++FLAG) -c $< $(I_PATH) $(LINK_OPTS)
+	$(CC) $(G++FLAG) -c $< $(I_PATH_NORM) $(LINK_OPTS)
 
 gene.o: gene.cpp gene.h
 	$(CC) $(G++FLAG) -c $< $(I_PATH) $(LINK_OPTS)
