@@ -2,7 +2,7 @@ name: C++ CI Test Binary (All)
 
 on:
   push:
-    branches: release_v3 
+    branches: patch_3_0_1 
 
 jobs:
   testbin:

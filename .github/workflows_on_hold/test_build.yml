@@ -1,10 +1,9 @@
 name: Test and Build binaries [binary_linux] + [binary_mac_arm] + [binary_mac] + [binary_osx] + [binary_win]
 
-
 on:
   push:
     branches:
-      - release_v3
+      - patch_3_0_1
 
 jobs:
   build:
@@ -16,7 +15,7 @@ jobs:
       matrix:
         include:
           - label: linux
-            runner: ubuntu-20.04
+            runner: ubuntu-latest
             kind: posix
             makefile: Makefile_linux
             bin_dir: bin/linux

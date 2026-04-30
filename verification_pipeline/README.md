@@ -1,4 +1,4 @@
-# Selscan Verification Pipeline
+# Selscan Verification Pipeline (v2 only)
 
 Use this pipeline to **compare outputs from two different versions of selscan**. It helps identify minor bugs or differences between versions.
 

@@ -7,7 +7,7 @@
 void GeneAnalyzer::readGenesFromBed(std::string bedfile, std::vector<Gene> &genes, bool canonical)
 {
     // bed, interval = HALF-OPEN
-    //start = 0-based  
+    // start = 0-based  
     // end   = 1-based  
     // length = end - start
 
@@ -720,7 +720,7 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
 
                 // Check overlapping genes starting from current gene_idx
                 size_t j = gene_idx;
-                std::string GENE_ID = w_chrom + "|" + chrGenes[j].name;
+                //std::string GENE_ID = w_chrom + "|" + chrGenes[j].name;
 
                 while (j < chrGenes.size() && chrGenes[j].start < w_end)
                 {
@@ -747,13 +747,13 @@ void GeneAnalyzer::readGenesFromGTF(std::string gtffile, std::vector<Gene> &gene
                                     bool useTranscripts, bool canonical)
 {
     igzstream infile;
-    std::cerr << "Opening " << gtffile << "...\n";
     infile.open(gtffile.c_str());
 
     if (!infile) {
         std::cerr << "ERROR: could not open file " << gtffile << "\n";
         std::exit(EXIT_FAILURE);
     }
+    std::cout<<"Reading gene annotations from GTF file: " << gtffile << "\n";
 
     auto isGff3Attributes = [](const std::string& attr) -> bool {
         // heuristic: GFF3 looks like key=value;key=value and usually has '='

@@ -1,5 +1,5 @@
 <!-- badges: start -->
-[![Version](https://img.shields.io/badge/version-3.0.0-green.svg)](https://shields.io/)
+[![Version](https://img.shields.io/badge/version-3.0.1-green.svg)](https://shields.io/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <!--badges: end -->
 
@@ -77,7 +77,7 @@ For details, refer to the manual.
 ```
 ** Data must have no missing genotypes. **
 
-selscan v2.1.0 -- a program to calculate EHH-based scans for positive selection in genomes.
+selscan v3.0.1 -- a program to calculate EHH-based scans for positive selection in genomes.
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.
 
 selscan currently implements EHH, iHS, XP-EHH, nSL, and XP-nSL.
@@ -246,6 +246,8 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
+30APR2026 - selscan v3.0.1: Fixed issue #162: corrected an issue where BED files were incorrectly interpreted as GTF in norm.cpp and resolved segmentation fault (appearing in linux only) from out-of-bounds access in GeneAnalyzer::annotateWindows.
+
 31MAR2026 - selscan v3.0.0: Normalization and downstream analysis enhanced. 
     - NEW: Normalization integrated: The normalization functionality is now included directly in selscan as the subcommand "selscan norm".
     - NEW: New features added for gene-based analyses: BED/GTF files can be provided for annotating windows and per gene scores.
