@@ -4,7 +4,7 @@ name: Test and Build binaries [binary_linux] + [binary_mac_arm] + [binary_mac] +
 on:
   push:
     branches:
-      - release_v3
+      - patch_3_0_1
 
 jobs:
   build:

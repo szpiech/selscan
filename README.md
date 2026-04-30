@@ -246,6 +246,8 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 ## 📝 Change Log
 ```
+30APR2026 - selscan v3.0.1: Fixed issue #162: corrected an issue where BED files were incorrectly interpreted as GTF in norm.cpp and resolved segmentation fault (appearing in linux only) from out-of-bounds access in GeneAnalyzer::annotateWindows.
+
 31MAR2026 - selscan v3.0.0: Normalization and downstream analysis enhanced. 
     - NEW: Normalization integrated: The normalization functionality is now included directly in selscan as the subcommand "selscan norm".
     - NEW: New features added for gene-based analyses: BED/GTF files can be provided for annotating windows and per gene scores.
