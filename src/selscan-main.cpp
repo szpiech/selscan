@@ -268,6 +268,7 @@ int runToolSelscan(int argc, char *argv[])
     for (int i = 0; i < argc; i++)
     {
         (*flog) << argv[i] << " ";
+        std::cerr << argv[i] << " ";
     }
     (*flog) << "\n";
 

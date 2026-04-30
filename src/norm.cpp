@@ -241,6 +241,12 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         return 1;
     }
 
+    // if --win-files provided, --bp-win is not meaningful
+    if( BPWIN && HAVE_WINFILE ){
+        cerr << "ERROR: Cannot use " + ARG_BPWIN + " with " + ARG_WIN_FILES + ".\n";
+        return 1;
+    }
+
     if( HAVE_NORMFILE ){
         nfiles = normFiles.size();
         filename = normFiles;
@@ -598,7 +604,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
     if(LOG_ONLY) DO_GENE = false;
     if(DO_GENE){ 
-        cerr << "Annotating " << nfiles << "files with " << geneFile << "\n";
+        cerr << "Annotating " << nfiles << " files using " << geneFile << "\n";
         
         vector<string> normFilenames(nfiles);
         vector<string> winFilenames(nfiles);
@@ -639,7 +645,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         if(!HAVE_WINFILE){
             string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPEHH ? "xpehh" : (XPNSL ? "xpnsl" : "ihh12")));
-            genex.annotateSNPs(geneFile, true, normFilenames, XP, stat, minSNPs);
+            genex.annotateSNPs(geneFile, useGTF, normFilenames, XP, stat, minSNPs);
             
         }
         
