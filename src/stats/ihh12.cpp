@@ -147,7 +147,7 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-double IHH12::calc_ehh_unidirection(int locus, bool downstream){
+double IHH12::calc_ehh_unidirection(int locus, bool downstream, int* last_i){
 
     double ihh12 = 0;
     unordered_map<int, vector<int> > m;
@@ -161,6 +161,7 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
     ehhdata.prev_ehh12_before_norm = ehhdata.curr_ehh12_before_norm;
 
     int i = locus;
+    int last = locus; // [span] last i whose interval was added to ihh12
     int prev_index = locus; // for multi-MAF
     int skipped_due_to_multimaf = 0; // for multi-MAF
 
@@ -251,6 +252,7 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         }else{
             ihh12 += 0.5  * (ehhdata.curr_ehh12_before_norm/twice_num_pair(ehhdata.nhaps) + ehhdata.prev_ehh12_before_norm/twice_num_pair(ehhdata.nhaps)) * scale * distance;
         }
+        last = i; // [span] both branches above just added i's interval
 
         // double current_ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
         // double previous_ehh1 = ehhdata.prev_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
@@ -267,6 +269,9 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         if (physicalDistance(i, locus, downstream) >= max_extend) break;
         
     }
+    // [span] NOT the loop index at exit: the EHH-cutoff break above (breaking_ehh) leaves i one
+    // SNP past the last increment.
+    if (last_i) *last_i = last;
     return ihh12;
 }
 
@@ -282,6 +287,18 @@ void IHH12::main()
     std::cerr << "Starting iHH12 calculations."<<endl;
 
     ThreadPool pool(p.numThreads);
+
+    // [span] beside the .out. The .out is NOT changed: `selscan norm` accepts only its own exact
+    // header, so the spans and the per-side areas go in their own file. iHH12 is phased-only
+    // (the UNPHASED guard above), so there is no unphased branch to skip.
+    int nl = hm->mapData->nloci;
+    span_left.assign(nl, -1); span_right.assign(nl, -1);
+    area_left.assign(nl, 0.0); area_right.assign(nl, 0.0);
+    std::ofstream span_out(get_filename_base("ihh12") + ".span.tsv");
+    span_out.precision(12); // the .out rounds to 6 s.f.
+    span_out << "chr\tid\tpos\tleft_bp\tright_bp\tleft_snps\tright_snps"
+             << "\tihh12_left\tihh12_right\n";
+
     std::vector< std::future<double> > results;
     for(int i = 0; i <  hm->mapData->nloci; ++i) {
         results.emplace_back(
@@ -303,12 +320,22 @@ void IHH12::main()
                     //<< hm->mapData->mapEntries[i].geneticPos << "\t"
                     << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"
                     << ihh12  << endl;     
+
+            // [span] same rows as the .out, same order; bp and SNP counts from the core
+            const auto& me = hm->mapData->mapEntries;
+            const int core_pos = me[i].physicalPos;
+            span_out << me[i].chr << "\t" << me[i].locusName << "\t" << core_pos << "\t"
+                     << core_pos - me[span_left[i]].physicalPos << "\t"
+                     << me[span_right[i]].physicalPos - core_pos << "\t"
+                     << i - span_left[i] << "\t" << span_right[i] - i << "\t"
+                     << area_left[i] << "\t" << area_right[i] << "\n";
         }
 
         i++;
         assert(i <= hm->mapData->nloci);
     }
     //close fouts
+    span_out.close(); // [span]
     fout->close();
     // hm->hapData->releaseHapData();
     // hm->hapData2->releaseHapData();
@@ -333,16 +360,24 @@ double IHH12::calc_ihh12_at_locus(int locus)
     }
 
 
-    double ihh12_down = calc_ehh_unidirection(locus, true);
+    int left = locus; // [span]
+    double ihh12_down = calc_ehh_unidirection(locus, true, &left);
     if(ihh12_down == skipLocusDouble()){
         return skipLocusDouble();
     }
 
-    double ihh12_up = calc_ehh_unidirection(locus, false);
+    int right = locus; // [span]
+    double ihh12_up = calc_ehh_unidirection(locus, false, &right);
     if(ihh12_up == skipLocusDouble()){
         return skipLocusDouble();
     }
 
+    if (!span_left.empty()) { // [span] one slot per locus; no lock needed
+        span_left[locus]  = left;
+        span_right[locus] = right;
+        area_left[locus]  = ihh12_down;
+        area_right[locus] = ihh12_up;
+    }
     return ihh12_down + ihh12_up;
 }
 

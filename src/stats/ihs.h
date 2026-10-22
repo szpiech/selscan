@@ -46,6 +46,12 @@ class IHS: public SelscanStats{
         IhhComponents calc_ihh1_details(int locus);
         pair<double, double> infer_missing(int locus);  
         std::mutex mutex_log;
+        // [span] per locus, phased iHS/nSL. How far the integration reached: the index of the
+        // last SNP whose interval was added to ihh1 (der) / ihh0 (anc), each side. And that
+        // side's own area, which the .out only reports summed. Filled in calc_ihh1 (one slot
+        // per locus, so concurrent tasks never touch the same element), written by main().
+        std::vector<int> span_der_left, span_anc_left, span_der_right, span_anc_right;
+        std::vector<double> area_der_left, area_der_right, area_anc_left, area_anc_right;
         //std::unique_ptr<std::mutex> mutex_log = std::make_unique<std::mutex>();
 
     protected:
@@ -106,7 +112,8 @@ class IHS: public SelscanStats{
         int max_extend;
 
         //phased_ihs
-        pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
+        pair<double, double> calc_ehh_unidirection(int locus, bool downstream,
+                                                   int* last_i1 = nullptr, int* last_i0 = nullptr);
 
         //unphased_ihs  
         OutputUnphasedIHH calc_ehh_unidirection_unphased(int locus, bool downstream);

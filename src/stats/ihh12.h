@@ -115,6 +115,10 @@ class IHH12 : public SelscanStats{
         void findMaxTwo(int* arr, int n, int &max1, int &max2);
         //void findMaxK(int* arr, int n, int &max1, int &max2, int k);
         std::mutex mutex_log; //static pthread_mutex_t mutex_log;
+        // [span] per locus. iHH12 pools both core alleles, so there is ONE span per side, not
+        // one per allele. Plus that side's own area, which the .out only reports summed.
+        std::vector<int> span_left, span_right;
+        std::vector<double> area_left, area_right;
 
     protected:
         int max_extend;
@@ -123,7 +127,7 @@ class IHH12 : public SelscanStats{
     
     private:
         double calc_ihh12_at_locus(int locus);
-        double calc_ehh_unidirection(int locus, bool downstream);
+        double calc_ehh_unidirection(int locus, bool downstream, int* last_i = nullptr);
 };
 
 

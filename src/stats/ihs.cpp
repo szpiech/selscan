@@ -496,7 +496,7 @@ string IHS::getOrder(uint64_t n_c2, uint64_t n_c1, uint64_t n_c0){
 /**
  * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
 */
-pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
+pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream, int* last_i1, int* last_i0){
 
     bool OUT_EHHS = false;
     std::ofstream ehhs_out;
@@ -621,6 +621,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     }
 
     int i = locus;  
+    int last1 = locus, last0 = locus; // [span] last i whose interval was added to ihh1 / ihh0
     int prev_index = locus; // for multi-MAF
     int skipped_due_to_multimaf = 0; // for multi-MAF
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
@@ -674,9 +675,11 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             // monomorphic check, it is possible to skip compute to speed it up
             assert(normalizer_1!=0);
             ihh1 += (prev_ehh1_before_norm + curr_ehh1_before_norm) * distance * 0.5 / normalizer_1;
+            last1 = i; // [span]
             
             assert(normalizer_0!=0);
             ihh0 += (prev_ehh0_before_norm + curr_ehh0_before_norm) * distance * 0.5 / normalizer_0;
+            last0 = i; // [span]
 
             if(OUT_EHHS){
                 string neg = downstream? "-" : ""; // if downstream, then negative distance
@@ -743,12 +746,14 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         if(prev_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){ // bug fix for low MAC
             assert(normalizer_1!=0);
             ihh1 += (prev_ehh1_before_norm + curr_ehh1_before_norm) * distance * 0.5 / normalizer_1;
+            last1 = i; // [span]
             prev_ehh1_before_norm = curr_ehh1_before_norm;
         }
 
         if(prev_ehh0_before_norm*1.0/normalizer_0 > p.EHH_CUTOFF){ // bug fix for low MAC
             assert(normalizer_0!=0);
             ihh0 += (prev_ehh0_before_norm + curr_ehh0_before_norm) * distance * 0.5 / normalizer_0;
+            last0 = i; // [span]
             prev_ehh0_before_norm = curr_ehh0_before_norm;
         }
 
@@ -788,6 +793,10 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     delete[] group_id;
     delete[] isDerived;
     //delete[] isAncestral;
+    // [span] NOT the loop index at exit: the EHH-cutoff break above leaves i one SNP past the
+    // last increment, and for nSL (which has no cutoff break) many SNPs past it.
+    if (last_i1) *last_i1 = last1;
+    if (last_i0) *last_i0 = last0;
     return make_pair(ihh1, ihh0);
 }
 
@@ -828,6 +837,23 @@ void IHS::main() {
                             << "ihh1" << "\t" << "ihh0" << "\t"  << ihsornsl  << endl;
         }
         
+        // [span] phased only, beside the .out. The .out is NOT changed: `selscan norm` accepts
+        // only its own exact header, so the spans and the per-side areas go in their own file.
+        std::ofstream span_out;
+        if(!hm->hapData->unphased){
+            int nl = hm->mapData->nloci;
+            span_der_left.assign(nl, -1);  span_anc_left.assign(nl, -1);
+            span_der_right.assign(nl, -1); span_anc_right.assign(nl, -1);
+            area_der_left.assign(nl, 0.0);  area_der_right.assign(nl, 0.0);
+            area_anc_left.assign(nl, 0.0);  area_anc_right.assign(nl, 0.0);
+            span_out.open(get_filename_base(ihsornsl) + ".span.tsv");
+            span_out.precision(12); // the .out rounds to 6 s.f.; a one-sided log ratio needs more
+            span_out << "chr\tid\tpos"
+                     << "\tder_left_bp\tanc_left_bp\tder_right_bp\tanc_right_bp"
+                     << "\tder_left_snps\tanc_left_snps\tder_right_snps\tanc_right_snps"
+                     << "\tihh1_left\tihh1_right\tihh0_left\tihh0_right\n";
+        }
+
         std::vector< std::future<pair<double, double> > > results;
         for(int i = 0; i <  hm->mapData->nloci; ++i) {
 
@@ -869,6 +895,20 @@ void IHS::main() {
                             << hm->hapData->calcFreq(locus) << "\t"
                             << ihh1 << "\t" << ihh0 <<"\t"<< log10(ihh1/ihh0) <<endl;
                             //hm->mapData->mapEntries[locus].locId << "\t"
+                    // [span] same rows as the .out, same order; bp and SNP counts from the core
+                    const auto& me = hm->mapData->mapEntries;
+                    const int core_pos = me[locus].physicalPos;
+                    span_out << me[locus].chr << "\t" << me[locus].locusName << "\t" << core_pos << "\t"
+                             << core_pos - me[span_der_left[locus]].physicalPos << "\t"
+                             << core_pos - me[span_anc_left[locus]].physicalPos << "\t"
+                             << me[span_der_right[locus]].physicalPos - core_pos << "\t"
+                             << me[span_anc_right[locus]].physicalPos - core_pos << "\t"
+                             << locus - span_der_left[locus] << "\t"
+                             << locus - span_anc_left[locus] << "\t"
+                             << span_der_right[locus] - locus << "\t"
+                             << span_anc_right[locus] - locus << "\t"
+                             << area_der_left[locus] << "\t" << area_der_right[locus] << "\t"
+                             << area_anc_left[locus] << "\t" << area_anc_right[locus] << "\n";
                 }
             }
 
@@ -877,6 +917,7 @@ void IHS::main() {
             assert(locus<=hm->mapData->nloci);
         }
         progressBarThread.join();
+        if(span_out.is_open()) span_out.close(); // [span]
     }
 
     if(p.WRITE_DETAILED_IHS){
@@ -1013,10 +1054,11 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
 
     // === Phased mode ===
 
-    pair<double, double> ihh1_ihh0_downstream = calc_ehh_unidirection(locus, true);
+    int der_left = locus, anc_left = locus, der_right = locus, anc_right = locus; // [span]
+    pair<double, double> ihh1_ihh0_downstream = calc_ehh_unidirection(locus, true, &der_left, &anc_left);
     if (skipLocus(ihh1_ihh0_downstream)) return skipLocusPair();
 
-    pair<double, double> ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false);
+    pair<double, double> ihh1_ihh0_upstream = calc_ehh_unidirection(locus, false, &der_right, &anc_right);
     if (skipLocus(ihh1_ihh0_upstream)) return skipLocusPair();
 
     // Sum values
@@ -1036,6 +1078,16 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
         return skipLocusPair();
     }
 
+    if (!span_der_left.empty()) { // [span] one slot per locus; no lock needed
+        span_der_left[locus]  = der_left;
+        span_anc_left[locus]  = anc_left;
+        span_der_right[locus] = der_right;
+        span_anc_right[locus] = anc_right;
+        area_der_left[locus]  = ihh1_ihh0_downstream.first;
+        area_anc_left[locus]  = ihh1_ihh0_downstream.second;
+        area_der_right[locus] = ihh1_ihh0_upstream.first;
+        area_anc_right[locus] = ihh1_ihh0_upstream.second;
+    }
     return { ihh1, ihh0 };
 }
 
