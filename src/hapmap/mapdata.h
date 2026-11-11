@@ -34,6 +34,7 @@ public:
 
     //allocates the arrays and populates them with -9 or "--" depending on type
     void initMapData(int nloci);
+    void setFromEntries(const vector<MapEntry> &entries);
     void releaseMapData();
 
     //reads in map data and also does basic checks on integrity of format

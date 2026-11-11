@@ -255,6 +255,14 @@ void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_
     fin.close();
 }
 
+// P1: install map entries collected while the VCF haplotypes were read
+void MapData::setFromEntries(const vector<MapEntry> &entries)
+{
+    cerr << "Loading map data for " << entries.size() << " loci (positions from the VCF)\n";
+    this->initMapData((int)entries.size());
+    for (size_t i = 0; i < entries.size(); i++) mapEntries[i] = entries[i];
+}
+
 void MapData::initMapData(int nloci)
 {
     if (nloci < 1)

@@ -96,6 +96,9 @@ public:
 
 
 
+    // P1: map entries of kept query-VCF loci, recorded during the haplotype pass
+    vector<MapEntry> vcfMap;
+    void captureVCFMapEntry(const string &line, size_t locus);
     VCFPass1Result readHapDataVCF_pass1(string filename);
     void readHapDataVCF_pass2(string filename, HapData& hapData, const VCFPass1Result& pass1);
     void readHapDataVCFXP(string filename, string filename2, HapData& hapData, HapData& hapData2);

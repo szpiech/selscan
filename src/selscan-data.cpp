@@ -479,6 +479,30 @@ void HapMap::markDuplicatePositions(const vector<long>& positions, const string&
     }
 }
 
+// P1: CHROM, POS and ID of a kept VCF record, taken while the haplotypes
+// are read, so the map does not need two more passes over the file. Fields
+// are split on spaces/tabs as readMapDataVCF does; locId is the record's
+// index among data lines, as there.
+void HapMap::captureVCFMapEntry(const string &line, size_t locus)
+{
+    size_t p0 = 0;
+    auto nextField = [&line](size_t &p) -> string {
+        while (p < line.size() && (line[p] == ' ' || line[p] == '\t')) ++p;
+        size_t q = p;
+        while (q < line.size() && line[q] != ' ' && line[q] != '\t') ++q;
+        string f = line.substr(p, q - p);
+        p = q;
+        return f;
+    };
+    MapEntry e;
+    e.chr = nextField(p0);
+    e.physicalPos = atoi(nextField(p0).c_str());
+    e.locusName = nextField(p0);
+    e.locId = (int)locus;
+    e.geneticPos = (long double)(e.physicalPos) / 1000000.0;
+    vcfMap.push_back(std::move(e));
+}
+
 VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
 {
     VCFPass1Result result;
@@ -734,6 +758,8 @@ void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFP
 
     // local copy because we consume it during pass 2
     queue<size_t> skiplist = pass1.skiplist;
+    const bool captureMap = (filename == p.vcfFilename);   // query file only (P1)
+    if (captureMap) { vcfMap.clear(); vcfMap.reserve(pass1.nloci_before_filtering - pass1.skipcount); }
 
     size_t locus = 0;                  // locus index in original file order
     size_t nloci_after_filtering = 0;  // locus index in filtered HapData
@@ -749,6 +775,7 @@ void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFP
             locus++;
             continue;
         }
+        if (captureMap) captureVCFMapEntry(line, locus);   // P1: map from this pass
 
         const char* pcur = line.c_str();
         const char* end  = pcur + line.size();
@@ -1258,6 +1285,8 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
     size_t locus = 0;
     size_t nloci_after_filtering = 0;
+    const bool captureMap = true;   // P1: record CHROM/POS/ID of kept loci
+    vcfMap.clear(); vcfMap.reserve(nloci_before_filtering - skipcount);
 
     while (getline(fin, line))
     {
@@ -1270,6 +1299,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             locus++;
             continue;
         }
+        if (captureMap) captureVCFMapEntry(line, locus);   // P1: map from this pass
 
         const char* pcur = line.c_str();
         const char* end  = pcur + line.size();
@@ -1706,9 +1736,14 @@ void HapMap::loadHapMapData(){
         if(!p.USE_PMAP && p.mapFilename.compare(DEFAULT_FILENAME_MAP) != 0) {
             mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
         }
+        else if (vcfMap.size() == (size_t)hapData->nloci) {
+            // P1: physical positions recorded while the haplotypes were read
+            mapData->setFromEntries(vcfMap);
+        }
         else{//Load physical positions
             mapData->readMapDataVCF(p.vcfFilename, hapData->nloci, hapData->skipQueue);
         }
+        vector<MapEntry>().swap(vcfMap);
     }else if(p.THAP){
         readHapDataTHAP(p.thapFilename, *hapData);
         if (p.CALC_XP || p.CALC_XPNSL)
