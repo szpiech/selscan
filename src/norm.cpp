@@ -50,6 +50,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     
     params.addFlag(ARG_GENE_SETA, DEFAULT_GENE_SETA, "", HELP_GENE_SETA); //added in v3
     params.addFlag(ARG_GENE_SETB, DEFAULT_GENE_SETB, "", HELP_GENE_SETB); //added in v3
+    params.addFlag(ARG_PERM_SEED, DEFAULT_PERM_SEED, "", HELP_PERM_SEED);
 
     params.addFlag(ARG_LOG_ONLY, DEFAULT_LOG_ONLY, "", HELP_LOG_ONLY); //added in v3
     // params.addFlag(ARG_NO_HEADER, DEFAULT_NO_HEADER, "", HELP_NO_HEADER); //added in v3
@@ -140,7 +141,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         //     return 1;
         // }
         cerr << "Running permutation test with target genes from " << geneSetA << " and background genes from " << geneSetB << "\n";
-        genex.perm_test(geneSetA, geneSetB);
+        genex.perm_test(geneSetA, geneSetB, params.getIntFlag(ARG_PERM_SEED));
         return 0;
     }
 

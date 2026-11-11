@@ -80,11 +80,18 @@ void GeneAnalyzer::readGenesFromBed(std::string bedfile, std::vector<Gene> &gene
     }
 }
 
-void GeneAnalyzer::perm_test(string fileA, string fileB) {
-    std::vector<double> scoresA = read_scores(fileA, "gene", "max_lenreg");
-    std::vector<double> scoresB = read_scores(fileB, "gene", "max_lenreg");
+void GeneAnalyzer::perm_test(string fileA, string fileB, long seed) {
+    // norm's gene tables carry the length-adjusted maximum as top_score_adj
+    // (3.0.1 looked for a column "max_lenreg", which no table has; B38)
+    std::vector<double> scoresA = read_scores(fileA, "gene", "top_score_adj");
+    std::vector<double> scoresB = read_scores(fileB, "gene", "top_score_adj");
+    if (scoresA.empty() || scoresB.empty()) {
+        std::cerr << "ERROR: the permutation test needs at least one gene with a numeric top_score_adj in each set ("
+                  << scoresA.size() << " in " << fileA << ", " << scoresB.size() << " in " << fileB << ").\n";
+        exit(EXIT_FAILURE);
+    }
 
-    // --- Permutation test ---
+    // --- Permutation test (one-sided: is the target set's mean higher?) ---
     int n_perms = 10000;
     int count = 0;
     std::vector<double> combined = scoresA;
@@ -95,9 +102,10 @@ void GeneAnalyzer::perm_test(string fileA, string fileB) {
     std::vector<int> indices(n_total);
     std::iota(indices.begin(), indices.end(), 0);
 
+    if (seed < 0) seed = static_cast<long>(std::time(nullptr));
     gsl_rng_env_setup();
     gsl_rng* r = gsl_rng_alloc(gsl_rng_default);
-    gsl_rng_set(r, std::time(nullptr));
+    gsl_rng_set(r, static_cast<unsigned long>(seed));
 
     double T_obs = gsl_stats_mean(scoresA.data(), 1, scoresA.size()) -
                 gsl_stats_mean(scoresB.data(), 1, scoresB.size());
@@ -114,14 +122,19 @@ void GeneAnalyzer::perm_test(string fileA, string fileB) {
         if (T_perm >= T_obs) count++;
     }
 
-    double p_value = static_cast<double>(count) / n_perms;
+    // add-one estimate: the observed labelling is one of the permutations,
+    // so the p-value is never 0
+    double p_value = static_cast<double>(count + 1) / (n_perms + 1);
+    std::cout << "Target genes: " << nA << ", background genes: " << (n_total - nA) << "\n";
+    std::cout << "Permutations: " << n_perms << ", seed: " << seed << " (--perm-seed)\n";
     std::cout << "Observed mean difference (A - B): " << T_obs << "\n";
-    std::cout << "Empirical p-value: " << p_value << "\n";
+    std::cout << "Empirical one-sided p-value (A > B): " << p_value << "\n";
     std::cout << ((p_value < 0.05) ? "Set A is significantly higher than Set B.\n"
                                 : "No significant difference between Set A and Set B.\n");
 
     gsl_rng_free(r);
 }
+
 
 std::vector<double> GeneAnalyzer::compute_length_residuals(
     const std::vector<double> &lengths,

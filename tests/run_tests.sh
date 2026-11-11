@@ -602,6 +602,18 @@ if selected norm-robust; then
     mv nr_bw.norm.100kb.windows.ann nr_bw_direct.ann 2>/dev/null
     run nr9.log norm --ihs --win-files nr_bw.norm.100kb.windows --gene-bed nr_wg.bed
     identical "norm-gene:bpwin-annotates-windows" nr_bw_direct.ann nr_bw.norm.100kb.windows.ann
+    # B38: the permutation test reads norm's own gene tables (top_score_adj),
+    # is reproducible with --perm-seed, and reports (count+1)/(n+1). The
+    # six-gene XP table is split into alternate genes.
+    awk 'NR==1 || NR%2==0' nr_xg.bed.xpehh.genetable > nr_setA.tab
+    awk 'NR==1 || NR%2==1' nr_xg.bed.xpehh.genetable > nr_setB.tab
+    run nr10.log norm --gene-target nr_setA.tab --gene-background nr_setB.tab --perm-seed 11; r1=$RC
+    p1=$(sed -n 's/.*one-sided p-value (A > B): //p' nr10.log)
+    run nr11.log norm --gene-target nr_setA.tab --gene-background nr_setB.tab --perm-seed 11
+    p2=$(sed -n 's/.*one-sided p-value (A > B): //p' nr11.log)
+    if [ "$r1" -eq 0 ] && [ "$RC" -eq 0 ] && [ -n "$p1" ] && [ "$p1" = "$p2" ] && awk -v p="$p1" 'BEGIN { exit !(p > 0 && p <= 1) }'
+    then pass "norm-gene:perm-test"
+    else fail "norm-gene:perm-test" "exit $r1/$RC, p-values '$p1' '$p2'"; fi
 fi
 
 if selected errors; then

@@ -119,7 +119,7 @@ public:
         double beta0,
         double beta1);
 
-    void perm_test(std::string fileA, std::string fileB);
+    void perm_test(std::string fileA, std::string fileB, long seed = -1);
 
     // Merge intervals for a vector of intervals and return total length
     int mergeIntervalsLength(std::vector<std::pair<int, int>> &intervals)
@@ -184,15 +184,26 @@ public:
             exit(1);
         }
 
+        // NA (no length regression, B25) and other non-numeric or non-finite
+        // values are skipped and counted
         std::vector<double> scores;
+        size_t skipped = 0;
         while (std::getline(f, line))
         {
+            if (line.empty()) continue;
             std::istringstream iss(line);
             std::vector<std::string> fields(headers.size());
             for (size_t i = 0; i < headers.size(); ++i)
                 iss >> fields[i];
-            scores.push_back(std::stod(fields[score_col]));
+            const std::string &tok = fields[score_col];
+            char *endp = nullptr;
+            double v = std::strtod(tok.c_str(), &endp);
+            if (tok.empty() || *endp != '\0' || !std::isfinite(v)) { skipped++; continue; }
+            scores.push_back(v);
         }
+        if (skipped > 0)
+            std::cerr << "WARNING: skipped " << skipped << " rows of " << filename
+                      << " without a numeric " << score_col_name << ".\n";
 
         return scores;
     }

@@ -223,6 +223,10 @@ class SelscanNorm{
     const string DEFAULT_GENE_SETB = "__genebackground__";
     const string HELP_GENE_SETB = "Provide a .genetable for background gene set for permutation test.";
 
+    const string ARG_PERM_SEED = "--perm-seed";
+    const int DEFAULT_PERM_SEED = -1;
+    const string HELP_PERM_SEED = "Random seed for the gene-set permutation test (default: seeded from the clock; the seed used is printed).";
+
     const string ARG_FINE_PERCENTILE = "--fine-percentile";
     const bool DEFAULT_FINE_PERCENTILE = false;
     const string HELP_FINE_PERCENTILE = "If set, will use fine grain percentiles (1,2,3,...,100) for normalization.";
