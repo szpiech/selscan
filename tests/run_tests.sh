@@ -57,9 +57,6 @@ case "$BIN" in /*) ;; *) BIN="$PWD/$BIN" ;; esac
 # ------------------------------------------------------------ known failures
 # <check name> <finding id>. Remove an entry in the commit that fixes it.
 KNOWN_FAIL="
-clean-error:all-filtered  B39
-clean-error:filter-vcf-01  B39
-clean-error:bad-json  B39
 "
 known_fail() { printf '%s\n' "$KNOWN_FAIL" | awk -v k="$1" '$1==k {print $2; exit}'; }
 
@@ -719,6 +716,9 @@ fi
 
 if selected errors; then
     printf '{"params":[{"maf":0.1,}]}' > bad.json
+    printf '{"params":[{"maf":"0.1"}]}' > badtype.json
+    printf '{"params":[{"maf":0.1,"mafx":0.2}]}' > badkey.json
+    printf '{"parameters":[{"maf":0.1}]}' > noparams.json
     while IFS='|' read -r name args; do
         [ -z "$name" ] && continue
         run e.log $args --out err_$name
@@ -732,6 +732,9 @@ filter-vcf-01|--ihs --filter-vcf --vcf p1.vcf.gz --pmap
 bad-locus|--ehh no_such_locus --vcf p1.vcf.gz --pmap
 bad-locus-ehh12|--ehh12 no_such_locus --vcf p1.vcf.gz --pmap
 bad-json|--ihs --vcf p1.vcf.gz --pmap --multi-param bad.json
+bad-json-type|--ihs --vcf p1.vcf.gz --pmap --multi-param badtype.json
+bad-json-key|--ihs --vcf p1.vcf.gz --pmap --multi-param badkey.json
+bad-json-noparams|--ihs --vcf p1.vcf.gz --pmap --multi-param noparams.json
 ERRS
 fi
 

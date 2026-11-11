@@ -278,6 +278,11 @@ int runToolSelscan(int argc, char *argv[])
         cerr << "WARNING: Running in multi-chromosome mode.\n";
     }
 
+    // B39: errors raised while loading data or computing statistics (for
+    // example every locus filtered out, or a malformed --multi-param file)
+    // are reported with exit status 1 and written to the log, instead of
+    // ending in std::terminate (exit 134).
+    try {
     if(p.MULTI_PARAMS){
         //TODON
         p.MULTI_MAF = true;
@@ -302,6 +307,17 @@ int runToolSelscan(int argc, char *argv[])
         hm->loadHapMapData();
         runStat(hm, p); // run the main program
     }
+    } catch (const std::exception &e) {
+        cerr << "[ERROR] " << e.what() << endl;
+        (*flog) << "[ERROR] " << e.what() << endl;
+        flog->close();
+        return 1;
+    } catch (...) {
+        // HANDLE_ERROR (DEBUG builds) and HapData throw after printing their message
+        (*flog) << "[ERROR] selscan stopped after the error above.\n";
+        flog->close();
+        return 1;
+    }
 
     double time_end = (clock() / (double)CLOCKS_PER_SEC);
     auto end = std::chrono::high_resolution_clock::now();
@@ -321,8 +337,7 @@ int runToolSelscan(int argc, char *argv[])
 
 
 // ------------------- Main Dispatcher -------------------
-int main(int argc, char* argv[]) {
-    //return runToolSelscan(argc, argv);
+static int dispatch(int argc, char* argv[]) {
     if (argc < 2) {
         // No subcommand, run original selscan with no arguments
         return runToolSelscan(0, nullptr);
@@ -338,4 +353,18 @@ int main(int argc, char* argv[]) {
     } else {
         return runToolSelscan(argc, argv);
     }
+}
+
+int main(int argc, char* argv[]) {
+    // B39: last-resort handler so no exception ends in std::terminate
+    try {
+        return dispatch(argc, argv);
+    } catch (const std::exception &e) {
+        std::cerr << "[ERROR] " << e.what() << std::endl;
+    } catch (const char *msg) {
+        std::cerr << "[ERROR] " << msg << std::endl;
+    } catch (...) {
+        std::cerr << "[ERROR] stopped after the error above." << std::endl;
+    }
+    return 1;
 }

@@ -590,6 +590,7 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
             if (!is_snp_base(field_starts[3],field_ends[3]) ||
                 !is_snp_base(field_starts[4],field_ends[4])) {
                 skip_due_to_multiallelic = true;
+                result.n_nonsnp++;
             }
         }
 
@@ -904,9 +905,13 @@ void HapMap::readHapDataVCFXP(string filename, string filename2, HapData& hapDat
     rebuild_skipqueue_with_new_skips(pass1_h2.skiplist, new_skip_h2);
 
     if(pass1_h2.nloci_before_filtering - pass1_h2.skiplist.size() == 0){
-        HANDLE_ERROR("After filtering, no loci remain in reference VCF. Please check your input files.");
+        HANDLE_ERROR("After filtering, no loci remain in reference VCF. Please check your input files."
+                     << (pass1_h2.n_nonsnp > 0 ? " " + ARG_MULTIALLELIC + " removed " + to_string(pass1_h2.n_nonsnp)
+                         + " records whose REF/ALT are not single A/C/G/T bases (for example 0/1 coding)." : string("")));
     }else if(pass1_h1.nloci_before_filtering - pass1_h1.skiplist.size() == 0){
-        HANDLE_ERROR("After filtering, no loci remain in query VCF. Please check your input files.");
+        HANDLE_ERROR("After filtering, no loci remain in query VCF. Please check your input files."
+                     << (pass1_h1.n_nonsnp > 0 ? " " + ARG_MULTIALLELIC + " removed " + to_string(pass1_h1.n_nonsnp)
+                         + " records whose REF/ALT are not single A/C/G/T bases (for example 0/1 coding)." : string("")));
     }else{
         LOG("After filtering, " << pass1_h1.nloci_before_filtering - pass1_h1.skiplist.size() << " loci remain in query VCF.");
         LOG("After filtering, " << pass1_h2.nloci_before_filtering - pass1_h2.skiplist.size() << " loci remain in reference VCF.");
@@ -941,6 +946,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
     size_t nloci_before_filtering = 0;   // number of variant records seen
     size_t skipcount = 0;                // number of records skipped
+    size_t nNonSNP = 0;                  // records removed by --filter-vcf (B39 message)
     int current_ngts = -1;               // number of genotype/sample columns
 
     // duplicate-position tracking
@@ -1061,6 +1067,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
             if (!is_snp_base(ref_s, ref_e) || !is_snp_base(alt_s, alt_e)) {
                 skip_due_to_multiallelic = true;
+                nNonSNP++;
             }
         }
 
@@ -1238,6 +1245,11 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                    << " haplotypes and " << (nloci_before_filtering - skipcount)
                    << " loci. Skipped " << skipcount << " loci \n");
 
+    if (nloci_before_filtering == skipcount && nNonSNP > 0) {
+        HANDLE_ERROR(ARG_MULTIALLELIC << " removed " << nNonSNP << " of " << nloci_before_filtering
+                     << " records of " << filename << " because REF/ALT are not single A/C/G/T bases"
+                     << " (for example, files that code alleles as 0/1), and no loci remain.");
+    }
     hapData.initHapData(nhaps, nloci_before_filtering - skipcount);
 
     // Preserve your old behavior

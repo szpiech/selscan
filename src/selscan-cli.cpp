@@ -518,48 +518,57 @@ void checkParameters(param_main &p){
 }
 
 void jsonParse(param_main &base_p, vector<param_main> &multi_params){
+    // B39: a malformed file, a value of the wrong type or an unknown key is
+    // reported as an error naming the file and the parameter set (3.0.1 let
+    // nlohmann exceptions escape: exit 134, or ignored unknown keys).
     std::ifstream inputFile(base_p.jsonFilename);
 
     if (!inputFile.is_open()) {
         HANDLE_ERROR_NOLOG("Failed to open json file " + base_p.jsonFilename + " containing parameters.");
     }
 
+    const string &F = base_p.jsonFilename;
     nlohmann::json data;
-    inputFile >> data;
+    try {
+        inputFile >> data;
+    } catch (const nlohmann::json::exception &e) {
+        throw runtime_error("Could not parse " + ARG_MULTI_PARAMS + " file " + F + ": " + e.what());
+    }
     inputFile.close();
-    
-    // Iterate over the array of params
+
+    if (!data.is_object() || !data.contains("params") || !data["params"].is_array() || data["params"].empty()) {
+        throw runtime_error(ARG_MULTI_PARAMS + " file " + F + " must be an object with a non-empty \"params\" array.");
+    }
+
+    const string MAX_EXTEND = ARG_MAX_EXTEND.substr(2);
+    const string MAF = ARG_MAF.substr(2);
+    const string MAX_EXTEND_NSL = ARG_MAX_EXTEND_NSL.substr(2);
+    const string CUTOFF = ARG_CUTOFF.substr(2);
+    const string allowed = MAF + ", " + CUTOFF + ", " + MAX_EXTEND + ", " + MAX_EXTEND_NSL;
+
+    size_t idx = 0;
     for (const auto& param : data["params"]) {
+        const string where = F + " params[" + to_string(idx) + "]";
+        if (!param.is_object()) throw runtime_error(where + " is not an object.");
+        for (auto it = param.begin(); it != param.end(); ++it) {
+            const string &key = it.key();
+            const auto &v = it.value();
+            if (key == MAF || key == CUTOFF) {
+                if (!v.is_number()) throw runtime_error(where + ": \"" + key + "\" must be a number.");
+            } else if (key == MAX_EXTEND || key == MAX_EXTEND_NSL) {
+                if (!v.is_number_integer()) throw runtime_error(where + ": \"" + key + "\" must be an integer.");
+            } else {
+                throw runtime_error(where + ": unknown key \"" + key + "\" (allowed: " + allowed + ").");
+            }
+        }
+
         param_main p(base_p); // make a copy of the base parameters
-        //cout<<ARG_MAX_EXTEND<<" "<<ARG_MAF<<" "<<ARG_MAX_EXTEND_NSL<<endl;
-        string MAX_EXTEND = ARG_MAX_EXTEND.substr(2);
-        string MAF = ARG_MAF.substr(2);
-        string MAX_EXTEND_NSL = ARG_MAX_EXTEND_NSL.substr(2);
-        string CUTOFF = ARG_CUTOFF.substr(2);
-        // all other params are ignored
-
-        string FILENAME_POP1 = ARG_FILENAME_POP1.substr(2);
-        string FILENAME_POP2 = ARG_FILENAME_POP2.substr(2);
-
-        if (param.contains(MAF)) { // Check if the field exists and retrieve it if it does
-            p.MAF = param[MAF];
-            DBG("DEBUG:::"<<ARG_MAF<<" "<<p.MAF<<endl);
-        }
-
-        if (param.contains(MAX_EXTEND)) { // Check if the field exists and retrieve it if it does
-            p.MAX_EXTEND = param[MAX_EXTEND];
-            DBG("DEBUG:::"<<ARG_MAX_EXTEND<<" "<<p.MAX_EXTEND<<endl);
-        }
-
-        if (param.contains(MAX_EXTEND_NSL)) { // Check if the field exists and retrieve it if it does
-            p.MAX_EXTEND_NSL = param[MAX_EXTEND_NSL];
-            DBG("DEBUG:::"<<ARG_MAX_EXTEND_NSL<<" "<<p.MAX_EXTEND_NSL<<endl);
-        }
-        if(param.contains(CUTOFF)){
-            p.EHH_CUTOFF = param[CUTOFF];
-            DBG("DEBUG:::"<<ARG_CUTOFF<<" "<<p.EHH_CUTOFF<<endl);
-        }
+        if (param.contains(MAF)) p.MAF = param[MAF].get<double>();
+        if (param.contains(MAX_EXTEND)) p.MAX_EXTEND = param[MAX_EXTEND].get<int>();
+        if (param.contains(MAX_EXTEND_NSL)) p.MAX_EXTEND_NSL = param[MAX_EXTEND_NSL].get<int>();
+        if (param.contains(CUTOFF)) p.EHH_CUTOFF = param[CUTOFF].get<double>();
         checkParameters(p);
         multi_params.push_back(p);
+        idx++;
     }
 }

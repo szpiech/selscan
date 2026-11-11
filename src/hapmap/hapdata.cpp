@@ -1,3 +1,5 @@
+#include <stdexcept>
+#include <string>
 #include "hapdata.h"
 #include "../gzstream.h"
 #include "../selscan-cli.h"
@@ -15,16 +17,20 @@ HapData::~HapData(){
 /// @brief Sets up structure according to nhaps and nloci
 void HapData::initHapData(int nhaps, int nloci)
 {
+    // B39: throw a std::runtime_error carrying the message (was `throw 0`,
+    // which nothing caught: exit 134); main reports it and exits 1
     if (nhaps > std::numeric_limits<int>::max() || nloci > std::numeric_limits<int>::max())
     {
-        cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") exceed maximum value.\n";
-        throw 0;
+        throw std::runtime_error("number of haplotypes (" + std::to_string(nhaps) + ") and number of loci ("
+                                 + std::to_string(nloci) + ") exceed maximum value.");
     }
 
     if (nhaps < 1 || nloci < 1)
     {
-        cerr << "ERROR: number of haplotypes (" << nhaps << ") and number of loci (" << nloci << ") must be positive.\n";
-        throw 0;
+        std::string msg = "number of haplotypes (" + std::to_string(nhaps) + ") and number of loci ("
+                          + std::to_string(nloci) + ") must be positive.";
+        if (nhaps >= 1 && nloci == 0) msg += " No loci remain after filtering (check --maf and the input).";
+        throw std::runtime_error(msg);
     }
     cout << "=====" << endl;
     std::cout << "After filtering: \n"

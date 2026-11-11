@@ -66,6 +66,7 @@ struct VCFPass1Result {
     // XP only: position and FNV-1a hash of "REF\tALT" per record, file order
     vector<size_t> physpos;
     vector<uint64_t> refalt_hash;
+    size_t n_nonsnp = 0;   // records removed by --filter-vcf
 };
 class HapMap{
 public:
