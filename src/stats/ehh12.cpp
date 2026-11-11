@@ -19,9 +19,13 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
         }
     }
 
-    output[locus].ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
-    output[locus].ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
-    output[locus].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / twice_num_pair(ehhdata.nhaps);
+    // Normalise by the measure the numerators use: N^2 under --alt (squared
+    // frequencies), N(N-1) otherwise. 3.0.1 always divided by N(N-1), so
+    // --alt EHH, EHH12 and EHH2/1 were scaled by N/(N-1). (The EHH12 top-two
+    // adjustment is 2*t1*t2 under either measure, so it needs no change.)
+    output[locus].ehh1 = ehhdata.curr_ehh_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+    output[locus].ehh12 = ehhdata.curr_ehh12_before_norm  / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+    output[locus].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
     output[locus].pdist = 0;
     output[locus].gdist = 0;
     output[locus].print = true;
@@ -76,9 +80,9 @@ void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
         //if(!downstream) cout<<current_ehh1<<" "<<previous_ehh1<<" "<<current_ehh12<<" "<<previous_ehh12<<" "<<ihh12[locus] <<" "<<scale * distance<< endl;
 
-        output[i].ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
-        output[i].ehh12 = ehhdata.curr_ehh12_before_norm  / twice_num_pair(ehhdata.nhaps);
-        output[i].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / twice_num_pair(ehhdata.nhaps);
+        output[i].ehh1 = ehhdata.curr_ehh_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+        output[i].ehh12 = ehhdata.curr_ehh12_before_norm  / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+        output[i].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
         output[i].pdist = downstream? -physicalDistance(i,locus, downstream): physicalDistance(i,locus, downstream);
         output[i].gdist = downstream? -geneticDistance(i,locus, downstream): geneticDistance(i,locus, downstream);
         output[i].print = true;
@@ -178,9 +182,12 @@ void EHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, EHH
     int top1, top2;
     findMaxTwo(ehhdata->group_count, ehhdata->totgc, top1, top2);
 
-    double firstFreq = (top1 > 1) ? twice_num_pair(top1) : 0;
-    double secondFreq =(top2 > 1) ?  twice_num_pair(top2): 0;
-    double comboFreq = ((top1 + top2) > 1) ? twice_num_pair((top1 + top2)) : 0;
+    // Same measure as curr_ehh_before_norm (n^2 under --alt). For EHH12 the
+    // pooled adjustment is 2*t1*t2 either way, but EHH2/1 subtracts the top
+    // term alone, which differs by t1 between the two measures.
+    double firstFreq = p.ALT ? square_alt(top1) : ((top1 > 1) ? twice_num_pair(top1) : 0);
+    double secondFreq = p.ALT ? square_alt(top2) : ((top2 > 1) ?  twice_num_pair(top2): 0);
+    double comboFreq = p.ALT ? square_alt(top1 + top2) : (((top1 + top2) > 1) ? twice_num_pair((top1 + top2)) : 0);
     
     //double normfac = twice_num_pair(ehhdata->nhaps);
 

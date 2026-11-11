@@ -81,9 +81,11 @@ class EHH12_ehh_data{
 
         curr_ehh_before_norm = (ALT?   square_alt(n_c[0]) +  square_alt(n_c[1]) :  twice_num_pair(n_c[0]) + twice_num_pair(n_c[1])); 
 
-        double firstFreq_before_norm = (n_c[1] > 1) ? twice_num_pair(n_c[1]) : 0;
-        double secondFreq_before_norm =(n_c[0] > 1) ?  twice_num_pair(n_c[0]): 0;
-        double comboFreq_before_norm = (nhaps > 1) ? twice_num_pair(nhaps) : 0;
+        // Same measure as curr_ehh_before_norm (n^2 under --alt); matters for
+        // EHH2/1, which subtracts the top term alone.
+        double firstFreq_before_norm = ALT ? square_alt(n_c[1]) : ((n_c[1] > 1) ? twice_num_pair(n_c[1]) : 0);
+        double secondFreq_before_norm = ALT ? square_alt(n_c[0]) : ((n_c[0] > 1) ?  twice_num_pair(n_c[0]): 0);
+        double comboFreq_before_norm = ALT ? square_alt(nhaps) : ((nhaps > 1) ? twice_num_pair(nhaps) : 0);
         
         //double normfac = twice_num_pair(nhaps);
         curr_ehh12_before_norm = curr_ehh_before_norm  - firstFreq_before_norm - secondFreq_before_norm + comboFreq_before_norm;

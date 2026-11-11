@@ -155,7 +155,7 @@ identical() {
 }
 
 # ---------------------------------------------------------------- case list
-CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh ehh12
+CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh ehh12 ehh12-alt
 ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
@@ -243,6 +243,7 @@ golden ihh12          ihh12.out        -- --ihh12 --vcf p1.vcf.gz --pmap
 golden pi             pi.100bp.out noheader -- --pi --vcf p1.vcf.gz --pmap
 golden ehh            ehh.chr1:29243.out   -- --ehh chr1:29243 --vcf p1.vcf.gz --pmap
 golden ehh12          ehh12.chr1:29243.out -- --ehh12 chr1:29243 --vcf p1.vcf.gz --pmap
+golden ehh12-alt      ehh12.Locus4077.alt.out -- --ehh12 Locus4077 --alt --hap example.hap --map example.map
 golden ihs-unphased   ihs.out          -- --ihs --unphased --vcf p1.vcf.gz --pmap
 golden nsl-unphased   nsl.out          -- --nsl --unphased --vcf p1.vcf.gz
 golden xpehh-unphased xpehh.out        -- --xpehh --unphased --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
