@@ -242,6 +242,30 @@ class SelscanNorm{
 
     const int MISSING = -9999;
 
+    // B18: numeric columns are read as tokens and parsed here, so a token
+    // such as "nan", "inf" or "x" cannot put the stream into a fail state
+    // (which silently zeroed every later row). readNum returns NaN for
+    // anything that is not a finite number; readScore maps that to MISSING
+    // and counts it in nBadRows (read pass only).
+    long nBadRows = 0;
+    static double parseNum(const string &t){
+        char *e = nullptr;
+        double v = strtod(t.c_str(), &e);
+        if (t.empty() || e == t.c_str() || *e != '\0' || !std::isfinite(v)) return NAN;
+        return v;
+    }
+    static double readNum(istream &in){ string t; in >> t; return parseNum(t); }
+    double readScore(istream &in, bool count){
+        double v = readNum(in);
+        if (std::isnan(v)) { if (count) nBadRows++; return MISSING; }
+        return v;
+    }
+    void reportBadRows(){
+        if (nBadRows == 0) return;
+        cerr << "WARNING: " << nBadRows << " rows have a non-numeric or non-finite score or frequency (e.g. nan, inf); they are treated as missing and not written.\n";
+        flog << "WARNING: " << nBadRows << " rows have a non-numeric or non-finite score or frequency (e.g. nan, inf); they are treated as missing and not written.\n";
+    }
+
     bool FINE_PERCENTILE = false;
 
     //returns number of lines in file

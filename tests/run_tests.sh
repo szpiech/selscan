@@ -614,6 +614,19 @@ if selected norm-robust; then
     if [ "$r1" -eq 0 ] && [ "$RC" -eq 0 ] && [ -n "$p1" ] && [ "$p1" = "$p2" ] && awk -v p="$p1" 'BEGIN { exit !(p > 0 && p <= 1) }'
     then pass "norm-gene:perm-test"
     else fail "norm-gene:perm-test" "exit $r1/$RC, p-values '$p1' '$p2'"; fi
+    # B18: a non-numeric or non-finite score is treated as missing: the output
+    # equals a run with that row deleted, and the count is logged. 3.0.1's
+    # stream entered a fail state (iHS: 33 of 527 rows written, exit 0).
+    for c in "ihs|ihs|7|nan|20bins.norm|--ihs --bins 20" "xpehh|xpehh|9|x|norm|--xpehh" "ihh12|ihh12|5|inf|norm|--ihh12"; do
+        IFS='|' read -r st g col tok suf args <<< "$c"
+        gzip -dc "$EXPECTED/$g.tsv.gz" | awk -F'\t' -v OFS='\t' -v c="$col" -v t="$tok" 'NR==101 {$c=t} {print}' > nb_bad.$st.out
+        gzip -dc "$EXPECTED/$g.tsv.gz" | awk 'NR!=101' > nb_rm.$st.out
+        run nb1.log norm $args --files nb_bad.$st.out
+        grep -q "WARNING: 1 rows have a non-numeric" nb1.log; w=$?
+        run nb2.log norm $args --files nb_rm.$st.out
+        if [ "$w" -ne 0 ]; then fail "norm-bad-token:$st" "no warning logged for '$tok'"
+        else identical "norm-bad-token:$st" nb_bad.$st.out.$suf nb_rm.$st.out.$suf; fi
+    done
 fi
 
 if selected errors; then

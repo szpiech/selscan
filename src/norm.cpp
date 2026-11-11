@@ -341,6 +341,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             double *score = new double[totalLoci];
             //read in all data
             readAllIHS(filename, fileLoci, nfiles, freq, score);
+            reportBadRows();
 
             double *mean = new double[numBins];
             double *variance = new double[numBins];
@@ -440,6 +441,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             //read in all data
             if(XPEHH) readAllXPEHH(filename, fileLoci, nfiles, freq1, freq2, score);
             if(SOFT) readAllIHH12(filename, fileLoci, nfiles, freq1, score);
+            reportBadRows();
             numBins = 1;
             double *mean = new double[numBins];
             double *variance = new double[numBins];
@@ -2070,15 +2072,15 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
         fin >> chr;
         fin >> name;
         fin >> pos;
-        fin >> freq;
-        fin >> ihh1;
-        fin >> ihh2;
-        fin >> data;
+        freq = readNum(fin);
+        ihh1 = readNum(fin);
+        ihh2 = readNum(fin);
+        data = readScore(fin, false);   // counted in readAllIHS (B18)
 
         // read in and skip extra columns
         skipCols(fin, numColsToSkip);
 
-        if (data == MISSING) continue;
+        if (data == MISSING || std::isnan(freq)) continue;
         {
             int b = freqBin(freq, numBins, threshold, false);
             if (b < 0) continue; // freq 1.0: excluded and counted in getMeanVarBins
@@ -2140,14 +2142,14 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
         fin >> chr;
         fin >> name;
         fin >> pos;
-        fin >> gpos;
-        fin >> freq1;
-        fin >> ihh1;
-        fin >> freq2;
-        fin >> ihh2;
-        fin >> data;
+        gpos = readNum(fin);
+        freq1 = readNum(fin);
+        ihh1 = readNum(fin);
+        freq2 = readNum(fin);
+        ihh2 = readNum(fin);
+        data = readScore(fin, false);   // counted in readAllXPEHH (B18)
 
-        if (data == MISSING) continue;
+        if (data == MISSING || std::isnan(freq1)) continue;
         {
             int b = freqBin(freq1, numBins, threshold, true); // single bin, closed at 1.0
             normedData = (data - mean[b]) / sqrt(variance[b]);
@@ -2213,10 +2215,10 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
         fin >> chr;
         fin >> name;
         fin >> pos;
-        fin >> freq1;
-        fin >> data;
+        freq1 = readNum(fin);
+        data = readScore(fin, false);   // counted in readAllIHH12 (B18)
 
-        if (data == MISSING) continue;
+        if (data == MISSING || std::isnan(freq1)) continue;
         {
             int b = freqBin(freq1, numBins, threshold, true); // single bin, closed at 1.0
             normedData = (data - mean[b]) / sqrt(variance[b]);
@@ -2367,10 +2369,11 @@ void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles
             fin >> junk;
             fin >> junk;
             fin >> junk;
-            fin >> freq[overallCount];
+            freq[overallCount] = readNum(fin);
             fin >> junk;
             fin >> junk;
-            fin >> score[overallCount];
+            score[overallCount] = readScore(fin, true);
+            if (std::isnan(freq[overallCount]) && score[overallCount] != MISSING) { score[overallCount] = MISSING; nBadRows++; }
             skipCols(fin, numColsToSkip); // if it has extra columns, skip them
             overallCount++;
         }
@@ -2510,11 +2513,12 @@ void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfil
             fin >> junk; //id
             fin >> junk; //pos
             fin >> junk; //gpos
-            fin >> freq1[overallCount];
+            freq1[overallCount] = readNum(fin);
             fin >> junk;
-            fin >> freq2[overallCount];
+            freq2[overallCount] = readNum(fin);
             fin >> junk;
-            fin >> score[overallCount];
+            score[overallCount] = readScore(fin, true);
+            if (std::isnan(freq1[overallCount]) && score[overallCount] != MISSING) { score[overallCount] = MISSING; nBadRows++; }
             overallCount++;
         }
         fin.close();
@@ -2539,8 +2543,9 @@ void SelscanNorm::readAllIHH12(vector<string> filename, int fileLoci[], int nfil
             fin >> junk; //chr
             fin >> junk; //id
             fin >> junk; //pos
-            fin >> freq1[overallCount]; //p1
-            fin >> score[overallCount]; //ihh12
+            freq1[overallCount] = readNum(fin); //p1
+            score[overallCount] = readScore(fin, true); //ihh12
+            if (std::isnan(freq1[overallCount]) && score[overallCount] != MISSING) { score[overallCount] = MISSING; nBadRows++; }
             overallCount++;
         }
         fin.close();
