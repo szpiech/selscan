@@ -736,6 +736,9 @@ maf-negative|--ihs --vcf p1.vcf.gz --pmap --maf -1
 maf-dot|--ihs --vcf p1.vcf.gz --pmap --maf .
 threads-overflow|--ihs --vcf p1.vcf.gz --pmap --threads 99999999999
 json-maf-range|--ihs --vcf p1.vcf.gz --pmap --multi-param badmaf.json
+ihs-nsl-no-map|--ihs --nsl --vcf p1.vcf.gz
+vcf-and-thap|--ihs --vcf p1.vcf.gz --thap example.thap --pmap
+vcf-with-tped-ref|--xpehh --vcf p1.vcf.gz --tped-ref p1.tped --pmap
 filter-vcf-01|--ihs --filter-vcf --vcf p1.vcf.gz --pmap
 bad-locus|--ehh no_such_locus --vcf p1.vcf.gz --pmap
 bad-locus-ehh12|--ehh12 no_such_locus --vcf p1.vcf.gz --pmap
@@ -758,6 +761,17 @@ if selected numeric-args; then
     run na5.log --ihs --vcf p1.vcf.gz --pmap --maf "" --out na5
     if [ "$RC" -eq 1 ]; then pass "numeric-args:maf-empty-rejected"
     else fail "numeric-args:maf-empty-rejected" "exit $RC (expected 1; 3.0.1 read an empty value as 0)"; fi
+fi
+
+if selected arg-messages; then
+    # U6: messages name the actual problem, and flags with no effect warn
+    chk() { local name="$1" want="$2"; shift 2; run am.log "$@" --out am_$name
+            if grep -q -- "$want" am.log; then pass "arg-messages:$name"
+            else fail "arg-messages:$name" "exit $RC, log lacks '$want'"; fi; }
+    chk xp-no-ref "need a reference population" --xpehh --vcf p1.vcf.gz --pmap
+    chk flag-as-value "is an option" --ihs --vcf --pmap
+    chk pmap-with-map "is not used for genetic distance" --ihs --vcf p1.vcf.gz --pmap --map example.map
+    chk wagh-without-xp "applies only to XP" --ihs --vcf p1.vcf.gz --pmap --wagh
 fi
 
 if selected help; then

@@ -326,6 +326,13 @@ bool param_t::parseCommandLine(int argc, char *argv[])
                 badFlags++;
                 break;
             }
+            else if (flagExists(string(argv[i + 1])))
+            {
+                // U6: the next token is another option, not a value
+                cerr << "ERROR: No argument found for " << argv[i] << " (" << argv[i + 1] << " is an option).\n";
+                badFlags++;
+                break;
+            }
             else
             {
                 args[argv[i]] = argv[i + 1];

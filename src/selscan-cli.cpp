@@ -318,12 +318,52 @@ void checkParameters(param_main &p){
     // bool VCF = false;
     // if (vcfFilename.compare(DEFAULT_FILENAME_POP1_VCF) != 0) VCF = true;
 
-    if (p.VCF && p.TPED) {
-        HANDLE_ERROR_NOLOG("Please choose only one of TPED, VCF, or HAP formatted files.\n");
-    }
+    // U6: exactly one input format; the reference file (XP only) must be of
+    // the same format. 3.0.1 rejected only VCF+TPED and (VCF|TPED)+HAP, and
+    // other mixtures ran on one file or failed on an internal file name.
+    {
+        const bool HAPQ = p.hapFilename.compare(DEFAULT_FILENAME_POP1) != 0;
+        const int nFormats = int(p.VCF) + int(p.TPED) + int(p.THAP) + int(HAPQ);
+        if (nFormats > 1) {
+            HANDLE_ERROR_NOLOG("Please choose only one of " + ARG_FILENAME_POP1_VCF + ", " + ARG_FILENAME_POP1_TPED
+                               + ", " + ARG_FILENAME_POP1_THAP + " or " + ARG_FILENAME_POP1 + ".");
+        }
+        if (nFormats == 0) {
+            HANDLE_ERROR_NOLOG("No input given: use one of " + ARG_FILENAME_POP1_VCF + ", " + ARG_FILENAME_POP1_TPED
+                               + ", " + ARG_FILENAME_POP1_THAP + " or " + ARG_FILENAME_POP1 + ".");
+        }
+        struct RefArg { bool given; bool matches; string flag; };
+        const RefArg refs[] = {
+            { p.vcfFilename2.compare(DEFAULT_FILENAME_POP2_VCF) != 0, p.VCF, ARG_FILENAME_POP2_VCF },
+            { p.tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0, p.TPED, ARG_FILENAME_POP2_TPED },
+            { p.thapFilename2.compare(DEFAULT_FILENAME_POP2_THAP) != 0, p.THAP, ARG_FILENAME_POP2_THAP },
+            { p.hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0, HAPQ, ARG_FILENAME_POP2 },
+        };
+        string wantRef = p.VCF ? ARG_FILENAME_POP2_VCF : p.TPED ? ARG_FILENAME_POP2_TPED
+                       : p.THAP ? ARG_FILENAME_POP2_THAP : ARG_FILENAME_POP2;
+        bool haveRef = false;
+        for (const auto &r : refs) {
+            if (r.given && !r.matches) {
+                HANDLE_ERROR_NOLOG(r.flag + " does not match the input format; use " + wantRef + " for the reference population.");
+            }
+            if (r.given && r.matches) haveRef = true;
+        }
+        if ((p.CALC_XP || p.CALC_XPNSL) && !haveRef) {
+            HANDLE_ERROR_NOLOG("XP-EHH and XP-nSL need a reference population: use " + wantRef + ".");
+        }
 
-    if ( (p.VCF || p.TPED) && (p.hapFilename.compare(DEFAULT_FILENAME_POP1) != 0 || p.hapFilename2.compare(DEFAULT_FILENAME_POP2) != 0) ) {
-        HANDLE_ERROR_NOLOG("Please choose only one of TPED, VCF, or HAP formatted files.\n");
+        // warnings for flags that have no effect (printed once)
+        static bool warned = false;
+        if (!warned) {
+            if (p.USE_PMAP && p.mapFilename.compare(DEFAULT_FILENAME_MAP) != 0) {
+                cerr << "WARNING: " << ARG_PMAP << " is set, so " << ARG_FILENAME_MAP << " " << p.mapFilename
+                     << " is not used for genetic distance (physical positions are used).\n";
+            }
+            if (p.WAGH && !p.CALC_XP && !p.CALC_XPNSL) {
+                cerr << "WARNING: " << ARG_WAGH << " applies only to XP-EHH/XP-nSL and is ignored.\n";
+            }
+            warned = true;
+        }
     }
     
 	// string outFilename = params.getStringFlag(ARG_OUTFILE);
@@ -453,8 +493,13 @@ void checkParameters(param_main &p){
             HANDLE_ERROR_NOLOG("You are not calculating XP stats but have given a second data file (" + p.vcfFilename2 + ").");
         }
 
-        if ((!p.CALC_NSL && !p.CALC_XPNSL) && (p.mapFilename.compare(DEFAULT_FILENAME_MAP) == 0 && !p.USE_PMAP)) {
-            HANDLE_ERROR_NOLOG("Must also provide a mapfile.");
+        // U6: a map is needed whenever a statistic other than nSL/XP-nSL is
+        // requested (3.0.1 skipped the check if --nsl was present, so
+        // --ihs --nsl without a map computed iHS on physical distance)
+        const bool NEEDS_MAP = p.CALC_IHS || p.CALC_XP || p.CALC_SOFT || p.SINGLE_EHH || p.SINGLE_EHH12 || p.CALC_PI;
+        if (NEEDS_MAP && (p.mapFilename.compare(DEFAULT_FILENAME_MAP) == 0 && !p.USE_PMAP)) {
+            HANDLE_ERROR_NOLOG("Must also provide a mapfile (" + ARG_FILENAME_MAP + ") or use " + ARG_PMAP
+                               + "; only " + ARG_NSL + " and " + ARG_XPNSL + " run without one.");
         }
     }
     else if(p.THAP)
