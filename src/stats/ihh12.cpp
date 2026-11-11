@@ -246,10 +246,12 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         m.clear();
 
         //DEBUG:: if(!downstream) cout<<"before ihh12"<<ihh12[locus]<<endl;
+        // distance already carries the gap scale (distance *= scale above);
+        // 2.1-3.0.1 multiplied by scale again here, squaring it (B8).
         if(p.ALT){
-            ihh12 += 0.5 * (ehhdata.curr_ehh12_before_norm + ehhdata.prev_ehh12_before_norm)/square_alt(ehhdata.nhaps) * scale * distance ;
+            ihh12 += 0.5 * (ehhdata.curr_ehh12_before_norm + ehhdata.prev_ehh12_before_norm)/square_alt(ehhdata.nhaps) * distance ;
         }else{
-            ihh12 += 0.5  * (ehhdata.curr_ehh12_before_norm/twice_num_pair(ehhdata.nhaps) + ehhdata.prev_ehh12_before_norm/twice_num_pair(ehhdata.nhaps)) * scale * distance;
+            ihh12 += 0.5  * (ehhdata.curr_ehh12_before_norm/twice_num_pair(ehhdata.nhaps) + ehhdata.prev_ehh12_before_norm/twice_num_pair(ehhdata.nhaps)) * distance;
         }
 
         // double current_ehh1 = ehhdata.curr_ehh_before_norm / twice_num_pair(ehhdata.nhaps);
