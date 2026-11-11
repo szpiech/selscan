@@ -192,21 +192,21 @@ class SelscanStats {
             if(n < 2){
                 return 0;
             }
-            return double(n) * (n - 1);   // exact; 2*nCk(n,2) via lgamma was off above 59,092 (B52)
+            return double(n) * (n - 1);   // exact; 2*nCk(n,2) via lgamma was off above 59,092 (B40)
         }
 
         inline long double twice_num_pair(int n){
             if(n < 2){
                 return 0;
             }
-            return double(n) * (n - 1);   // exact; 2*nCk(n,2) via lgamma was off above 59,092 (B52)
+            return double(n) * (n - 1);   // exact; 2*nCk(n,2) via lgamma was off above 59,092 (B40)
         }
 
         inline double num_pair(int n){
             if(n < 2){
                 return 0;
             }
-            return double(n) * (n - 1) / 2;   // exact (B52)
+            return double(n) * (n - 1) / 2;   // exact (B40)
         }
 
 

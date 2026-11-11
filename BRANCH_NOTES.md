@@ -61,6 +61,16 @@ dependencies, so an incremental build is safe. Before that commit, run
 | 1ff78da | U5 | none in goldens; numeric options must be complete finite numbers (1e-3 and +0.1 now accepted); `--maf` in [0, 0.5] |
 | 4955607 | U6 | none in goldens; one input format, matching reference, map required unless only nSL/XP-nSL; warnings for ignored flags |
 | 903a394 | U12 | none in goldens; `--help` on stdout, `--version`, usage with no arguments, command line echoed once |
+| 8d5d5c0 | notes | step 5 rows in this file |
+| a1b775f | P4 | none; EHH kernels free their work arrays on every return path (p4 iHS leaked 37 MB; peak RSS 44.7 -> 9.1 MiB) |
+| 067e9ab | P2 | none; phased data share one all-zero bitset (phased load RSS -31%) |
+| 8a17e3a | P1 | none; VCF read through a 1 MiB gzread buffer (load about 2.7x faster) |
+| cfa6f90 | B50 | VCF iHS/XP-EHH use `--map` also when nSL/XP-nSL is co-requested (was physical distance); goldens unchanged |
+| b38368b | P1 | none; VCF positions taken from the haplotype pass (big50k load 1.09-1.29 -> 0.81-0.82 s) |
+| 436e402 | P3 | none; gene annotation resumes its scan (1M SNPs, 2000 genes: 2.4 -> 2.1 s; 41.9 s on 3.0.1, mostly B48) |
+| 3c79b85 | P6, B51 | none on well-formed input; norm read/normalise passes buffered (5M rows 10.8 -> 6.6 s); `--ihs-detail` column count from the first data line |
+| 4c51bce | P5 | none; group splitting without per-step allocation (nSL 85.8 -> 14.9 s, single thread) |
+| 47776f7 | B40 | none at the suite's sizes; exact pair counts (nCk(n,2) was off above 59,092 haplotypes; the factln cache race is gone) |
 
 Each commit message gives the measured differences in full.
 
@@ -79,6 +89,11 @@ Corrections to later commit messages:
   known failures, 0 failed.
 - d2bd8ed (B24) calls the release-build out-of-bounds write hidden; it
   ran silently on a018ca0 but crashed (SIGTRAP) on a 22769f4 build.
+- 47776f7 is titled "B52", but it fixes review finding B40 (the factln
+  cache race, the only ThreadSanitizer report, and nCk's inexactness
+  above 59,092); there is no B52. The pair counts no longer call nCk, so
+  the race is gone by construction. TSan does not run on the macOS build
+  machine, so no TSan rerun was made.
 
 ## Validation against an independent reference
 
@@ -130,6 +145,14 @@ remove the 12 duplicated positions.
   200,000-permutation numpy estimate of 0.299.
 - UBSan with libc++ hardening (`_LIBCPP_HARDENING_MODE_DEBUG`) on
   8150dd1: the 38 norm checks pass with no reports.
+- The same build on 3c79b85: the 39 norm checks pass. On the tree
+  committed as 4c51bce (P5): all 183 checks pass.
+- P5 and B40 (47776f7), outputs byte-identical to 436e402: phased iHS and nSL
+  (1000 samples x 50k sites; p4.2000), unphased iHS, iHH12, XP-EHH and
+  XP-nSL (phased and unphased, p1/p2), EHH and EHH12 at 5 loci each.
+- P6: normalised output and log byte-identical to 436e402 on 5M-row iHS,
+  1M-row XP-EHH and iHH12 tables, and on an `--ihs-detail` table with
+  15-17-digit fields and nan/inf/-0/NaN/1.5x tokens.
 
 v2.1.3 is not a baseline for the XP fixes. It drops the same 14
 joint-frequency-0.5 sites as 3.0.1 and agrees with 3.0.1 exactly on every
@@ -180,6 +203,39 @@ site they share.
   B38 adds `--perm-seed` and reports (count+1)/(n+1); B18 treats any
   non-finite score or frequency as missing and logs the count; the norm
   log records bin means and variances at 17 significant digits.
+- Step 6 findings and choices made here, not by the PI: B50 and B51
+  were found during step 6 and are not in the review report. P5 visits
+  groups in first-touched order; results do not depend on it (integer
+  sums). P6 reports write errors on norm output (exit 1); they were
+  ignored.
+
+## Performance (step 6)
+
+Wall time, release build, M-series Mac (8 cores), 7a93ff1 -> 47776f7.
+Synthetic big50k: 1000 samples x 50k sites, 28 MiB VCF. p4.2000: 2000
+sites x 3202 samples. Single runs, so +-5%. These compare what each
+version computes, and the definitions differ: nSL now integrates without
+an EHH cutoff (B7) and iHH12 truncates on EHH12 (Q5), so both do more
+work than in 3.0.1.
+
+| run | 7a93ff1 | 47776f7 | ratio |
+|---|---|---|---|
+| iHS big50k t1 | 9.35 s | 2.77 s | 3.4x |
+| iHS big50k t8 | 4.43 s | 1.13 s | 3.9x |
+| nSL big50k t8 | 21.15 s | 2.92 s | 7.2x |
+| iHS p4 t1 | 21.32 s | 4.73 s | 4.5x |
+| iHH12 p4 t1 | 5.82 s | 4.21 s | 1.4x |
+| iHS p4 unphased t1 | 14.7 s | 3.69 s | 4.0x |
+| norm iHS 5M rows | 16.2 s | 6.66 s | 2.4x |
+
+Per-commit measurements are in the commit messages. Main contributions:
+VCF loading (P1, 3.1-3.4 -> 0.81-0.82 s on big50k), group splitting
+(P5), exact pair counts (B40), norm I/O (P6). Peak memory: P4 and P2 (p4
+iHS, 4 threads, 44.7 -> 7.0 MiB).
+
+Tried and not committed: writing rows with "\n" instead of `endl` (one
+flush per row). No measurable change on local disk; the writes overlap
+the computation. It may matter on network filesystems.
 
 ## Known open issues
 
@@ -207,8 +263,13 @@ site they share.
 - norm items from the review not yet addressed: B35 (`--min-snps 0`), B36
   (window analysis assumes one sorted chromosome per file), B46
   (`--win-offset` counts leading SNPs), U3 (`--ihs-detail` input), U11
-  (empty inputs), P3 and P6 (gene annotation and normalisation speed),
-  M11 (help and manual).
+  (empty inputs), M11 (help and manual).
+- norm speed after P6: about 2.5 of 6.6 s on 5M rows is `%.6g`
+  formatting. `std::to_chars` would remove most of it but needs macOS
+  13.3 or later in Apple's libc++; this waits for the release deployment
+  target (step 7). The separate counting pass (checkIHSfile and its XP
+  and iHH12 versions, about 0.9 s) remains.
+- binom.cpp (nCk, factln) is no longer used by the kernels since 47776f7 (B40).
 - iHS/nSL gene-table rows end with an extra tab (one more field than the
   header); left as is.
 - Makefile_win and the unused Makefile_macos-arm64/-x86-64 still lack
