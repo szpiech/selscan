@@ -130,8 +130,12 @@ class EHH12 : public SelscanStats{
 
             if (queryLoc < 0)
             {
+                // Same contract as --ehh: a query that is not in the
+                // (filtered) data is an error, not a silent empty result.
                 cerr << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
-                return -1;
+                (*flog) << "ERROR: Could not find specific locus query, " << query << ", in data.\n";
+                flog->flush();
+                exit(EXIT_FAILURE);
             }else{
                 cerr << "Found " << query << " in data. Computing EHH12...\n";
             }
