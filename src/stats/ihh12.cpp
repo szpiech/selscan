@@ -214,7 +214,11 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         prev_index = i;  // save last index that was not skipped
 
 
-        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
+        // Truncate on EHH12, the quantity being integrated (manual eq. 14; PI
+        // decision). 2.1-3.0.1 truncated on whole-sample EHH, which decays
+        // sooner than EHH12 because EHH12 pools the two most frequent
+        // haplotypes, so iHH12 stopped while EHH12 was still above the cutoff.
+        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh12_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh12_before_norm /twice_num_pair(ehhdata.nhaps));
         if(breaking_ehh <= p.EHH_CUTOFF){
             /*DEBUG :
             if(downstream){
