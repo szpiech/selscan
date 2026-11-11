@@ -257,7 +257,10 @@ std::pair<double,double> GeneAnalyzer::fit_length_regression(
     }
 
     size_t m = valid_idx.size();
-    if (m == 0) return {0.0, 0.0}; // nothing to fit
+    // gsl_multifit_linear needs m >= p, and with m == p every residual is 0.
+    // Callers check for at least p + 1 genes first (B25); this is a backstop
+    // so GSL's default handler cannot abort the process.
+    if (m <= p) return {0.0, 0.0};
 
     gsl_matrix *X = gsl_matrix_alloc(m, p);
     gsl_vector *y = gsl_vector_alloc(m);
@@ -530,15 +533,24 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
             }
         }
 
-        std::pair<double,double> beta = fit_length_regression(geneLengths, geneScoresMax);
-        
-        std::pair<double,double> beta_min;
-        
-        if(XP)
-            beta_min = fit_length_regression(geneLengths, geneScoresMin);
+        // The length regression has two coefficients; with fewer than three
+        // genes it is undetermined or fits exactly, and GSL aborts below two
+        // (B25). Skip it and write NA in the *_adj columns.
+        const bool FIT_LENGTH = geneLengths.size() >= 3;
+        std::pair<double,double> beta = {0.0, 0.0};
+        std::pair<double,double> beta_min = {0.0, 0.0};
 
-        std::cout << "Fitted length regression: score = " << beta.first
-                  << " + " << beta.second << " * log(length)\n";
+        if (FIT_LENGTH) {
+            beta = fit_length_regression(geneLengths, geneScoresMax);
+            if(XP)
+                beta_min = fit_length_regression(geneLengths, geneScoresMin);
+            std::cout << "Fitted length regression: score = " << beta.first
+                      << " + " << beta.second << " * log(length)\n";
+        } else {
+            std::cerr << "WARNING: " << geneLengths.size() << " gene(s) with at least " << minSNPs
+                      << " SNPs; at least 3 are needed for the length regression. "
+                      << "It is skipped and the *_adj columns are NA.\n";
+        }
 
         const bool SINGLE_GENE_TABLE = true;
         if (SINGLE_GENE_TABLE)
@@ -579,8 +591,13 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
 
                 if (nwin < minSNPs) continue;
 
-                double res_score = compute_length_residual(len, maxScore, beta.first, beta.second);
-                double res_score_min = compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
+                std::string res_score = "NA", res_score_min = "NA";
+                if (FIT_LENGTH) {
+                    std::ostringstream a, b;
+                    a << compute_length_residual(len, maxScore, beta.first, beta.second);
+                    b << compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
+                    res_score = a.str(); res_score_min = b.str();
+                }
                 
                 int geneEnd = row.geneEnd;
                 int geneStart = geneEnd - static_cast<int>(len) + 1;

@@ -557,6 +557,13 @@ if selected norm-robust; then
     if [ "$RC" -eq 0 ] && [ -s nr_genes.bed.ihs.genetable ]; then pass "norm-gene:first"
     else fail "norm-gene:first" "exit $RC"; fi
     rm -f nr_genes.bed.ihs.genetable
+    # B25: with fewer than 3 genes the length regression is skipped and the
+    # adjusted score is NA; 3.0.1 aborted in GSL with one gene
+    head -1 nr_genes.bed > nr_one.bed
+    run nr3.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_one.bed --min-snps 1
+    adj=$(awk -F'\t' 'NR==2 {print $9}' nr_one.bed.ihs.genetable 2>/dev/null)
+    if [ "$RC" -eq 0 ] && [ "$adj" = NA ] && grep -q 'length regression' nr3.log; then pass "norm-gene:one-gene"
+    else fail "norm-gene:one-gene" "exit $RC, top_score_adj '$adj'"; fi
 fi
 
 if selected errors; then
