@@ -74,6 +74,14 @@ public:
     set<string> chr_set;
     double MIN_MAF_CUTOFF = -1;
 
+    // Loci (indices before any filtering) that every reader must skip
+    // regardless of MAF: sites at a duplicated position. Built by
+    // loadHapMapData before the haplotype readers run; empty for VCF input,
+    // whose readers detect duplicates themselves.
+    vector<char> preSkip;
+    bool preSkipAt(size_t locus) const { return locus < preSkip.size() && preSkip[locus]; }
+    void markDuplicatePositions(const vector<long>& positions, const string& source);
+
     std::unique_ptr<MapData> mapData;
     std::unique_ptr<HapData> hapData;
     std::unique_ptr<HapData> hapData2;

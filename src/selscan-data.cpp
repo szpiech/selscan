@@ -134,9 +134,13 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
  int num_rows = hap;
  current_nhaps = (p.UNPHASED) ? num_rows/2 : num_rows;
 
+ int n_maf_skipped = 0;
  for(int loc=0; loc<nloci_before_filter; loc++){
-     if(shouldSkipLocus(number_of_1s_per_locus[loc], number_of_2s_per_locus[loc], num_rows)){
+     if(preSkipAt(loc)){
          skiplist.push_back(loc);
+     }else if(shouldSkipLocus(number_of_1s_per_locus[loc], number_of_2s_per_locus[loc], num_rows)){
+         skiplist.push_back(loc);
+         n_maf_skipped++;
      }
  }
  
@@ -150,7 +154,7 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
 
 if (p.SKIP) {
     LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF);
-    LOG("Removed " << skiplist.size() << " low frequency variants from haplotype data.");
+    LOG("Removed " << n_maf_skipped << " low frequency variants from haplotype data.");
 } else {
     LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF);
 }
@@ -261,6 +265,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 
     queue<int> skiplist;
     int nloci_before_filter = 0;
+    int n_maf_skipped = 0;
 
     //Counts number of haps (rows) and number of loci (cols)
     //if any lines differ, send an error message and throw an exception
@@ -290,8 +295,11 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
             }
         }
 
-        if(shouldSkipLocus(number_of_1s, number_of_2s, current_nhaps)){
+        if(preSkipAt(nloci_before_filter-1)){
             skiplist.push(nloci_before_filter-1);
+        }else if(shouldSkipLocus(number_of_1s, number_of_2s, current_nhaps)){
+            skiplist.push(nloci_before_filter-1);
+            n_maf_skipped++;
         }
         
     
@@ -313,7 +321,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 
     if(p.SKIP) { //prefilter all sites < MAF
         LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
-        LOG("Removed "<<skiplist.size() <<" low frequency all variants.");
+        LOG("Removed "<<n_maf_skipped <<" low frequency variants.");
 
     }else{
         LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF << ".");
@@ -392,6 +400,49 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 }
 
 
+
+// Column 4 (physical position) of every row of a TPED or map file.
+static vector<long> readPositionColumn(const string& filename)
+{
+    igzstream fin;
+    fin.open(filename.c_str());
+    if (fin.fail()) {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 1;
+    }
+    vector<long> pos;
+    string line, a, b, c;
+    long d;
+    while (getline(fin, line)) {
+        istringstream ss(line);
+        if (!(ss >> a >> b >> c >> d)) {
+            cerr << "ERROR: line " << pos.size() + 1 << " of " << filename << " has no physical position in column 4.\n";
+            throw 1;
+        }
+        pos.push_back(d);
+    }
+    fin.close();
+    return pos;
+}
+
+// Drop every record at a position that occurs more than once (PI decision):
+// a duplicated position cannot be placed on the map, and keeping one of the
+// records would be arbitrary. This is what the VCF readers already did; the
+// TPED and hap/thap readers kept duplicates.
+void HapMap::markDuplicatePositions(const vector<long>& positions, const string& source)
+{
+    std::map<long, int> count;
+    for (long x : positions) count[x]++;
+    preSkip.assign(positions.size(), 0);
+    size_t nrec = 0, npos = 0;
+    for (const auto& kv : count) if (kv.second > 1) npos++;
+    for (size_t i = 0; i < positions.size(); i++) {
+        if (count[positions[i]] > 1) { preSkip[i] = 1; nrec++; }
+    }
+    if (nrec > 0) {
+        LOG("Dropped " << nrec << " records at " << npos << " duplicated positions in " << source << " (all records at a duplicated position are removed).");
+    }
+}
 
 VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
 {
@@ -1461,6 +1512,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     int current_nhaps = 0;
     
     queue<int> skiplist;
+    int n_maf_skipped = 0;
 
     //Counts number of haps (cols) and number of loci (rows)
     //if any lines differ, send an error message and throw an exception
@@ -1509,8 +1561,11 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
                 }
             }
         }
-        if(shouldSkipLocus(number_of_1s, number_of_2s, current_nhaps)){
+        if(preSkipAt(nloci_before_filter-1)){
             skiplist.push(nloci_before_filter-1);
+        }else if(shouldSkipLocus(number_of_1s, number_of_2s, current_nhaps)){
+            skiplist.push(nloci_before_filter-1);
+            n_maf_skipped++;
         }
 
         if (previous_nhaps < 0)
@@ -1534,7 +1589,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
 
     if(p.SKIP) { //prefilter all sites < MAF
         LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
-        LOG("Removed "<<skiplist.size() <<" low frequency all variants.");
+        LOG("Removed "<<n_maf_skipped <<" low frequency variants.");
 
     }else{
         LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF << ".");
@@ -1643,6 +1698,20 @@ void HapMap::loadHapMapData(){
     }   
 
     auto start_reading = std::chrono::high_resolution_clock::now();
+
+    // Sites at duplicated positions are dropped by every reader (preSkip).
+    preSkip.clear();
+    if (p.TPED) {
+        vector<long> pos = readPositionColumn(p.tpedFilename);
+        if (p.CALC_XP || p.CALC_XPNSL) {
+            if (readPositionColumn(p.tpedFilename2) != pos) {
+                HANDLE_ERROR(p.tpedFilename + " and " + p.tpedFilename2 + " do not list the same positions in the same order.");
+            }
+        }
+        markDuplicatePositions(pos, p.tpedFilename);
+    } else if (!p.VCF) {
+        markDuplicatePositions(readPositionColumn(p.mapFilename), p.mapFilename);
+    }
 
     if (p.TPED)
     {

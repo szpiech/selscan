@@ -188,22 +188,25 @@ done
 
 # dd1/dd2.vcf: p1/p2 restricted to records that both loaders keep, and
 # c1/c2.tped: the same records converted to TPED, to check that TPED input is
-# read exactly like the same data in VCF. Two filters differ between the
-# loaders and are removed here so this case tests reading alone: the VCF
-# loader drops sites at duplicated positions (12 in p1) and, in XP mode,
-# sites monomorphic in the two panels combined; the TPED loader does neither.
-# Sites at joint frequency 0.5 are also removed (dropped by VCF XP, B2).
-gzip -dc p1.vcf.gz | awk '!/^#/ {print $2}' | uniq -d > dup_pos.txt
+# read exactly like the same data in VCF. Duplicated positions (12 in p1) are
+# left in: every loader drops all records at a duplicated position. Sites
+# monomorphic in the two panels combined are removed, because in XP mode only
+# the VCF loader filters them (a separate difference).
 for k in 1 2; do
     gzip -dc p$k.vcf.gz | awk '!/^#/ { c=0; for (i=10;i<=NF;i++) c += (substr($i,1,1)=="1") + (substr($i,3,1)=="1"); print c, 2*(NF-9) }' > cnt$k.txt
 done
-paste -d' ' cnt1.txt cnt2.txt | awk '{ t=$1+$3; n=$2+$4; print (t==0 || t==n || 2*t==n) ? 1 : 0 }' > drop_row.txt
+paste -d' ' cnt1.txt cnt2.txt | awk '{ t=$1+$3; n=$2+$4; print (t==0 || t==n) ? 1 : 0 }' > drop_row.txt
 for k in 1 2; do
-    gzip -dc p$k.vcf.gz | awk 'FILENAME==ARGV[1] {d[$1]=1; next} FILENAME==ARGV[2] {x[FNR]=$1; next}
-        /^#/ {print; next} { r++; if (!($2 in d) && !x[r]) print }' dup_pos.txt drop_row.txt - > dd$k.vcf
+    gzip -dc p$k.vcf.gz | awk 'FILENAME==ARGV[1] {x[FNR]=$1; next}
+        /^#/ {print; next} { r++; if (!x[r]) print }' drop_row.txt - > dd$k.vcf
     awk '/^#/ {next} { printf "%s %s %.10g %s", $1, $3, $2/1e6, $2;
         for (i=10;i<=NF;i++) printf " %s %s", substr($i,1,1), substr($i,3,1); printf "\n" }' dd$k.vcf > c$k.tped
 done
+
+# dup.map: example.map with Locus2000 moved onto Locus1999's position (map rows
+# 2000-2001, both reported as iHS cores on the normal map), so two records
+# share a position; both must be dropped from hap/thap input.
+awk 'NR==2000 {p=$4} { if (NR==2001) $4=p; print }' example.map > dup.map
 
 echo "selscan regression suite"
 echo "  binary : $BIN"
@@ -379,6 +382,11 @@ if selected tped-equiv; then
     run te3.log --xpehh --tped c1.tped --tped-ref c2.tped --pmap --out te_t
     run te4.log --xpehh --vcf dd1.vcf --vcf-ref dd2.vcf --pmap --out te_v
     identical "tped-equiv:xpehh" te_t.xpehh.out te_v.xpehh.out
+    # hap input with a duplicated map position: both records are dropped and logged
+    run dp.log --ihs --hap example.hap --map dup.map --out dp
+    nd=$(awk -F'\t' 'NR>1 && ($2=="Locus1999" || $2=="Locus2000")' dp.ihs.out | wc -l | tr -d ' ')
+    if [ "$RC" -eq 0 ] && [ "$nd" = 0 ] && grep -q "Dropped 2 records at 1 duplicated positions" dp.log; then pass "dup-positions:hap"
+    else fail "dup-positions:hap" "exit $RC, $nd of the duplicated loci reported, log note $(grep -q 'Dropped 2 records' dp.log && echo present || echo absent)"; fi
 fi
 
 if selected norm-invariants; then
