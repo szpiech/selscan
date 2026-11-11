@@ -40,6 +40,23 @@ dependencies, so an incremental build is safe. Before that commit, run
 | 56de517 | B15 | none in goldens; XP VCF files are paired by position and REF/ALT (was by record index); unpaired and mismatched records are dropped and counted |
 | 22769f4 | B47 | XP-nSL window and unphased step counted in retained sites (were raw file-1 records); xpnsl and xpnsl-unphased change in every row |
 | aba04c4 | B16 | none in goldens; XP VCF reader rejects missing alleles, '/' in phased mode, short rows and a missing #CHROM line, as the single-population reader does |
+| 5bd30f8 | tests | comment states measured 3.0.1 behaviour for the xp-validate fixtures |
+| a018ca0 | B23 | none in goldens; `--norm-files --gene-bed` no longer crashes after writing |
+| d2bd8ed | B24 | none in goldens; `--first` with several `--files` and `--gene-bed` stays in bounds |
+| 9fbb6d7 | B25 | none in goldens; gene table with fewer than 3 genes: NA in `*_adj`, no GSL abort |
+| 4535177 | B26 | none in goldens; XP `bottom_score_adj` is the residual of the bottom score |
+| 49d0827 | B37 | none in goldens; a gene's last base counts for SNP and window overlap |
+| 9f30ab1 | B48 | none in goldens; `--bp-win --gene-bed` annotates the `.windows` table (was the `.norm` file) |
+| 1156907 | B38 | none in goldens; permutation test reads `top_score_adj`, add-one p-value, `--perm-seed` |
+| 3078566 | B18 | none in goldens; non-numeric/non-finite scores are treated as missing and counted |
+| 9d50efc | B34 | frequency bins exactly left-closed; norm-ihs, norm-nsl, norm-ihs-bpwin (+windows) re-recorded |
+| a53b5b2 | B19, U10 | none in goldens; `--crit-percent` from finite normalised scores; iHH12 one-tailed |
+| 4545108 | B21 | windows golden gains its last window (5 SNPs, below `--min-snps`) |
+| ff34218 | B45 | none in goldens; iHH12 window maxima are per file |
+| 3213f74 | B22, U4 | windows golden: 8 labels 1 -> 100; quantile bins sliced with the output rule, `>` rule, warning below 100 windows per bin |
+| c3c2060 | B49 | none in goldens; norm `--log` written in every mode and kept open to the end |
+| 15426a0 | B20 | none in goldens; `--log-input` takes the bin count from the log; bin statistics logged at 17 digits |
+| 8150dd1 | U2 | none in goldens; `--log-only` honoured for iHS/nSL, window and gene analyses skipped |
 
 Each commit message gives the measured differences in full.
 
@@ -85,6 +102,21 @@ remove the 12 duplicated positions.
   phased 2156/2156, unphased 2193/2193, same site sets; sL within 4.7e-5
   (rounding on values near 20), XP-nSL within 3.8e-6. The pre-B47 build
   differs by more than 1e-4 at 1427 phased and 2188 unphased sites.
+- norm frequency bins after B34, against the normalisation track's
+  refnorm.py (exact left-closed rule, 20 bins): p1 iHS 503/503, p1 nSL
+  816/816, example.hap iHS 4782/4782, same locus sets, within 5e-6.
+- `--crit-percent` after B19/U10, against a numpy computation: p4 iHS at
+  100 bins 2.24509 / -2.32029 from 1419 loci (equal); p1 iHH12 one-tailed
+  1.20591, 58 of 1145 loci flagged at 0.05.
+- Window percentile labels after B22/U4, against refwin.py with the `>`
+  rule: tie-heavy and random synthetic sets 0 mismatches of 1001 and
+  3001; example.hap iHS and p1/p2 XP-EHH (both tails) 0 of 50.
+- Gene table `*_adj` after B26: within 5.2e-6 of numpy least squares
+  (30-gene synthetic XP table).
+- Gene-set permutation test after B38: 0.306 (seed 7) against a
+  200,000-permutation numpy estimate of 0.299.
+- UBSan with libc++ hardening (`_LIBCPP_HARDENING_MODE_DEBUG`) on
+  8150dd1: the 38 norm checks pass with no reports.
 
 v2.1.3 is not a baseline for the XP fixes. It drops the same 14
 joint-frequency-0.5 sites as 3.0.1 and agrees with 3.0.1 exactly on every
@@ -113,9 +145,22 @@ site they share.
 - Q7/B15: XP input is intersected by position, and REF/ALT must match;
   each kind of dropped record is counted in the log.
 - B47 (found during B15, not in the review report): XP-nSL counts distance
-  in retained sites, as nSL does. This is a definition change made for
-  consistency and awaits PI confirmation; it is a separate commit so it can
-  be dropped.
+  in retained sites, as nSL does. A definition change made for
+  consistency; confirmed by the PI.
+- Q9/B34: frequency bins are [b/B, (b+1)/B), computed as
+  floor(f*B + 1e-6*B); the tolerance covers 6-digit printing.
+- Q10/B19, U10, U4: `--crit-percent` over every locus with a finite
+  normalised score (including bins below 20 loci, which are not
+  written); iHH12 one-tailed; window labels use `>`; a warning when a
+  SNP-count bin has fewer than 100 windows. Rank-based empirical
+  percentiles remain a possible future change.
+- Q11/B20: `--log-input` takes the bin count from the log; an explicit
+  `--bins` must agree.
+- Implementation choices made here, not by the PI: B25 writes NA in the
+  gene table's `*_adj` columns when fewer than 3 genes pass `--min-snps`;
+  B38 adds `--perm-seed` and reports (count+1)/(n+1); B18 treats any
+  non-finite score or frequency as missing and logs the count; the norm
+  log records bin means and variances at 17 significant digits.
 
 ## Known open issues
 
@@ -139,6 +184,16 @@ site they share.
   record (B39, filter-vcf-01).
 - No golden case runs unphased `--wagh`, so that part of feec363 is
   untested.
+- B24 is a regression check only on release builds: the out-of-bounds
+  write ran silently on a018ca0 but crashed (SIGTRAP) on a 22769f4
+  build, and a libc++-hardened build aborts on it.
+- norm items from the review not yet addressed: B35 (`--min-snps 0`), B36
+  (window analysis assumes one sorted chromosome per file), B46
+  (`--win-offset` counts leading SNPs), U3 (`--ihs-detail` input), U11
+  (empty inputs), P3 and P6 (gene annotation and normalisation speed),
+  M11 (help and manual).
+- iHS/nSL gene-table rows end with an extra tab (one more field than the
+  header); left as is.
 - Makefile_win and the unused Makefile_macos-arm64/-x86-64 still lack
   header dependencies (M4).
 - `--multi-chr` is deferred until after the bug fixes; it is a new feature
