@@ -57,6 +57,10 @@ dependencies, so an incremental build is safe. Before that commit, run
 | c3c2060 | B49 | none in goldens; norm `--log` written in every mode and kept open to the end |
 | 15426a0 | B20 | none in goldens; `--log-input` takes the bin count from the log; bin statistics logged at 17 digits |
 | 8150dd1 | U2 | none in goldens; `--log-only` honoured for iHS/nSL, window and gene analyses skipped |
+| 02aaea8 | B39 | none in goldens; errors exit 1 with a message (were exit 134); `--multi-param` keys and types checked |
+| 1ff78da | U5 | none in goldens; numeric options must be complete finite numbers (1e-3 and +0.1 now accepted); `--maf` in [0, 0.5] |
+| 4955607 | U6 | none in goldens; one input format, matching reference, map required unless only nSL/XP-nSL; warnings for ignored flags |
+| 903a394 | U12 | none in goldens; `--help` on stdout, `--version`, usage with no arguments, command line echoed once |
 
 Each commit message gives the measured differences in full.
 
@@ -165,6 +169,12 @@ site they share.
   percentiles remain a possible future change.
 - Q11/B20: `--log-input` takes the bin count from the log; an explicit
   `--bins` must agree.
+- Q13/U12: help on stdout with exit 0, `--version`, a missing `--ehh12`
+  locus is an error.
+- Step 5 choices made here, not by the PI: `--pmap` together with `--map`
+  and `--wagh` without XP only warn; a string option followed by another
+  option is an error; `--maf` outside [0, 0.5] is an error; `--multi-param`
+  rejects unknown keys.
 - Implementation choices made here, not by the PI: B25 writes NA in the
   gene table's `*_adj` columns when fewer than 3 genes pass `--min-snps`;
   B38 adds `--perm-seed` and reports (count+1)/(n+1); B18 treats any
@@ -173,9 +183,7 @@ site they share.
 
 ## Known open issues
 
-- Still failing on purpose, listed in tests/run_tests.sh KNOWN_FAIL: B39
-  (uncaught exceptions abort with exit 134: all loci filtered, `--filter-vcf`
-  on 0/1-coded VCF, malformed `--multi-param` JSON).
+- KNOWN_FAIL in tests/run_tests.sh is empty since 02aaea8 (B39).
 - B43 (phased XP-EHH `--alt`) differs from the reference at 862 of 2083
   sites. Part of it is explained: XP integrates each population only while
   that population is not all-unique, and under `--alt` the all-unique EHH
