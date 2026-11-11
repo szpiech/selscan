@@ -692,6 +692,20 @@ if selected norm-robust; then
         if grep -q 'Creating window file' nl$k.log 2>/dev/null; then pass "norm-log:window-analysis:$k"
         else fail "norm-log:window-analysis:$k" "window analysis missing from the --log file"; fi
     done
+    # B20 (Q11): --log-input takes the bin count from the log and reproduces
+    # the run that wrote it exactly (statistics are logged at full
+    # precision). 3.0.1 always used 100 bins and silently dropped loci.
+    gzip -dc "$EXPECTED/ihs.tsv.gz" > li_ref.ihs.out; cp li_ref.ihs.out li_use.ihs.out
+    run li1.log norm --ihs --bins 20 --files li_ref.ihs.out --log li_ref.log
+    run li2.log norm --ihs --files li_use.ihs.out --log-input li_ref.log --log li_use.log
+    identical "norm-log-input:ihs-20-bins" li_use.ihs.out.20bins.norm li_ref.ihs.out.20bins.norm
+    gzip -dc "$EXPECTED/xpehh.tsv.gz" > li_ref.xpehh.out; cp li_ref.xpehh.out li_use.xpehh.out
+    run li3.log norm --xpehh --files li_ref.xpehh.out --log li_refx.log
+    run li4.log norm --xpehh --files li_use.xpehh.out --log-input li_refx.log --log li_usex.log
+    identical "norm-log-input:xpehh" li_use.xpehh.out.norm li_ref.xpehh.out.norm
+    run li5.log norm --ihs --bins 30 --files li_use.ihs.out --log-input li_ref.log --log li_bad.log
+    if [ "$RC" -eq 1 ] && grep -q 'disagrees' li5.log; then pass "norm-log-input:bins-conflict"
+    else fail "norm-log-input:bins-conflict" "exit $RC (expected 1 with a --bins conflict message)"; fi
 fi
 
 if selected errors; then

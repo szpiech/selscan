@@ -285,6 +285,7 @@ class SelscanNorm{
                          double quantileBound[], map<string, double> topWindowBoundary[], const string &label);
     double windowPercentile(int nSNPs, double frac, const double quantileBound[], int numQuantiles,
                             map<string, double> topWindowBoundary[]);
+    int countLogBins(const std::string &binFile);
     void critCutoffs(const double score[], int nloci, double critPercent, double critNum,
                      bool oneTailed, double &upperCutoff, double &lowerCutoff);
 

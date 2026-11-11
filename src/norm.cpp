@@ -1,5 +1,6 @@
 #include "norm.h"
 #include <limits>
+#include <iomanip>
 #include <deque>
 
 // #include <gsl/gsl_statistics_double.h>
@@ -146,10 +147,23 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         return 0;
     }
 
-    if(params.flagWasSet(ARG_FREQ_BINS) && LOG_INPUT){
-        cerr << "ERROR: Options --log-input and --bins cannot be used together. "
-         << "--log-input already provides frequency bin information.\n";
-        exit(1);
+    // B20 (PI decision Q11): with --log-input the number of frequency bins is
+    // the number of rows in the log's bin table (3.0.1 always used 100, so
+    // logs written with other --bins silently dropped most loci). --bins may
+    // be given only if it agrees.
+    if (LOG_INPUT && (IHS || NSL)) {
+        int nLogBins = countLogBins(params.getStringFlag(ARG_LOG_INPUT));
+        if (nLogBins <= 0) {
+            cerr << "ERROR: no frequency-bin table (header 'bin\tnum\tmean\tvariance') in "
+                 << params.getStringFlag(ARG_LOG_INPUT) << ".\n";
+            exit(1);
+        }
+        if (params.flagWasSet(ARG_FREQ_BINS) && numBins != nLogBins) {
+            cerr << "ERROR: --bins " << numBins << " disagrees with the " << nLogBins
+                 << " frequency bins in " << params.getStringFlag(ARG_LOG_INPUT) << ".\n";
+            exit(1);
+        }
+        numBins = nLogBins;
     }
 
     if(params.flagWasSet(ARG_FREQ_BINS) && (params.flagWasSet(ARG_XPEHH) || params.flagWasSet(ARG_XPNSL) || params.flagWasSet(ARG_SOFT))){
@@ -399,7 +413,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             for (int i = 0; i < numBins; i++)
             {
                 cerr << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
-                flog << threshold[i] << "\t" << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+                // full precision so --log-input reproduces this run exactly (B20)
+                flog << threshold[i] << "\t" << n[i] <<  "\t" << std::setprecision(17) << mean[i] << "\t" << variance[i] << std::setprecision(6) << endl;
             }
 
 
@@ -480,7 +495,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             for (int i = 0; i < numBins; i++)
             {
                 cerr << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
-                flog << n[i] <<  "\t" << mean[i] << "\t" << variance[i] << endl;
+                flog << n[i] <<  "\t" << std::setprecision(17) << mean[i] << "\t" << variance[i] << std::setprecision(6) << endl;
             }
 
             // Only normalizing if necessary
@@ -1632,6 +1647,31 @@ int SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double 
     return excluded;
 }
 
+// Number of rows in the frequency-bin table of a norm log: the lines after
+// the "bin\tnum\tmean\tvariance" header up to the first line that is not
+// four fields starting with a number (B20).
+int SelscanNorm::countLogBins(const std::string &binFile)
+{
+    std::ifstream in(binFile);
+    if (!in) {
+        std::cerr << "Error: cannot open bin data file " << binFile << "\n";
+        exit(1);
+    }
+    std::string line;
+    bool found = false;
+    while (std::getline(in, line))
+        if (line.rfind("bin\tnum\tmean\tvariance", 0) == 0) { found = true; break; }
+    if (!found) return 0;
+    int nb = 0;
+    while (std::getline(in, line)) {
+        std::istringstream iss(line);
+        string a, b, c, d;
+        if (!(iss >> a >> b >> c >> d) || std::isnan(parseNum(a))) break;
+        nb++;
+    }
+    return nb;
+}
+
 void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
                                        double freq[], double data[], int nloci,
                                        double mean[], double variance[], int n[],
@@ -1683,24 +1723,31 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
 
     // 4. Read the rest of the file (bin rows)
     if(!XPORSOFT){
+        // The table is the numBins rows right after the header, in order;
+        // row b must carry the upper edge (b+1)/numBins. It ends at the
+        // first line that is not "edge n mean variance" (later sections of
+        // the log, such as window tables, are not read). (B20)
+        int b = 0;
         while (std::getline(in, line)) {
-            if (line.empty()) continue;
-
             std::istringstream iss(line);
-            double bin;
-            int num;
-            double m, v;
-            if (!(iss >> bin >> num >> m >> v)) continue;
-
-            // Find the right bin slot by threshold match
-            for (int b = 0; b < numBins; b++) {
-                if (std::abs(bin - threshold[b]) < 1e-6) {
-                    n[b] = num;
-                    mean[b] = m;
-                    variance[b] = v;
-                    break;
-                }
+            string tb, tn, tm, tv;
+            if (!(iss >> tb >> tn >> tm >> tv)) break;
+            double bin = parseNum(tb);
+            if (std::isnan(bin)) break;
+            if (b >= numBins) break;
+            if (std::abs(bin - threshold[b]) > 1e-6) {
+                std::cerr << "ERROR: bin " << b + 1 << " of " << binFile << " has upper edge " << tb
+                          << ", expected " << threshold[b] << ".\n";
+                exit(1);
             }
+            n[b] = atoi(tn.c_str());
+            mean[b] = (tm == "nan" || tm == "-nan") ? NAN : atof(tm.c_str());
+            variance[b] = (tv == "nan" || tv == "-nan") ? NAN : atof(tv.c_str());
+            b++;
+        }
+        if (b != numBins) {
+            std::cerr << "ERROR: " << binFile << " lists " << b << " frequency bins; expected " << numBins << ".\n";
+            exit(1);
         }
     }else{
         if(numBins != 1){
