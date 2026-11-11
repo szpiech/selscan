@@ -48,7 +48,7 @@ selscan-cli.o: selscan-cli.cpp selscan-cli.h
 binom.o: binom.cpp binom.h
 	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
-norm.o: norm.cpp norm.h
+norm.o: norm.cpp norm.h normio.h gzlinereader.h
 	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 gene.o: gene.cpp gene.h

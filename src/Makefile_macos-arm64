@@ -52,7 +52,7 @@ binom.o: binom.cpp binom.h
 	$(CC) $(G++FLAG) -c $<
 
 
-norm.o: norm.cpp norm.h
+norm.o: norm.cpp norm.h normio.h gzlinereader.h
 	$(CC) $(G++FLAG) -c $< $(I_PATH) $(LINK_OPTS_NORM)
 
 gene.o: gene.cpp gene.h

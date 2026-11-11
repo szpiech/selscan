@@ -1,4 +1,5 @@
 #include "norm.h"
+#include "normio.h"
 #include <limits>
 #include <iomanip>
 #include <deque>
@@ -1805,31 +1806,23 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
 //outputs the original row plus normed score
 void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool NSL)
 {
- 
-    //TODO FIX IHS DETAILS
-    ifstream fin;
-    ofstream fout;
-
-    fin.open(filename.c_str());
-    fout.open(outfilename.c_str());
-    if (fout.fail())
+    NormTokenReader fin(filename);   // P6
+    NormOut fout;
+    if (!fout.open(outfilename))
     {
         cerr << "ERROR: " << outfilename << " " << strerror(errno);
         throw 1;
     }
 
-
     string name, header;
-    int pos;
+    long pos;
     string chr;
-    double freq, data, normedData, ihh1, ihh2;;
+    double freq, data, normedData, ihh1, ihh2;
     int numInBin = 0;
-    string junk;
-    getline(fin, header);
+    fin.getline(header);
 
     const std::string expectedHeaderIHS = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
     const std::string expectedHeaderNSL = "chr\tid\tpos\tfreq\tihh1\tihh0\tnsl";
-
 
     if (NSL){
          if(expectedHeaderNSL != header){
@@ -1837,33 +1830,31 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
             flog << "ERROR: Expected header '" << expectedHeaderNSL << "' but found '" << header << "' in file " << filename << "\n";
             exit(EXIT_FAILURE);
         }
-        fout << header + "\tnorm_nsl\tcrit\n"; 
+        fout.put(header + "\tnorm_nsl\tcrit\n");
     } else{
          if(expectedHeaderIHS != header){
             cerr << "ERROR: Expected header '" << expectedHeaderIHS <<  "' but found '" << header << "' in file " << filename << "\n";
             flog << "ERROR: Expected header '" << expectedHeaderIHS <<  "' but found '" << header << "' in file " << filename << "\n";
             exit(EXIT_FAILURE);
         }
-        fout << header + "\tnorm_ihs\tcrit\n";  
-    } 
+        fout.put(header + "\tnorm_ihs\tcrit\n");
+    }
 
-    // determine the number of cols to skip 
-    // (the number more than the number we care about: 6)
-    int numColsToSkip = 0;
-    numColsToSkip = colsToSkip(fin, 7);
+    // number of columns beyond the 7 used (--ihs-detail adds 4)
+    int numColsToSkip = std::max(0, fin.fieldsInNextLine() - 7);
 
     for (int j = 0; j < fileLoci; j++)
     {
-        fin >> chr;
-        fin >> name;
-        fin >> pos;
-        freq = readNum(fin);
-        ihh1 = readNum(fin);
-        ihh2 = readNum(fin);
-        data = readScore(fin, false);   // counted in readAllIHS (B18)
+        fin.str(chr);
+        fin.str(name);
+        pos = fin.integer();
+        freq = fin.num();
+        ihh1 = fin.num();
+        ihh2 = fin.num();
+        data = fin.num();   // non-finite counted in readAllIHS (B18)
+        if (std::isnan(data)) data = MISSING;
 
-        // read in and skip extra columns
-        skipCols(fin, numColsToSkip);
+        fin.skip(numColsToSkip);
 
         if (data == MISSING || std::isnan(freq)) continue;
         {
@@ -1875,64 +1866,61 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
 
         if (numInBin >= 20)
         {
-            fout << chr << "\t" 
-                << name << "\t"
-                 << pos << "\t"
-                 << freq << "\t"
-                 << ihh1 << "\t"
-                 << ihh2 << "\t"
-                 << data << "\t"
-                 << normedData << "\t";
-            if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
-            else fout << "0\n";
+            fout.put(chr); fout.put('\t');
+            fout.put(name); fout.put('\t');
+            fout.putInt(pos); fout.put('\t');
+            fout.putG(freq); fout.put('\t');
+            fout.putG(ihh1); fout.put('\t');
+            fout.putG(ihh2); fout.put('\t');
+            fout.putG(data); fout.put('\t');
+            fout.putG(normedData); fout.put('\t');
+            if (normedData >= upperCutoff || normedData <= lowerCutoff) fout.put("1\n", 2);
+            else fout.put("0\n", 2);
         }
     }
 
-    fin.close();
-    fout.close();
-
-    return;
+    if (!fout.close())
+    {
+        cerr << "ERROR: writing " << outfilename << " failed: " << strerror(errno) << "\n";
+        throw 1;
+    }
 }
 
 void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool XPNSL)
 {
-    ifstream fin;
-    ofstream fout;
-
-    fin.open(filename.c_str());
-    fout.open(outfilename.c_str());
-    if (fout.fail())
+    NormTokenReader fin(filename);   // P6
+    NormOut fout;
+    if (!fout.open(outfilename))
     {
         cerr << "ERROR: " << outfilename << " " << strerror(errno);
         throw 1;
     }
 
-
-    
     string name, header;
-    int pos;
+    long pos;
     string chr;
-    double gpos, freq1, freq2, data, normedData, ihh1, ihh2;;
+    double gpos, freq1, freq2, data, normedData, ihh1, ihh2;
     int numInBin = 0;
 
-    getline(fin, header);
+    fin.getline(header);
     if (XPNSL){
-        fout << header + "\tnorm_xpnsl\tcrit\n"; 
+        fout.put(header + "\tnorm_xpnsl\tcrit\n");
     } else{
-        fout << header + "\tnorm_xpehh\tcrit\n";  
-    } 
+        fout.put(header + "\tnorm_xpehh\tcrit\n");
+    }
 
     for (int j = 0; j < fileLoci; j++)
     {
-        fin >> chr;
-        fin >> name;
-        fin >> pos;
-        gpos = readNum(fin);
-        freq1 = readNum(fin);
-        ihh1 = readNum(fin);
-        freq2 = readNum(fin);
-        ihh2 = readNum(fin);
-        data = readScore(fin, false);   // counted in readAllXPEHH (B18)
+        fin.str(chr);
+        fin.str(name);
+        pos = fin.integer();
+        gpos = fin.num();
+        freq1 = fin.num();
+        ihh1 = fin.num();
+        freq2 = fin.num();
+        ihh2 = fin.num();
+        data = fin.num();   // non-finite counted in readAllXPEHH (B18)
+        if (std::isnan(data)) data = MISSING;
 
         if (data == MISSING || std::isnan(freq1)) continue;
         {
@@ -1943,48 +1931,46 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
 
         if (numInBin >= 20)
         {
-            fout << chr << "\t" 
-                << name << "\t"
-                 << pos << "\t"
-                 << gpos << "\t"
-                 << freq1 << "\t"
-                 << ihh1 << "\t"
-                 << freq2 << "\t"
-                 << ihh2 << "\t"
-                 << data << "\t"
-                 << normedData << "\t";
-            if (normedData >= upperCutoff) fout << "1\n";
-            else if (normedData <= lowerCutoff) fout << "-1\n";
-            else fout << "0\n";
+            fout.put(chr); fout.put('\t');
+            fout.put(name); fout.put('\t');
+            fout.putInt(pos); fout.put('\t');
+            fout.putG(gpos); fout.put('\t');
+            fout.putG(freq1); fout.put('\t');
+            fout.putG(ihh1); fout.put('\t');
+            fout.putG(freq2); fout.put('\t');
+            fout.putG(ihh2); fout.put('\t');
+            fout.putG(data); fout.put('\t');
+            fout.putG(normedData); fout.put('\t');
+            if (normedData >= upperCutoff) fout.put("1\n", 2);
+            else if (normedData <= lowerCutoff) fout.put("-1\n", 3);
+            else fout.put("0\n", 2);
         }
     }
 
-    fin.close();
-    fout.close();
-
-    return;
+    if (!fout.close())
+    {
+        cerr << "ERROR: writing " << outfilename << " failed: " << strerror(errno) << "\n";
+        throw 1;
+    }
 }
 
 
 void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
 {
-    ifstream fin;
-    ofstream fout;
-
-    fin.open(filename.c_str());
-    fout.open(outfilename.c_str());
-    if (fout.fail())
+    NormTokenReader fin(filename);   // P6
+    NormOut fout;
+    if (!fout.open(outfilename))
     {
         cerr << "ERROR: " << outfilename << " " << strerror(errno);
         throw 1;
     }
 
     string chr, name, header;
-    int pos;
-    double gpos, freq1, data, normedData, ihh1, ihh2;;
+    long pos;
+    double freq1, data, normedData;
     int numInBin = 0;
 
-    getline(fin, header);
+    fin.getline(header);
 
     const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh12";
     if (header != expectedHeader) {     //check that header matches expected format
@@ -1993,15 +1979,16 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
         exit(EXIT_FAILURE);
     }
 
-    fout << header + "\tnorm_ihh12\tcrit\n";
+    fout.put(header + "\tnorm_ihh12\tcrit\n");
 
     for (int j = 0; j < fileLoci; j++)
     {
-        fin >> chr;
-        fin >> name;
-        fin >> pos;
-        freq1 = readNum(fin);
-        data = readScore(fin, false);   // counted in readAllIHH12 (B18)
+        fin.str(chr);
+        fin.str(name);
+        pos = fin.integer();
+        freq1 = fin.num();
+        data = fin.num();   // non-finite counted in readAllIHH12 (B18)
+        if (std::isnan(data)) data = MISSING;
 
         if (data == MISSING || std::isnan(freq1)) continue;
         {
@@ -2012,22 +1999,22 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
 
         if (numInBin >= 20)
         {
-            fout << chr << "\t"
-                 << name << "\t"
-                 << pos << "\t"
-                 << freq1 << "\t"
-                 << data << "\t"
-                 << normedData << "\t";
-            //if (normedData >= upperCutoff || normedData <= lowerCutoff) fout << "1\n";
-            if (normedData >= upperCutoff) fout << "1\n";
-            else fout << "0\n";
+            fout.put(chr); fout.put('\t');
+            fout.put(name); fout.put('\t');
+            fout.putInt(pos); fout.put('\t');
+            fout.putG(freq1); fout.put('\t');
+            fout.putG(data); fout.put('\t');
+            fout.putG(normedData); fout.put('\t');
+            if (normedData >= upperCutoff) fout.put("1\n", 2);   // one-tailed (U10)
+            else fout.put("0\n", 2);
         }
     }
 
-    fin.close();
-    fout.close();
-
-    return;
+    if (!fout.close())
+    {
+        cerr << "ERROR: writing " << outfilename << " failed: " << strerror(errno) << "\n";
+        throw 1;
+    }
 }
 
 // returns number of loci (lines) in IHS file
@@ -2138,34 +2125,27 @@ int SelscanNorm::checkIHSfile(std::ifstream &fin, bool norm)
 void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
     //chr	id	pos	freq	ihh1	ihh0	ihs
-    ifstream fin;
     string junk;
     int overallCount = 0;
     for (int i = 0; i < nfiles; i++)
     {
-        fin.open(filename[i].c_str());
-        getline(fin, junk); //added v3, skip header line
-
-        int numColsToSkip = 0;
-        numColsToSkip = colsToSkip(fin, 7); // if it has extra columns, skip them
+        NormTokenReader fin(filename[i]);   // P6
+        fin.getline(junk); // header
+        int numColsToSkip = std::max(0, fin.fieldsInNextLine() - 7); // --ihs-detail columns
 
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> junk;
-            fin >> junk;
-            fin >> junk;
-            freq[overallCount] = readNum(fin);
-            fin >> junk;
-            fin >> junk;
-            score[overallCount] = readScore(fin, true);
+            fin.skip(3);
+            freq[overallCount] = fin.num();
+            fin.skip(2);
+            double s = fin.num();
+            if (std::isnan(s)) { s = MISSING; nBadRows++; }   // B18
+            score[overallCount] = s;
             if (std::isnan(freq[overallCount]) && score[overallCount] != MISSING) { score[overallCount] = MISSING; nBadRows++; }
-            skipCols(fin, numColsToSkip); // if it has extra columns, skip them
+            fin.skip(numColsToSkip);
             overallCount++;
         }
-        fin.close();
     }
-
-    return;
 }
 
 // returns number of loci (lines) in XP-EHH file
@@ -2285,58 +2265,47 @@ int SelscanNorm::checkIHH12file(std::ifstream &fin, bool norm)
 
 void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[])
 {
-    ifstream fin;
     string junk;
     int overallCount = 0;
     for (int i = 0; i < nfiles; i++)
     {
-        fin.open(filename[i].c_str());
-        getline(fin, junk); //skip header line
+        NormTokenReader fin(filename[i]);   // P6
+        fin.getline(junk); // header
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> junk; //chr
-            fin >> junk; //id
-            fin >> junk; //pos
-            fin >> junk; //gpos
-            freq1[overallCount] = readNum(fin);
-            fin >> junk;
-            freq2[overallCount] = readNum(fin);
-            fin >> junk;
-            score[overallCount] = readScore(fin, true);
+            fin.skip(4);                    // chr id pos gpos
+            freq1[overallCount] = fin.num();
+            fin.skip(1);                    // ihh1
+            freq2[overallCount] = fin.num();
+            fin.skip(1);                    // ihh2
+            double s = fin.num();
+            if (std::isnan(s)) { s = MISSING; nBadRows++; }   // B18
+            score[overallCount] = s;
             if (std::isnan(freq1[overallCount]) && score[overallCount] != MISSING) { score[overallCount] = MISSING; nBadRows++; }
             overallCount++;
         }
-        fin.close();
     }
-
-    return;
 }
 
 void SelscanNorm::readAllIHH12(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double score[])
 {
-    ifstream fin;
     string junk;
     int overallCount = 0;
-
     for (int i = 0; i < nfiles; i++)
     {
-        fin.open(filename[i].c_str());
-        getline(fin, junk); //skip header line
-
+        NormTokenReader fin(filename[i]);   // P6
+        fin.getline(junk); // header
         for (int j = 0; j < fileLoci[i]; j++)
         {
-            fin >> junk; //chr
-            fin >> junk; //id
-            fin >> junk; //pos
-            freq1[overallCount] = readNum(fin); //p1
-            score[overallCount] = readScore(fin, true); //ihh12
+            fin.skip(3);                    // chr id pos
+            freq1[overallCount] = fin.num(); // p1
+            double s = fin.num();            // ihh12
+            if (std::isnan(s)) { s = MISSING; nBadRows++; }   // B18
+            score[overallCount] = s;
             if (std::isnan(freq1[overallCount]) && score[overallCount] != MISSING) { score[overallCount] = MISSING; nBadRows++; }
             overallCount++;
         }
-        fin.close();
     }
-
-    return;
 }
 
 

@@ -717,6 +717,15 @@ if selected norm-robust; then
     nout=$(ls lo.ihs.out.*norm* lo.xpehh.out.*norm* 2>/dev/null | wc -l | tr -d ' ')
     if [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ] && [ "$nout" = 0 ] && grep -q 'mean' lo1.norm.log; then pass "norm-log-only"
     else fail "norm-log-only" "exit $r1/$r2, $nout normalised or window files written"; fi
+    # B51: the --ihs-detail column count is taken from the first data line.
+    # 3.0.1 counted the second; a blank line there gave 0 extra columns and
+    # every later row was misread (3.0.1: no rows written; 3 of 503 after
+    # the B18 token parsing).
+    gzip -dc "$EXPECTED/ihs.tsv.gz" | awk -F'\t' 'BEGIN { OFS="\t" } NR==1 { print; next } { print $0, 0.1, 0.2, 0.3, 0.4; if (NR==2) print "" }' > dl_b.ihs.out
+    grep -v '^$' dl_b.ihs.out > dl_a.ihs.out
+    run dl1.log norm --ihs --bins 20 --files dl_a.ihs.out
+    run dl2.log norm --ihs --bins 20 --files dl_b.ihs.out
+    identical "norm-detail-blank-line" dl_a.ihs.out.20bins.norm dl_b.ihs.out.20bins.norm
 fi
 
 if selected errors; then

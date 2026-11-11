@@ -49,7 +49,7 @@ selscan-cli.o : selscan-cli.cpp selscan-cli.h
 binom.o : binom.cpp binom.h
 	$(CC) $(G++FLAG) -c binom.cpp
 
-norm.o: norm.cpp norm.h
+norm.o: norm.cpp norm.h normio.h gzlinereader.h
 	$(CC) $(G++FLAG) -c $< $(I_PATH_NORM) $(LINK_OPTS)
 
 gene.o: gene.cpp gene.h
