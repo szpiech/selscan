@@ -899,11 +899,20 @@ void HapMap::readHapDataVCFXP(string filename, string filename2, HapData& hapDat
 
         for (int i = 0; i < pass1_h1.nloci_before_filtering; i++) {
 
-            int total_c1   = pass1_h1.num_1s[i] + pass1_h2.num_1s[i];
-            int total_haps = pass1_h1.current_ngts + pass1_h2.current_ngts;
+            // Count derived ALLELES in the two panels combined. current_ngts is
+            // the number of samples (genotype columns), so the allele total is
+            // twice it. In unphased mode pass 1 stores heterozygotes in num_1s
+            // and homozygous-derived samples in num_2s; in phased mode num_1s
+            // already counts alleles and num_2s stays 0. Comparing num_1s with
+            // the sample count (as 3.0.0-3.0.1 did) removed every site at joint
+            // frequency 0.5, including fixed differences between equal-size
+            // panels, and in unphased mode every site without heterozygotes.
+            long total_derived = (long)pass1_h1.num_1s[i] + 2L * pass1_h1.num_2s[i]
+                               + (long)pass1_h2.num_1s[i] + 2L * pass1_h2.num_2s[i];
+            long total_alleles = 2L * (pass1_h1.current_ngts + pass1_h2.current_ngts);
 
             // monomorphic if all alleles are ancestral or all derived
-            if (total_c1 == 0 || total_c1 == total_haps) {
+            if (total_derived == 0 || total_derived == total_alleles) {
                 new_skip_h1.push_back(i);
                 new_skip_h2.push_back(i); // two copy for simple logic
                 //cout<<"Locus " << i << " is monomorphic in combined data. Will skip from both files." << endl;
