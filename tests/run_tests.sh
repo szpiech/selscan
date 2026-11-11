@@ -669,6 +669,20 @@ if selected norm-robust; then
     if [ "$RC" -eq 0 ] && [ -n "$mx" ] && awk -v a="$sc" -v b="$mx" 'BEGIN { d=a-b; if (d<0) d=-d; exit !(d < 1e-4) }'
     then pass "norm-bpwin:ihh12-per-file-max"
     else fail "norm-bpwin:ihh12-per-file-max" "exit $RC, first window of file B scored '$sc', its SNPs' maximum '$mx'"; fi
+    # B22/U4: 995 windows with 10 SNPs (every 20th has one extreme SNP) and 5
+    # with 12 SNPs and none. Tied SNP-count bounds left a bin unfilled in
+    # 3.0.1, whose windows were compared with 0 and labelled 1%; with '>='
+    # windows tied at a 0 boundary were labelled too. No window without an
+    # extreme SNP may be labelled 1 or 5.
+    awk 'BEGIN { OFS="\t"; print "chr","id","pos","freq","ihh1","ihh0","ihs","norm_ihs","crit"
+        for (k=0; k<1000; k++) { n = (k < 995) ? 10 : 12
+            for (j=0; j<n; j++) { p = 1 + k*100000 + j*1000; c = (k < 995 && k%20==0 && j==0)
+                print "chr1", "chr1:" p, p, 0.5, 0.1, 0.1, 0, (c ? 3 : 0.1), c } } }' > nq.ihs.out.20bins.norm
+    run nq.log norm --ihs --norm-files nq.ihs.out.20bins.norm --bp-win --winsize 100000
+    bad=$(awk -F'\t' 'NR>1 && $5==0 && ($6==1 || $6==5)' nq.ihs.out.20bins.norm.100kb.windows 2>/dev/null | wc -l | tr -d ' ')
+    nw=$(awk 'END {print NR-1}' nq.ihs.out.20bins.norm.100kb.windows 2>/dev/null)
+    if [ "$RC" -eq 0 ] && [ "$nw" = 1000 ] && [ "$bad" = 0 ]; then pass "norm-bpwin:quantile-ties"
+    else fail "norm-bpwin:quantile-ties" "exit $RC, $nw windows, $bad windows without extreme SNPs labelled 1 or 5"; fi
 fi
 
 if selected errors; then

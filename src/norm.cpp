@@ -750,6 +750,86 @@ void SelscanNorm::skipCols(ifstream &fin, int numCols)
     }
 }
 
+// Window percentile tables for --bp-win (B22, U4).
+// Windows (sorted by SNP count) are split into numQuantiles SNP-count bins
+// with the bounds quantileBound[b] = the (b+1)/numQuantiles quantile of the
+// SNP counts. Each window goes to the first bin with nSNPs <= bound, the
+// same rule the output uses (3.0.1 built the slices with a different rule:
+// slices were shifted by one window and, with tied bounds, some bins were
+// never filled, so their windows were compared with 0 and labelled top 1%).
+// Within a bin, the 99th and 95th percentiles of the fraction of extreme
+// SNPs (or every percentile with --fine-percentile) are recorded.
+void SelscanNorm::windowQuantiles(const double sortedSNPs[], double frac[], int numWindows, int numQuantiles,
+                                  double quantileBound[], map<string, double> topWindowBoundary[], const string &label)
+{
+    for (int q = 0; q < numQuantiles; q++)
+        quantileBound[q] = (numWindows > 0)
+            ? gsl_stats_quantile_from_sorted_data(sortedSNPs, 1, numWindows, double(q + 1) / double(numQuantiles))
+            : 0.0;
+    if (numWindows == 0) {
+        cerr << "WARNING: no windows" << label << " with enough SNPs; no window percentiles computed.\n";
+        flog << "WARNING: no windows" << label << " with enough SNPs; no window percentiles computed.\n";
+        return;
+    }
+
+    vector<int> qStart(numQuantiles, 0), qCount(numQuantiles, 0);
+    int bb = 0;
+    for (int i = 0; i < numWindows; i++) {
+        while (bb < numQuantiles - 1 && sortedSNPs[i] > quantileBound[bb]) bb++;
+        if (qCount[bb] == 0) qStart[bb] = i;
+        qCount[bb]++;
+    }
+
+    cerr << "\n" << label << (label.empty() ? "" : "\n") << "nSNPs 1.0 5.0 nWindows\n";
+    flog << "\n" << label << (label.empty() ? "" : "\n") << "nSNPs 1.0 5.0 nWindows\n";
+    int nSmall = 0, nUsed = 0;
+    for (bb = 0; bb < numQuantiles; bb++) {
+        if (qCount[bb] == 0) continue;   // tied bounds: no window is assigned here
+        nUsed++;
+        double *slice = &(frac[qStart[bb]]);
+        gsl_sort(slice, 1, qCount[bb]);
+        if (FINE_PERCENTILE) {
+            for (int p = 1; p <= 100; p++)
+                topWindowBoundary[bb][to_string(p) + ".0"] = gsl_stats_quantile_from_sorted_data(slice, 1, qCount[bb], 1.0 - double(p) / 100.0);
+        } else {
+            topWindowBoundary[bb]["1.0"] = gsl_stats_quantile_from_sorted_data(slice, 1, qCount[bb], 0.990);
+            topWindowBoundary[bb]["5.0"] = gsl_stats_quantile_from_sorted_data(slice, 1, qCount[bb], 0.950);
+        }
+        if (qCount[bb] < 100) nSmall++;
+        cerr << quantileBound[bb] << " " << topWindowBoundary[bb]["1.0"] << " " << topWindowBoundary[bb]["5.0"] << " " << qCount[bb] << "\n";
+        flog << quantileBound[bb] << " " << topWindowBoundary[bb]["1.0"] << " " << topWindowBoundary[bb]["5.0"] << " " << qCount[bb] << "\n";
+    }
+    cerr << "\n"; flog << "\n";
+    if (nSmall > 0) {
+        cerr << "WARNING: " << nSmall << " of " << nUsed << " SNP-count bins" << label << " hold fewer than 100 windows; "
+             << "their 1% and 5% window labels rest on few windows (use fewer --qbins or more data).\n";
+        flog << "WARNING: " << nSmall << " of " << nUsed << " SNP-count bins" << label << " hold fewer than 100 windows; "
+             << "their 1% and 5% window labels rest on few windows (use fewer --qbins or more data).\n";
+    }
+}
+
+// Percentile label of a window: the first percentile whose within-bin
+// boundary the window's fraction of extreme SNPs EXCEEDS (U4, PI decision
+// Q10: '>' rather than '>='; with '>=' every window tied at the boundary,
+// often 0, was labelled 1%). 100 means not in the top 5% (or any fine
+// percentile).
+double SelscanNorm::windowPercentile(int nSNPs, double frac, const double quantileBound[], int numQuantiles,
+                                     map<string, double> topWindowBoundary[])
+{
+    int b = 0;
+    while (b < numQuantiles - 1 && nSNPs > quantileBound[b]) b++;
+    const map<string, double> &m = topWindowBoundary[b];
+    if (m.empty()) return 100.0;
+    if (FINE_PERCENTILE) {
+        for (int p = 1; p <= 100; p++)
+            if (frac > m.at(to_string(p) + ".0")) return double(p);
+        return 100.0;
+    }
+    if (frac > m.at("1.0")) return 1.0;
+    if (frac > m.at("5.0")) return 5.0;
+    return 100.0;
+}
+
 void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int nfiles, int winSize, int numQuantiles, int minSNPs)
 {
     vector<string> chrs(nfiles);
@@ -869,96 +949,8 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     gsl_sort2(allSNPsPerWindow, 1, allFracCritPerWindow, 1, numWindows);
 
     double *quantileBound = new double[numQuantiles];
-    //determine quantile boundaries
-    for (int i = 0; i < numQuantiles; i++)
-    {
-        quantileBound[i] = gsl_stats_quantile_from_sorted_data (allSNPsPerWindow, 1, numWindows, double(i + 1) / double(numQuantiles));
-    }
-
-    /*
-     *instead of splitting into a mini vector for each quantile bin, just pass a reference to the
-     *start of the slice plus its size to gsl_stats_quantile_from_sorted_data
-     *will need the number of snps per quantile bin
-     */
-    int b = 0;//quantileBoundary index
-    int count = 0;//number in quantile, not necessarily equal across quantiles because of ties
-    int start = 0;//starting index for the sort function
     map<string, double> *topWindowBoundary = new map<string, double>[numQuantiles];
-
-    //cerr << "\nnSNPs 0.1 0.5 1.0 5.0\n";
-    //flog << "\nnSNPs 0.1 0.5 1.0 5.0\n";
-
-    cerr << "\nnSNPs 1.0 5.0\n";
-    flog << "\nnSNPs 1.0 5.0\n";
-
-
-    for (int i = 0; i < numWindows; i++)
-    {
-        if (allSNPsPerWindow[i] <= quantileBound[b])
-        {
-            count++;
-        }
-        else
-        {
-            gsl_sort(&(allFracCritPerWindow[start]), 1, count);
-
-            //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
-            //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
-            
-            if(FINE_PERCENTILE){
-                for(int p = 1; p <= 100; p++){
-                    string perc = to_string(p) + ".0";
-                    topWindowBoundary[b][perc] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 1.0 - double(p)/100.0);
-                }
-            }else{
-                topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
-                topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
-
-            }
-            
-            cerr << quantileBound[b] << " "
-                 //<< topWindowBoundary[b]["0.1"] << " "
-                 //<< topWindowBoundary[b]["0.5"] << " "
-                 << topWindowBoundary[b]["1.0"] << " "
-                 << topWindowBoundary[b]["5.0"] << endl;
-
-            flog << quantileBound[b] << " "
-                 //<< topWindowBoundary[b]["0.1"] << " "
-                 //<< topWindowBoundary[b]["0.5"] << " "
-                 << topWindowBoundary[b]["1.0"] << " "
-                 << topWindowBoundary[b]["5.0"] << endl;
-
-            start = i;
-            count = 0;
-            b++;
-        }
-    }
-
-    gsl_sort(&(allFracCritPerWindow[start]), 1, count);
-    //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
-    //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
-    
-    if(FINE_PERCENTILE){
-        for(int p = 1; p <= 100; p++){
-            string perc = to_string(p) + ".0";
-            topWindowBoundary[b][perc] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 1.0 - double(p)/100.0);
-        }
-    }else{
-        topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
-        topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
-    }
-
-    cerr << quantileBound[b] << " "
-         //<< topWindowBoundary[b]["0.1"] << " "
-         //<< topWindowBoundary[b]["0.5"] << " "
-         << topWindowBoundary[b]["1.0"] << " "
-         << topWindowBoundary[b]["5.0"] << "\n\n";
-
-    flog << quantileBound[b] << " "
-         //<< topWindowBoundary[b]["0.1"] << " "
-         //<< topWindowBoundary[b]["0.5"] << " "
-         << topWindowBoundary[b]["1.0"] << " "
-         << topWindowBoundary[b]["5.0"] << "\n\n";
+    windowQuantiles(allSNPsPerWindow, allFracCritPerWindow, numWindows, numQuantiles, quantileBound, topWindowBoundary, "");
 
     delete [] allSNPsPerWindow;
     delete [] allFracCritPerWindow;
@@ -992,31 +984,8 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
                 fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1\tNA" << endl;
                 continue;
             }
-            double percentile = 100.0;
-            for (b = 0; b < numQuantiles; b++)
-            {
-                if (nSNPs[i][j] <= quantileBound[b]) break;
-            }
+            double percentile = windowPercentile(nSNPs[i][j], fracCrit[i][j], quantileBound, numQuantiles, topWindowBoundary);
 
-            if(FINE_PERCENTILE){
-                for(int p = 1; p <= 100; p++){
-                    string perc = to_string(p) + ".0";
-                    if (fracCrit[i][j] >= topWindowBoundary[b][perc]){
-                        percentile = double(p);
-                        break;
-                    }
-                }
-            }else{
-                if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
-                {
-                    percentile = 5.0;
-                }
-                else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
-                {
-                    percentile = 1.0;
-                }
-            }
-            
             /*
             else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
             {
@@ -1297,178 +1266,13 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
 
     double *quantileBoundTop = new double[numQuantiles];
     double *quantileBoundBot = new double[numQuantiles];
-
-    //determine quantile boundaries
-    for (int i = 0; i < numQuantiles; i++)
-    {
-        quantileBoundTop[i] = gsl_stats_quantile_from_sorted_data (allSNPsPerWindowTop, 1, numWindowsTop, double(i + 1) / double(numQuantiles));
-        quantileBoundBot[i] = gsl_stats_quantile_from_sorted_data (allSNPsPerWindowBot, 1, numWindowsBot, double(i + 1) / double(numQuantiles));
-    }
-
-
-
-////TOP
-    /*
-     *instead of splitting into a mini vector for each quantile bin, just pass a reference to the
-     *start of the slice plus its size to gsl_stats_quantile_from_sorted_data
-     *will need the number of snps per quantile bin
-     */
-    int bTop = 0;//quantileBoundary index
-    int countTop = 0;//number in quantile, not necessarily equal across quantiles because of ties
-    int startTop = 0;//starting index for the sort function
     map<string, double> *topWindowBoundaryTop = new map<string, double>[numQuantiles];
-
-
-    cerr << "\nHigh Scores\nnSNPs 1.0 5.0\n";
-    flog << "\nHigh Scores\nnSNPs 1.0 5.0\n";
-
-
-    for (int i = 0; i < numWindowsTop; i++)
-    {
-        if (allSNPsPerWindowTop[i] <= quantileBoundTop[bTop])
-        {
-            countTop++;
-        }
-        else
-        {
-            gsl_sort(&(allFracCritPerWindowTop[startTop]), 1, countTop);
-
-            // topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
-            // topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
-
-            if (FINE_PERCENTILE)
-            {
-                for (int p = 1; p <= 100; p++)
-                {
-                    string perc = to_string(p) + ".0";
-                    double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 1.0 - p / 100.0);
-                    topWindowBoundaryTop[bTop][perc] = key;
-                }
-            }
-            else
-            {
-                topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
-                topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
-
-            }
-
-            cerr << quantileBoundTop[bTop] << " "
-                 << topWindowBoundaryTop[bTop]["1.0"] << " "
-                 << topWindowBoundaryTop[bTop]["5.0"] << endl;
-
-            flog << quantileBoundTop[bTop] << " "
-                 << topWindowBoundaryTop[bTop]["1.0"] << " "
-                 << topWindowBoundaryTop[bTop]["5.0"] << endl;
-
-            startTop = i;
-            countTop = 0;
-            bTop++;
-        }
-    }
-
-    gsl_sort(&(allFracCritPerWindowTop[startTop]), 1, countTop);
-
-    if(FINE_PERCENTILE){
-        for (int p = 1; p <= 100; p++)
-        {
-            string perc = to_string(p) + ".0";
-            double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 1.0 - p / 100.0);
-            topWindowBoundaryTop[bTop][perc] = key;
-        }
-    }
-    else{
-        topWindowBoundaryTop[bTop]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.990);
-        topWindowBoundaryTop[bTop]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowTop[startTop]), 1, countTop, 0.950);
-    }
-
-
-    cerr << quantileBoundTop[bTop] << " "
-         << topWindowBoundaryTop[bTop]["1.0"] << " "
-         << topWindowBoundaryTop[bTop]["5.0"] << "\n\n";
-
-    flog << quantileBoundTop[bTop] << " "
-         << topWindowBoundaryTop[bTop]["1.0"] << " "
-         << topWindowBoundaryTop[bTop]["5.0"] << "\n\n";
+    map<string, double> *topWindowBoundaryBot = new map<string, double>[numQuantiles];
+    windowQuantiles(allSNPsPerWindowTop, allFracCritPerWindowTop, numWindowsTop, numQuantiles, quantileBoundTop, topWindowBoundaryTop, " (high scores)");
+    windowQuantiles(allSNPsPerWindowBot, allFracCritPerWindowBot, numWindowsBot, numQuantiles, quantileBoundBot, topWindowBoundaryBot, " (low scores)");
 
     delete [] allSNPsPerWindowTop;
     delete [] allFracCritPerWindowTop;
-
-///BOT 
-/*
-     *instead of splitting into a mini vector for each quantile bin, just pass a reference to the
-     *start of the slice plus its size to gsl_stats_quantile_from_sorted_data
-     *will need the number of snps per quantile bin
-     */
-    int bBot = 0;//quantileBoundary index
-    int countBot = 0;//number in quantile, not necessarily equal across quantiles because of ties
-    int startBot = 0;//starting index for the sort function
-    map<string, double> *topWindowBoundaryBot = new map<string, double>[numQuantiles];
-
-
-    cerr << "\nLow Scores\nnSNPs 1.0 5.0\n";
-    flog << "\nLow Scores\nnSNPs 1.0 5.0\n";
-
-
-    for (int i = 0; i < numWindowsBot; i++)
-    {
-        if (allSNPsPerWindowBot[i] <= quantileBoundBot[bBot])
-        {
-            countBot++;
-        }
-        else
-        {
-            gsl_sort(&(allFracCritPerWindowBot[startBot]), 1, countBot);
-
-            // topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
-            // topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
-            if(FINE_PERCENTILE){
-                for(int p = 1; p<=100; p++){
-                    string perc = to_string(p)+".0";
-                    double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 1.0 - p/100.0);
-                    topWindowBoundaryBot[bBot][perc] = key;
-                }
-            }else{
-                topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
-                topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
-            }
-
-            cerr << quantileBoundBot[bBot] << " "
-                 << topWindowBoundaryBot[bBot]["1.0"] << " "
-                 << topWindowBoundaryBot[bBot]["5.0"] << endl;
-
-            flog << quantileBoundBot[bBot] << " "
-                 << topWindowBoundaryBot[bBot]["1.0"] << " "
-                 << topWindowBoundaryBot[bBot]["5.0"] << endl;
-
-            startBot = i;
-            countBot = 0;
-            bBot++;
-        }
-    }
-
-    gsl_sort(&(allFracCritPerWindowBot[startBot]), 1, countBot);
-    // topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
-    // topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
-    if(FINE_PERCENTILE){
-        for(int p = 1; p<=100; p++){
-            string perc = to_string(p)+".0";
-            double key = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 1.0 - p/100.0);
-            topWindowBoundaryBot[bBot][perc] = key;
-        }
-    }else{
-        topWindowBoundaryBot[bBot]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.990);
-        topWindowBoundaryBot[bBot]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindowBot[startBot]), 1, countBot, 0.950);
-    }
-
-
-    cerr << quantileBoundBot[bBot] << " "
-         << topWindowBoundaryBot[bBot]["1.0"] << " "
-         << topWindowBoundaryBot[bBot]["5.0"] << "\n\n";
-
-    flog << quantileBoundBot[bBot] << " "
-         << topWindowBoundaryBot[bBot]["1.0"] << " "
-         << topWindowBoundaryBot[bBot]["5.0"] << "\n\n";
-
     delete [] allSNPsPerWindowBot;
     delete [] allFracCritPerWindowBot;
 
@@ -1494,60 +1298,9 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
                 continue;
             }
 
-            double percentile = 100.0;
-            for (bTop = 0; bTop < numQuantiles; bTop++)
-            {
-                if (nSNPs[i][j] <= quantileBoundTop[bTop]) break;
-            }
-
-
-            if(FINE_PERCENTILE){
-                for(int p = 1; p <= 100; p++){
-                    string perc = to_string(p) + ".0";
-                    if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop][perc]){
-                        percentile = double(p);
-                        break;
-                    }
-                }
-            }else{
-
-                if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["5.0"] && fracCritTop[i][j] < topWindowBoundaryTop[bTop]["1.0"])
-                {
-                    percentile = 5.0;
-                }
-                else if (fracCritTop[i][j] >= topWindowBoundaryTop[bTop]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
-                {
-                    percentile = 1.0;
-                }
-            }
-            
-            
+            double percentile = windowPercentile(nSNPs[i][j], fracCritTop[i][j], quantileBoundTop, numQuantiles, topWindowBoundaryTop);
             fout << percentile << "\t";
-
-            percentile = 100.0;
-            for (bBot = 0; bBot < numQuantiles; bBot++)
-            {
-                if (nSNPs[i][j] <= quantileBoundBot[bBot]) break;
-            }
-
-            if(FINE_PERCENTILE){
-                for(int p = 1; p <= 100; p++){
-                    string perc = to_string(p) + ".0";
-                    if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot][perc]){
-                        percentile = double(p);
-                        break;
-                    }
-                }
-            }else{
-                if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["5.0"] && fracCritBot[i][j] < topWindowBoundaryBot[bBot]["1.0"])        {
-                    percentile = 5.0;
-                }
-                else if (fracCritBot[i][j] >= topWindowBoundaryBot[bBot]["1.0"])// && fracCritTop[i][j] < topWindowBoundaryTop[b]["0.5"])
-                {
-                    percentile = 1.0;
-                }
-            }
-            
+            percentile = windowPercentile(nSNPs[i][j], fracCritBot[i][j], quantileBoundBot, numQuantiles, topWindowBoundaryBot);
             fout << percentile << "\t";
 
             if(maxScore[i][j] == -99999){
@@ -1696,79 +1449,8 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     gsl_sort2(allSNPsPerWindow, 1, allFracCritPerWindow, 1, numWindows);
 
     double *quantileBound = new double[numQuantiles];
-    //determine quantile boundaries
-    for (int i = 0; i < numQuantiles; i++)
-    {
-        quantileBound[i] = gsl_stats_quantile_from_sorted_data (allSNPsPerWindow, 1, numWindows, double(i + 1) / double(numQuantiles));
-    }
-
-    /*
-     *instead of splitting into a mini vector for each quantile bin, just pass a reference to the
-     *start of the slice plus its size to gsl_stats_quantile_from_sorted_data
-     *will need the number of snps per quantile bin
-     */
-    int b = 0;//quantileBoundary index
-    int count = 0;//number in quantile, not necessarily equal across quantiles because of ties
-    int start = 0;//starting index for the sort function
     map<string, double> *topWindowBoundary = new map<string, double>[numQuantiles];
-
-    //cerr << "\nnSNPs 0.1 0.5 1.0 5.0\n";
-    //flog << "\nnSNPs 0.1 0.5 1.0 5.0\n";
-
-    cerr << "\nnSNPs 1.0 5.0\n";
-    flog << "\nnSNPs 1.0 5.0\n";
-
-
-    for (int i = 0; i < numWindows; i++)
-    {
-        if (allSNPsPerWindow[i] <= quantileBound[b])
-        {
-            count++;
-        }
-        else
-        {
-            gsl_sort(&(allFracCritPerWindow[start]), 1, count);
-
-            //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
-            //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
-            topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
-            topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
-
-            cerr << quantileBound[b] << " "
-                 //<< topWindowBoundary[b]["0.1"] << " "
-                 //<< topWindowBoundary[b]["0.5"] << " "
-                 << topWindowBoundary[b]["1.0"] << " "
-                 << topWindowBoundary[b]["5.0"] << endl;
-
-            flog << quantileBound[b] << " "
-                 //<< topWindowBoundary[b]["0.1"] << " "
-                 //<< topWindowBoundary[b]["0.5"] << " "
-                 << topWindowBoundary[b]["1.0"] << " "
-                 << topWindowBoundary[b]["5.0"] << endl;
-
-            start = i;
-            count = 0;
-            b++;
-        }
-    }
-
-    gsl_sort(&(allFracCritPerWindow[start]), 1, count);
-    //topWindowBoundary[b]["0.1"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.999);
-    //topWindowBoundary[b]["0.5"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.995);
-    topWindowBoundary[b]["1.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.990);
-    topWindowBoundary[b]["5.0"] = gsl_stats_quantile_from_sorted_data(&(allFracCritPerWindow[start]), 1, count, 0.950);
-
-    cerr << quantileBound[b] << " "
-         //<< topWindowBoundary[b]["0.1"] << " "
-         //<< topWindowBoundary[b]["0.5"] << " "
-         << topWindowBoundary[b]["1.0"] << " "
-         << topWindowBoundary[b]["5.0"] << "\n\n";
-
-    flog << quantileBound[b] << " "
-         //<< topWindowBoundary[b]["0.1"] << " "
-         //<< topWindowBoundary[b]["0.5"] << " "
-         << topWindowBoundary[b]["1.0"] << " "
-         << topWindowBoundary[b]["5.0"] << "\n\n";
+    windowQuantiles(allSNPsPerWindow, allFracCritPerWindow, numWindows, numQuantiles, quantileBound, topWindowBoundary, "");
 
     delete [] allSNPsPerWindow;
     delete [] allFracCritPerWindow;
@@ -1792,31 +1474,8 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
                 fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCrit[i][j] << "\t-1" <<"\tNA"<< endl;
                 continue;
             }
-            double percentile = 100.0;
-            for (b = 0; b < numQuantiles; b++)
-            {
-                if (nSNPs[i][j] <= quantileBound[b]) break;
-            }
+            double percentile = windowPercentile(nSNPs[i][j], fracCrit[i][j], quantileBound, numQuantiles, topWindowBoundary);
 
-            if(FINE_PERCENTILE){
-                for(int p = 1; p <= 100; p++){
-                    string perc = to_string(p) + ".0";
-                    if (fracCrit[i][j] >= topWindowBoundary[b][perc]){
-                        percentile = double(p);
-                        break;
-                    }
-                }
-            }else{
-                if (fracCrit[i][j] >= topWindowBoundary[b]["5.0"] && fracCrit[i][j] < topWindowBoundary[b]["1.0"])
-                {
-                    percentile = 5.0;
-                }
-                else if (fracCrit[i][j] >= topWindowBoundary[b]["1.0"])// && fracCrit[i][j] < topWindowBoundary[b]["0.5"])
-                {
-                    percentile = 1.0;
-                }
-            }
-            
             /*
             else if (fracCrit[i][j] >= topWindowBoundary[b]["0.5"] && fracCrit[i][j] < topWindowBoundary[b]["0.1"])
             {

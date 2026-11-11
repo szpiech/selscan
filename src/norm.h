@@ -281,6 +281,10 @@ class SelscanNorm{
     // Returns the number of loci left out because their frequency (1.0) has no
     // bin; always 0 when includeFreqOne is true.
     int getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[], bool includeFreqOne);
+    void windowQuantiles(const double sortedSNPs[], double frac[], int numWindows, int numQuantiles,
+                         double quantileBound[], map<string, double> topWindowBoundary[], const string &label);
+    double windowPercentile(int nSNPs, double frac, const double quantileBound[], int numQuantiles,
+                            map<string, double> topWindowBoundary[]);
     void critCutoffs(const double score[], int nloci, double critPercent, double critNum,
                      bool oneTailed, double &upperCutoff, double &lowerCutoff);
 
