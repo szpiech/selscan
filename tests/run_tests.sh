@@ -64,8 +64,6 @@ multiparam==single:pconfig2  B32
 multiparam==single:pconfig7  B32
 multiparam==single:pconfig9  B32
 clean-error:all-filtered  B39
-pi-edge:last=300  B13
-pi-edge:last=299  B13
 clean-error:filter-vcf-01  B39
 clean-error:bad-json  B39
 "

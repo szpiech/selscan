@@ -2,49 +2,32 @@
 
 void PI::main()
 {
-    // Taken in double: nhaps*(nhaps-1) in int overflowed at 46,342 haplotypes
-    // and gave negative pi (B12); n1*n0 below overflows later.
+    // Pairwise differences per window, divided by the number of haplotype pairs.
+    // Both products are taken in double: nhaps*(nhaps-1) in int overflowed at
+    // 46,342 haplotypes and gave negative pi (B12), and n1*n0 overflows later.
     const double nh = hm->hapData->nhaps;
-    double denominator = nh * (nh - 1) * 0.5;
+    const double denominator = nh * (nh - 1) * 0.5;
     double pi = 0;
 
-    int max_physpos = hm->mapData->mapEntries[hm->mapData->nloci - 1].physicalPos;
-    int num_entries = ceil((max_physpos+1) / winsize);
-    
-    
-    // cerr<<"DEBUG::: "<<"num entries"<<num_entries<<endl;
-
-    // vector<double> index_by_start(num_entries+1);
-    
-    //int site_counter;
+    // Windows are [1, w], [w+1, 2w], ...; position p falls in window (p-1)/w.
+    // The old count, ceil((max+1)/w) with integer division inside ceil, gave
+    // one window past the data whenever max = 0 or -1 (mod w), and that window
+    // read mapEntries[nloci] and crashed (B13). The loci loop is also bounded.
+    const int max_physpos = hm->mapData->mapEntries[hm->mapData->nloci - 1].physicalPos;
+    const int last_window = (max_physpos - 1) / winsize;
 
     int locus = 0;
-    for(int i =0; i<= num_entries; i++){
-        (*fout)<<i*winsize + 1<<" " <<(i+1)*winsize  <<" ";
-
-        //int start = i*winsize + 1;
-        int end = (i+1)*winsize;
-
+    for (int i = 0; i <= last_window; i++){
+        (*fout) << i*winsize + 1 << " " << (i+1)*winsize << " ";
+        const int end = (i+1)*winsize;
         pi = 0;
-        //site_counter = 0;
-        while(true){
-            int pos = hm->mapData->mapEntries[locus].physicalPos;
-            if(pos > end){
-                break;
-            }else{
-                double n1 = hm->hapData->get_n_c1(locus);
-                double n0 =  hm->hapData->nhaps - n1;
-                pi += n1 * n0 ;
-                //site_counter++;
-
-                locus++;
-                if(locus == hm->mapData->nloci){
-                    break;
-                }
-            }
+        while (locus < hm->mapData->nloci && hm->mapData->mapEntries[locus].physicalPos <= end){
+            const double n1 = hm->hapData->get_n_c1(locus);
+            const double n0 = hm->hapData->nhaps - n1;
+            pi += n1 * n0;
+            locus++;
         }
-
-        (*fout) << pi / denominator   << endl;
+        (*fout) << pi / denominator << endl;
     }
     fout->close();
     // // // // // exit(0);
