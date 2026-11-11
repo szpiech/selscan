@@ -153,8 +153,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
     GroupSplitMap& m = threadSplitMap(0);   // P5
 
     IHH12_ehh_data ehhdata;
-    int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
-
     ehhdata.init(hm->hapData->nhaps, hm->hapData->hapEntries[locus].hapbitset);
     ehhdata.initialize_core(p.ALT);
     ehhdata.prev_ehh_before_norm = ehhdata.curr_ehh_before_norm;
@@ -162,7 +160,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
     int i = locus;
     int prev_index = locus; // for multi-MAF
-    int skipped_due_to_multimaf = 0; // for multi-MAF
 
     while(true){
 
@@ -193,7 +190,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         // --keep-low-freq, so that flag was dropped in combined runs (B27).
         if(p.MULTI_MAF && p.SKIP){
             if(hm->hapData->below_maf(i, p.MAF)){
-                skipped_due_to_multimaf++;
                 continue;
             }
         }

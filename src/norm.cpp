@@ -234,7 +234,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     bool HAVE_WINFILE = (windowFiles[0]!=DEFAULT_WIN_FILES); // user gave winfile
 
     bool DO_NORM = HAVE_FILES;                       // if input stat files (.out) provided
-    bool DO_WINDOW = BPWIN;                    // user gave --winsize → do window-based stats:: TODO should be user gave --bp-win
     bool DO_GENE = useBED || useGTF;                // user gave --gene-bed (.bed)
 
     int nfiles;
@@ -315,7 +314,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         for (int i = 0; i < nfiles; i++)
         {
             char str[10];
-            sprintf(str, "%d", numBins);
+            snprintf(str, sizeof str, "%d", numBins);
             if(IHS || NSL) outfilename[i] = filename[i] + "." + str + "bins.norm";
             if(XPEHH || SOFT) outfilename[i] = filename[i] + ".norm";
             
@@ -880,7 +879,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     string *winfilename = new string[nfiles];
 
     char str[10];
-    sprintf(str, "%d", winSize / 1000);
+    snprintf(str, sizeof str, "%d", winSize / 1000);
 
     string name;
     int pos;
@@ -967,7 +966,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     //Load all num SNPs per window into a single double vector to determine quantile boundaries across
     for (int i = 0; i < nfiles; i++)
     {
-        for (int j = 0; j < nSNPs[i].size(); j++)
+        for (int j = 0; j < (int)nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] >= minSNPs && fracCrit[i][j] >= 0)
             {
@@ -1010,7 +1009,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         flog << "Creating window file " << winfilename[i] << endl;
         fout<<"chr\tstart\tend\tn_snps\tfrac_extreme\tperc\tscore\n";  // <start> <end> <num-snps> <fraction-of-extreme-snps> <percentile> <max-score of ihs/nsl etc.>
     
-        for (int j = 0; j < nSNPs[i].size(); j++)
+        for (int j = 0; j < (int)nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
@@ -1161,7 +1160,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     string *winfilename = new string[nfiles];
 
     char str[10];
-    sprintf(str, "%d", winSize / 1000);
+    snprintf(str, sizeof str, "%d", winSize / 1000);
 
     string name, header;
     int pos;
@@ -1276,7 +1275,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     //Load all num SNPs per window into a single double vector to determine quantile boundaries across
     for (int i = 0; i < nfiles; i++)
     {
-        for (int j = 0; j < nSNPs[i].size(); j++)
+        for (int j = 0; j < (int)nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] >= minSNPs && fracCritTop[i][j] >= 0)
             {
@@ -1322,7 +1321,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
         cerr << "Creating window file " << winfilename[i] << endl; 
         flog << "Creating window file " << winfilename[i] << endl;
 
-        for (int j = 0; j < nSNPs[i].size(); j++)
+        for (int j = 0; j < (int)nSNPs[i].size(); j++)
         {
             fout << chrs[i] << "\t" << winStarts[i][j] << "\t" << winStarts[i][j] + winSize - 1 << "\t" << nSNPs[i][j] << "\t" << fracCritTop[i][j] << "\t" << fracCritBot[i][j] << "\t";
             if (nSNPs[i][j] < minSNPs)
@@ -1383,11 +1382,11 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     string *winfilename = new string[nfiles];
 
     char str[10];
-    sprintf(str, "%d", winSize / 1000);
+    snprintf(str, sizeof str, "%d", winSize / 1000);
 
     string name, header;
     int pos;
-    double gpos, freq1, ihh12, data, normedData;
+    double freq1, data, normedData;
     bool crit;
     int numWindows = 0;
     
@@ -1467,7 +1466,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     //Load all num SNPs per window into a single double vector to determine quantile boundaries across
     for (int i = 0; i < nfiles; i++)
     {
-        for (int j = 0; j < nSNPs[i].size(); j++)
+        for (int j = 0; j < (int)nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] >= minSNPs && fracCrit[i][j] >= 0)
             {
@@ -1500,7 +1499,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     
         cerr << "Creating window file " << winfilename[i] << endl;
         flog << "Creating window file " << winfilename[i] << endl;
-        for (int j = 0; j < nSNPs[i].size(); j++)
+        for (int j = 0; j < (int)nSNPs[i].size(); j++)
         {
             if (nSNPs[i][j] < minSNPs || fracCrit[i][j] < 0)
             {
@@ -1955,7 +1954,7 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
 }
 
 
-void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff)
+void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double /*lowerCutoff: iHH12 is one-tailed (U10)*/)
 {
     NormTokenReader fin(filename);   // P6
     NormOut fout;

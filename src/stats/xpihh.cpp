@@ -366,7 +366,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
     GroupSplitMap& m = threadSplitMap(0);   // P5
 
-    int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
     if(hm->hapData->nloci != hm->hapData2->nloci){
         HANDLE_ERROR("Number of loci in both reference and non-reference hapData should be same.");
     }
