@@ -179,12 +179,17 @@ class SelscanStats {
             return n*n;
         }
 
+        // Homozygosity term for a group of n haplotypes: 2*C(n,2) = n(n-1)
+        // (binomial EHH), or n^2 under --alt, whose EHH is the sum of squared
+        // haplotype frequencies (n_i/N)^2. 2.1-3.0.1 returned C(n,2)+n =
+        // n(n+1)/2 under --alt, and 0 for a singleton, which gives neither
+        // definition (B9).
         inline double twice_num_pair_or_square(int n, bool alt){
+            if(alt){
+                return double(n) * n;
+            }
             if(n < 2){
                 return 0;
-            }
-            if(alt){
-                return nCk(n, 2)+n;
             }
             return 2*nCk(n, 2);
         }
