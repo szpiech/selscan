@@ -163,15 +163,16 @@ void param_t::printHelp()
 {
     map<string, string>::iterator it;
 
-    cerr << preamble << endl;
+    // U12: help goes to stdout (it was stderr, so `--help | less` was empty)
+    cout << preamble << endl;
 
-    cerr << "----------Command Line Arguments----------\n\n";
+    cout << "----------Command Line Arguments----------\n\n";
 
     for (it = help.begin(); it != help.end(); it++)
     {
         if (labels[(*it).first].compare("SILENT") != 0)
         {
-            cerr << (*it).first << " " << (*it).second << "\n\n";
+            cout << (*it).first << " " << (*it).second << "\n\n";
         }
     }
 

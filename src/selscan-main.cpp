@@ -267,8 +267,7 @@ int runToolSelscan(int argc, char *argv[])
     (*flog) << "selscan v" + VERSION + "\n";
     for (int i = 0; i < argc; i++)
     {
-        (*flog) << argv[i] << " ";
-        std::cerr << argv[i] << " ";
+        (*flog) << argv[i] << " ";   // (U12: no second echo to stderr)
     }
     (*flog) << "\n";
 
@@ -338,12 +337,23 @@ int runToolSelscan(int argc, char *argv[])
 
 // ------------------- Main Dispatcher -------------------
 static int dispatch(int argc, char* argv[]) {
+    // U12: short usage with no arguments (was an error about missing
+    // statistics); --version prints the version to stdout
     if (argc < 2) {
-        // No subcommand, run original selscan with no arguments
-        return runToolSelscan(0, nullptr);
+        std::cerr << "selscan v" << VERSION << "\n"
+                  << "Usage: selscan <statistic> <input> [options]\n"
+                  << "         statistic: --ihs, --nsl, --xpehh, --xpnsl, --ihh12, --pi, --ehh <id>, --ehh12 <id>\n"
+                  << "         input:     --vcf <file> (with --map <file> or --pmap), --tped, --thap or --hap\n"
+                  << "       selscan norm <statistic> --files <file> ... [options]\n"
+                  << "Run 'selscan --help' or 'selscan norm --help' for all options.\n";
+        return 1;
     }
 
     std::string firstArg = argv[1];
+    if (firstArg == "--version" || (firstArg == "norm" && argc >= 3 && std::string(argv[2]) == "--version")) {
+        std::cout << "selscan " << VERSION << std::endl;
+        return 0;
+    }
     if (firstArg == "norm") {
         int subArgc = argc - 1;
         char** subArgv = argv + 1;

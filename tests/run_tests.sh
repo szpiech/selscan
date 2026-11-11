@@ -777,6 +777,23 @@ fi
 if selected help; then
     run h.log --help
     if [ "$RC" -eq 0 ]; then pass "help-exit-0"; else fail "help-exit-0" "exit $RC"; fi
+    # U12: help on stdout (selscan and norm), --version, usage without
+    # arguments, and the command line echoed once
+    for sub in "" "norm"; do
+        "$BIN" $sub --help > hs.out 2> /dev/null; rc=$?
+        nb=$(wc -c < hs.out | tr -d ' ')
+        if [ "$rc" -eq 0 ] && [ "$nb" -gt 1000 ]; then pass "help-stdout${sub:+:$sub}"
+        else fail "help-stdout${sub:+:$sub}" "exit $rc, $nb bytes on stdout"; fi
+    done
+    v=$("$BIN" --version 2> /dev/null); rc=$?
+    if [ "$rc" -eq 0 ] && printf '%s' "$v" | grep -q '^selscan [0-9]'; then pass "version"
+    else fail "version" "exit $rc, stdout '$v'"; fi
+    "$BIN" > /dev/null 2> na.err; rc=$?
+    if [ "$rc" -eq 1 ] && grep -q '^Usage: selscan' na.err; then pass "no-args-usage"
+    else fail "no-args-usage" "exit $rc"; fi
+    run ce.log --ihs --vcf p1.vcf.gz --pmap --out ce
+    n=$(grep -c -- '--out ce' ce.log)
+    if [ "$n" = 1 ]; then pass "cmdline-echoed-once"; else fail "cmdline-echoed-once" "command line printed $n times"; fi
 fi
 
 # ---------------------------------------------------------------- summary
