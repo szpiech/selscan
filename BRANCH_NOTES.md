@@ -1,10 +1,10 @@
 # Branch `code-review`: review fixes on top of 3.0.1
 
 Base: `main` at 7a93ff1 ("Patch 3_0_1"). Finding ids (B1, U12, ...) refer to
-the code review report (selscan_code_review.md). Every commit builds from a
-clean tree and passes `make check`. Run `make clean` before testing a change
-to a header, because the Makefiles have no header dependencies (M1, not yet
-fixed).
+the code review report (selscan_code_review.md). Every commit passes
+`make check`. Since 341bdc0 (M1) the macOS and Linux Makefiles track header
+dependencies, so an incremental build is safe. Before that commit, run
+`make clean` after editing a header.
 
 ## Commits and what they change in the output
 
@@ -20,15 +20,31 @@ fixed).
 | d45021f | B4 | norm: XP/iHH12 p1 = 1.0 sites normalised in the single bin; iHS/nSL freq = 1.0 excluded and reported; norm-xpehh only |
 | 3205f67 | B10 | unphased XP no longer skips sites lacking one homozygous class (770 -> 2193 sites; existing rows identical) |
 | cd3c6f2 | B11 | unphased iHS cutoff with homozygous classes of < 2 individuals (1416 -> 1419 cores; 254 ihs values change) |
+| 2903bfe | notes | this file |
+| 341bdc0 | M1 | none (build: header dependencies via -MMD -MP) |
+| f97de30 | B12 | none in goldens; `--pi` correct at >= 46,342 haplotypes (was negative) |
+| 3558905 | B13 | none in goldens; `--pi` no longer reads past the last site when it is 0 or -1 mod `--pi-win` |
+| fcea18f | B7 | phased nSL integrates with no EHH cutoff; nsl, nsl-thap, nsl-gap, norm-nsl change |
+| 7b54c0e | tests | adds a 100 kb gap fixture (ihs/nsl/ihh12-gap100), the first golden to exercise `--gap-scale` |
+| 02a4289 | B8 | iHH12 applies the gap scale once; ihh12-gap100 only (266 of 5477 cores) |
+| 1378603 | Q5 | iHH12 truncates on EHH12 (definition change); every iHH12 value rises, 1361 -> 1145 cores on p1 (more reach a chromosome end) |
+| 4de29fa | B9 | `--alt` uses squared frequencies (helper for iHS/nSL/EHH/unphased); ihs-alt changes in all rows |
+| 28de5ec | B9 | `--ehh12 --alt` output normalised by N^2; EHH2/1 under `--alt`; new ehh12-alt golden |
+| 13ffd40 | new | EHH2/1 at the core removes the larger class (was the derived class); one cell of ehh12; new ehh12-minor golden |
+| b69fead | B41 | none (square_alt in double) |
+| 0fc9333 | B27 | none in goldens; `--keep-low-freq` honoured in combined and `--multi-param` runs |
+| 82d0042 | B32 | none in goldens; one symmetric MAF test with ties kept; at `--maf 0.1` on p1 iHS goes 178 -> 198 cores |
+| a1c5bbd | B17 | none in goldens; `--pi`/`--ehh` combined with iHS see all sites |
 
 Each commit message gives the measured differences in full.
 
 ## Validation against an independent reference
 
 The review wrote a Python reference implementation from the manual's
-equations and the v2.0.3 loop semantics. The runs below use example p1/p2
-with the 12 duplicated positions removed; printed precision is 6 significant
-digits.
+equations and the v2.0.3 loop semantics. Where a PI decision changed a
+definition, a workspace copy of the reference was adjusted to that decision
+(noted below). Printed precision is 6 significant digits. Runs on p1/p2
+remove the 12 duplicated positions.
 
 - Phased XP-EHH after B2: 2156/2156 sites, max abs difference 5.0e-7.
   3.0.1 misses the 14 restored sites and differs at 725. (Run after commit
@@ -36,6 +52,22 @@ digits.
 - Unphased XP-EHH after B6 + B10: 2193/2193 sites, max abs 4.3e-6, with the
   reference's skip rule set to "one genotype class holds everyone".
 - Unphased iHS after B11: 1419/1419 cores; ihh1, ihh0 and ihs within 5.0e-6.
+- Phased nSL after B7 (no cutoff): example.hap with example.map 5374/5374,
+  with the 300 kb gap map 5174/5174, within 5e-6 relative.
+- iHS and nSL across the 100 kb gap: 4782/4782 and 5374/5374 (already
+  correct before B8).
+- iHH12 after B8: 5477/5477 within 4.6e-6 with the scale applied once. 3.0.1
+  matched only when the reference squared the scale.
+- iHH12 after Q5 (EHH12 truncation): example, 300 kb gap and 100 kb gap maps,
+  each with and without `--trunc-ok`; all six site sets identical, values
+  within 4.1e-6.
+- iHS `--alt` after B9 (squared frequencies, stop when all haplotypes are
+  unique): 998/998 cores within 4.8e-6.
+- iHH12 `--alt`: 5205/5205 (5574 with `--trunc-ok`) within 4.6e-6, against
+  the reference extended to squared-frequency EHH12.
+- EHH12 output (`--ehh12`, binomial and `--alt`, derived allele major and
+  minor at the core): every cell of 302, 275 and 934 rows matches an
+  independent computation from haplotype counts.
 
 v2.1.3 is not a baseline for the XP fixes. It drops the same 14
 joint-frequency-0.5 sites as 3.0.1 and agrees with 3.0.1 exactly on every
@@ -50,13 +82,30 @@ site they share.
 - B10: the all-heterozygous case is also treated as "no variation", which
   goes beyond the review's suggestion and matches the unphased iHS kernel.
 - U12: a missing `--ehh12` locus is an error, as for `--ehh`.
+- B7: nSL uses no EHH cutoff; it is governed by `--max-extend-nsl`.
+- Q5: iHH12 truncates when EHH12, not whole-sample EHH, falls below
+  `--cutoff`. This lowers the number of reported cores (more reach a
+  chromosome end; `--trunc-ok` keeps them) and raises every iHH12 value.
+- B9: `--alt` is the sum of squared haplotype frequencies; integration
+  stops when all haplotypes are unique.
+- B32: a site exactly at `--maf` is kept, whichever allele is minor.
+- B17/Q1: each statistic in a combined run equals its single run; XP is never
+  MAF-filtered because iHS is co-requested.
 
 ## Known open issues
 
-- Still failing on purpose, listed in tests/run_tests.sh KNOWN_FAIL: B27
-  (`--keep-low-freq` ignored in combined runs), B32 (MAF boundary asymmetry,
-  `--multi-param` differs from single runs) and B39 (uncaught exceptions
-  abort with 134).
+- Still failing on purpose, listed in tests/run_tests.sh KNOWN_FAIL: B39
+  (uncaught exceptions abort with exit 134: all loci filtered, `--filter-vcf`
+  on 0/1-coded VCF, malformed `--multi-param` JSON).
+- B43 (phased XP-EHH `--alt`) differs from the reference at 862 of 2083
+  sites. Part of it is explained: XP integrates each population only while
+  that population is not all-unique, and under `--alt` the all-unique EHH
+  floor is 1/n, not 0. That accounts for 53 sites; 809 are unexplained.
+  Binomial XP-EHH matches exactly.
+- iHH12 `--alt` code mixes squared and binomial terms for the top two
+  haplotypes. Left alone deliberately: the EHH12 adjustment is 2*t1*t2 under
+  either measure, and iHH12 `--alt` was identical before and after the
+  equivalent change.
 - Found while building the harness, not in the review report: the VCF loader
   drops sites at duplicated positions and the TPED loader keeps them; in XP
   mode only the VCF loader drops sites monomorphic in the two panels
@@ -66,3 +115,7 @@ site they share.
   reading alone.
 - No golden case runs unphased `--wagh`, so that part of feec363 is
   untested.
+- Makefile_win and the unused Makefile_macos-arm64/-x86-64 still lack
+  header dependencies (M4).
+- `--multi-chr` is deferred until after the bug fixes; it is a new feature
+  to add.
