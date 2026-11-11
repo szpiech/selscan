@@ -14,3 +14,10 @@ unused/
 src/*.d
 src/build/
 src/selscan.exe
+
+# Not tracked since step 7 (M6): binaries are GitHub Release assets and
+# GSL is no longer used. Earlier copies remain in history.
+/bin/
+/releases/
+/lib/
+/include/

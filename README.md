@@ -57,15 +57,13 @@ The same Makefile builds on Linux, macOS and Windows (MSYS2 with MinGW-w64). sel
 
 ## 📦 Precompiled Binaries
 
-Precompiled binaries are available for the following platforms:
+Precompiled binaries are attached to each release on the [Releases page](https://github.com/szpiech/selscan/releases):
 
-- **Linux:** `/bin/linux/`
-- **Windows:** `/bin/win/`  
-- **macOS Universal:** `/bin/macos/`  
+- **Linux** (x86_64): needs glibc 2.28 or newer (RHEL, Rocky and Alma 8 and later, Debian 10 and later, Ubuntu 20.04 and later).
+- **macOS** (universal, Apple Silicon and Intel): macOS 11 or newer.
+- **Windows** (x86_64): a static .exe.
 
-Additionally, we provide binaries for:
-- **macOS Apple Silicon, ARM64 only:** `/bin/macos-arm64/`  
-- **macOS Intel, x86_64 and older macs:** `/bin/osx/`  
+Binaries are no longer kept in the repository. Those for earlier versions remain in its history (`bin/` and `releases/`).
 
 ## 📖 Usage   
 
