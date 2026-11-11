@@ -706,6 +706,15 @@ if selected norm-robust; then
     run li5.log norm --ihs --bins 30 --files li_use.ihs.out --log-input li_ref.log --log li_bad.log
     if [ "$RC" -eq 1 ] && grep -q 'disagrees' li5.log; then pass "norm-log-input:bins-conflict"
     else fail "norm-log-input:bins-conflict" "exit $RC (expected 1 with a --bins conflict message)"; fi
+    # U2: --log-only writes the bin statistics and no normalised output, for
+    # every statistic; window and gene analyses are skipped (3.0.1 ignored
+    # it for iHS/nSL and aborted on XP with --bp-win)
+    gzip -dc "$EXPECTED/ihs.tsv.gz" > lo.ihs.out; gzip -dc "$EXPECTED/xpehh.tsv.gz" > lo.xpehh.out
+    run lo1.log norm --ihs --log-only --bp-win --files lo.ihs.out --log lo1.norm.log; r1=$RC
+    run lo2.log norm --xpehh --log-only --bp-win --files lo.xpehh.out --log lo2.norm.log; r2=$RC
+    nout=$(ls lo.ihs.out.*norm* lo.xpehh.out.*norm* 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ] && [ "$nout" = 0 ] && grep -q 'mean' lo1.norm.log; then pass "norm-log-only"
+    else fail "norm-log-only" "exit $r1/$r2, $nout normalised or window files written"; fi
 fi
 
 if selected errors; then

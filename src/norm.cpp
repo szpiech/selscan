@@ -418,14 +418,19 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             }
 
 
-            //Read each file and create normed files.
-            if (FIRST) nfiles = 1;
-            for (int i = 0; i < nfiles; i++)
-            {
-                cerr << "Normalizing " << filename[i] << "\n";
-                normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, NSL);
-                //fin[i].close();
-                //fout[i].close();
+            //Read each file and create normed files (not with --log-only, U2).
+            if(!LOG_ONLY){
+                if (FIRST){
+                    cerr << "Only normalizing first file as --first flag is set.\n";
+                    nfiles = 1;
+                }
+                for (int i = 0; i < nfiles; i++)
+                {
+                    cerr << "Normalizing " << filename[i] << "\n";
+                    normalizeIHSDataByBins(filename[i], outfilename[i], fileLoci[i], mean, variance, n, numBins, threshold, upperCutoff, lowerCutoff, NSL);
+                }
+            }else{
+                cerr << "Skipping outputting normalized output as --log-only flag is set.\n";
             }
 
 
@@ -535,6 +540,15 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
 
 
+
+    // --log-only writes no .norm files, so there is nothing for the window
+    // or gene analyses to read (U2)
+    if (LOG_ONLY && DO_NORM && (BPWIN || DO_GENE)) {
+        cerr << "Skipping window and gene analyses as --log-only flag is set.\n";
+        flog << "Skipping window and gene analyses as --log-only flag is set.\n";
+        BPWIN = false;
+        DO_GENE = false;
+    }
 
     if(BPWIN){ // start from .ihs.out, then require .norm files
         if(DO_NORM){
