@@ -83,8 +83,15 @@ class EHH12_ehh_data{
 
         // Same measure as curr_ehh_before_norm (n^2 under --alt); matters for
         // EHH2/1, which subtracts the top term alone.
-        double firstFreq_before_norm = ALT ? square_alt(n_c[1]) : ((n_c[1] > 1) ? twice_num_pair(n_c[1]) : 0);
-        double secondFreq_before_norm = ALT ? square_alt(n_c[0]) : ((n_c[0] > 1) ?  twice_num_pair(n_c[0]): 0);
+        // At the core the two haplotypes are the derived and ancestral classes;
+        // "first" must be the LARGER one, because EHH2/1 removes the most
+        // frequent haplotype. It used to be the derived class regardless, so
+        // EHH2/1 at pdist 0 was wrong whenever the derived allele was the minor
+        // one (e.g. 0.485714 instead of 0.085714 for 15 of 50 haplotypes).
+        const int top1_core = (n_c[1] >= n_c[0]) ? n_c[1] : n_c[0];
+        const int top2_core = (n_c[1] >= n_c[0]) ? n_c[0] : n_c[1];
+        double firstFreq_before_norm = ALT ? square_alt(top1_core) : ((top1_core > 1) ? twice_num_pair(top1_core) : 0);
+        double secondFreq_before_norm = ALT ? square_alt(top2_core) : ((top2_core > 1) ?  twice_num_pair(top2_core): 0);
         double comboFreq_before_norm = ALT ? square_alt(nhaps) : ((nhaps > 1) ? twice_num_pair(nhaps) : 0);
         
         //double normfac = twice_num_pair(nhaps);
