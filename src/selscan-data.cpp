@@ -425,6 +425,40 @@ static vector<long> readPositionColumn(const string& filename)
     return pos;
 }
 
+// Derived-allele count per locus, and alleles per locus, for TPED ('t'),
+// thap ('h': one line per locus) or ms-style hap ('m': one line per
+// haplotype) input. Every allele field or character is one allele; '1' is
+// derived.
+static void scanDerivedCounts(const string& filename, char fmt, vector<long>& derived, long& nalleles)
+{
+    igzstream fin;
+    fin.open(filename.c_str());
+    if (fin.fail()) {
+        cerr << "ERROR: Failed to open " << filename << " for reading.\n";
+        throw 1;
+    }
+    derived.clear(); nalleles = 0;
+    string line, tok;
+    while (getline(fin, line)) {
+        if (fmt == 't') {
+            istringstream ss(line);
+            long n = 0, d = 0; int col = 0;
+            while (ss >> tok) { if (++col <= 4) continue; n++; d += (tok == "1"); }
+            derived.push_back(d); nalleles = n;
+        } else {
+            line.erase(std::remove_if(line.begin(), line.end(), [](char c) { return std::isspace(static_cast<unsigned char>(c)); }), line.end());
+            if (fmt == 'h') {
+                derived.push_back(std::count(line.begin(), line.end(), '1')); nalleles = line.size();
+            } else {
+                if (derived.empty()) derived.assign(line.size(), 0);
+                for (size_t i = 0; i < line.size() && i < derived.size(); i++) derived[i] += (line[i] == '1');
+                nalleles++;
+            }
+        }
+    }
+    fin.close();
+}
+
 // Drop every record at a position that occurs more than once (PI decision):
 // a duplicated position cannot be placed on the map, and keeping one of the
 // records would be arbitrary. This is what the VCF readers already did; the
@@ -1711,6 +1745,31 @@ void HapMap::loadHapMapData(){
         markDuplicatePositions(pos, p.tpedFilename);
     } else if (!p.VCF) {
         markDuplicatePositions(readPositionColumn(p.mapFilename), p.mapFilename);
+    }
+
+    // XP: drop sites monomorphic in the two populations combined, as the VCF
+    // XP reader does. TPED and hap/thap kept them, and the extra sites change
+    // iHH through the integration steps and gap scaling, so the same data gave
+    // different XP results by format.
+    if ((p.CALC_XP || p.CALC_XPNSL) && !p.VCF) {
+        const char fmt = p.TPED ? 't' : (p.THAP ? 'h' : 'm');
+        const string f1 = p.TPED ? p.tpedFilename : (p.THAP ? p.thapFilename : p.hapFilename);
+        const string f2 = p.TPED ? p.tpedFilename2 : (p.THAP ? p.thapFilename2 : p.hapFilename2);
+        vector<long> d1, d2; long n1 = 0, n2 = 0;
+        scanDerivedCounts(f1, fmt, d1, n1);
+        scanDerivedCounts(f2, fmt, d2, n2);
+        if (d1.size() != d2.size()) {
+            HANDLE_ERROR(f1 + " and " + f2 + " do not have the same number of loci.");
+        }
+        if (preSkip.size() < d1.size()) preSkip.resize(d1.size(), 0);
+        size_t nmono = 0;
+        for (size_t i = 0; i < d1.size(); i++) {
+            const long d = d1[i] + d2[i];
+            if (!preSkip[i] && (d == 0 || d == n1 + n2)) { preSkip[i] = 1; nmono++; }
+        }
+        if (nmono > 0) {
+            LOG("Dropped " << nmono << " sites monomorphic in the two populations combined.");
+        }
     }
 
     if (p.TPED)

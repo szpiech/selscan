@@ -186,19 +186,12 @@ for k in 1 2; do
         { r++; if (r % 400 == 200) { for (i=10;i<=NF;i++) $i=gt; print $3 > "fd_ids.txt" } print }' > fd$k.vcf
 done
 
-# dd1/dd2.vcf: p1/p2 restricted to records that both loaders keep, and
-# c1/c2.tped: the same records converted to TPED, to check that TPED input is
-# read exactly like the same data in VCF. Duplicated positions (12 in p1) are
-# left in: every loader drops all records at a duplicated position. Sites
-# monomorphic in the two panels combined are removed, because in XP mode only
-# the VCF loader filters them (a separate difference).
+# c1/c2.tped: p1/p2 converted from VCF to TPED, record for record, to check
+# that TPED input gives exactly what the same data gives as VCF. Nothing is
+# removed: duplicated positions (12 in p1) and, in XP mode, sites monomorphic
+# in the two panels combined are dropped by every loader.
 for k in 1 2; do
-    gzip -dc p$k.vcf.gz | awk '!/^#/ { c=0; for (i=10;i<=NF;i++) c += (substr($i,1,1)=="1") + (substr($i,3,1)=="1"); print c, 2*(NF-9) }' > cnt$k.txt
-done
-paste -d' ' cnt1.txt cnt2.txt | awk '{ t=$1+$3; n=$2+$4; print (t==0 || t==n) ? 1 : 0 }' > drop_row.txt
-for k in 1 2; do
-    gzip -dc p$k.vcf.gz | awk 'FILENAME==ARGV[1] {x[FNR]=$1; next}
-        /^#/ {print; next} { r++; if (!x[r]) print }' drop_row.txt - > dd$k.vcf
+    gzip -dc p$k.vcf.gz > dd$k.vcf
     awk '/^#/ {next} { printf "%s %s %.10g %s", $1, $3, $2/1e6, $2;
         for (i=10;i<=NF;i++) printf " %s %s", substr($i,1,1), substr($i,3,1); printf "\n" }' dd$k.vcf > c$k.tped
 done
@@ -382,6 +375,13 @@ if selected tped-equiv; then
     run te3.log --xpehh --tped c1.tped --tped-ref c2.tped --pmap --out te_t
     run te4.log --xpehh --vcf dd1.vcf --vcf-ref dd2.vcf --pmap --out te_v
     identical "tped-equiv:xpehh" te_t.xpehh.out te_v.xpehh.out
+    # ... and the same records as thap + map (one line per locus)
+    for k in 1 2; do
+        awk '/^#/ {next} { s = ""; for (i=10;i<=NF;i++) s = s " " substr($i,1,1) " " substr($i,3,1); print substr(s,2) }' dd$k.vcf > c$k.thap
+    done
+    awk '/^#/ {next} { printf "%s %s %.10g %s\n", $1, $3, $2/1e6, $2 }' dd1.vcf > c.map
+    run te5.log --xpehh --thap c1.thap --thap-ref c2.thap --map c.map --pmap --out te_h
+    identical "thap-equiv:xpehh" te_h.xpehh.out te_v.xpehh.out
     # hap input with a duplicated map position: both records are dropped and logged
     run dp.log --ihs --hap example.hap --map dup.map --out dp
     nd=$(awk -F'\t' 'NR>1 && ($2=="Locus1999" || $2=="Locus2000")' dp.ihs.out | wc -l | tr -d ' ')
