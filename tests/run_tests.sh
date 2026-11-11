@@ -506,6 +506,34 @@ if selected pi-edges; then
     done
 fi
 
+if selected xp-validate; then
+    # B16: the XP VCF reader validates genotypes like the single-population
+    # reader. Record 104 of p2 (position 16202, first genotype 1|1) is corrupted (missing allele, '/' in phased
+    # mode, a genotype field removed) or the #CHROM line is deleted; XP must
+    # exit 1, as --ihs does on the same file. 3.0.1 ran the first three with
+    # exit 0 and aborted on the missing header.
+    awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n==104 {$10=".|."} {print}' dd2.vcf > xv_miss.vcf
+    awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n==104 {$10="0/1"} {print}' dd2.vcf > xv_slash.vcf
+    awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n==104 {NF=NF-1} {print}' dd2.vcf > xv_short.vcf
+    grep -v '^#CHROM' dd2.vcf > xv_nohdr.vcf
+    for c in miss slash short nohdr; do
+        run xv.log --xpehh --vcf dd1.vcf --vcf-ref xv_$c.vcf --pmap --out xv; xrc=$RC
+        run xvi.log --ihs --vcf xv_$c.vcf --pmap --out xvi
+        if [ "$xrc" -eq 1 ] && [ "$RC" -eq 1 ]; then pass "xp-validate:$c"
+        else fail "xp-validate:$c" "xpehh exit $xrc, ihs exit $RC (expected 1 and 1)"; fi
+    done
+    # With --filter-vcf a bad record is skipped instead, and its partner in the
+    # other file goes with it. The record is polymorphic, so reading '.' as 0
+    # (3.0.1) changes the result (REF/ALT relabelled A/C so --filter-vcf keeps SNPs)
+    ac='/^#/ {print; next} {n++; $4="A"; $5="C"} '
+    awk -F'\t' -v OFS='\t' "$ac"'{print}' dd1.vcf > xv_a1.vcf
+    awk -F'\t' -v OFS='\t' "$ac"'{print}' xv_miss.vcf > xv_a2.vcf
+    for k in 1 2; do awk -F'\t' -v OFS='\t' "$ac"'n != 104 {print}' dd$k.vcf > xv_r$k.vcf; done
+    run xva.log --xpehh --filter-vcf --vcf xv_a1.vcf --vcf-ref xv_a2.vcf --pmap --out xva
+    run xvr.log --xpehh --filter-vcf --vcf xv_r1.vcf --vcf-ref xv_r2.vcf --pmap --out xvr
+    identical "xp-validate:filter-vcf-skip" xva.xpehh.out xvr.xpehh.out
+fi
+
 if selected errors; then
     printf '{"params":[{"maf":0.1,}]}' > bad.json
     while IFS='|' read -r name args; do

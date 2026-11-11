@@ -528,8 +528,14 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
         if (line[0] == '#') {
             if (line.rfind("#CHROM",0) == 0) {
                 result.current_ngts = count_samples_from_header(line);
+                if (result.current_ngts <= 0) {
+                    HANDLE_ERROR("Failed to determine number of samples from VCF header in " + filename);
+                }
             }
             continue;
+        }
+        if (result.current_ngts < 0) {
+            HANDLE_ERROR("VCF header (#CHROM line) not found before variant data in " + filename);
         }
 
         result.nloci_before_filtering++;
@@ -587,52 +593,60 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
             }
         }
 
+        // Genotype checks mirror the single-population reader (B16):
+        // alleles other than 0/1 are an error unless missing data is allowed
+        // (with --filter-vcf the site is skipped instead), '/' is an
+        // error in phased mode, a field shorter than "a|b" is an error, and
+        // the number of genotype fields must match the #CHROM header.
+        auto bad_site = [&](const string& msg) {
+            if (!p.MULTI_ALLELIC) { HANDLE_ERROR(msg); }
+            skip_due_to_missing = true;
+        };
+
         int seen_ngts = 0;
 
-        if (p.UNPHASED)
+        while (pcur < end && seen_ngts < result.current_ngts)
         {
-            while (pcur < end && seen_ngts < result.current_ngts)
-            {
-                const char* g = pcur;
+            const char* g = pcur;
 
-                if (end-g >= 3) {
-                    char a1 = g[0];
-                    char a2 = g[2];
+            if (end - g >= 3) {
+                const char a1 = g[0];
+                const char sep = g[1];
+                const char a2 = g[2];
 
-                    int v1 = (a1=='1');
-                    int v2 = (a2=='1');
-
-                    int sum = v1+v2;
-
-                    if (sum==2) number_of_2s++;
-                    else if (sum==1) number_of_1s++;
+                if (!p.MISSING_ALLOWED &&
+                    ((a1 != '0' && a1 != '1') || (a2 != '0' && a2 != '1'))) {
+                    bad_site("Alleles must be coded 0 or 1 only. Found alleles "
+                             + string(1, a1) + sep + a2 + " at pos " + to_string(new_physpos)
+                             + " in " + filename + ".");
+                }
+                if (!p.UNPHASED && sep != '|') {
+                    bad_site("Unphased entries detected (/ is used) at pos " + to_string(new_physpos)
+                             + " in " + filename + ". Make sure you run with --unphased flag for correct results.");
                 }
 
-                while (pcur < end && *pcur!='\t') ++pcur;
-                if (pcur < end) ++pcur;
-
-                seen_ngts++;
+                const int v1 = (a1 == '1');
+                const int v2 = (a2 == '1');
+                if (p.UNPHASED) {
+                    const int sum = v1 + v2;
+                    if (sum == 2) number_of_2s++;
+                    else if (sum == 1) number_of_1s++;
+                } else {
+                    number_of_1s += v1 + v2;
+                }
+            } else {
+                bad_site("Malformed genotype field at pos " + to_string(new_physpos) + " in " + filename + ".");
             }
+
+            while (pcur < end && *pcur != '\t') ++pcur;
+            if (pcur < end) ++pcur;
+            seen_ngts++;
         }
-        else
-        {
-            while (pcur < end && seen_ngts < result.current_ngts)
-            {
-                const char* g = pcur;
 
-                if (end-g >= 3) {
-                    char a1 = g[0];
-                    char a2 = g[2];
-
-                    number_of_1s += (a1=='1');
-                    number_of_1s += (a2=='1');
-                }
-
-                while (pcur < end && *pcur!='\t') ++pcur;
-                if (pcur < end) ++pcur;
-
-                seen_ngts++;
-            }
+        if (seen_ngts != result.current_ngts) {
+            HANDLE_ERROR("line " + to_string(result.nloci_before_filtering) +
+                         " of " + filename + " has " + to_string(seen_ngts) +
+                         " genotype fields, but header indicates " + to_string(result.current_ngts) + ".");
         }
 
         // -------- store counts per locus --------
@@ -813,7 +827,7 @@ void HapMap::readHapDataVCFXP(string filename, string filename2, HapData& hapDat
     VCFPass1Result pass1_h2 = readHapDataVCF_pass1(filename2);
     // Pair the two files by position (B15). A record is kept only when its
     // position occurs exactly once in each file, neither record was removed
-    // by the per-file filters (duplicate position, --multi-allelic), REF/ALT
+    // by the per-file filters (duplicate position, --filter-vcf), REF/ALT
     // agree, and the site is polymorphic in the two populations combined.
     // Kept records therefore appear in the same order in both files, which
     // pass 2 and the map reader (driven by file 1's skip list) rely on.
@@ -877,9 +891,9 @@ void HapMap::readHapDataVCFXP(string filename, string filename2, HapData& hapDat
     if (only2 > 0)
         LOG("Dropped " << only2 << " records of " << filename2 << " at positions absent from " << filename << ".");
     if (partner1 > 0)
-        LOG("Dropped " << partner1 << " records of " << filename << " whose matching record in " << filename2 << " was removed (duplicated position or multi-allelic).");
+        LOG("Dropped " << partner1 << " records of " << filename << " whose matching record in " << filename2 << " was removed by a per-file filter (duplicated position, or --filter-vcf).");
     if (partner2 > 0)
-        LOG("Dropped " << partner2 << " records of " << filename2 << " whose matching record in " << filename << " was removed (duplicated position or multi-allelic).");
+        LOG("Dropped " << partner2 << " records of " << filename2 << " whose matching record in " << filename << " was removed by a per-file filter (duplicated position, or --filter-vcf).");
     if (mismatch > 0)
         LOG("Dropped " << mismatch << " shared positions where REF/ALT differ between the two files.");
     if (mono > 0)
