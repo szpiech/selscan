@@ -683,6 +683,15 @@ if selected norm-robust; then
     nw=$(awk 'END {print NR-1}' nq.ihs.out.20bins.norm.100kb.windows 2>/dev/null)
     if [ "$RC" -eq 0 ] && [ "$nw" = 1000 ] && [ "$bad" = 0 ]; then pass "norm-bpwin:quantile-ties"
     else fail "norm-bpwin:quantile-ties" "exit $RC, $nw windows, $bad windows without extreme SNPs labelled 1 or 5"; fi
+    # B49: the --log file records the window analysis in both modes (3.0.1:
+    # closed before it with --files, never written with --norm-files)
+    rm -f nl1.log nl2.log
+    run nlr1.txt norm --ihs --bins 20 --bp-win --winsize 100000 --files nr_b.ihs.out --log nl1.log
+    run nlr2.txt norm --ihs --norm-files nr_b.ihs.out.20bins.norm --bp-win --winsize 100000 --log nl2.log
+    for k in 1 2; do
+        if grep -q 'Creating window file' nl$k.log 2>/dev/null; then pass "norm-log:window-analysis:$k"
+        else fail "norm-log:window-analysis:$k" "window analysis missing from the --log file"; fi
+    done
 fi
 
 if selected errors; then

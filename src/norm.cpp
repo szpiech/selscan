@@ -265,6 +265,21 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     string *outfilename = nullptr;
     int *fileLoci = nullptr;
     
+    // B49: the log is opened for every mode (3.0.1 opened it only with
+    // --files and closed it before the window and gene analyses, so their
+    // tables and warnings never reached it; --norm-files wrote no log).
+    flog.open(infoOutfile.c_str());
+    if (flog.fail())
+    {
+        cerr << "ERROR: Cannot open " << infoOutfile << " for logging " << strerror(errno) << endl;
+        return 1;
+    }
+    for (int i = 0; i < argc; i++)
+    {
+        flog << argv[i] << " ";
+    }
+    flog << "\n\n";
+
     if(DO_NORM){
         cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
 
@@ -275,18 +290,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         int totalLoci = 0;
 
 
-        flog.open(infoOutfile.c_str());
-        if (flog.fail())
-        {
-            cerr << "ERROR: Cannot open " << infoOutfile << " for logging " << strerror(errno) << endl;
-            return 1;
-        }
-
-        for (int i = 0; i < argc; i++)
-        {
-            flog << argv[i] << " ";
-        }
-        flog << "\n\n";
 
         //flog << "Input files:\n";
 
@@ -513,7 +516,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         // delete [] mean;
         // delete [] variance;
         // delete [] n;
-        flog.close();
     }
 
 
@@ -633,6 +635,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             
     delete [] outfilename;
     delete [] fileLoci;
+    flog.close();
        
 
     return 0;
