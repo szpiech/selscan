@@ -67,6 +67,15 @@ loads 811 loci and reports 13 cores, and the fixed build loads 998 loci and
 reports 198 cores. 178 is the pre-B32 build's count on the original,
 unswapped p1, so the asymmetry was 178 cores unswapped against 13 swapped.
 
+Corrections to later commit messages:
+- f97de30 (B12) and 3558905 (B13) give their `make check` counts as from
+  a "(clean build)"; no `make clean` preceded those runs, so they were
+  incremental builds (header dependencies tracked since 341bdc0). At
+  eea08a5, `make clean` followed by `make check` gives 155 passed, 3
+  known failures, 0 failed.
+- d2bd8ed (B24) calls the release-build out-of-bounds write hidden; it
+  ran silently on a018ca0 but crashed (SIGTRAP) on a 22769f4 build.
+
 ## Validation against an independent reference
 
 The review wrote a Python reference implementation from the manual's
