@@ -91,11 +91,11 @@ struct HapEntry
 {
     bool flipped = false;
     
-    MyBitset* hapbitset; // stores 1s (set bits indicate 1s)
-    MyBitset* xorbitset; // for unphased stores 2s, for phased stores consecutive loci XORs 
+    MyBitset* hapbitset = nullptr; // stores 1s (set bits indicate 1s)
+    MyBitset* xorbitset = nullptr; // unphased: stores 2s; phased: the shared all-zero HapData::zeroBitset (P2)
 
     //for missing
-    MyBitset* missbitset; // stores missing bits
+    MyBitset* missbitset = nullptr; // stores missing bits
 };
 
 class HapData
@@ -110,6 +110,7 @@ public:
     //void xor_for_phased_and_unphased(); //experimental
 
     struct HapEntry* hapEntries = NULL; //vector of haplotype entries
+    MyBitset* zeroBitset = nullptr;    // shared xorbitset for phased data (P2)
     int nloci;
     int nhaps;
     bool unphased = false;

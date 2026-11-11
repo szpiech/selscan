@@ -41,9 +41,13 @@ void HapData::initHapData(int nhaps, int nloci)
     this->nhaps = nhaps;
     this->nloci = nloci;
     
+    // P2: in phased mode xorbitset is never written (addAllele2 requires
+    // unphased data) and is only read as all zero, so every locus points to
+    // one shared zero bitset instead of allocating its own.
+    if (!unphased) zeroBitset = new MyBitset(nhaps);
     for (int j = 0; j < nloci; j++){
         hapEntries[j].hapbitset = new MyBitset(nhaps);
-        hapEntries[j].xorbitset = new MyBitset(nhaps);
+        hapEntries[j].xorbitset = unphased ? new MyBitset(nhaps) : zeroBitset;
         if(MISSING_ALLOWED && unphased){
             hapEntries[j].missbitset = new MyBitset(nhaps);
         }
@@ -58,8 +62,11 @@ void HapData::releaseHapData()
     //we have a MyBitset for every locus
     for (int j = 0; j < nloci; j++){
         delete hapEntries[j].hapbitset ; //MyBitset destructor called
-        delete hapEntries[j].xorbitset; //MyBitset destructor called
+        if (hapEntries[j].xorbitset != zeroBitset) delete hapEntries[j].xorbitset;
+        delete hapEntries[j].missbitset;   // (was never freed)
     }
+    delete zeroBitset;
+    zeroBitset = nullptr;
     delete [] hapEntries;
     hapEntries = NULL;
     this->nhaps = -9;
