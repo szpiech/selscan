@@ -619,8 +619,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             cerr << "You have provided " << nfiles << " window files for gene annotation.\n";
             genex.annotateWindows(geneFile, useGTF, filename);
         }else if(DO_NORM){ // --files but not --win-files
-            cerr << "Using " << filename.size() << " normalized output files for gene-based analysis.\n";
-            for (int i = 0; i < filename.size() ; i++)
+            // nfiles, not filename.size(): --first sets nfiles = 1 and only
+            // the first file is normalised (B24)
+            cerr << "Using " << nfiles << " normalized output files for gene-based analysis.\n";
+            for (int i = 0; i < nfiles; i++)
             {
                 normFilenames[i] = outfilename[i];
             }

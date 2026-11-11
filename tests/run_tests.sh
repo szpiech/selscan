@@ -550,6 +550,13 @@ if selected norm-robust; then
     if [ "$RC" -eq 0 ] && [ -s nr_genes.bed.ihs.genetable ]; then pass "norm-gene:norm-files"
     else fail "norm-gene:norm-files" "exit $RC"; fi
     rm -f nr_genes.bed.ihs.genetable
+    # B24: --files a b --first --gene-bed wrote past the end of a vector. The
+    # release build hides it (undefined behaviour); a libc++-hardened build
+    # aborted. Regression check only.
+    run nr2.log norm --ihs --bins 20 --files nr_a.ihs.out nr_b.ihs.out --first --gene-bed nr_genes.bed --min-snps 1
+    if [ "$RC" -eq 0 ] && [ -s nr_genes.bed.ihs.genetable ]; then pass "norm-gene:first"
+    else fail "norm-gene:first" "exit $RC"; fi
+    rm -f nr_genes.bed.ihs.genetable
 fi
 
 if selected errors; then
