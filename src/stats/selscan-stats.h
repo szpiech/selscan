@@ -176,7 +176,7 @@ class SelscanStats {
         }
         
         inline double square_alt(int n){
-            return n*n;
+            return double(n) * n; // int n*n overflows above 46,340 haplotypes (B41)
         }
 
         // Homozygosity term for a group of n haplotypes: 2*C(n,2) = n(n-1)

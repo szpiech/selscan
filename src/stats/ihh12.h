@@ -48,7 +48,7 @@ class IHH12_ehh_data{
     }
 
     inline double square_alt(int n){
-        return n*n;
+        return double(n) * n; // int n*n overflows above 46,340 haplotypes (B41)
     }
 
     inline double twice_num_pair(int n){
