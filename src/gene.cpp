@@ -595,7 +595,8 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                 if (FIT_LENGTH) {
                     std::ostringstream a, b;
                     a << compute_length_residual(len, maxScore, beta.first, beta.second);
-                    b << compute_length_residual(len, maxScore, beta_min.first, beta_min.second);
+                    // bottom score against the bottom-score fit (was maxScore, B26)
+                    b << compute_length_residual(len, row.minScore, beta_min.first, beta_min.second);
                     res_score = a.str(); res_score_min = b.str();
                 }
                 

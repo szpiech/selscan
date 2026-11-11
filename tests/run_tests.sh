@@ -564,6 +564,19 @@ if selected norm-robust; then
     adj=$(awk -F'\t' 'NR==2 {print $9}' nr_one.bed.ihs.genetable 2>/dev/null)
     if [ "$RC" -eq 0 ] && [ "$adj" = NA ] && grep -q 'length regression' nr3.log; then pass "norm-gene:one-gene"
     else fail "norm-gene:one-gene" "exit $RC, top_score_adj '$adj'"; fi
+    # B26: XP bottom_score_adj must be the residual of bottom_score on
+    # log(len), recomputed here by least squares (genes of unequal length).
+    gzip -dc "$EXPECTED/xpehh.tsv.gz" > nr_x.xpehh.out
+    run nr4.log norm --xpehh --files nr_x.xpehh.out
+    awk 'BEGIN { s=50000; for (g=0; g<6; g++) { e=s+30000+g*12000; printf "chr1\t%d\t%d\tX%d\n", s, e, g+1; s=e+10000 } }' > nr_xg.bed
+    run nr5.log norm --xpehh --norm-files nr_x.xpehh.out.norm --gene-bed nr_xg.bed --min-snps 1
+    d=$(awk -F'\t' 'NR>1 { n++; L[n]=log($5); y[n]=$11; a[n]=$12; sl+=L[n]; sy+=y[n] }
+        END { if (n < 3) { print "n=" n; exit } ml=sl/n; my=sy/n
+              for (i=1;i<=n;i++) { sxy+=(L[i]-ml)*(y[i]-my); sxx+=(L[i]-ml)^2 }
+              b=sxy/sxx; m=0; for (i=1;i<=n;i++) { r=y[i]-my-b*(L[i]-ml)-a[i]; if (r<0) r=-r; if (r>m) m=r }
+              printf "%.3g", m }' nr_xg.bed.xpehh.genetable 2>/dev/null)
+    if [ "$RC" -eq 0 ] && awk -v d="$d" 'BEGIN { exit !(d != "" && d+0 < 1e-4) }'; then pass "norm-gene:xp-bottom-adj"
+    else fail "norm-gene:xp-bottom-adj" "exit $RC, max |bottom_score_adj - residual| = '$d'"; fi
 fi
 
 if selected errors; then
