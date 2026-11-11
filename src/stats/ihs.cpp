@@ -765,14 +765,18 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         }
 
         m.clear(); // CLEAR THE MAP //unordered_map<int, vector<int> >().swap(m);
-        
-        if(prev_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){ // bug fix for low MAC
+
+        // nSL has no EHH cutoff (manual; v2.0.3): it integrates until
+        // --max-extend-nsl, all haplotypes unique, or the edge. 2.1-3.0.1 applied
+        // the iHS --cutoff gate below to nSL too, truncating its integrals.
+        const bool nsl_mode = (p.CALC_NSL && !p.CALC_IHS);
+        if(nsl_mode || prev_ehh1_before_norm*1.0/normalizer_1 > p.EHH_CUTOFF){ // bug fix for low MAC
             assert(normalizer_1!=0);
             ihh1 += (prev_ehh1_before_norm + curr_ehh1_before_norm) * distance * 0.5 / normalizer_1;
             prev_ehh1_before_norm = curr_ehh1_before_norm;
         }
 
-        if(prev_ehh0_before_norm*1.0/normalizer_0 > p.EHH_CUTOFF){ // bug fix for low MAC
+        if(nsl_mode || prev_ehh0_before_norm*1.0/normalizer_0 > p.EHH_CUTOFF){ // bug fix for low MAC
             assert(normalizer_0!=0);
             ihh0 += (prev_ehh0_before_norm + curr_ehh0_before_norm) * distance * 0.5 / normalizer_0;
             prev_ehh0_before_norm = curr_ehh0_before_norm;
