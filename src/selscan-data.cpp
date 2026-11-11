@@ -1633,7 +1633,7 @@ void HapMap::loadHapMapData(){
         readHapDataTPED(p.tpedFilename, *hapData);
         if (p.CALC_XP || p.CALC_XPNSL)
         {
-            readHapDataTPED(p.tpedFilename, *hapData2);
+            readHapDataTPED(p.tpedFilename2, *hapData2);
             if (hapData->nloci != hapData2->nloci)
             {
                 HANDLE_ERROR("Haplotypes from " + p.tpedFilename + " and " + p.tpedFilename2 + " do not have the same number of loci.");

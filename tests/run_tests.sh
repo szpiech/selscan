@@ -61,7 +61,6 @@ maxgap-effective:ihs  B1
 maxgap-effective:nsl  B1
 xp-fixed-diff:xpehh  B2
 xp-fixed-diff:xpehh-unphased  B2
-tped-equiv:xpehh  B3
 norm-freq1-excluded:ihs  B4
 norm-single-bin-linear:xpehh  B4
 norm-single-bin-linear:xpnsl  B4
@@ -198,13 +197,21 @@ for k in 1 2; do
         { r++; if (r % 400 == 200) { for (i=10;i<=NF;i++) $i=gt; print $3 > "fd_ids.txt" } print }' > fd$k.vcf
 done
 
-# dd1/dd2.vcf: p1/p2 without the 12 positions that occur twice (the VCF
-# loader drops duplicate positions and the TPED loader does not, which is a
-# separate difference), and c1/c2.tped: the same records converted to TPED,
-# to check that TPED input is read exactly like the same data in VCF.
+# dd1/dd2.vcf: p1/p2 restricted to records that both loaders keep, and
+# c1/c2.tped: the same records converted to TPED, to check that TPED input is
+# read exactly like the same data in VCF. Two filters differ between the
+# loaders and are removed here so this case tests reading alone: the VCF
+# loader drops sites at duplicated positions (12 in p1) and, in XP mode,
+# sites monomorphic in the two panels combined; the TPED loader does neither.
+# Sites at joint frequency 0.5 are also removed (dropped by VCF XP, B2).
 gzip -dc p1.vcf.gz | awk '!/^#/ {print $2}' | uniq -d > dup_pos.txt
 for k in 1 2; do
-    gzip -dc p$k.vcf.gz | awk 'FNR==NR {d[$1]=1; next} /^#/ || !($2 in d)' dup_pos.txt - > dd$k.vcf
+    gzip -dc p$k.vcf.gz | awk '!/^#/ { c=0; for (i=10;i<=NF;i++) c += (substr($i,1,1)=="1") + (substr($i,3,1)=="1"); print c, 2*(NF-9) }' > cnt$k.txt
+done
+paste -d' ' cnt1.txt cnt2.txt | awk '{ t=$1+$3; n=$2+$4; print (t==0 || t==n || 2*t==n) ? 1 : 0 }' > drop_row.txt
+for k in 1 2; do
+    gzip -dc p$k.vcf.gz | awk 'FILENAME==ARGV[1] {d[$1]=1; next} FILENAME==ARGV[2] {x[FNR]=$1; next}
+        /^#/ {print; next} { r++; if (!($2 in d) && !x[r]) print }' dup_pos.txt drop_row.txt - > dd$k.vcf
     awk '/^#/ {next} { printf "%s %s %.10g %s", $1, $3, $2/1e6, $2;
         for (i=10;i<=NF;i++) printf " %s %s", substr($i,1,1), substr($i,3,1); printf "\n" }' dd$k.vcf > c$k.tped
 done
