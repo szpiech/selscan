@@ -694,7 +694,14 @@ pair<double, double> XPIHH::calc_xpihh(int locus)
 {
 
     if(p.UNPHASED){
-        if(hm->hapData->get_n_c0(locus) + hm->hapData2->get_n_c0(locus) == 0  || hm->hapData->get_n_c2(locus) + hm->hapData2->get_n_c2(locus) == 0 ){  
+        // No variation means one genotype class holds every individual in the
+        // pooled sample. 3.0.0-3.0.1 skipped a site whenever EITHER homozygous
+        // class was empty, which also removed segregating sites carried by
+        // heterozygotes plus one homozygous class.
+        const int c0 = hm->hapData->get_n_c0(locus) + hm->hapData2->get_n_c0(locus);
+        const int c1 = hm->hapData->get_n_c1(locus) + hm->hapData2->get_n_c1(locus);
+        const int c2 = hm->hapData->get_n_c2(locus) + hm->hapData2->get_n_c2(locus);
+        if( c1 + c2 == 0 || c0 + c1 == 0 || c0 + c2 == 0 ){  
             {std::lock_guard<std::mutex> lock(mutex_log);
                 (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
             }//unlock
