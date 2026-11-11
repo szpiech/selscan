@@ -372,7 +372,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
                                         freq, score, totalLoci,
                                         mean, variance,  n, numBins, threshold, (XPNSL|| XPEHH|| SOFT));
             }else{
-                getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold);
+                int nFreqOne = getMeanVarBins(freq, score, totalLoci, mean, variance, n, numBins, threshold, false);
+                if (nFreqOne > 0) {
+                    cerr << "Excluded " << nFreqOne << " loci with derived allele frequency 1.0 from normalisation (no frequency bin); they are not written to the .norm output.\n";
+                    flog << "Excluded " << nFreqOne << " loci with derived allele frequency 1.0 from normalisation (no frequency bin); they are not written to the .norm output.\n";
+                }
 
             }
 
@@ -468,7 +472,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
                                         freq1, score, totalLoci,
                                         mean, variance,  n, numBins, threshold, (XPNSL|| XPEHH|| SOFT));
             }else{
-                getMeanVarBins(freq1, score, totalLoci, mean, variance, n, numBins, threshold);
+                getMeanVarBins(freq1, score, totalLoci, mean, variance, n, numBins, threshold, true);
             }
             
 
@@ -1838,8 +1842,27 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
 //and normalizes the data array based on these values
 //freq[]: derived allele frequency array
 //data[]: unnormalized score array  
-void SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[])
+// Frequency bin of a locus, or -1 if it has none.
+// Bins are [0, t0), [t0, t1), ... as before. A frequency of 1.0 is at or past
+// the last edge and, before this helper, matched no bin at all: the locus was
+// left out of the bin statistics and then written with the PREVIOUS row's
+// normalised score and crit flag (normedData/numInBin are not reset per row).
+// XP-EHH/XP-nSL/iHH12 normalise in one genome-wide bin, where p1 = 1.0 is a
+// sweep completed in population 1, so for them the last bin is closed at 1.0
+// (includeFreqOne). iHS/nSL bin by derived frequency, and a site fixed for the
+// derived allele has no frequency class; those loci return -1, are excluded,
+// and are counted.
+static inline int freqBin(double f, int numBins, const double threshold[], bool includeFreqOne)
 {
+    if (f >= 1.0) return includeFreqOne ? numBins - 1 : -1;
+    for (int b = 0; b < numBins; b++)
+        if (f < threshold[b]) return b;
+    return numBins - 1; // f < 1.0 but at/after a rounded last edge
+}
+
+int SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[], bool includeFreqOne)
+{
+    int excluded = 0;
     //initialize
     for (int b = 0; b < numBins; b++)
     {
@@ -1852,16 +1875,11 @@ void SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double
     for (int i = 0; i < nloci; i++)
     {
         if (data[i] == MISSING) continue;
-        for (int b = 0; b < numBins; b++)
-        {
-            if (freq[i] < threshold[b])
-            {
-                n[b]++;
-                mean[b] += data[i];
-                variance[b] += data[i] * data[i];
-                break;
-            }
-        }
+        int b = freqBin(freq[i], numBins, threshold, includeFreqOne);
+        if (b < 0) { excluded++; data[i] = MISSING; continue; }
+        n[b]++;
+        mean[b] += data[i];
+        variance[b] += data[i] * data[i];
     }
 
     //Transform the sum(x_i) and sum(x_i^2) into mean and variances for each bin
@@ -1879,16 +1897,10 @@ void SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double
     for (int i = 0; i < nloci; i++)
     {
         if (data[i] == MISSING) continue;
-        for (int b = 0; b < numBins; b++)
-        {
-            if (freq[i] < threshold[b])
-            {
-                data[i] = (data[i] - mean[b]) / sqrt(variance[b]);
-                break;
-            }
-        }
+        int b = freqBin(freq[i], numBins, threshold, includeFreqOne);
+        data[i] = (data[i] - mean[b]) / sqrt(variance[b]);
     }
-    return;
+    return excluded;
 }
 
 void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
@@ -1989,13 +2001,10 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
     // 5. Normalize the data using the precomputed stats
     for (int i = 0; i < nloci; i++) {
         if (data[i] == MISSING) continue;
-        for (int b = 0; b < numBins; b++) {
-            if (freq[i] < threshold[b]) {
-                if (n[b] > 1 && !std::isnan(mean[b]) && !std::isnan(variance[b])) {
-                    data[i] = (data[i] - mean[b]) / std::sqrt(variance[b]);
-                }
-                break;
-            }
+        int b = freqBin(freq[i], numBins, threshold, XPORSOFT);
+        if (b < 0) { data[i] = MISSING; continue; }
+        if (n[b] > 1 && !std::isnan(mean[b]) && !std::isnan(variance[b])) {
+            data[i] = (data[i] - mean[b]) / std::sqrt(variance[b]);
         }
     }
 }
@@ -2065,14 +2074,11 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
         skipCols(fin, numColsToSkip);
 
         if (data == MISSING) continue;
-        for (int b = 0; b < numBins; b++)
         {
-            if (freq < threshold[b])
-            {
-                normedData = (data - mean[b]) / sqrt(variance[b]);
-                numInBin = n[b];
-                break;
-            }
+            int b = freqBin(freq, numBins, threshold, false);
+            if (b < 0) continue; // freq 1.0: excluded and counted in getMeanVarBins
+            normedData = (data - mean[b]) / sqrt(variance[b]);
+            numInBin = n[b];
         }
 
         if (numInBin >= 20)
@@ -2137,14 +2143,10 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
         fin >> data;
 
         if (data == MISSING) continue;
-        for (int b = 0; b < numBins; b++)
         {
-            if (freq1 < threshold[b])
-            {
-                normedData = (data - mean[b]) / sqrt(variance[b]);
-                numInBin = n[b];
-                break;
-            }
+            int b = freqBin(freq1, numBins, threshold, true); // single bin, closed at 1.0
+            normedData = (data - mean[b]) / sqrt(variance[b]);
+            numInBin = n[b];
         }
 
         if (numInBin >= 20)
@@ -2210,14 +2212,10 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
         fin >> data;
 
         if (data == MISSING) continue;
-        for (int b = 0; b < numBins; b++)
         {
-            if (freq1 < threshold[b])
-            {
-                normedData = (data - mean[b]) / sqrt(variance[b]);
-                numInBin = n[b];
-                break;
-            }
+            int b = freqBin(freq1, numBins, threshold, true); // single bin, closed at 1.0
+            normedData = (data - mean[b]) / sqrt(variance[b]);
+            numInBin = n[b];
         }
 
         if (numInBin >= 20)
