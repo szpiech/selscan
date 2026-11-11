@@ -437,14 +437,15 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
 
                 // Find first gene that could overlap position w.start
                 size_t gene_idx = 0;
-                while (gene_idx < chrGenes.size() && chrGenes[gene_idx].end <= pos)
+                // genes are 1-based inclusive [start, end] (B37)
+                while (gene_idx < chrGenes.size() && chrGenes[gene_idx].end < pos)
                     ++gene_idx;
 
                 // For a single-position "window", overlap if gene.start < pos+1 and gene.end > pos
                 // i.e., (w.end >= gene.start && w.start < gene.end) with w.start==w.end==pos
                 for (size_t j = gene_idx; j < chrGenes.size() && chrGenes[j].start <= pos; ++j)
                 {
-                    if (pos >= chrGenes[j].start && pos < chrGenes[j].end)
+                    if (pos >= chrGenes[j].start && pos <= chrGenes[j].end)
                     {
                         if(GENERATE_ANNOTATED_NORM){
                             if (!ov.empty()) ov += ", ";
@@ -731,7 +732,8 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
                 std::string ov;
 
                 // Advance gene_idx to the first gene that might overlap
-                while (gene_idx < chrGenes.size() && chrGenes[gene_idx].end <= w_start)
+                // genes and windows are both 1-based inclusive (B37)
+                while (gene_idx < chrGenes.size() && chrGenes[gene_idx].end < w_start)
                 {
                     gene_idx++;
                 }
@@ -740,9 +742,9 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
                 size_t j = gene_idx;
                 //std::string GENE_ID = w_chrom + "|" + chrGenes[j].name;
 
-                while (j < chrGenes.size() && chrGenes[j].start < w_end)
+                while (j < chrGenes.size() && chrGenes[j].start <= w_end)
                 {
-                    if ((w_end > chrGenes[j].start && w_start < chrGenes[j].end))
+                    if (w_end >= chrGenes[j].start && w_start <= chrGenes[j].end)
                     { // overlaps
                         if (!ov.empty())
                             ov += ", ";

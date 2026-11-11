@@ -577,6 +577,23 @@ if selected norm-robust; then
               printf "%.3g", m }' nr_xg.bed.xpehh.genetable 2>/dev/null)
     if [ "$RC" -eq 0 ] && awk -v d="$d" 'BEGIN { exit !(d != "" && d+0 < 1e-4) }'; then pass "norm-gene:xp-bottom-adj"
     else fail "norm-gene:xp-bottom-adj" "exit $RC, max |bottom_score_adj - residual| = '$d'"; fi
+    # B37: BED genes cover 1-based start+1..end inclusive. A gene ending
+    # exactly at a SNP must count it (3.0.1 dropped the last base).
+    P=$(awk -F'\t' 'NR==202 {print $3}' nr_a.ihs.out.20bins.norm)
+    nb=$(awk -F'\t' -v P="$P" 'NR>1 && $3 >= P-999 && $3 <= P' nr_a.ihs.out.20bins.norm | wc -l | tr -d ' ')
+    printf 'chr1\t%d\t%d\tENDP\nchr1\t100000\t150000\tF1\nchr1\t300000\t350000\tF2\n' $((P-1000)) "$P" > nr_end.bed
+    run nr6.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_end.bed --min-snps 1
+    ns=$(awk -F'\t' '$4=="ENDP" {print $6}' nr_end.bed.ihs.genetable 2>/dev/null)
+    if [ "$RC" -eq 0 ] && [ "$ns" = "$nb" ]; then pass "norm-gene:snp-at-gene-end"
+    else fail "norm-gene:snp-at-gene-end" "exit $RC, nsnps '$ns', expected $nb"; fi
+    # ... and windows (1-based inclusive) overlap a gene that starts on their
+    # last base or ends on their first base (--win-files path)
+    printf 'chr\tstart\tend\tn_snps\tfrac_extreme\tperc\tscore\nchr1\t1\t100000\t5\t0\t1\t1\nchr1\t100001\t200000\t5\t0\t1\t1\nchr1\t200001\t300000\t5\t0\t1\t1\n' > nr_w.windows
+    printf 'chr1\t199999\t260000\tSTARTS\nchr1\t50000\t100001\tENDS\n' > nr_wg.bed
+    run nr7.log norm --ihs --win-files nr_w.windows --gene-bed nr_wg.bed
+    ov=$(awk -F'\t' '$2==100001 {print $8}' nr_w.windows.ann 2>/dev/null)
+    if [ "$RC" -eq 0 ] && [ "$ov" = "ENDS, STARTS" ]; then pass "norm-gene:window-edges"
+    else fail "norm-gene:window-edges" "exit $RC, window 100001-200000 overlaps '$ov' (expected 'ENDS, STARTS')"; fi
 fi
 
 if selected errors; then
