@@ -594,6 +594,14 @@ if selected norm-robust; then
     ov=$(awk -F'\t' '$2==100001 {print $8}' nr_w.windows.ann 2>/dev/null)
     if [ "$RC" -eq 0 ] && [ "$ov" = "ENDS, STARTS" ]; then pass "norm-gene:window-edges"
     else fail "norm-gene:window-edges" "exit $RC, window 100001-200000 overlaps '$ov' (expected 'ENDS, STARTS')"; fi
+    # B48: --bp-win --gene-bed must annotate the .windows table it wrote, as
+    # --win-files does; 3.0.1 read the .norm file as windows and wrote
+    # .norm.ann with every SNP tagged
+    cp nr_a.ihs.out.20bins.norm nr_bw.norm
+    run nr8.log norm --ihs --norm-files nr_bw.norm --bp-win --winsize 100000 --gene-bed nr_wg.bed --min-snps 1
+    mv nr_bw.norm.100kb.windows.ann nr_bw_direct.ann 2>/dev/null
+    run nr9.log norm --ihs --win-files nr_bw.norm.100kb.windows --gene-bed nr_wg.bed
+    identical "norm-gene:bpwin-annotates-windows" nr_bw_direct.ann nr_bw.norm.100kb.windows.ann
 fi
 
 if selected errors; then

@@ -642,9 +642,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         }
 
         if(BPWIN) { // must be with --norm-files or --files
+            // the window tables written by analyze*BPWindows, not the .norm
+            // files they were built from (B48)
             for(int i = 0; i < nfiles; i++)
             {
-                winFilenames[i] =  outfilename[i];
+                winFilenames[i] = outfilename[i] + "." + to_string(winSize / 1000) + "kb.windows";
             }
             genex.annotateWindows(geneFile, useGTF, winFilenames);
             
