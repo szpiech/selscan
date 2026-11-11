@@ -43,8 +43,7 @@ class EHH12_ehh_data{
         if(n < 2){
             return 0;
         }
-        // return 2*nCk(n, 2);
-        return 2*nCk(n, 2);
+        return double(n) * (n - 1);   // exact; 2*nCk(n,2) via lgamma was off above 59,092 (B52)
     }
     void init(int nhaps, MyBitset* positions ){
         this->nhaps = nhaps;
