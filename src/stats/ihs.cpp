@@ -226,7 +226,14 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
     
         if(p.CALC_IHS && !p.CALC_NSL){
-            if(curr_ehh_before_norm[2]*1.0/normalizer[2] <= p.EHH_CUTOFF and curr_ehh_before_norm[0]*1.0/normalizer[0]  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
+            // A homozygous class with fewer than 2 individuals has normalizer 0,
+            // so curr/normalizer was 0/0 = NaN, which never compares <= cutoff:
+            // the core walked to the chromosome edge (dropped unless --trunc-ok)
+            // or to --max-extend. Such a class uses only its first two EHH points
+            // (prev_ehh is set to 0 after the first step), so test prev_ehh.
+            const double e2 = normalizer[2] != 0 ? curr_ehh_before_norm[2] / normalizer[2] : prev_ehh[2];
+            const double e0 = normalizer[0] != 0 ? curr_ehh_before_norm[0] / normalizer[0] : prev_ehh[0];
+            if(e2 <= p.EHH_CUTOFF and e0 <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
                 DBG("Break reason for locus "<<locus<<":: EHH_CUTOFF.");
                 break;
             }
