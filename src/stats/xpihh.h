@@ -26,9 +26,9 @@ class XPIHH_ehh_data{
 
     int nhaps;
     int totgc = 0;
-    int* group_count;
+    int* group_count = nullptr;
     // bool* is1;
-    int* group_id;
+    int* group_id = nullptr;
     double normalizer;
 
     ~XPIHH_ehh_data();

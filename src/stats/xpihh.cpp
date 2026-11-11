@@ -1,3 +1,4 @@
+#include <memory>
 #include "xpihh.h"
 #include "../thread_pool.h"
 
@@ -76,10 +77,11 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
     double ihh_p1 = 0;
     double ihh_p2 = 0;
 
-    XPIHH_ehh_data_unphased* p1, *p2, *pooled;
-    p1 = new XPIHH_ehh_data_unphased();
-    p2 = new XPIHH_ehh_data_unphased();
-    pooled = new XPIHH_ehh_data_unphased();
+    // P4: owned by unique_ptr so every return path frees them
+    std::unique_ptr<XPIHH_ehh_data_unphased> p1_own(new XPIHH_ehh_data_unphased()), p2_own(new XPIHH_ehh_data_unphased()), pooled_own(new XPIHH_ehh_data_unphased());
+    XPIHH_ehh_data_unphased* p1 = p1_own.get();
+    XPIHH_ehh_data_unphased* p2 = p2_own.get();
+    XPIHH_ehh_data_unphased* pooled = pooled_own.get();
     
     p1->nhaps = hm->hapData->nhaps;
     p2->nhaps = hm->hapData2->nhaps;
@@ -353,9 +355,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
         //     cout<<locus<<":::r "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
         // }
     }
-    delete p1;
-    delete p2;
-    delete pooled;
     return make_pair(ihh_p1, ihh_p2);
 }
 
@@ -378,10 +377,11 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
     double ihh_p1 = 0;
     double ihh_p2 = 0;
 
-    XPIHH_ehh_data* p1, *p2, *pooled;
-    p1 = new XPIHH_ehh_data();
-    p2 = new XPIHH_ehh_data();
-    pooled = new XPIHH_ehh_data();
+    // P4: owned by unique_ptr so every return path frees them
+    std::unique_ptr<XPIHH_ehh_data> p1_own(new XPIHH_ehh_data()), p2_own(new XPIHH_ehh_data()), pooled_own(new XPIHH_ehh_data());
+    XPIHH_ehh_data* p1 = p1_own.get();
+    XPIHH_ehh_data* p2 = p2_own.get();
+    XPIHH_ehh_data* pooled = pooled_own.get();
     
     p1->nhaps = hm->hapData->nhaps;
     p2->nhaps = hm->hapData2->nhaps;
@@ -600,9 +600,6 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         // }
     }
 
-    delete p1;
-    delete p2;
-    delete pooled;
 
     return make_pair(ihh_p1, ihh_p2);
 }

@@ -1,3 +1,4 @@
+#include <memory>
 #include "ihs.h"
 #include <iomanip> 
 #include <set>
@@ -86,11 +87,15 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
 
     int n_c[3] = {0,0,0};
 
-    int* group_count = new int[numHaps];
-    int* group_id =  new int[numHaps];
-    int* group_core =  new int[numHaps];
-    bool* is1 =  new bool[numHaps];
-    bool* is2 =  new bool[numHaps];
+    // P4: owned by unique_ptr so every return path frees them (the early
+    // returns for skipped cores leaked them)
+    std::unique_ptr<int[]> group_count_own(new int[numHaps]), group_id_own(new int[numHaps]), group_core_own(new int[numHaps]);
+    std::unique_ptr<bool[]> is1_own(new bool[numHaps]), is2_own(new bool[numHaps]);
+    int* group_count = group_count_own.get();
+    int* group_id = group_id_own.get();
+    int* group_core = group_core_own.get();
+    bool* is1 = is1_own.get();
+    bool* is2 = is2_own.get();
 
     double iHH[3] = {0,0,0};
     double ciHH[3] = {0,0,0};
@@ -455,11 +460,6 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         //     cout<<locus<<":::r "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
         // }
     }
-    delete[] group_count;
-    delete[] group_id;
-    delete[] is1;
-    delete[] is2;
-    delete[] group_core;
 
     // cihh2 = ciHH[2];
     // cihh0 = ciHH[0];
@@ -539,9 +539,12 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     int numHaps = hm->hapData->nhaps;
 
     // PHASE 1: INITIALIZATION
-    int* group_count = new int[numHaps];
-    int* group_id = new int[numHaps];
-    bool* isDerived = new bool [numHaps];
+    // P4: owned by unique_ptr so every return path frees them
+    std::unique_ptr<int[]> group_count_own(new int[numHaps]), group_id_own(new int[numHaps]);
+    std::unique_ptr<bool[]> isDerived_own(new bool[numHaps]);
+    int* group_count = group_count_own.get();
+    int* group_id = group_id_own.get();
+    bool* isDerived = isDerived_own.get();
     // bool* isAncestral = new bool [numHaps];
 
     for(int i = 0; i<numHaps; i++){ //will be vectorized with compile time flags
@@ -694,9 +697,6 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 (*flog) << "WARNING: Reached a gap of " << gap
                         << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
             }
-            delete[] group_count;
-            delete[] group_id;
-            delete[] isDerived;
             return skipLocusPair();
         }
 
@@ -818,10 +818,6 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
 
 
 
-    delete[] group_count;
-    delete[] group_id;
-    delete[] isDerived;
-    //delete[] isAncestral;
     return make_pair(ihh1, ihh0);
 }
 
