@@ -96,7 +96,19 @@ selected() {
 # run <log> args... : run the binary, record its exit status in RC
 RC=0
 # (in a subshell, so a crash report from the shell lands in the log too)
-run() { local log="$1"; shift; ( "$BIN" "$@"; exit $? ) > "$log" 2>&1; RC=$?; }
+# On Windows (MSYS2) selscan's text-mode streams end lines with CRLF. Files
+# a run writes in the scratch directory are converted to LF so that the
+# comparisons and the awk/grep checks see the same text on every platform.
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) CRLF=1 ;; *) CRLF=0 ;; esac
+run() {
+    local log="$1"; shift
+    [ "$CRLF" = 1 ] && touch "$WORK/.run-stamp"
+    ( "$BIN" "$@"; exit $? ) > "$log" 2>&1; RC=$?
+    if [ "$CRLF" = 1 ]; then
+        find "$WORK" -type f -newer "$WORK/.run-stamp" ! -name '*.gz' -exec sed -i 's/\r$//' {} +
+    fi
+    return 0
+}
 
 # compare_table <check> <actual> <golden-name> [noheader]
 # Header must match exactly, integer-looking fields exactly, floats to RTOL.
@@ -807,6 +819,10 @@ if selected help; then
     v=$("$BIN" --version 2> /dev/null); rc=$?
     if [ "$rc" -eq 0 ] && printf '%s' "$v" | grep -q '^selscan [0-9]'; then pass "version"
     else fail "version" "exit $rc, stdout '$v'"; fi
+    # norm's banner carries the same version (3.0.1 printed v3.0.0 there)
+    nv=$("$BIN" norm --help 2>&1 > /dev/null | tr -d '\r' | sed -n 's/^selscan v//p' | sed -n 1p)
+    if [ -n "$nv" ] && [ "selscan $nv" = "$(printf '%s' "$v" | tr -d '\r')" ]; then pass "version:norm"
+    else fail "version:norm" "norm says '$nv', selscan --version says '$v'"; fi
     "$BIN" > /dev/null 2> na.err; rc=$?
     if [ "$rc" -eq 1 ] && grep -q '^Usage: selscan' na.err; then pass "no-args-usage"
     else fail "no-args-usage" "exit $rc"; fi

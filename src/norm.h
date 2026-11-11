@@ -20,6 +20,7 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include "version.h"
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -60,7 +61,7 @@ class SelscanNorm{
     int WINOFFSET;
 
     
-    const string VERSION = "3.0.0";
+    const string VERSION = SELSCAN_VERSION;   // was "3.0.0" here while selscan said 3.0.1
 
     const string PREAMBLE = " -- norm: a program for downstream analysis of selscan output\n\
     Source code and binaries can be found at\n\

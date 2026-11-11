@@ -20,6 +20,7 @@
 
 
 #include "param_t.h"
+#include "version.h"
 #include <string>
 
 using namespace std;
@@ -65,7 +66,7 @@ using namespace std;
 
 
 
-const string VERSION = "3.0.1";
+const string VERSION = SELSCAN_VERSION;
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
