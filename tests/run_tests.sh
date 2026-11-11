@@ -65,10 +65,7 @@ tped-equiv:xpehh  B3
 norm-freq1-excluded:ihs  B4
 norm-single-bin-linear:xpehh  B4
 norm-single-bin-linear:xpnsl  B4
-status:ehh  B5
-status:ehh12  B5
-status:ehh-unphased  B5
-clean-error:bad-locus-ehh12  B5
+clean-error:bad-locus-ehh12  U12
 xp-swap-antisymmetry:xpehh-unphased  B6
 xp-swap-antisymmetry:xpnsl-unphased  B6
 multistat==single:ihs--keep-low-freq  B27

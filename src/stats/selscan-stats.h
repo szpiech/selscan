@@ -43,7 +43,11 @@ class SelscanStats {
         const std::unique_ptr<HapMap>& hm;
         const param_main p;
         ofstream* flog;
-        ofstream* fout;
+        // Set by init_global_fout(). EHH and EHH12 write one file per query
+        // and never call it, so it must start null: the destructor used to
+        // close it unconditionally, and every --ehh/--ehh12 run segfaulted
+        // after writing its output.
+        ofstream* fout = nullptr;
         ofstream fout_obj;
 
         int numThreads;
@@ -162,7 +166,7 @@ class SelscanStats {
         }
 
         ~SelscanStats(){
-            fout->close();
+            if (fout) fout->close();
             //flog->close();
         }
         
