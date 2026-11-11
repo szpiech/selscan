@@ -33,3 +33,10 @@ else ifeq ($(OS_TYPE),Windows)
 else
 	@echo "Unsupported OS: $(OS_TYPE)"
 endif
+
+# Regression suite (tests/run_tests.sh): builds first, then checks ./selscan
+# against tests/expected/. See tests/README.md.
+check: all
+	@../tests/run_tests.sh --bin ./selscan
+
+.PHONY: all clean check
