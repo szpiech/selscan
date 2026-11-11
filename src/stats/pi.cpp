@@ -2,7 +2,10 @@
 
 void PI::main()
 {
-    double denominator = (hm->hapData->nhaps) * (hm->hapData->nhaps - 1) * 0.5;
+    // Taken in double: nhaps*(nhaps-1) in int overflowed at 46,342 haplotypes
+    // and gave negative pi (B12); n1*n0 below overflows later.
+    const double nh = hm->hapData->nhaps;
+    double denominator = nh * (nh - 1) * 0.5;
     double pi = 0;
 
     int max_physpos = hm->mapData->mapEntries[hm->mapData->nloci - 1].physicalPos;
@@ -29,8 +32,8 @@ void PI::main()
             if(pos > end){
                 break;
             }else{
-                int n1 = hm->hapData->get_n_c1(locus);
-                int n0 =  hm->hapData->nhaps - n1;
+                double n1 = hm->hapData->get_n_c1(locus);
+                double n0 =  hm->hapData->nhaps - n1;
                 pi += n1 * n0 ;
                 //site_counter++;
 

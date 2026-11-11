@@ -64,6 +64,8 @@ multiparam==single:pconfig2  B32
 multiparam==single:pconfig7  B32
 multiparam==single:pconfig9  B32
 clean-error:all-filtered  B39
+pi-edge:last=300  B13
+pi-edge:last=299  B13
 clean-error:filter-vcf-01  B39
 clean-error:bad-json  B39
 "
@@ -159,7 +161,7 @@ CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh e
 ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
-threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants errors help"
+threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants pi-edges errors help"
 
 if [ "$LIST" = 1 ]; then for c in $CASES; do echo "$c"; done; exit 0; fi
 if [ ! -x "$BIN" ]; then echo "ERROR: no binary at $BIN (run make in src/ first)." >&2; exit 70; fi
@@ -391,6 +393,41 @@ if selected norm-invariants; then
     got=$(awk 'NR>1 && $4==1' f1.ihs.out.20bins.norm | wc -l | tr -d ' ')
     if [ "$got" = 0 ] && grep -qi "excluded $nf1 loci" f1.log; then pass "norm-freq1-excluded:ihs"
     else fail "norm-freq1-excluded:ihs" "$got of $nf1 freq=1 rows written; exclusion message $(grep -qi excluded f1.log && echo present || echo absent)"; fi
+fi
+
+if selected pi-edges; then
+    # pi-large-n: 23,200 diploids = 46,400 haplotypes, above the 46,342 at which
+    # nhaps*(nhaps-1) overflowed int. Site 2 carries the derived allele on
+    # exactly half the haplotypes, so window 101-200 has pi = (n/2)^2/(n(n-1)/2).
+    awk 'BEGIN { n = 23200
+        print "##fileformat=VCFv4.2"
+        print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">"
+        printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
+        for (i = 1; i <= n; i++) printf "\ts%d", i
+        printf "\n"
+        for (s = 1; s <= 3; s++) {
+            printf "1\t%d\tsnp%d\tA\tC\t.\tPASS\t.\tGT", s * 75, s
+            for (i = 1; i <= n; i++) printf "\t%s", (s == 2 ? "0|1" : (i <= n / 4 ? "1|1" : "0|0"))
+            printf "\n"
+        } }' > pi_large.vcf
+    run pl.log --pi --pi-win 100 --vcf pi_large.vcf --pmap --out pl
+    r=$(awk -v n=46400 '
+        NR == 2 { want = (n/2) * (n/2) / (n * (n-1) / 2); d = $3 - want; if (d < 0) d = -d
+                  if (d > 1e-5 * want) printf "window 101-200 pi = %s, expected %.6g; ", $3, want }
+        END { if (NR != 3) printf "%d windows, expected 3", NR }' pl.pi.100bp.out 2>/dev/null)
+    if [ "$RC" -eq 0 ] && [ -s pl.pi.100bp.out ] && [ -z "$r" ]; then pass "pi-large-n"
+    else fail "pi-large-n" "${r:-exit $RC}"; fi
+    # pi-edge: the last position is 0 and then -1 (mod --pi-win); both read past
+    # the last locus. The window list must end with the window holding it.
+    for last in 300 299; do
+        gzip -dc p1.vcf.gz | awk -v last=$last 'BEGIN { OFS = "\t" } /^#/ { print; next }
+            { r++; if (r <= 3) { $2 = (r == 3 ? last : r * 50); print } }' > pe.vcf
+        run pe.log --pi --pi-win 100 --vcf pe.vcf --pmap --out pe
+        nw=0; [ -f pe.pi.100bp.out ] && nw=$(($(wc -l < pe.pi.100bp.out)))
+        if [ "$RC" -eq 0 ] && [ "$nw" = 3 ]; then pass "pi-edge:last=$last"
+        else fail "pi-edge:last=$last" "exit $RC, $nw windows (expected 3)"; fi
+        rm -f pe.pi.100bp.out
+    done
 fi
 
 if selected errors; then
