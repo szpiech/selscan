@@ -14,7 +14,7 @@ Runtime is about 20 s on a laptop. Needs only bash, awk, gzip, cmp and diff.
 - **golden**: 30 output tables (every statistic, phased and unphased; VCF,
   hap, thap and TPED input; `selscan norm` for each mode and for `--bp-win`)
   compared column by column with `tests/expected/*.tsv.gz`. Headers and
-  integer fields must match exactly, floats to `--rtol` (default 1e-6). A
+  integer fields must match exactly, floats to `--rtol` (default 1e-5, one unit in the sixth significant digit, so builds for other CPUs pass). A
   failure names the column, the number of rows and the worst relative
   deviation. Each golden case also checks the exit status separately
   (`status:<case>`), so "crashed after writing correct output" and "wrong

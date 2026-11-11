@@ -4,7 +4,7 @@
 #   ./tests/run_tests.sh                 # check src/selscan against tests/expected/
 #   ./tests/run_tests.sh --regen         # re-record tests/expected/ from the current build
 #   ./tests/run_tests.sh --bin PATH      # test another binary
-#   ./tests/run_tests.sh --rtol 1e-5     # loosen the float tolerance (default 1e-6)
+#   ./tests/run_tests.sh --rtol 1e-6     # set the float tolerance (default 1e-5)
 #   ./tests/run_tests.sh --keep          # keep the scratch directory
 #   ./tests/run_tests.sh --list          # list case names
 #   ./tests/run_tests.sh <case> [...]    # run only the named cases
@@ -37,7 +37,12 @@ ROOT_DIR="$(cd "$TESTS_DIR/.." && pwd)"
 EXAMPLE="$ROOT_DIR/example"
 BIN="$ROOT_DIR/src/selscan"
 EXPECTED="$TESTS_DIR/expected"
-REGEN=0; KEEP=0; LIST=0; RTOL=1e-6
+# Default float tolerance: one unit in the sixth significant digit, the
+# printed precision (relative 1e-6 to 1e-5). Builds for different CPUs or
+# C libraries differ at that level (FMA contraction on arm64, libm, long
+# double width): an x86_64 build differs from the arm64 goldens by one
+# last-digit unit in 2 and 3 rows of ihs-keep and ihh12 (M13).
+REGEN=0; KEEP=0; LIST=0; RTOL=1e-5
 SELECTED=()
 
 while [ $# -gt 0 ]; do
