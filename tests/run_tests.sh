@@ -508,10 +508,13 @@ fi
 
 if selected xp-validate; then
     # B16: the XP VCF reader validates genotypes like the single-population
-    # reader. Record 104 of p2 (position 16202, first genotype 1|1) is corrupted (missing allele, '/' in phased
-    # mode, a genotype field removed) or the #CHROM line is deleted; XP must
-    # exit 1, as --ihs does on the same file. 3.0.1 ran the first three with
-    # exit 0 and aborted on the missing header.
+    # reader. Record 104 of p2 (position 16202, first genotype 1|1) is
+    # corrupted (missing allele, '/' in phased mode, a genotype field
+    # removed) or the #CHROM line is deleted; XP must
+    # exit 1, as --ihs does on the same file. 3.0.1 (7a93ff1) runs the first
+    # three with exit 0; on the missing header it prints "number of
+    # haplotypes (-2) and number of loci (1483) must be positive" and aborts
+    # (exit 134).
     awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n==104 {$10=".|."} {print}' dd2.vcf > xv_miss.vcf
     awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n==104 {$10="0/1"} {print}' dd2.vcf > xv_slash.vcf
     awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n==104 {NF=NF-1} {print}' dd2.vcf > xv_short.vcf
