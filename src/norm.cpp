@@ -833,6 +833,16 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
             numSNPs++;
             numCrit += crit;
         }
+        // B21: the window holding the file's last SNP is never closed by a
+        // later SNP; write it here
+        if (numSNPs > 0)
+        {
+            winStarts[i].push_back(winStart);
+            nSNPs[i].push_back(numSNPs);
+            fracCrit[i].push_back(double(numCrit) / double(numSNPs));
+            if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
+            maxAbsScore[i].push_back(maxAbs);
+        }
         fin.close();
     }
 
@@ -1228,6 +1238,25 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             numSNPs++;
             if(crit == 1) numCritTop++;
             else if (crit == -1) numCritBot++;
+        }
+        // B21: the window holding the file's last SNP is never closed by a
+        // later SNP; write it here
+        if (numSNPs > 0)
+        {
+            winStarts[i].push_back(winStart);
+            nSNPs[i].push_back(numSNPs);
+            if (numSNPs < minSNPs){
+                fracCritTop[i].push_back(-1);
+                fracCritBot[i].push_back(-1);
+            }
+            else{
+                fracCritTop[i].push_back(double(numCritTop) / double(numSNPs));
+                numWindowsTop++;
+                fracCritBot[i].push_back(double(numCritBot) / double(numSNPs));
+                numWindowsBot++;
+            }
+            maxScore[i].push_back(max);
+            minScore[i].push_back(min);
         }
         fin.close();
     }
@@ -1630,6 +1659,16 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
             if(normedData > maxAbs) maxAbs = normedData;
             numSNPs++;
             numCrit += crit;
+        }
+        // B21: the window holding the file's last SNP is never closed by a
+        // later SNP; write it here
+        if (numSNPs > 0)
+        {
+            winStarts[i].push_back(winStart);
+            nSNPs[i].push_back(numSNPs);
+            fracCrit[i].push_back(double(numCrit) / double(numSNPs));
+            if (numSNPs >= minSNPs && numCrit >= 0) numWindows++;
+            maxAbsScore[i].push_back(maxAbs);
         }
         fin.close();
     }

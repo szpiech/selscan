@@ -646,6 +646,18 @@ if selected norm-robust; then
     fr=$(awk -F'\t' 'NR>1 {n++; f+=($NF==1)} END {if (n) printf "%.4f", f/n}' nc.ihh12.out.norm 2>/dev/null)
     if [ "$RC" -eq 0 ] && awk -v f="$fr" 'BEGIN { exit !(f != "" && f >= 0.045 && f <= 0.055) }'; then pass "norm-critpct:ihh12-one-tailed"
     else fail "norm-critpct:ihh12-one-tailed" "exit $RC, fraction flagged '$fr' (expected 0.05)"; fi
+    # B21: --bp-win writes the window holding each file's last SNP (3.0.1
+    # never closed it). The last window row must contain the last position.
+    for c in "ihs|ihs-hap|--ihs --bins 20|20bins.norm" "xpehh|xpehh|--xpehh|norm" "ihh12|ihh12|--ihh12|norm"; do
+        IFS='|' read -r st g args suf <<< "$c"
+        gzip -dc "$EXPECTED/$g.tsv.gz" > nw.$st.out
+        run nw.log norm $args --bp-win --winsize 100000 --files nw.$st.out
+        last=$(awk -F'\t' 'NR>1 && $3>m {m=$3} END {print m}' nw.$st.out.$suf 2>/dev/null)
+        wl=$(tail -1 nw.$st.out.$suf.100kb.windows 2>/dev/null | awk -F'\t' '{print $2"-"$3}')
+        if [ "$RC" -eq 0 ] && [ -n "$last" ] && awk -v w="$wl" -v p="$last" 'BEGIN { split(w,a,"-"); exit !(p+0 >= a[1]+0 && p+0 <= a[2]+0) }'
+        then pass "norm-bpwin:last-window:$st"
+        else fail "norm-bpwin:last-window:$st" "exit $RC, last SNP $last, last window $wl"; fi
+    done
 fi
 
 if selected errors; then
