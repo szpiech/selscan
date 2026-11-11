@@ -1,4 +1,5 @@
 #include "norm.h"
+#include <limits>
 #include <deque>
 
 // #include <gsl/gsl_statistics_double.h>
@@ -384,25 +385,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
             }
 
-            gsl_sort(score, 1, totalLoci);
-
             double upperCutoff, lowerCutoff;
-
-            if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
-            {
-                upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
-                lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
-
-                cerr << "\nTop cutoff: " << upperCutoff << endl;
-                cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
-                flog << "\nTop cutoff: " << upperCutoff << endl;
-                flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
-            }
-            else
-            {
-                upperCutoff = critNum;
-                lowerCutoff = -critNum;
-            }
+            critCutoffs(score, totalLoci, critPercent, critNum, false, upperCutoff, lowerCutoff);
             delete [] freq;
             delete [] score;
 
@@ -481,25 +465,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             }
             
 
-            gsl_sort(score, 1, totalLoci);
-
             double upperCutoff, lowerCutoff;
-
-            if (critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))
-            {
-                upperCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, 1 - critPercent / 2.0 );
-                lowerCutoff = gsl_stats_quantile_from_sorted_data (score, 1, totalLoci, critPercent / 2.0);
-
-                cerr << "\nTop cutoff: " << upperCutoff << endl;
-                cerr << "Bottom cutoff: " << lowerCutoff << "\n\n";
-                flog << "\nTop cutoff: " << upperCutoff << endl;
-                flog << "Bottom cutoff: " << lowerCutoff << "\n\n";
-            }
-            else
-            {
-                upperCutoff = critNum;
-                lowerCutoff = -critNum;
-            }
+            critCutoffs(score, totalLoci, critPercent, critNum, SOFT, upperCutoff, lowerCutoff);
             delete [] freq1;
             if (XPEHH) delete [] freq2;
             delete [] score;
@@ -1875,6 +1842,52 @@ static inline int freqBin(double f, int numBins, const double threshold[], bool 
     return b;
 }
 
+// --crit-percent cutoffs (B19, U10). The quantiles are taken over every
+// locus with a finite normalised score: -9999 (missing), excluded freq = 1
+// loci, NaN from bins with fewer than 2 loci and loci left un-normalised by
+// --log-input are left out (3.0.1 sorted all of them together, and NaN makes
+// the sort order undefined). This includes loci in bins with fewer than 20
+// loci, which are not written. iHH12 is one-tailed: the top critPercent is
+// flagged. The other statistics flag critPercent/2 in each tail.
+void SelscanNorm::critCutoffs(const double score[], int nloci, double critPercent, double critNum,
+                              bool oneTailed, double &upperCutoff, double &lowerCutoff)
+{
+    if (!(critPercent != DEFAULT_CRIT_PERCENT && (critPercent > 0 && critPercent < 1))) {
+        upperCutoff = critNum;
+        lowerCutoff = -critNum;
+        return;
+    }
+    vector<double> v;
+    v.reserve(nloci);
+    for (int i = 0; i < nloci; i++)
+        if (std::isfinite(score[i]) && score[i] != MISSING) v.push_back(score[i]);
+    if (v.empty()) {
+        cerr << "ERROR: no normalised scores to compute --crit-percent cutoffs from.\n";
+        flog << "ERROR: no normalised scores to compute --crit-percent cutoffs from.\n";
+        exit(EXIT_FAILURE);
+    }
+    std::sort(v.begin(), v.end());
+    if (oneTailed) {
+        upperCutoff = gsl_stats_quantile_from_sorted_data(v.data(), 1, v.size(), 1 - critPercent);
+        lowerCutoff = -std::numeric_limits<double>::infinity();
+    } else {
+        upperCutoff = gsl_stats_quantile_from_sorted_data(v.data(), 1, v.size(), 1 - critPercent / 2.0);
+        lowerCutoff = gsl_stats_quantile_from_sorted_data(v.data(), 1, v.size(), critPercent / 2.0);
+    }
+    cerr << "\n--crit-percent cutoffs from " << v.size() << " of " << nloci << " loci with a normalised score"
+         << (oneTailed ? " (one-tailed)" : "") << ".\n";
+    flog << "\n--crit-percent cutoffs from " << v.size() << " of " << nloci << " loci with a normalised score"
+         << (oneTailed ? " (one-tailed)" : "") << ".\n";
+    cerr << "Top cutoff: " << upperCutoff << endl;
+    flog << "Top cutoff: " << upperCutoff << endl;
+    if (!oneTailed) {
+        cerr << "Bottom cutoff: " << lowerCutoff << "\n";
+        flog << "Bottom cutoff: " << lowerCutoff << "\n";
+    }
+    cerr << "\n";
+    flog << "\n";
+}
+
 int SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[], bool includeFreqOne)
 {
     int excluded = 0;
@@ -2020,6 +2033,8 @@ void SelscanNorm::getMeanVarBinsFromLog(const std::string &binFile,
         if (b < 0) { data[i] = MISSING; continue; }
         if (n[b] > 1 && !std::isnan(mean[b]) && !std::isnan(variance[b])) {
             data[i] = (data[i] - mean[b]) / std::sqrt(variance[b]);
+        } else {
+            data[i] = NAN;   // no statistics for this bin: not normalised (B19)
         }
     }
 }

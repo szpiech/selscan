@@ -281,6 +281,8 @@ class SelscanNorm{
     // Returns the number of loci left out because their frequency (1.0) has no
     // bin; always 0 when includeFreqOne is true.
     int getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[], bool includeFreqOne);
+    void critCutoffs(const double score[], int nloci, double critPercent, double critNum,
+                     bool oneTailed, double &upperCutoff, double &lowerCutoff);
 
     void normalizeIHSDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool NSL);
     void normalizeXPEHHDataByBins(string &filename, string &outfilename, int &fileLoci, double mean[], double variance[], int n[], int numBins, double threshold[], double upperCutoff, double lowerCutoff, bool XPNSL);

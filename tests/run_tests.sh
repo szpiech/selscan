@@ -627,6 +627,25 @@ if selected norm-robust; then
         if [ "$w" -ne 0 ]; then fail "norm-bad-token:$st" "no warning logged for '$tok'"
         else identical "norm-bad-token:$st" nb_bad.$st.out.$suf nb_rm.$st.out.$suf; fi
     done
+    # B19: --crit-percent cutoffs come from finite normalised scores only, so
+    # adding a missing (-9999) locus must not move them (3.0.1 sorted -9999
+    # into the lower tail).
+    gzip -dc "$EXPECTED/ihs-hap.tsv.gz" > nc_a.ihs.out
+    cp nc_a.ihs.out nc_b.ihs.out
+    printf 'chr1\tmissing1\t9999999\t0.5\t0.1\t0.1\t-9999\n' >> nc_b.ihs.out
+    run nc1.log norm --ihs --crit-percent 0.02 --files nc_a.ihs.out
+    c1=$(grep -E '^(Top|Bottom) cutoff' nc1.log | tr '\n' ' ')
+    run nc2.log norm --ihs --crit-percent 0.02 --files nc_b.ihs.out
+    c2=$(grep -E '^(Top|Bottom) cutoff' nc2.log | tr '\n' ' ')
+    if [ -n "$c1" ] && [ "$c1" = "$c2" ]; then pass "norm-critpct:missing-ignored"
+    else fail "norm-critpct:missing-ignored" "cutoffs '$c1' vs '$c2'"; fi
+    # U10: iHH12 is one-tailed; --crit-percent 0.05 flags about 5% of loci
+    # (3.0.1 used 0.025 per tail and only the top tail is flagged)
+    gzip -dc "$EXPECTED/ihh12.tsv.gz" > nc.ihh12.out
+    run nc3.log norm --ihh12 --crit-percent 0.05 --files nc.ihh12.out
+    fr=$(awk -F'\t' 'NR>1 {n++; f+=($NF==1)} END {if (n) printf "%.4f", f/n}' nc.ihh12.out.norm 2>/dev/null)
+    if [ "$RC" -eq 0 ] && awk -v f="$fr" 'BEGIN { exit !(f != "" && f >= 0.045 && f <= 0.055) }'; then pass "norm-critpct:ihh12-one-tailed"
+    else fail "norm-critpct:ihh12-one-tailed" "exit $RC, fraction flagged '$fr' (expected 0.05)"; fi
 fi
 
 if selected errors; then
