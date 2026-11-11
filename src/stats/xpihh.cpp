@@ -230,7 +230,10 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         double scale, distance;
         if(p.CALC_XPNSL){
-            distance = snpDistance(i, prev_index, downstream);
+            // One unit per retained site, as in the phased kernel and in nSL
+            // (B47). snpDistance() counts raw file-1 records, including ones
+            // removed before analysis.
+            distance = 1;
         }else{
             distance = geneticDistance(i, prev_index, downstream);   // why was it physicalDistance before?
         }
@@ -342,7 +345,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         // check if current locus is beyond 1Mb
         if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;
-        if(p.CALC_XPNSL && snpDistance(i,locus, downstream) >= max_extend) break;
+        if(p.CALC_XPNSL && abs(i - locus) >= max_extend) break;   // retained sites (B47)
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
 
@@ -534,7 +537,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
         double scale, distance;
         if(p.CALC_XPNSL){
-            distance = 1; // snpDistance(i, prev_index, downstream); // or just use 1
+            distance = 1;   // one unit per retained site (B47)
         }else{
             distance = geneticDistance(i, prev_index, downstream); // why was it physicalDistance before?
         }
@@ -588,7 +591,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
 
         // check if current locus is beyond 1Mb
         if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;
-        if(p.CALC_XPNSL && snpDistance(i, locus, downstream) >= max_extend) break; //g(xi−1, xi) = 1. // or just abs(i-locus)
+        if(p.CALC_XPNSL && abs(i - locus) >= max_extend) break;   // retained sites (B47)
         // if(downstream){
         //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
 

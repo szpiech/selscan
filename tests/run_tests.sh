@@ -404,6 +404,13 @@ if selected xp-intersect; then
     run xq.log --xpehh --vcf xq1.vcf --vcf-ref xq2.vcf --pmap --out xq
     run xr.log --xpehh --vcf xr1.vcf --vcf-ref xr2.vcf --pmap --out xr
     identical "xp-intersect:vcf" xq.xpehh.out xr.xpehh.out
+    # XP-nSL counts retained sites only (B47), so records removed before the
+    # analysis must not change it either
+    for ph in "" "--unphased"; do
+        run xqn.log --xpnsl $ph --vcf xq1.vcf --vcf-ref xq2.vcf --pmap --out xqn
+        run xrn.log --xpnsl $ph --vcf xr1.vcf --vcf-ref xr2.vcf --pmap --out xrn
+        identical "xp-intersect:xpnsl${ph:+-unphased}" xqn.xpnsl.out xrn.xpnsl.out
+    done
     # expected drop counts, computed from the record numbers
     nrec=$(grep -vc '^#' xu1.vcf)
     exp=$(awk -v N="$nrec" 'BEGIN {for (n=1;n<=N;n++) {a+=(n%7==0 && n%13); b+=(n%13==0 && n%7); m+=(n%11==0 && n%7 && n%13)} print a, b, m}')
