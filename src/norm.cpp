@@ -258,8 +258,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }
 
 
-    string *outfilename; 
-    int *fileLoci;
+    // Allocated on the --files (DO_NORM) or --norm-files --bp-win paths only;
+    // freed once at the end (B23).
+    string *outfilename = nullptr;
+    int *fileLoci = nullptr;
     
     if(DO_NORM){
         cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
@@ -655,10 +657,8 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         
     }
             
-    if(!HAVE_WINFILE && !DO_NORM){
-         delete [] outfilename;
-         delete [] fileLoci;
-    }
+    delete [] outfilename;
+    delete [] fileLoci;
        
 
     return 0;

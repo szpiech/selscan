@@ -537,6 +537,21 @@ if selected xp-validate; then
     identical "xp-validate:filter-vcf-skip" xva.xpehh.out xvr.xpehh.out
 fi
 
+if selected norm-robust; then
+    # Inputs: two iHS tables from the goldens (ihs: p1 VCF; ihs-hap:
+    # example.hap) and six 60 kb genes across the p1 range (49-481 kb).
+    gzip -dc "$EXPECTED/ihs.tsv.gz" > nr_a.ihs.out
+    gzip -dc "$EXPECTED/ihs-hap.tsv.gz" > nr_b.ihs.out
+    awk 'BEGIN { for (g=0; g<6; g++) printf "chr1\t%d\t%d\tG%d\n", 50000+g*70000, 110000+g*70000, g+1 }' > nr_genes.bed
+    run nr0.log norm --ihs --bins 20 --files nr_a.ihs.out
+    # B23: --norm-files + --gene-bed without --bp-win deleted uninitialised
+    # pointers after writing its output (3.0.1: exit 134/139)
+    run nr1.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_genes.bed --min-snps 1
+    if [ "$RC" -eq 0 ] && [ -s nr_genes.bed.ihs.genetable ]; then pass "norm-gene:norm-files"
+    else fail "norm-gene:norm-files" "exit $RC"; fi
+    rm -f nr_genes.bed.ihs.genetable
+fi
+
 if selected errors; then
     printf '{"params":[{"maf":0.1,}]}' > bad.json
     while IFS='|' read -r name args; do
