@@ -57,9 +57,6 @@ case "$BIN" in /*) ;; *) BIN="$PWD/$BIN" ;; esac
 # ------------------------------------------------------------ known failures
 # <check name> <finding id>. Remove an entry in the commit that fixes it.
 KNOWN_FAIL="
-multiparam==single:pconfig2  B32
-multiparam==single:pconfig7  B32
-multiparam==single:pconfig9  B32
 clean-error:all-filtered  B39
 clean-error:filter-vcf-01  B39
 clean-error:bad-json  B39
@@ -156,7 +153,7 @@ CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh e
 ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
-threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants pi-edges errors help"
+threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants maf-symmetry pi-edges errors help"
 
 if [ "$LIST" = 1 ]; then for c in $CASES; do echo "$c"; done; exit 0; fi
 if [ ! -x "$BIN" ]; then echo "ERROR: no binary at $BIN (run make in src/ first)." >&2; exit 70; fi
@@ -397,6 +394,21 @@ if selected norm-invariants; then
     got=$(awk 'NR>1 && $4==1' f1.ihs.out.20bins.norm | wc -l | tr -d ' ')
     if [ "$got" = 0 ] && grep -qi "excluded $nf1 loci" f1.log; then pass "norm-freq1-excluded:ihs"
     else fail "norm-freq1-excluded:ihs" "$got of $nf1 freq=1 rows written; exclusion message $(grep -qi excluded f1.log && echo present || echo absent)"; fi
+fi
+
+if selected maf-symmetry; then
+    # The MAF filter is symmetric: swapping 0 and 1 at every site (derived
+    # frequency f -> 1-f) must keep exactly the same cores. At --maf 0.1 with
+    # 20 haplotypes, sites with 2 and with 18 derived alleles are both exactly
+    # at the boundary and both kept (ties are kept).
+    gzip -dc p1.vcf.gz | awk 'BEGIN { OFS = "\t" } /^#/ { print; next }
+        { for (i = 10; i <= NF; i++) { a = substr($i,1,1); b = substr($i,3,1)
+              $i = (a == "0" ? "1" : "0") substr($i,2,1) (b == "0" ? "1" : "0") } print }' > flip.vcf
+    run ms1.log --ihs --vcf p1.vcf.gz --pmap --maf 0.1 --out ms_a
+    run ms2.log --ihs --vcf flip.vcf --pmap --maf 0.1 --out ms_b
+    r=$(awk -F'\t' 'FNR == 1 { next } FNR == NR { a[$2] = 1; na++; next } { nb++; if (!($2 in a)) only++ }
+        END { if (na != nb || only) printf "%d cores vs %d after flipping alleles (%d not shared)", na, nb, only }' ms_a.ihs.out ms_b.ihs.out)
+    if [ -s ms_a.ihs.out ] && [ -z "$r" ]; then pass "maf-symmetry:ihs"; else fail "maf-symmetry:ihs" "${r:-no output}"; fi
 fi
 
 if selected pi-edges; then

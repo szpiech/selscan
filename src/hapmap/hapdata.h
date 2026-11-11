@@ -16,6 +16,19 @@
 
 using namespace std;
 
+// The one MAF test used by the loader prefilter and by the kernels (B32).
+// True when the minor allele count is strictly below maf * total, so a site
+// whose MAF equals --maf exactly is kept, whichever allele is minor. Exact
+// counts are compared, with a relative tolerance so that maf * total landing
+// a rounding step off an integer does not decide a tie. Previously the loader
+// compared derived_freq and 1 - derived_freq (asymmetric through rounding)
+// while the kernels used get_maf(), so --multi-param and combined runs could
+// disagree with single runs at the boundary.
+inline bool minor_allele_below(long minor, long total, double maf){
+    if (total <= 0) return maf > 0;
+    return (double)minor < maf * (double)total * (1.0 - 1e-9);
+}
+
 // class MissingInfo{
 //     public:
 //         // int i = -1;
@@ -415,6 +428,19 @@ public:
             int mac = min(n_c1, n_c0);
             return mac / (double) total;
         }
+    }
+
+    inline bool below_maf(int locus, double maf){
+        if(MISSING_ALLOWED){
+            throw "not implemented";
+        }
+        if(unphased){
+            const long derived = get_n_c1(locus) + 2L * get_n_c2(locus);
+            const long total = 2L * nhaps;
+            return minor_allele_below(std::min(derived, total - derived), total, maf);
+        }
+        const long n1 = get_n_c1(locus), n0 = get_n_c0(locus);
+        return minor_allele_below(std::min(n1, n0), n1 + n0, maf);
     }
 
     // inline int get_n_c_missing(int locus)

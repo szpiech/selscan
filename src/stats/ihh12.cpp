@@ -192,7 +192,7 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         // only when that prefilter would (no --keep-low-freq). It used to ignore
         // --keep-low-freq, so that flag was dropped in combined runs (B27).
         if(p.MULTI_MAF && p.SKIP){
-            if(hm->hapData->get_maf(i) < p.MAF){
+            if(hm->hapData->below_maf(i, p.MAF)){
                 skipped_due_to_multimaf++;
                 continue;
             }
@@ -331,7 +331,7 @@ void IHH12::main()
 */
 double IHH12::calc_ihh12_at_locus(int locus)
 {
-    if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
+    if(hm->hapData->below_maf(locus, p.MAF)) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
     {
             string reason = "MAF < " + std::to_string(p.MAF);
             std::lock_guard<std::mutex> lock(mutex_log);

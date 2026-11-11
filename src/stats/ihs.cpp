@@ -266,7 +266,7 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         // only when that prefilter would (no --keep-low-freq). It used to ignore
         // --keep-low-freq, so that flag was dropped in combined runs (B27).
         if(p.MULTI_MAF && p.SKIP){
-            if(hm->hapData->get_maf(i) < p.MAF){
+            if(hm->hapData->below_maf(i, p.MAF)){
                 skipped_due_to_multimaf++;
                 continue; // skip this locus for integration
             }
@@ -656,7 +656,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         
         i = (downstream)? i-1 : i+1; // update i 
         if(p.MULTI_MAF && p.SKIP){
-            if(hm->hapData->get_maf(i) < p.MAF){
+            if(hm->hapData->below_maf(i, p.MAF)){
                 skipped_due_to_multimaf++;
                 continue;
             }
@@ -995,7 +995,7 @@ std::pair<double, double> IHS::calc_ihh1(int locus) {
             }
         return skipLocusPair();
     }
-    if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
+    if(hm->hapData->below_maf(locus, p.MAF)) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
         {
                 string reason = "MAF < " + std::to_string(p.MAF);
                 std::lock_guard<std::mutex> lock(mutex_log);
@@ -1094,7 +1094,7 @@ IhhComponents IHS::calc_ihh1_details(int locus) {
                 }
             return {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
         }
-    if(hm->hapData->get_maf(locus) < p.MAF) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
+    if(hm->hapData->below_maf(locus, p.MAF)) { // if core locus has MAF < p.MAF, skip it, useful in --keep-low-freq
     {
         string reason = "MAF < " + std::to_string(p.MAF);
         std::lock_guard<std::mutex> lock(mutex_log);

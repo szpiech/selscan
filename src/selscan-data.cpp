@@ -1346,10 +1346,8 @@ bool HapMap::shouldSkipLocus(int number_of_1s, int number_of_2s, int nalleles_pe
     
     // Check for low-frequency alleles (MAF filtering)
     if (p.SKIP) {
-        double derived_freq = derived_allele_count * 1.0 / nalleles_per_loc;
-        double ancestral_freq = 1.0 - derived_freq;
-
-        skip_due_to_maf = (derived_freq < MIN_MAF_CUTOFF || ancestral_freq < MIN_MAF_CUTOFF);
+        const long d = derived_allele_count, n = nalleles_per_loc;
+        skip_due_to_maf = minor_allele_below(std::min(d, n - d), n, MIN_MAF_CUTOFF);
     }
     
     return skip_due_to_maf;
