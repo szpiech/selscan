@@ -719,6 +719,9 @@ if selected errors; then
     printf '{"params":[{"maf":"0.1"}]}' > badtype.json
     printf '{"params":[{"maf":0.1,"mafx":0.2}]}' > badkey.json
     printf '{"parameters":[{"maf":0.1}]}' > noparams.json
+    printf '{"params":[{"maf":0.7}]}' > badmaf.json
+    # every site monomorphic, so the MAF filter removes all loci (B39 path)
+    gzip -dc p1.vcf.gz | awk -F'\t' -v OFS='\t' '/^#/ {print; next} {for (i=10;i<=NF;i++) $i="0|0"; print}' > mono.vcf
     while IFS='|' read -r name args; do
         [ -z "$name" ] && continue
         run e.log $args --out err_$name
@@ -727,7 +730,12 @@ if selected errors; then
 no-stat|--vcf p1.vcf.gz --pmap
 xp-no-ref|--xpehh --vcf p1.vcf.gz --pmap
 no-map|--ihs --vcf p1.vcf.gz
-all-filtered|--ihs --vcf p1.vcf.gz --pmap --maf 0.7
+all-filtered|--ihs --vcf mono.vcf --pmap
+maf-too-large|--ihs --vcf p1.vcf.gz --pmap --maf 0.7
+maf-negative|--ihs --vcf p1.vcf.gz --pmap --maf -1
+maf-dot|--ihs --vcf p1.vcf.gz --pmap --maf .
+threads-overflow|--ihs --vcf p1.vcf.gz --pmap --threads 99999999999
+json-maf-range|--ihs --vcf p1.vcf.gz --pmap --multi-param badmaf.json
 filter-vcf-01|--ihs --filter-vcf --vcf p1.vcf.gz --pmap
 bad-locus|--ehh no_such_locus --vcf p1.vcf.gz --pmap
 bad-locus-ehh12|--ehh12 no_such_locus --vcf p1.vcf.gz --pmap
@@ -736,6 +744,20 @@ bad-json-type|--ihs --vcf p1.vcf.gz --pmap --multi-param badtype.json
 bad-json-key|--ihs --vcf p1.vcf.gz --pmap --multi-param badkey.json
 bad-json-noparams|--ihs --vcf p1.vcf.gz --pmap --multi-param noparams.json
 ERRS
+fi
+
+if selected numeric-args; then
+    # U5: valid numbers in scientific notation or with a leading '+' are
+    # accepted and mean what they say (3.0.1 rejected them)
+    run na1.log --ihs --vcf p1.vcf.gz --pmap --maf 1e-1 --out na1
+    run na2.log --ihs --vcf p1.vcf.gz --pmap --maf 0.1 --out na2
+    identical "numeric-args:maf-1e-1" na1.ihs.out na2.ihs.out
+    run na3.log --ihs --vcf p1.vcf.gz --pmap --cutoff +0.05 --out na3
+    run na4.log --ihs --vcf p1.vcf.gz --pmap --out na4
+    identical "numeric-args:cutoff-plus" na3.ihs.out na4.ihs.out
+    run na5.log --ihs --vcf p1.vcf.gz --pmap --maf "" --out na5
+    if [ "$RC" -eq 1 ]; then pass "numeric-args:maf-empty-rejected"
+    else fail "numeric-args:maf-empty-rejected" "exit $RC (expected 1; 3.0.1 read an empty value as 0)"; fi
 fi
 
 if selected help; then

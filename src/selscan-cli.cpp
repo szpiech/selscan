@@ -427,6 +427,19 @@ void checkParameters(param_main &p){
     {
         HANDLE_ERROR_NOLOG("EHH cut off must be > 0 and < 1.");
     }
+    // U5: range checks (also applied to every --multi-param set)
+    if (p.MAF < 0 || p.MAF > 0.5)
+    {
+        HANDLE_ERROR_NOLOG(ARG_MAF + " must be between 0 and 0.5 (found " + to_string(p.MAF) + ").");
+    }
+    if (p.CALC_PI && p.PI_WIN < 1)
+    {
+        HANDLE_ERROR_NOLOG(ARG_PI_WIN + " must be a positive number of base pairs.");
+    }
+    if (p.QWIN < 1)
+    {
+        HANDLE_ERROR_NOLOG(ARG_QWIN + " must be positive.");
+    }
     if (p.TPED)
     {
         if ((!p.CALC_XP && !p.CALC_XPNSL) && p.tpedFilename2.compare(DEFAULT_FILENAME_POP2_TPED) != 0)
