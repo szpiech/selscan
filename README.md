@@ -67,32 +67,58 @@ Binaries are no longer kept in the repository. Those for earlier versions remain
 
 ## 📖 Usage   
 
-For details, refer to the manual.  
+For details, refer to the manual.
+
+Genotypes must not be missing: selscan stops with an error at any `.` allele in VCF, hap or TPED input.
+
+The option lists below are the output of `selscan --help` and `selscan norm --help`.
+
+### selscan
 
 ```
-** Data must have no missing genotypes. **
 
 selscan v3.0.1 -- a program to calculate EHH-based scans for positive selection in genomes.
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.
 
-selscan currently implements EHH, iHS, XP-EHH, nSL, and XP-nSL.
+selscan currently implements EHH, iHS, XP-EHH, XP-nSL, iHH12 and nSL.
+
+Citations:
+
+selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.
+         ZA Szpiech (2024) Bioinformatics 40: btae006.
+         A Rahman, TQ Smith, and ZA Szpiech (2025). MBE, 42(11), msaf275.
+         A Rahman, TQ Smith, and ZA Szpiech (2026). HPGG, 6(2), 0005. https://doi.org/10.47248/hpgg2606020005
+iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.
+       N Garud et al. (2015) PLoS Genetics 11: 1–32.
+nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.
+XP-nSL: Szpiech et al. (2021) Evol Lett 5: 408-421.
+XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.
+        K Wagh et al. (2012) PloS ONE 7: e44751.
+iHS: BF Voight et al. (2006) PLoS Biology 4: e72.
+EHH: PC Sabeti et al. (2002) Nature 419: 832–837.
 
 To calculate EHH:
+
 ./selscan --ehh <locusID> --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate iHS:
+
 ./selscan --ihs --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate nSL:
+
 ./selscan --nsl --vcf <vcf> --out <outfile>
 
 To calculate XP-nSL:
+
 ./selscan --xpnsl --vcf <vcf> --vcf-ref <vcf> --out <outfile>
 
 To calculate iHH12:
+
 ./selscan --ihh12 --vcf <vcf> --map <mapfile> --out <outfile>
 
 To calculate XP-EHH:
+
 ./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>
 
 ----------Command Line Arguments----------
@@ -102,23 +128,34 @@ To calculate XP-EHH:
 	binomial coefficients.
 	Default: false
 
---cutoff <double>: The EHH decay cutoff.
+--cutoff <double>: The EHH decay cutoff. nSL integrates without a cutoff
+	(see --max-extend-nsl).
 	Default: 0.05
 
---ehh <string>: Calculate EHH of the '1' and '0' haplotypes at the specified
-	locus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>
+--ehh <string>: Calculate EHH at the given loci (comma-separated locus IDs:
+	locus1,locus2,...), one output file per locus. Columns: chr, pdist, gdist
+	(physical and genetic distance from the locus), derEHH and ancEHH (EHH of
+	the haplotypes carrying the '1' and the '0' allele at the locus), EHH (all haplotypes).
 	Default: __NO_LOCUS__
 
 --ehh-win <int>: When calculating EHH, this is the length of the window in bp
 	in each direction from the query locus.
 	Default: 100000
 
+--ehh12 <string>: Calculate EHH12 at the given loci (comma-separated locus IDs),
+	one output file per locus. Columns: chr, pdist, gdist, ehh1 (EHH of all
+	haplotypes), ehh12 (EHH12) and ehh2d1 (EHH2/1).
+	Default: __NO_LOCUS__
+
+--filter-vcf <bool>: Filter VCF to keep only biallelic SNPs with canonical alleles (A, C, G, T); excludes indels/MNPs/ambiguous bases.
+	Default: false
+
 --gap-scale <int>: Gap scale parameter in bp. If a gap is encountered between
 	two snps > GAP_SCALE and < MAX_GAP, then the genetic distance is
 	scaled by GAP_SCALE/GAP.
 	Default: 20000
 
---hap <string>: A hapfile with one column per haplotype, and one row per
+--hap <string>: A hapfile with one row per haplotype, and one column per
 	variant. Variants should be coded 0/1
 	Default: __hapfile1
 
@@ -142,7 +179,7 @@ To calculate XP-EHH:
 	Default: 0.05
 
 --map <string>: A mapfile with one row per variant site.
-	Formatted <chr#> <locusID> <genetic pos> <physical pos>.
+	Formatted <chr> <locusID> <genetic pos> <physical pos>.
 	Default: __mapfile
 
 --max-extend <int>: The maximum distance an EHH decay curve is allowed to extend from the core.
@@ -157,11 +194,11 @@ To calculate XP-EHH:
 	Default: 200000
 
 --multi-param <string>: Specify a JSON file with multiple parameter sets.
-        Each set should match the structure of command-line arguments.
-        The program will run the analysis for each set, generating separate outputs.
-        Useful for batch processing and exploring different configurations.
+	Each set should match the structure of command-line arguments.
+	The program will run the analysis for each set, generating separate outputs.
+	Useful for batch processing and exploring different configurations.
 
-        Default: __jsonFile
+	Default: __jsonFile
 
 --nsl <bool>: Set this flag to calculate nSL.
 	Default: false
@@ -180,7 +217,7 @@ To calculate XP-EHH:
 
 --ref <string>: A hapfile with one row per haplotype, and one column per
 	variant. Variants should be coded 0/1. This is the 'reference'
-	population for XP-EHH calculations.  Ignored otherwise.
+	population for XP calculations.  Ignored otherwise.
 	Default: __hapfile2
 
 --skip-low-freq <bool>: **This flag is now on by default. If you want to include low frequency variants
@@ -188,17 +225,18 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: false
 
 --thap <string>: A hapfile in IMPUTE hap format with one column per haplotype, and one row per
-        variant. Variants should be coded 0/1
-        Default: __thapfile1
+	variant. Variants should be coded 0/1
+	Default: __thapfile1
 
 --thap-ref <string>: A hapfile in IMPUTE hap format with one column per haplotype, and row per
-        variant. Variants should be coded 0/1. This is the 'reference'
-        population for XP calculations.  Ignored otherwise.
-        Default: __thapfile2
+	variant. Variants should be coded 0/1. This is the 'reference'
+	population for XP calculations.  Ignored otherwise.
+	Default: __thapfile2
 
 --threads <int>: The number of threads to spawn during the calculation.
-	Partitions loci across threads.
-	Default: Maximum concurrency supported by the system (hardware threads).
+	Partitions loci across threads. The default is the number of
+	logical CPUs of the machine selscan runs on.
+	Default: 8
 
 --tped <string>: A TPED file containing haplotype and map data.
 	Variants should be coded 0/1
@@ -206,26 +244,27 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 --tped-ref <string>: A TPED file containing haplotype and map data.
 	Variants should be coded 0/1. This is the 'reference'
-	population for XP-EHH calculations and should contain the same number
+	population for XP calculations and should contain the same number
 	of loci as the query population. Ignored otherwise.
 	Default: __hapfile2
 
 --trunc-ok <bool>: If an EHH decay reaches the end of a sequence before reaching the cutoff,
-	integrate the curve anyway (iHS and XPEHH only).
+	integrate the curve anyway.
 	Normal function is to disregard the score for that core.
 	Default: false
 
 --unphased <bool>: Set this flag to use multilocus genotypes.
 	Default: false
 
---vcf <string>: A VCF file containing haplotype data.
-	A map file must be specified with --map.
+--vcf <string>: A VCF file containing haplotype data. Give a genetic map
+	with --map, or use --pmap for physical distance (nSL and XP-nSL
+	need neither).
 	Default: __hapfile1
 
---vcf-ref <string>: A VCF file containing haplotype and map data.
-	Variants should be coded 0/1. This is the 'reference'
-	population for XP-EHH calculations and should contain the same number
-	of loci as the query population. Ignored otherwise.
+--vcf-ref <string>: A VCF file containing haplotype data for the 'reference'
+	population in XP calculations. Variants should be coded 0/1.
+	Sites are paired with --vcf by position and REF/ALT; unpaired
+	sites are dropped and counted in the log. Ignored otherwise.
 	Default: __hapfile2
 
 --wagh <bool>: Set this flag to calculate XP-EHH using definition of EHH which
@@ -236,6 +275,133 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: false
 
 --xpnsl <bool>: Set this flag to calculate XP-nSL.
+	Default: false
+```
+
+### selscan norm
+
+```
+ -- norm: a program for downstream analysis of selscan output
+    Source code and binaries can be found at
+    	<https://www.github.com/szpiech/selscan>
+    
+    Citations:
+    
+    selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.
+            ZA Szpiech (2024) Bioinformatics 40: btae006.
+            A Rahman, TQ Smith, and ZA Szpiech (2025). MBE, 42(11), msaf275.
+            A Rahman, TQ Smith, and ZA Szpiech (2026). HPGG, 6(2), 0005. https://doi.org/10.47248/hpgg2606020005.
+    iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.
+        N Garud et al. (2015) PLoS Genetics 11: 1–32.
+    nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.
+    XP-nSL: Szpiech et al. (2021) Evol Lett 5: 408-421.
+    XP-EHH: PC Sabeti et al. (2007) Nature 449: 913–918.
+            K Wagh et al. (2012) PloS ONE 7: e44751.
+    iHS: BF Voight et al. (2006) PLoS Biology 4: e72.
+    EHH: PC Sabeti et al. (2002) Nature 419: 832–837.
+    
+    To normalize selscan output across frequency bins:
+    
+    ./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
+    
+    To normalize selscan output and analyze non-overlapping windows of fixed bp for 
+    extreme scores:
+    
+    ./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
+
+----------Command Line Arguments----------
+
+--bins <int>: The number of frequency bins in [0,1] for score normalization.
+	Default: 100
+
+--bp-win <bool>: Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.
+
+	Default: false
+
+--crit-percent <double>: Set the critical value such that a SNP with iHS in the most extreme CRIT_PERCENT tails (two-tailed) is marked as an extreme SNP.
+    	Not used by default.
+	Default: -1.00
+
+--crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
+	Default: 2.00
+
+--files <string1> ... <stringN>: A list of files delimited by whitespace for
+    	joint normalization.
+    	Expected format for iHS or nSL files (no header):
+    	<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>
+    	Expected format for XP-EHH files (one line header):
+    	<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>
+    	Expected format for iHH12 files (one line header):
+    	<locus name> <physical pos> <freq1> <ihh12>
+	Default: __infile__
+
+--fine-percentile <bool>: If set, will use fine grain percentiles (1,2,3,...,100) for normalization.
+	Default: false
+
+--first <bool>: Output only the first file's normalization.
+	Default: false
+
+--gene-background <string>: Provide a .genetable for background gene set for permutation test.
+	Default: __genebackground__
+
+--gene-bed <string>: Provide a .bed file (<chr> <start> <end> <gene>) with gene annotations. 
+	Default: __filebed__
+
+--gene-gtf <string>: Provide a .gtf file with gene annotations. Extracts protein-coding genes only. Supports gzipped files
+	Default: __filegtf__
+
+--gene-target <string>: Provide a .genetable for target gene set for permutation tests.
+	Default: __genetarget__
+
+--help <bool>: Prints this help dialog.
+	Default: false
+
+--ihh12 <bool>: Do ihh12 normalization.
+	Default: false
+
+--ihs <bool>: Do iHS normalization.
+	Default: false
+
+--log <string>: The log file name.
+	Default: norm.log
+
+--log-input <string>: Specifies the log file used as an input for normalization.
+If provided, frequency-bin or mean/variance normalization is applied from the log-input file.
+Cannot be used together with --bins.
+Default: __logfile__.
+
+	Default: __logfile__
+
+--log-only <bool>: If set, outputs only the log file with normalization info (mean, variance) and skips normalized output. Useful with --log-input.
+	Default: false
+
+--min-snps <int>: Only consider a bp window if it has at least this many SNPs.
+	Default: 10
+
+--norm-files <string1> ... <stringN>: Provide a list of normalized selscan output files to be used for window-based output and/or gene annotation (requires --gene-bed and/or --bp-win).
+	Default: __filenorm__
+
+--nsl <bool>: Do nSL normalization.
+	Default: false
+
+--perm-seed <int>: Random seed for the gene-set permutation test (default: seeded from the clock; the seed used is printed).
+	Default: -1
+
+--qbins <int>: Outlying windows are binned by number of sites within each
+    	window.  This is the number of quantile bins to use.
+	Default: 10
+
+--win-files <string1> ... <stringN>: Provide a .windows file generated by selscan norm to be annotated with gene names (requires --gene-bed).
+	Default: __filewin__
+
+--winsize <int>: The non-overlapping window size for calculating the percentage
+    	of extreme SNPs.
+	Default: 100000
+
+--xpehh <bool>: Do XP-EHH normalization.
+	Default: false
+
+--xpnsl <bool>: Do XP-nSL normalization.
 	Default: false
 ```
 

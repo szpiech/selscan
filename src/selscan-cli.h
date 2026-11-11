@@ -115,7 +115,8 @@ To calculate XP-EHH:\n\
 const string ARG_THREAD = "--threads";
 const int DEFAULT_THREAD = std::thread::hardware_concurrency();
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
-\tPartitions loci across threads.";
+\tPartitions loci across threads. The default is the number of\n\
+\tlogical CPUs of the machine selscan runs on.";
 
 const string ARG_FILENAME_POP1_TPED = "--tped";
 const string DEFAULT_FILENAME_POP1_TPED = "__hapfile1";
@@ -131,15 +132,16 @@ const string HELP_FILENAME_POP2_TPED = "A TPED file containing haplotype and map
 
 const string ARG_FILENAME_POP1_VCF = "--vcf";
 const string DEFAULT_FILENAME_POP1_VCF = "__hapfile1";
-const string HELP_FILENAME_POP1_VCF = "A VCF file containing haplotype data.\n\
-\tA map file must be specified with --map.";
+const string HELP_FILENAME_POP1_VCF = "A VCF file containing haplotype data. Give a genetic map\n\
+\twith --map, or use --pmap for physical distance (nSL and XP-nSL\n\
+\tneed neither).";
 
 const string ARG_FILENAME_POP2_VCF = "--vcf-ref";
 const string DEFAULT_FILENAME_POP2_VCF = "__hapfile2";
-const string HELP_FILENAME_POP2_VCF = "A VCF file containing haplotype and map data.\n\
-\tVariants should be coded 0/1. This is the 'reference'\n\
-\tpopulation for XP calculations and should contain the same number\n\
-\tof loci as the query population. Ignored otherwise.";
+const string HELP_FILENAME_POP2_VCF = "A VCF file containing haplotype data for the 'reference'\n\
+\tpopulation in XP calculations. Variants should be coded 0/1.\n\
+\tSites are paired with --vcf by position and REF/ALT; unpaired\n\
+\tsites are dropped and counted in the log. Ignored otherwise.";
 
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
@@ -180,7 +182,8 @@ const string HELP_OUTFILE = "The basename for all output files.";
 
 const string ARG_CUTOFF = "--cutoff";
 const double DEFAULT_CUTOFF = 0.05;
-const string HELP_CUTOFF = "The EHH decay cutoff.";
+const string HELP_CUTOFF = "The EHH decay cutoff. nSL integrates without a cutoff\n\
+\t(see --max-extend-nsl).";
 
 const string ARG_MAX_GAP = "--max-gap";
 const int DEFAULT_MAX_GAP = 200000;
@@ -242,8 +245,10 @@ const string HELP_MAF = "If a site has a MAF below this value, the program will 
 
 const string ARG_EHH = "--ehh";
 const string DEFAULT_EHH = "__NO_LOCUS__";
-const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified loci: locus1,locus2,locus3,... \n\
-Output: <chr> <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+const string HELP_EHH = "Calculate EHH at the given loci (comma-separated locus IDs:\n\
+\tlocus1,locus2,...), one output file per locus. Columns: chr, pdist, gdist\n\
+\t(physical and genetic distance from the locus), derEHH and ancEHH (EHH of\n\
+\tthe haplotypes carrying the '1' and the '0' allele at the locus), EHH (all haplotypes).";
 
 const string ARG_EHHS = "--ehhs";
 const string DEFAULT_EHHS = "-";
@@ -254,8 +259,9 @@ const string HELP_EHHS = "Specifies one or more comma-separated genomic position
 
 const string ARG_EHH12 = "--ehh12";
 const string DEFAULT_EHH12 = "__NO_LOCUS__";
-const string HELP_EHH12 = "Calculate EHH12 of the '1' and '0' haplotypes at the specified\n\
-\tlocus. Output: <chr> <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+const string HELP_EHH12 = "Calculate EHH12 at the given loci (comma-separated locus IDs),\n\
+\tone output file per locus. Columns: chr, pdist, gdist, ehh1 (EHH of all\n\
+\thaplotypes), ehh12 (EHH12) and ehh2d1 (EHH2/1).";
 
 const string ARG_QWIN = "--ehh-win";
 const int DEFAULT_QWIN = 100000;
