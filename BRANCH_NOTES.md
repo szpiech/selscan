@@ -38,6 +38,13 @@ dependencies, so an incremental build is safe. Before that commit, run
 
 Each commit message gives the measured differences in full.
 
+Correction to the 82d0042 message: its sentence "loaded 811 instead of 998
+loci and reported 13 instead of 178 cores" pairs two different
+comparisons. On the allele-swapped p1 at `--maf 0.1`, the pre-B32 build
+loads 811 loci and reports 13 cores, and the fixed build loads 998 loci and
+reports 198 cores. 178 is the pre-B32 build's count on the original,
+unswapped p1, so the asymmetry was 178 cores unswapped against 13 swapped.
+
 ## Validation against an independent reference
 
 The review wrote a Python reference implementation from the manual's
