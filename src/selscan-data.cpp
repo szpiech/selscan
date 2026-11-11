@@ -534,11 +534,6 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
 
         result.nloci_before_filtering++;
 
-        // bool ALLOW_XP_LOCI_MISMATCH = false; // for now, assume all loci mismatch in XP mode, and rely on physpos-based skipping to identify shared loci. This is because in XP mode we want to keep all loci that are present in either VCF, even if they are not shared. So we will disable the NUM_LOCI_MISMATCH check and just rely on physpos-based skipping to identify shared loci.
-        // if((p.CALC_XP || p.CALC_XPNSL) && ALLOW_XP_LOCI_MISMATCH ){
-        //     result.physpos.push_back(physpos);
-        // }
-
         const char* pcur = line.c_str();
         const char* end  = pcur + line.size();
 
@@ -553,6 +548,22 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
         }
 
         int new_physpos = parse_int_fast(field_starts[1], field_ends[1]);
+
+        if (p.CALC_XP || p.CALC_XPNSL) {
+            // The XP reader pairs the two files by position, which needs both
+            // sorted. Keep the position and a hash of REF<TAB>ALT per record.
+            if (physpos >= 0 && new_physpos < physpos) {
+                HANDLE_ERROR(filename + " is not sorted by position (" + to_string(new_physpos)
+                             + " follows " + to_string(physpos) + ").");
+            }
+            result.physpos.push_back((size_t)new_physpos);
+            uint64_t h = 1469598103934665603ULL;            // FNV-1a 64
+            for (const char* c = field_starts[3]; c < field_ends[4]; ++c) {
+                h ^= (unsigned char)*c;
+                h *= 1099511628211ULL;
+            }
+            result.refalt_hash.push_back(h);
+        }
 
         if (physpos == new_physpos)
             skip_due_to_duplicate_pos++;
@@ -772,7 +783,7 @@ void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFP
     }
 
     if(p.CALC_XP || p.CALC_XPNSL){
-        LOG("Done removing " << pass1.skipcount << " loci due to duplicate positions.");
+        LOG("Done removing " << pass1.skipcount << " loci.");
     }else{
         if (p.SKIP) {
             LOG("Done removing " << pass1.skipcount << " low frequency variants from haplotype data.");
@@ -800,221 +811,83 @@ void HapMap::readHapDataVCFXP(string filename, string filename2, HapData& hapDat
 
     VCFPass1Result pass1_h1 = readHapDataVCF_pass1(filename);
     VCFPass1Result pass1_h2 = readHapDataVCF_pass1(filename2);
-    // if(!pass1_h1.skiplist.empty() || !pass1_h2.skiplist.empty()){
-    //     HANDLE_ERROR("XP should have no skipped loci due to MAF filtering.");
-    // }
-    //but skip maybe due to duplicate positions
+    // Pair the two files by position (B15). A record is kept only when its
+    // position occurs exactly once in each file, neither record was removed
+    // by the per-file filters (duplicate position, --multi-allelic), REF/ALT
+    // agree, and the site is polymorphic in the two populations combined.
+    // Kept records therefore appear in the same order in both files, which
+    // pass 2 and the map reader (driven by file 1's skip list) rely on.
+    const size_t n1 = pass1_h1.nloci_before_filtering;
+    const size_t n2 = pass1_h2.nloci_before_filtering;
 
-    bool NUM_LOCI_MISMATCH = (pass1_h1.nloci_before_filtering != pass1_h2.nloci_before_filtering);
-    // for (int pid = 0; pid < pass1_h1.nloci_before_filtering ; pid++) {
-    //     if (pass1_h1.physpos[pid] != pass1_h2.physpos[pid]) {
-    //         NUM_LOCI_MISMATCH = true;
-    //         break;
-    //     }
-    // }
-    if(NUM_LOCI_MISMATCH) {
-        LOG("ERROR: The two VCF files have different sets of loci.");
-        cout<<"File 1: " << filename << " has " << pass1_h1.nloci_before_filtering << " loci, with " << pass1_h1.skipcount << " skipped due to MAF or duplicates.\n";
-        cout<<"File 2: " << filename2 << " has " << pass1_h2.nloci_before_filtering << " loci, with " << pass1_h2.skipcount << " skipped due to MAF or duplicates.\n";
-       exit(EXIT_FAILURE);
+    auto skipFlags = [](queue<size_t> q, size_t n) {
+        vector<char> f(n, 0);
+        while (!q.empty()) { if (q.front() < n) f[q.front()] = 1; q.pop(); }
+        return f;
+    };
+    const vector<char> skip1 = skipFlags(pass1_h1.skiplist, n1);
+    const vector<char> skip2 = skipFlags(pass1_h2.skiplist, n2);
+    const vector<size_t>& pos1 = pass1_h1.physpos;
+    const vector<size_t>& pos2 = pass1_h2.physpos;
 
-//        LOG("WARNING: The two VCF files have different sets of loci. Will identify shared loci and skip non-shared ones.");
-    } else {
-        LOG("The two VCF files contain the same number of loci. Calculations are performed assuming they represent the same set of loci.");
-    }
-    
-    // if (NUM_LOCI_MISMATCH) {            
-    //     size_t i = 0;
-    //     size_t j = 0;
+    vector<size_t> new_skip_h1, new_skip_h2;
+    size_t only1 = 0, only2 = 0, partner1 = 0, partner2 = 0, mismatch = 0, mono = 0, shared = 0;
+    const long total_alleles = 2L * (pass1_h1.current_ngts + pass1_h2.current_ngts);
 
-    //     while (i < pass1_h1.physpos.size() && j < pass1_h2.physpos.size()) {
-
-    //         if (pass1_h1.physpos[i] == pass1_h2.physpos[j]) {
-    //             // value appears in both
-    //             i++;
-    //             j++;
-    //         }
-    //         else if (pass1_h1.physpos[i] < pass1_h2.physpos[j]) {
-    //             // h1 value not present in h2
-    //             pass1_h1.skiplist.push(i);
-    //             i++;
-    //         }
-    //         else {
-    //             // h2 value not present in h1
-    //             pass1_h2.skiplist.push(j);
-    //             j++;
-    //         }
-    //     }
-
-    //     // remaining elements in h1
-    //     while (i < pass1_h1.physpos.size()) {
-    //         pass1_h1.skiplist.push(i);
-    //         i++;
-    //     }
-
-    //     // remaining elements in h2
-    //     while (j < pass1_h2.physpos.size()) {
-    //         pass1_h2.skiplist.push(j);
-    //         j++;
-    //     }    
-    // }
-
-    //if the two vcfs differ in number of loci, we should handle that case. For now we assume they are the same.
-
-    if (NUM_LOCI_MISMATCH)
-    {
-        vector<size_t> new_skip_h1;
-        vector<size_t> new_skip_h2;
-
-
-        const int total_alleles_h1 = 2 * pass1_h1.current_ngts; // a genotype is like 0|1, so 2 alleles per genotype
-        const int total_alleles_h2 = 2 * pass1_h2.current_ngts;
-        const int total_alleles_joint = total_alleles_h1 + total_alleles_h2;
-        size_t i = 0;
-        size_t j = 0;
-       
-        while (i < pass1_h1.physpos.size() || j < pass1_h2.physpos.size())
-        {
-
-            // Decide next genomic position to process
-            int pos;
-            if (i < pass1_h1.physpos.size() && j < pass1_h2.physpos.size())
-            {
-                pos = std::min(pass1_h1.physpos[i], pass1_h2.physpos[j]);
-            }
-            else if (i < pass1_h1.physpos.size())
-            {
-                pos = pass1_h1.physpos[i];
-            }
-            else
-            {
-                pos = pass1_h2.physpos[j];
-            }
-
-            // Find full run of this position in h1
-            size_t i_start = i;
-            while (i < pass1_h1.physpos.size() && pass1_h1.physpos[i] == pos)
-            {
-                i++;
-            }
-            size_t i_end = i;
-            size_t count_h1 = i_end - i_start;
-
-            // Find full run of this position in h2
-            size_t j_start = j;
-            while (j < pass1_h2.physpos.size() && pass1_h2.physpos[j] == pos)
-            {
-                j++;
-            }
-            size_t j_end = j;
-            size_t count_h2 = j_end - j_start;
-
-            // ----------------------------------------------------
-            // Case 1: duplicated anywhere -> skip from everywhere
-            // ----------------------------------------------------
-            if (count_h1 > 1 || count_h2 > 1)
-            {
-                for (size_t k = i_start; k < i_end; k++)
-                {
-                    new_skip_h1.push_back(k);
-                }
-                for (size_t k = j_start; k < j_end; k++)
-                {
-                    new_skip_h2.push_back(k);
-                }
-                continue;
-            }
-
-            // ----------------------------------------------------
-            // Case 2: exists only in h1
-            // ----------------------------------------------------
-            if (count_h1 == 1 && count_h2 == 0)
-            {
-                new_skip_h1.push_back(i_start);
-                continue;
-            }
-
-            // ----------------------------------------------------
-            // Case 3: exists only in h2
-            // ----------------------------------------------------
-            if (count_h1 == 0 && count_h2 == 1)
-            {
-                new_skip_h2.push_back(j_start);
-                continue;
-            }
-
-            // ----------------------------------------------------
-            // Case 4: shared exactly once in both files
-            // ----------------------------------------------------
-            if (count_h1 == 1 && count_h2 == 1)
-            {
-
-                // int derived_h1, derived_h2, total_derived;
-
-                // if (p.UNPHASED)
-                // {
-                //     // unphased:
-                //     //   num_1s = heterozygotes (one derived allele)
-                //     //   num_2s = hom-derived genotypes (two derived alleles)
-                //     derived_h1 = pass1_h1.num_1s[i_start] + 2 * pass1_h1.num_2s[i_start];
-                //     derived_h2 = pass1_h2.num_1s[j_start] + 2 * pass1_h2.num_2s[j_start];
-                // }
-                // else
-                // {
-                //     // phased:
-                //     //   num_1s already counts derived haplotypes
-                //     derived_h1 = pass1_h1.num_1s[i_start];
-                //     derived_h2 = pass1_h2.num_1s[j_start];
-                // }
-
-                // total_derived = derived_h1 + derived_h2;
-
-                // // monomorphic if all alleles are ancestral or all are derived
-                // if (total_derived == 0 || total_derived == total_alleles_joint)
-                // {
-                //     new_skip_h1.push_back(i_start);
-                //     new_skip_h2.push_back(j_start);
-                // }
-            }
+    size_t i = 0, j = 0;
+    while (i < n1 || j < n2) {
+        if (j >= n2 || (i < n1 && pos1[i] < pos2[j])) {        // only in file 1
+            if (!skip1[i]) { new_skip_h1.push_back(i); only1++; }
+            i++;
+            continue;
         }
-
-        // Rebuild queues safely with old + new skips
-        rebuild_skipqueue_with_new_skips(pass1_h1.skiplist, new_skip_h1);
-        rebuild_skipqueue_with_new_skips(pass1_h2.skiplist, new_skip_h2);
-    }
-
-    else{
-        // --------------------------------------------------------
-        // Step 1: detect loci that become monomorphic when
-        // combining hapData and hapData2
-        // --------------------------------------------------------
-        vector<size_t> new_skip_h1;
-        vector<size_t> new_skip_h2;
-
-        for (int i = 0; i < pass1_h1.nloci_before_filtering; i++) {
-
-            // Count derived ALLELES in the two panels combined. current_ngts is
-            // the number of samples (genotype columns), so the allele total is
-            // twice it. In unphased mode pass 1 stores heterozygotes in num_1s
-            // and homozygous-derived samples in num_2s; in phased mode num_1s
-            // already counts alleles and num_2s stays 0. Comparing num_1s with
-            // the sample count (as 3.0.0-3.0.1 did) removed every site at joint
-            // frequency 0.5, including fixed differences between equal-size
-            // panels, and in unphased mode every site without heterozygotes.
+        if (i >= n1 || pos2[j] < pos1[i]) {                     // only in file 2
+            if (!skip2[j]) { new_skip_h2.push_back(j); only2++; }
+            j++;
+            continue;
+        }
+        // same position in both files
+        if (skip1[i] || skip2[j]) {
+            if (!skip1[i]) { new_skip_h1.push_back(i); partner1++; }
+            if (!skip2[j]) { new_skip_h2.push_back(j); partner2++; }
+        } else if (pass1_h1.refalt_hash[i] != pass1_h2.refalt_hash[j]) {
+            new_skip_h1.push_back(i);
+            new_skip_h2.push_back(j);
+            mismatch++;
+        } else {
+            // In unphased mode pass 1 stores heterozygotes in num_1s and
+            // homozygous-derived samples in num_2s; in phased mode num_1s
+            // counts derived alleles and num_2s is 0.
             long total_derived = (long)pass1_h1.num_1s[i] + 2L * pass1_h1.num_2s[i]
-                               + (long)pass1_h2.num_1s[i] + 2L * pass1_h2.num_2s[i];
-            long total_alleles = 2L * (pass1_h1.current_ngts + pass1_h2.current_ngts);
-
-            // monomorphic if all alleles are ancestral or all derived
+                               + (long)pass1_h2.num_1s[j] + 2L * pass1_h2.num_2s[j];
             if (total_derived == 0 || total_derived == total_alleles) {
                 new_skip_h1.push_back(i);
-                new_skip_h2.push_back(i); // two copy for simple logic
-                //cout<<"Locus " << i << " is monomorphic in combined data. Will skip from both files." << endl;
+                new_skip_h2.push_back(j);
+                mono++;
+            } else {
+                shared++;
             }
         }
-        rebuild_skipqueue_with_new_skips(pass1_h1.skiplist, new_skip_h1);
-        rebuild_skipqueue_with_new_skips(pass1_h2.skiplist, new_skip_h2);
+        i++;
+        j++;
     }
+
+    if (only1 > 0)
+        LOG("Dropped " << only1 << " records of " << filename << " at positions absent from " << filename2 << ".");
+    if (only2 > 0)
+        LOG("Dropped " << only2 << " records of " << filename2 << " at positions absent from " << filename << ".");
+    if (partner1 > 0)
+        LOG("Dropped " << partner1 << " records of " << filename << " whose matching record in " << filename2 << " was removed (duplicated position or multi-allelic).");
+    if (partner2 > 0)
+        LOG("Dropped " << partner2 << " records of " << filename2 << " whose matching record in " << filename << " was removed (duplicated position or multi-allelic).");
+    if (mismatch > 0)
+        LOG("Dropped " << mismatch << " shared positions where REF/ALT differ between the two files.");
+    if (mono > 0)
+        LOG("Dropped " << mono << " sites monomorphic in the two populations combined.");
+    LOG(shared << " sites are shared by the two files and retained.");
+
+    rebuild_skipqueue_with_new_skips(pass1_h1.skiplist, new_skip_h1);
+    rebuild_skipqueue_with_new_skips(pass1_h2.skiplist, new_skip_h2);
 
     if(pass1_h2.nloci_before_filtering - pass1_h2.skiplist.size() == 0){
         HANDLE_ERROR("After filtering, no loci remain in reference VCF. Please check your input files.");

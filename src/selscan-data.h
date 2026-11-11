@@ -63,7 +63,9 @@ struct VCFPass1Result {
     vector<int> num_1s;
     vector<int> num_2s;
 
+    // XP only: position and FNV-1a hash of "REF\tALT" per record, file order
     vector<size_t> physpos;
+    vector<uint64_t> refalt_hash;
 };
 class HapMap{
 public:

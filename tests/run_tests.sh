@@ -389,6 +389,37 @@ if selected tped-equiv; then
     else fail "dup-positions:hap" "exit $RC, $nd of the duplicated loci reported, log note $(grep -q 'Dropped 2 records' dp.log && echo present || echo absent)"; fi
 fi
 
+if selected xp-intersect; then
+    # XP VCF input is paired by position and REF/ALT (B15). Start from p1/p2
+    # without duplicated positions (u1/u2 list the same positions), then
+    # remove every 13th record from file 1, every 7th from file 2, and change
+    # ALT on every 11th record of file 2. The result must equal a run on a
+    # matched pair with the union of those records removed from both files.
+    for k in 1 2; do
+        awk 'NR==FNR {if (!/^#/) c[$2]++; next} /^#/ || c[$2]==1' dd$k.vcf dd$k.vcf > xu$k.vcf
+        awk '/^#/ {print; next} {n++} n%13 && n%7 && n%11' xu$k.vcf > xr$k.vcf
+    done
+    awk '/^#/ {print; next} {n++} n%13 != 0' xu1.vcf > xq1.vcf
+    awk -F'\t' -v OFS='\t' '/^#/ {print; next} {n++} n%7 == 0 {next} n%11 == 0 {$5 = ($5=="A" ? "C" : "A")} {print}' xu2.vcf > xq2.vcf
+    run xq.log --xpehh --vcf xq1.vcf --vcf-ref xq2.vcf --pmap --out xq
+    run xr.log --xpehh --vcf xr1.vcf --vcf-ref xr2.vcf --pmap --out xr
+    identical "xp-intersect:vcf" xq.xpehh.out xr.xpehh.out
+    # expected drop counts, computed from the record numbers
+    nrec=$(grep -vc '^#' xu1.vcf)
+    exp=$(awk -v N="$nrec" 'BEGIN {for (n=1;n<=N;n++) {a+=(n%7==0 && n%13); b+=(n%13==0 && n%7); m+=(n%11==0 && n%7 && n%13)} print a, b, m}')
+    got="$(sed -n 's/^Dropped \([0-9]*\) records of xq1.vcf at positions absent.*/\1/p' xq.log) $(sed -n 's/^Dropped \([0-9]*\) records of xq2.vcf at positions absent.*/\1/p' xq.log) $(sed -n 's/^Dropped \([0-9]*\) shared positions where REF\/ALT differ.*/\1/p' xq.log)"
+    if [ "$got" = "$exp" ]; then pass "xp-intersect:log-counts"
+    else fail "xp-intersect:log-counts" "logged '$got', expected '$exp'"; fi
+    # Equal record counts but offset by one record: 3.0.1 paired records by
+    # index and silently reported every site against the wrong partner.
+    awk -v N="$nrec" '/^#/ {print; next} {n++} n<N' xu1.vcf > xs1.vcf
+    awk '/^#/ {print; next} {n++} n>1' xu2.vcf > xs2.vcf
+    for k in 1 2; do awk -v N="$nrec" '/^#/ {print; next} {n++} n>1 && n<N' xu$k.vcf > xm$k.vcf; done
+    run xs.log --xpehh --vcf xs1.vcf --vcf-ref xs2.vcf --pmap --out xs
+    run xm.log --xpehh --vcf xm1.vcf --vcf-ref xm2.vcf --pmap --out xm
+    identical "xp-intersect:offset" xs.xpehh.out xm.xpehh.out
+fi
+
 if selected norm-invariants; then
     # XP-EHH/XP-nSL are normalised in one genome-wide bin: every output row must
     # satisfy norm = (x - mean)/sd for the same mean and sd, and every input row
