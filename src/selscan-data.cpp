@@ -1699,8 +1699,11 @@ void HapMap::loadHapMapData(){
         }else{
             readHapDataVCF(p.vcfFilename, *hapData);
         }
-        if(!p.CALC_NSL && !p.CALC_XPNSL && !p.USE_PMAP) {
-            //int exp_haps = (p.UNPHASED)? hapData->nhaps*2 : hapData->nhaps;
+        // B50: use --map whenever one is given (and --pmap is not set),
+        // whatever statistics are requested. 3.0.1 ignored the map when
+        // --nsl or --xpnsl was also requested, so iHS/XP-EHH in such a
+        // combined run used physical distance.
+        if(!p.USE_PMAP && p.mapFilename.compare(DEFAULT_FILENAME_MAP) != 0) {
             mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
         }
         else{//Load physical positions

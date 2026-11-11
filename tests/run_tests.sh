@@ -296,6 +296,11 @@ if selected multistat; then
     run s.log --pi --vcf p1.vcf.gz --pmap --out s_pi
     run s.log --ehh chr1:29243 --vcf p1.vcf.gz --pmap --out s_ehh
     run s.log --xpehh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap --out s_xp
+    # B50: with a genetic map, iHS in an --ihs --nsl run equals iHS alone
+    gzip -dc p1.vcf.gz | awk '/^#/ {next} { printf "%s %s %.10g %s\n", $1, $3, $2/1e6*(1+$2/250000), $2 }' > p1gen.map
+    run s.log --ihs --vcf p1.vcf.gz --map p1gen.map --out s_ihsmap
+    run m.log --ihs --nsl --vcf p1.vcf.gz --map p1gen.map --out m_ihsmap
+    identical "multistat==single:ihs-with-nsl-map" m_ihsmap.ihs.out s_ihsmap.ihs.out
     run m.log --ihs --pi --vcf p1.vcf.gz --pmap --out m_pi
     identical "multistat==single:pi-with-ihs" m_pi.pi.100bp.out s_pi.pi.100bp.out
     identical "multistat==single:ihs-with-pi" m_pi.ihs.out s_ihs.ihs.out
