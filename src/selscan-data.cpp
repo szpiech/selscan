@@ -37,6 +37,15 @@ void HapMap::initParamsInHap(HapData &hapData){
                 }
             }
         }
+        // A co-requested statistic that uses every site (pi, EHH, EHH12, XP)
+        // must see the unfiltered data, so the loader cannot prefilter. The
+        // MAF filter for iHS/nSL/iHH12 is then applied at run time by their
+        // kernels (MULTI_MAF is set for every combined run), which reproduces
+        // the single-run result. Without this, pi and EHH in a combined run
+        // were computed on MAF-filtered sites (B17).
+        if(p.CALC_PI || p.SINGLE_EHH || p.SINGLE_EHH12 || p.CALC_XP || p.CALC_XPNSL){
+            this->MIN_MAF_CUTOFF = 0;
+        }
     }else{
         // if we are not calculating IHS or NSL, we can set the MAF cutoff to 0
         this->MIN_MAF_CUTOFF = 0;

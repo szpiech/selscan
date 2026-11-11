@@ -297,6 +297,20 @@ if selected multistat; then
             identical "multistat==single:$e$keep" multi.$e.out single.$e.out
         done
     done
+    # Statistics that use every site (pi, EHH, XP) combined with ones that
+    # MAF-filter (iHS): each side must still equal its single run.
+    run s.log --ihs --vcf p1.vcf.gz --pmap --out s_ihs
+    run s.log --pi --vcf p1.vcf.gz --pmap --out s_pi
+    run s.log --ehh chr1:29243 --vcf p1.vcf.gz --pmap --out s_ehh
+    run s.log --xpehh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap --out s_xp
+    run m.log --ihs --pi --vcf p1.vcf.gz --pmap --out m_pi
+    identical "multistat==single:pi-with-ihs" m_pi.pi.100bp.out s_pi.pi.100bp.out
+    identical "multistat==single:ihs-with-pi" m_pi.ihs.out s_ihs.ihs.out
+    run m.log --ihs --ehh chr1:29243 --vcf p1.vcf.gz --pmap --out m_ehh
+    identical "multistat==single:ehh-with-ihs" m_ehh.ehh.chr1:29243.out s_ehh.ehh.chr1:29243.out
+    run m.log --ihs --xpehh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap --out m_xp
+    identical "multistat==single:xpehh-with-ihs" m_xp.xpehh.out s_xp.xpehh.out
+    identical "multistat==single:ihs-with-xpehh" m_xp.ihs.out s_ihs.ihs.out
 fi
 
 if selected multiparam; then
