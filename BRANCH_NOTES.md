@@ -35,6 +35,11 @@ dependencies, so an incremental build is safe. Before that commit, run
 | 0fc9333 | B27 | none in goldens; `--keep-low-freq` honoured in combined and `--multi-param` runs |
 | 82d0042 | B32 | none in goldens; one symmetric MAF test with ties kept; at `--maf 0.1` on p1 iHS goes 178 -> 198 cores |
 | a1c5bbd | B17 | none in goldens; `--pi`/`--ehh` combined with iHS see all sites |
+| f985491 | data | none in goldens; TPED and hap/thap drop every record at a duplicated position, as VCF did, and log it |
+| 28f0f22 | data | none in goldens; TPED/thap/hap XP drop sites monomorphic in the two populations combined, as VCF did (1663 on p1/p2) |
+| 56de517 | B15 | none in goldens; XP VCF files are paired by position and REF/ALT (was by record index); unpaired and mismatched records are dropped and counted |
+| 22769f4 | B47 | XP-nSL window and unphased step counted in retained sites (were raw file-1 records); xpnsl and xpnsl-unphased change in every row |
+| aba04c4 | B16 | none in goldens; XP VCF reader rejects missing alleles, '/' in phased mode, short rows and a missing #CHROM line, as the single-population reader does |
 
 Each commit message gives the measured differences in full.
 
@@ -75,6 +80,11 @@ remove the 12 duplicated positions.
 - EHH12 output (`--ehh12`, binomial and `--alt`, derived allele major and
   minor at the core): every cell of 302, 275 and 934 rows matches an
   independent computation from haplotype counts.
+- XP-nSL after B47, on p1/p2 restricted to selscan's retained set
+  (duplicated positions and jointly monomorphic sites removed, 2229 sites):
+  phased 2156/2156, unphased 2193/2193, same site sets; sL within 4.7e-5
+  (rounding on values near 20), XP-nSL within 3.8e-6. The pre-B47 build
+  differs by more than 1e-4 at 1427 phased and 2188 unphased sites.
 
 v2.1.3 is not a baseline for the XP fixes. It drops the same 14
 joint-frequency-0.5 sites as 3.0.1 and agrees with 3.0.1 exactly on every
@@ -98,6 +108,14 @@ site they share.
 - B32: a site exactly at `--maf` is kept, whichever allele is minor.
 - B17/Q1: each statistic in a combined run equals its single run; XP is never
   MAF-filtered because iHS is co-requested.
+- Duplicated positions: every reader drops all records that share a
+  position and logs how many.
+- Q7/B15: XP input is intersected by position, and REF/ALT must match;
+  each kind of dropped record is counted in the log.
+- B47 (found during B15, not in the review report): XP-nSL counts distance
+  in retained sites, as nSL does. This is a definition change made for
+  consistency and awaits PI confirmation; it is a separate commit so it can
+  be dropped.
 
 ## Known open issues
 
@@ -113,13 +131,12 @@ site they share.
   haplotypes. Left alone deliberately: the EHH12 adjustment is 2*t1*t2 under
   either measure, and iHH12 `--alt` was identical before and after the
   equivalent change.
-- Found while building the harness, not in the review report: the VCF loader
-  drops sites at duplicated positions and the TPED loader keeps them; in XP
-  mode only the VCF loader drops sites monomorphic in the two panels
-  combined. The extra sites change iHH through the integration steps and gap
-  scaling, so the same data gives different XP output from TPED and VCF.
-  The tped-equiv fixture removes both kinds of site so that it tests file
-  reading alone.
+- The loader differences found while building the harness (duplicated
+  positions, jointly monomorphic XP sites) are resolved by f985491 and
+  28f0f22; tped-equiv and thap-equiv now run on the unfiltered p1/p2.
+- `--filter-vcf` (the multi-allelic filter) tests REF/ALT for single
+  A/C/G/T bases, so on 0/1-coded VCFs such as example/ it removes every
+  record (B39, filter-vcf-01).
 - No golden case runs unphased `--wagh`, so that part of feec363 is
   untested.
 - Makefile_win and the unused Makefile_macos-arm64/-x86-64 still lack
