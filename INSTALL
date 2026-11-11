@@ -1,30 +1,46 @@
-Pre-compiled binaries for OSX, Linux, and Windows can be found in
+Building selscan from source
+============================
 
-bin/osx/
-bin/linux/
-bin/win/
+selscan needs a C++17 compiler and zlib. It has been built with GCC 11
+(Rocky Linux 9) and Apple clang 16. It no longer uses GSL. Normalisation is run as `selscan norm`; there
+is no separate norm binary.
 
-To install the binaries, just place them somewhere in your $PATH (i.e. ~/bin/).
+    cd src
+    make            # builds src/selscan
+    make check      # optional: runs the regression suite in tests/
+    make install    # optional: copies selscan to /usr/local/bin
+                    # (make install PREFIX=$HOME installs to ~/bin)
 
-selscan depends on the C++ standard thread library, which should be available by default
-in any build environment on a OSX/Linux system. On Windows, we successfully built selscan using the clang++ compiler with MinGW in an MSYS2 environment. MinGW provides a lightweight development setup for native Windows compilation, while MSYS2 offers Unix-like libraries and utilities. clang++ was used instead of gcc to ensure correct support for C++ standard threads.
+The binary is written to src/ (src/selscan.exe on Windows). Object files
+go to src/build/; `make clean` removes them and the binary.
 
-selscan (2.1.0+) also depends on zlib (http://www.zlib.net/), which should be
-available by default in OSX/Linux build environments.  On Windows, we have had
-success compiling zlib in a MinGW environment (http://www.mingw.org/).  A compiled version of zlib in provided in lib/win32/.
+Platforms
+---------
 
-To build (some lines in the Makefile may need to be commented/uncommented):
+Linux: install a compiler and the zlib headers, e.g.
+`dnf install gcc-c++ zlib-devel` (RHEL, Rocky, Alma, Fedora) or
+`apt install g++ zlib1g-dev` (Debian, Ubuntu).
 
-make selscan 
+macOS: install the Xcode command line tools (`xcode-select --install`).
+zlib is part of macOS.
 
-The selscan binary will appear in the src/ directory when built.
+Windows: use MSYS2 (https://www.msys2.org). In the MINGW64 shell, run
+`pacman -S make mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib`, then build as
+above.
 
-The program norm depends on GNU GSL (http://www.gnu.org/software/gsl/). There shouldn't be 
-a strict need to download and install these yourself, as pre-compiled static 
-versions of GSL for OSX, Linux, and Windows in lib/osx/, lib/linux/, and lib/win32/ are provided.
+Options
+-------
 
-To build (some lines in the Makefile may need to be commented/uncommented):
+Set these on the make command line, e.g. `make STATIC=1`:
 
-make norm 
+    CXX=...         compiler to use
+    CXXFLAGS=...    optimisation and debugging flags (default -O3)
+    STATIC=1        Linux: link libstdc++, libgcc and zlib statically, so the
+                    binary needs only the system glibc. Windows: a fully
+                    static .exe.
+    UNIVERSAL=1     macOS: one binary for Apple Silicon and Intel Macs.
+    MACOS_MIN=11.0  macOS: the oldest macOS the binary should run on.
 
-The norm binary will appear in the src/ directory when built.
+A debug build with the undefined-behaviour sanitizer:
+
+    make CXXFLAGS="-O1 -g -fsanitize=undefined" LDFLAGS=-fsanitize=undefined

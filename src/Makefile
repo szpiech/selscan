@@ -1,42 +1,88 @@
-# Detect OS
-UNAME_S := $(shell uname -s)
+# Makefile for selscan: Linux, macOS, and Windows (MSYS2 / MinGW-w64).
+#
+#   make            build ./selscan
+#   make check      build, then run the regression suite in ../tests
+#   make install    copy selscan to $(PREFIX)/bin (PREFIX defaults to /usr/local)
+#   make clean      remove the build directory and the binary
+#
+# Needs a C++17 compiler and zlib (headers and library). Set any of these
+# on the command line or in the environment:
+#
+#   CXX             compiler (make's default is g++, which is clang on macOS)
+#   CXXFLAGS        optimisation and debugging flags (default -O3)
+#   CPPFLAGS, LDFLAGS, LDLIBS
+#   STATIC=1        Linux: link libstdc++, libgcc and zlib statically and
+#                   keep glibc dynamic, as the release binaries are built.
+#                   Windows: a fully static .exe.
+#   UNIVERSAL=1     macOS: one binary for arm64 and x86_64.
+#   MACOS_MIN=11.0  macOS: oldest macOS the binary runs on.
+#
+# Example debug build with UBSan:
+#   make CXXFLAGS="-O1 -g -fsanitize=undefined" LDFLAGS=-fsanitize=undefined
+
+CXXFLAGS ?= -O3
+override CXXFLAGS += -std=c++17 -Wall -Wextra
+override CPPFLAGS += -MMD -MP
+PREFIX ?= /usr/local
+
 ifeq ($(OS),Windows_NT)
-    OS_TYPE := Windows
-else ifeq ($(UNAME_S),Linux)
-    OS_TYPE := Linux
-else ifeq ($(UNAME_S),Darwin)
-    OS_TYPE := Mac
+  PLATFORM := windows
 else
-    OS_TYPE := Unknown
+  PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 endif
 
-# Define default target
-all:
-ifeq ($(OS_TYPE),Linux)
-	@$(MAKE) -f Makefile_linux
-else ifeq ($(OS_TYPE),Mac)
-	@$(MAKE) -f Makefile_macos
-else ifeq ($(OS_TYPE),Windows)
-	@$(MAKE) -f Makefile_win
+EXE :=
+SYSLIBS := -lz
+ifeq ($(PLATFORM),windows)
+  EXE := .exe
+  ifeq ($(STATIC),1)
+    override LDFLAGS += -static
+  endif
+else ifeq ($(PLATFORM),darwin)
+  ifeq ($(UNIVERSAL),1)
+    override CXXFLAGS += -arch arm64 -arch x86_64
+  endif
+  ifneq ($(MACOS_MIN),)
+    override CXXFLAGS += -mmacosx-version-min=$(MACOS_MIN)
+  endif
 else
-	@echo "Unsupported OS"
+  ifeq ($(STATIC),1)
+    override LDFLAGS += -static-libstdc++ -static-libgcc
+    SYSLIBS := -Wl,-Bstatic -lz -Wl,-Bdynamic
+  endif
+  SYSLIBS += -lm
 endif
+override LDLIBS += $(SYSLIBS) -pthread
 
-# Clean target for all platforms
+SRCS := selscan-main.cpp selscan-cli.cpp selscan-data.cpp param_t.cpp \
+        norm.cpp gene.cpp binom.cpp gzstream.cpp thread_pool.cpp \
+        hapmap/hapdata.cpp hapmap/mapdata.cpp hapmap/bitset.cpp \
+        stats/ehh.cpp stats/ehh12.cpp stats/ihs.cpp stats/ihh12.cpp \
+        stats/pi.cpp stats/xpihh.cpp
+BUILD := build
+OBJS := $(SRCS:%.cpp=$(BUILD)/%.o)
+BIN := selscan$(EXE)
+
+all: $(BIN)
+
+$(BIN): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+$(BUILD)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+# header dependencies written by -MMD
+-include $(OBJS:.o=.d)
+
+check: $(BIN)
+	../tests/run_tests.sh --bin ./$(BIN)
+
+install: $(BIN)
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BIN) $(DESTDIR)$(PREFIX)/bin/
+
 clean:
-ifeq ($(OS_TYPE),Linux)
-	@$(MAKE) -f Makefile_linux clean
-else ifeq ($(OS_TYPE),Mac)
-	@$(MAKE) -f Makefile_macos clean
-else ifeq ($(OS_TYPE),Windows)
-	@$(MAKE) -f Makefile_win clean
-else
-	@echo "Unsupported OS: $(OS_TYPE)"
-endif
+	rm -rf $(BUILD) $(BIN)
 
-# Regression suite (tests/run_tests.sh): builds first, then checks ./selscan
-# against tests/expected/. See tests/README.md.
-check: all
-	@../tests/run_tests.sh --bin ./selscan
-
-.PHONY: all clean check
+.PHONY: all check install clean

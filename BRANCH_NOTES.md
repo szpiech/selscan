@@ -4,7 +4,8 @@ Base: `main` at 7a93ff1 ("Patch 3_0_1"). Finding ids (B1, U12, ...) refer to
 the code review report (selscan_code_review.md). Every commit passes
 `make check`. Since 341bdc0 (M1) the macOS and Linux Makefiles track header
 dependencies, so an incremental build is safe. Before that commit, run
-`make clean` after editing a header.
+`make clean` after editing a header. Since the M4 commit of step 7 there is
+one src/Makefile for every platform, also with header dependencies.
 
 ## Commits and what they change in the output
 
@@ -274,7 +275,5 @@ the computation. It may matter on network filesystems.
 - binom.cpp (nCk, factln) is no longer used by the kernels since 47776f7 (B40).
 - iHS/nSL gene-table rows end with an extra tab (one more field than the
   header); left as is.
-- Makefile_win and the unused Makefile_macos-arm64/-x86-64 still lack
-  header dependencies (M4).
 - `--multi-chr` is deferred until after the bug fixes; it is a new feature
   to add.

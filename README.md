@@ -50,13 +50,10 @@ PC Sabeti et al. (2002) Detecting recent positive selection in the human
 git clone https://github.com/szpiech/selscan/
 cd selscan && git checkout main
 cd src && make
+make check     # optional: run the regression suite
 ```
 
-If you prefer OS-specific makefiles, replace `make` with one of the following:
-
-- `make -f Makefile_macos` &nbsp;&nbsp;&nbsp;→ for **macOS**
-- `make -f Makefile_linux` &nbsp;&nbsp;&nbsp;→ for **Linux**
-- `make -f Makefile_win` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ for **Windows**
+The same Makefile builds on Linux, macOS and Windows (MSYS2 with MinGW-w64). selscan needs a C++17 compiler and zlib, and nothing else. See INSTALL for build options (static Linux binaries, macOS universal binaries).
 
 ## 📦 Precompiled Binaries
 
