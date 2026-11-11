@@ -349,6 +349,8 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
     
     for (size_t normFileId = 0; normFileId < normFiles.size(); ++normFileId)
     {
+        struct SnpScan { size_t idx = 0; long lastPos = -1; };
+        std::unordered_map<std::string, SnpScan> snpScan;   // P3: per-chromosome gene scan position
         std::string normFilePath = normFiles[normFileId];
         std::ifstream normFile(normFilePath);
         if (!normFile)
@@ -448,11 +450,20 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                 //chr found in bed file
                 const auto &chrGenes = it->second;
 
-                // Find first gene that could overlap position w.start
-                size_t gene_idx = 0;
+                // Find first gene that could overlap position w.start.
+                // P3: genes are sorted by start and SNPs by position, and a
+                // gene ending before this SNP cannot overlap a later one, so
+                // the scan resumes where the previous SNP's scan stopped
+                // (reset if positions go backwards). 3.0.1 restarted at gene
+                // 0 for every SNP.
+                SnpScan &sc = snpScan[chrom_from_win];
+                if (pos < sc.lastPos) sc.idx = 0;
+                sc.lastPos = pos;
+                size_t gene_idx = sc.idx;
                 // genes are 1-based inclusive [start, end] (B37)
                 while (gene_idx < chrGenes.size() && chrGenes[gene_idx].end < pos)
                     ++gene_idx;
+                sc.idx = gene_idx;
 
                 // For a single-position "window", overlap if gene.start < pos+1 and gene.end > pos
                 // i.e., (w.end >= gene.start && w.start < gene.end) with w.start==w.end==pos
@@ -718,6 +729,8 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
         // }
 
 
+        struct WinScan { size_t idx = 0; long lastStart = -1; };
+        std::unordered_map<std::string, WinScan> winScan;   // P3: per-chromosome gene scan position
         while (std::getline(winFile, windowLine))
         {
             std::istringstream iss(windowLine);
@@ -740,8 +753,12 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
                 //chr found in bed file
                 const auto &chrGenes = it->second;
 
-                // Two-pointer approach
-                size_t gene_idx = 0;
+                // Two-pointer approach (P3: resumes where the previous
+                // window's scan stopped; reset if windows go backwards)
+                WinScan &ws = winScan[w_chrom];
+                if (w_start < ws.lastStart) ws.idx = 0;
+                ws.lastStart = w_start;
+                size_t gene_idx = ws.idx;
                 std::string ov;
 
                 // Advance gene_idx to the first gene that might overlap
@@ -750,6 +767,7 @@ void GeneAnalyzer::annotateWindows(std::string geneFile, bool useGTF, vector<std
                 {
                     gene_idx++;
                 }
+                ws.idx = gene_idx;
 
                 // Check overlapping genes starting from current gene_idx
                 size_t j = gene_idx;
