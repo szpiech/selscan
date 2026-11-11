@@ -142,7 +142,9 @@ remove the 12 duplicated positions.
 - Gene table `*_adj` after B26: within 5.2e-6 of numpy least squares
   (30-gene synthetic XP table).
 - Gene-set permutation test after B38: 0.306 (seed 7) against a
-  200,000-permutation numpy estimate of 0.299.
+  200,000-permutation numpy estimate of 0.299. With the built-in
+  generator (no GSL, step 7): 0.304 at seed 7, mean 0.2997 over seeds
+  100-119 (sd 0.0043; the binomial sd at 10,000 permutations is 0.0046).
 - UBSan with libc++ hardening (`_LIBCPP_HARDENING_MODE_DEBUG`) on
   8150dd1: the 38 norm checks pass with no reports.
 - The same build on 3c79b85: the 39 norm checks pass. On the tree

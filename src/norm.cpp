@@ -797,7 +797,7 @@ void SelscanNorm::windowQuantiles(const double sortedSNPs[], double frac[], int 
 {
     for (int q = 0; q < numQuantiles; q++)
         quantileBound[q] = (numWindows > 0)
-            ? gsl_stats_quantile_from_sorted_data(sortedSNPs, 1, numWindows, double(q + 1) / double(numQuantiles))
+            ? snum::quantile_sorted(sortedSNPs, numWindows, double(q + 1) / double(numQuantiles))
             : 0.0;
     if (numWindows == 0) {
         cerr << "WARNING: no windows" << label << " with enough SNPs; no window percentiles computed.\n";
@@ -820,13 +820,13 @@ void SelscanNorm::windowQuantiles(const double sortedSNPs[], double frac[], int 
         if (qCount[bb] == 0) continue;   // tied bounds: no window is assigned here
         nUsed++;
         double *slice = &(frac[qStart[bb]]);
-        gsl_sort(slice, 1, qCount[bb]);
+        snum::sort(slice, qCount[bb]);
         if (FINE_PERCENTILE) {
             for (int p = 1; p <= 100; p++)
-                topWindowBoundary[bb][to_string(p) + ".0"] = gsl_stats_quantile_from_sorted_data(slice, 1, qCount[bb], 1.0 - double(p) / 100.0);
+                topWindowBoundary[bb][to_string(p) + ".0"] = snum::quantile_sorted(slice, qCount[bb], 1.0 - double(p) / 100.0);
         } else {
-            topWindowBoundary[bb]["1.0"] = gsl_stats_quantile_from_sorted_data(slice, 1, qCount[bb], 0.990);
-            topWindowBoundary[bb]["5.0"] = gsl_stats_quantile_from_sorted_data(slice, 1, qCount[bb], 0.950);
+            topWindowBoundary[bb]["1.0"] = snum::quantile_sorted(slice, qCount[bb], 0.990);
+            topWindowBoundary[bb]["5.0"] = snum::quantile_sorted(slice, qCount[bb], 0.950);
         }
         if (qCount[bb] < 100) nSmall++;
         cerr << quantileBound[bb] << " " << topWindowBoundary[bb]["1.0"] << " " << topWindowBoundary[bb]["5.0"] << " " << qCount[bb] << "\n";
@@ -979,7 +979,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     }
 
     //Sort allSNPsPerWindow and rearrange allFracCritPerWindow based on that sorting
-    gsl_sort2(allSNPsPerWindow, 1, allFracCritPerWindow, 1, numWindows);
+    snum::sort2(allSNPsPerWindow, allFracCritPerWindow, numWindows);
 
     double *quantileBound = new double[numQuantiles];
     map<string, double> *topWindowBoundary = new map<string, double>[numQuantiles];
@@ -1294,8 +1294,8 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     }
 
     //Sort allSNPsPerWindow and rearrange allFracCritPerWindow based on that sorting
-    gsl_sort2(allSNPsPerWindowTop, 1, allFracCritPerWindowTop, 1, numWindowsTop);
-    gsl_sort2(allSNPsPerWindowBot, 1, allFracCritPerWindowBot, 1, numWindowsBot);
+    snum::sort2(allSNPsPerWindowTop, allFracCritPerWindowTop, numWindowsTop);
+    snum::sort2(allSNPsPerWindowBot, allFracCritPerWindowBot, numWindowsBot);
 
     double *quantileBoundTop = new double[numQuantiles];
     double *quantileBoundBot = new double[numQuantiles];
@@ -1479,7 +1479,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     }
 
     //Sort allSNPsPerWindow and rearrange allFracCritPerWindow based on that sorting
-    gsl_sort2(allSNPsPerWindow, 1, allFracCritPerWindow, 1, numWindows);
+    snum::sort2(allSNPsPerWindow, allFracCritPerWindow, numWindows);
 
     double *quantileBound = new double[numQuantiles];
     map<string, double> *topWindowBoundary = new map<string, double>[numQuantiles];
@@ -1599,11 +1599,11 @@ void SelscanNorm::critCutoffs(const double score[], int nloci, double critPercen
     }
     std::sort(v.begin(), v.end());
     if (oneTailed) {
-        upperCutoff = gsl_stats_quantile_from_sorted_data(v.data(), 1, v.size(), 1 - critPercent);
+        upperCutoff = snum::quantile_sorted(v.data(), v.size(), 1 - critPercent);
         lowerCutoff = -std::numeric_limits<double>::infinity();
     } else {
-        upperCutoff = gsl_stats_quantile_from_sorted_data(v.data(), 1, v.size(), 1 - critPercent / 2.0);
-        lowerCutoff = gsl_stats_quantile_from_sorted_data(v.data(), 1, v.size(), critPercent / 2.0);
+        upperCutoff = snum::quantile_sorted(v.data(), v.size(), 1 - critPercent / 2.0);
+        lowerCutoff = snum::quantile_sorted(v.data(), v.size(), critPercent / 2.0);
     }
     cerr << "\n--crit-percent cutoffs from " << v.size() << " of " << nloci << " loci with a normalised score"
          << (oneTailed ? " (one-tailed)" : "") << ".\n";

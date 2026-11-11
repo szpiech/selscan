@@ -24,7 +24,7 @@ L_PATH = ../lib/macos-arm                 # Path to GSL libraries
 
 # Linking options
 LINK_OPTS_SELSCAN = -lpthread -lz         # Link with pthread and zlib for selscan
-LINK_OPTS_NORM = -L$(L_PATH) -lgsl -lgslcblas # Link with GSL and CBLAS for norm #LINK_OPTS_NORM = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
+LINK_OPTS_NORM =                          # GSL is no longer used
 
 # Object file groups
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o

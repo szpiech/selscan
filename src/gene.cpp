@@ -103,22 +103,20 @@ void GeneAnalyzer::perm_test(string fileA, string fileB, long seed) {
     std::iota(indices.begin(), indices.end(), 0);
 
     if (seed < 0) seed = static_cast<long>(std::time(nullptr));
-    gsl_rng_env_setup();
-    gsl_rng* r = gsl_rng_alloc(gsl_rng_default);
-    gsl_rng_set(r, static_cast<unsigned long>(seed));
+    snum::Rng rng(static_cast<uint64_t>(seed));   // was gsl_rng_default, so a seed gives different permutations than GSL builds
 
-    double T_obs = gsl_stats_mean(scoresA.data(), 1, scoresA.size()) -
-                gsl_stats_mean(scoresB.data(), 1, scoresB.size());
+    double T_obs = snum::mean(scoresA.data(), scoresA.size()) -
+                snum::mean(scoresB.data(), scoresB.size());
 
     for (int i = 0; i < n_perms; ++i) {
-        gsl_ran_shuffle(r, indices.data(), n_total, sizeof(int));
+        rng.shuffle(indices.data(), n_total);
 
         std::vector<double> permA(nA), permB(n_total - nA);
         for (int j = 0; j < nA; ++j) permA[j] = combined[indices[j]];
         for (int j = nA; j < n_total; ++j) permB[j - nA] = combined[indices[j]];
 
-        double T_perm = gsl_stats_mean(permA.data(), 1, permA.size()) -
-                        gsl_stats_mean(permB.data(), 1, permB.size());
+        double T_perm = snum::mean(permA.data(), permA.size()) -
+                        snum::mean(permB.data(), permB.size());
         if (T_perm >= T_obs) count++;
     }
 
@@ -132,7 +130,6 @@ void GeneAnalyzer::perm_test(string fileA, string fileB, long seed) {
     std::cout << ((p_value < 0.05) ? "Set A is significantly higher than Set B.\n"
                                 : "No significant difference between Set A and Set B.\n");
 
-    gsl_rng_free(r);
 }
 
 
@@ -171,136 +168,23 @@ double GeneAnalyzer::compute_length_residual(
     return residual;
 }
 
-// if any part of gene overlaps a window, mark that window as overlapping the gene
-// if a window overlaps multiple genes, list all genes in the annotation (comma-separated?), 
-/**
- * Regresses score ~ intercept + log(length) using GSL
- * and returns residuals (length-corrected scores).
- *
- * @param lengths  Vector of gene lengths
- * @param scores   Vector of per-gene scores
- * @return residuals vector (score corrected for length)
- */
-std::vector<double> GeneAnalyzer::regress_out_length(
-    const std::vector<double> &lengths,
-    const std::vector<double> &scores) 
-{
-    size_t n = lengths.size();
-    size_t p = 2; // intercept + log(length)
-
-    // First collect only valid (score != -1) entries
-    std::vector<size_t> valid_idx;
-    valid_idx.reserve(n);
-    for (size_t i = 0; i < n; i++) {
-        if (abs(scores[i]) != MISSING_SCORE) {
-            valid_idx.push_back(i);
-        }
-    }
-
-    size_t m = valid_idx.size(); // number of valid points
-    if (m == 0) {
-        // nothing to fit, just return original
-        return scores;
-    }
-
-    gsl_matrix *X = gsl_matrix_alloc(m, p);
-    gsl_vector *y = gsl_vector_alloc(m);
-    gsl_vector *c = gsl_vector_alloc(p);
-    gsl_matrix *cov = gsl_matrix_alloc(p, p);
-    double chisq;
-
-    // Fill design matrix and response with only valid data
-    for (size_t j = 0; j < m; j++) {
-        size_t i = valid_idx[j];
-        gsl_matrix_set(X, j, 0, 1.0);                  // intercept
-        gsl_matrix_set(X, j, 1, std::log(lengths[i])); // log(length)
-        gsl_vector_set(y, j, scores[i]);
-    }
-
-    // Fit linear regression
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(m, p);
-    gsl_multifit_linear(X, y, c, cov, &chisq, work);
-    gsl_multifit_linear_free(work);
-
-    double beta0 = gsl_vector_get(c, 0);
-    double beta1 = gsl_vector_get(c, 1);
-
-    // Compute residuals (keep same size as input)
-    std::vector<double> residuals(n, -1.0);
-    for (size_t j = 0; j < m; j++) {
-        size_t i = valid_idx[j];
-        double pred = beta0 + beta1 * std::log(lengths[i]);
-        residuals[i] = scores[i] - pred;
-    }
-
-    // Shift residuals so the minimum valid one is 0
-    // double minResidual = std::numeric_limits<double>::max();
-    // for (double r : residuals) {
-    //     if (r != -1.0) minResidual = std::min(minResidual, r);
-    // }
-    // if (minResidual < 0.0) {
-    //     for (auto &r : residuals) {
-    //         if (r != -1.0) r -= minResidual;
-    //     }
-    // }
-
-    // Free memory
-    gsl_matrix_free(X);
-    gsl_matrix_free(cov);
-    gsl_vector_free(y);
-    gsl_vector_free(c);
-
-    return residuals;
-}
-
-
 std::pair<double,double> GeneAnalyzer::fit_length_regression(
     const std::vector<double> &lengths,
     const std::vector<double> &scores)
 {
-    size_t n = lengths.size();
-    size_t p = 2; // intercept + log(length)
-
-    // Collect valid entries
-    std::vector<size_t> valid_idx;
-    valid_idx.reserve(n);
-    for (size_t i = 0; i < n; i++) {
-        if (abs(scores[i]) != MISSING_SCORE)
-            valid_idx.push_back(i);
+    // score ~ intercept + log(length), over genes with a score
+    std::vector<double> x, y;
+    x.reserve(lengths.size());
+    y.reserve(lengths.size());
+    for (size_t i = 0; i < lengths.size(); i++) {
+        if (abs(scores[i]) != MISSING_SCORE) {
+            x.push_back(std::log(lengths[i]));
+            y.push_back(scores[i]);
+        }
     }
-
-    size_t m = valid_idx.size();
-    // gsl_multifit_linear needs m >= p, and with m == p every residual is 0.
-    // Callers check for at least p + 1 genes first (B25); this is a backstop
-    // so GSL's default handler cannot abort the process.
-    if (m <= p) return {0.0, 0.0};
-
-    gsl_matrix *X = gsl_matrix_alloc(m, p);
-    gsl_vector *y = gsl_vector_alloc(m);
-    gsl_vector *c = gsl_vector_alloc(p);
-    gsl_matrix *cov = gsl_matrix_alloc(p, p);
-    double chisq;
-
-    for (size_t j = 0; j < m; j++) {
-        size_t i = valid_idx[j];
-        gsl_matrix_set(X, j, 0, 1.0);
-        gsl_matrix_set(X, j, 1, std::log(lengths[i]));
-        gsl_vector_set(y, j, scores[i]);
-    }
-
-    gsl_multifit_linear_workspace *work = gsl_multifit_linear_alloc(m, p);
-    gsl_multifit_linear(X, y, c, cov, &chisq, work);
-    gsl_multifit_linear_free(work);
-
-    double beta0 = gsl_vector_get(c, 0);
-    double beta1 = gsl_vector_get(c, 1);
-
-    gsl_matrix_free(X);
-    gsl_matrix_free(cov);
-    gsl_vector_free(y);
-    gsl_vector_free(c);
-
-    return {beta0, beta1};
+    // With 2 genes every residual is 0. Callers require at least 3 (B25).
+    if (x.size() <= 2) return {0.0, 0.0};
+    return snum::fit_line(x, y);
 }
 
 

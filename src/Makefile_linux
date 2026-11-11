@@ -14,7 +14,7 @@ I_PATH = -I../include
 L_PATH = ../lib/linux
 
 # Libraries
-LDLIBS = -lm -pthread -lz -L$(L_PATH) -lgsl -lgslcblas
+LDLIBS = -lm -pthread -lz
 
 # Header dependencies: each compile also writes <object>.d listing every header
 # it included, and those files are read back below, so editing a header

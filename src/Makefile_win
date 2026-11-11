@@ -13,7 +13,7 @@ LINK_OPTS_LATER =  -L../lib/win32
 
 LINK_OPTS2=-L$(L_PATH) -lpthread -lz 
 #For static linking of norm program to gsl libs
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+LINK_OPTS =
 
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o

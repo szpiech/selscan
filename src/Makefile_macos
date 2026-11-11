@@ -25,7 +25,7 @@ L_PATH = ../lib/macos-arm                 # Path to GSL libraries
 
 # Linking options
 LINK_OPTS_SELSCAN = -lpthread -lz         # Link with pthread and zlib for selscan
-LINK_OPTS_NORM = -L$(L_PATH) -lgsl -lgslcblas # Link with GSL and CBLAS for norm #LINK_OPTS_NORM = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a   #For static linking of norm program to gsl libs
+LINK_OPTS_NORM =                          # GSL is no longer used
 
 # Header dependencies: each compile also writes <object>.d listing every header
 # it included, and those files are read back below, so editing a header

@@ -29,26 +29,22 @@
 #include <vector>
 #include <cstring>
 #include <sstream>
-#include <gsl/gsl_statistics.h>
-#include <gsl/gsl_sort.h>
 #include "param_t.h"
 
 
 //
 #include <iostream>
 #include <vector>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
 #include <algorithm> // for std::shuffle
 #include <numeric>   // for std::accumulate
 #include <ctime>     // for seeding
 
 #include "gene.h"
+#include "selscan-numeric.h"
 
 using namespace std;
 
 // added afterwards
-#include <gsl/gsl_multifit.h>
 
 struct BinData {
     std::vector<double> bins;

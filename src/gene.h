@@ -10,21 +10,17 @@
 #include <vector>
 #include <cstring>
 #include <sstream>
-#include <gsl/gsl_statistics.h>
-#include <gsl/gsl_sort.h>
 
 #include <iostream>
 #include <vector>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
 #include <algorithm> // for std::shuffle
 #include <numeric>   // for std::accumulate
 #include <ctime>     // for seeding
 
 #include <fstream>
+#include "selscan-numeric.h"
 
 // added afterwards
-#include <gsl/gsl_multifit.h>
 
 
 
@@ -106,8 +102,6 @@ public:
     double beta0,
     double beta1);
 
-    std::vector<double> regress_out_length(const std::vector<double> &lengths,
-                                           const std::vector<double> &scores); // Score_length_corrected
 
     std::pair<double, double> fit_length_regression(
         const std::vector<double> &lengths,
