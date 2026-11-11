@@ -157,7 +157,7 @@ identical() {
 # ---------------------------------------------------------------- case list
 CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh ehh12
 ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
-ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap
+ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
 threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants pi-edges errors help"
 
@@ -178,6 +178,10 @@ for f in "$EXAMPLE"/*; do ln -s "$f" .; done
 # gap.map: example.map with a 300 kb gap (and 0.3 cM) inserted before the
 # middle locus, larger than the default --max-gap of 200 kb.
 awk '{ if (NR > 4162) { $4 += 300000; $3 = sprintf("%.15g", $3 + 0.3) } print }' example.map > gap.map
+# gap100.map: the same with a 100 kb gap (and 0.1 cM), between --gap-scale
+# (20 kb) and --max-gap (200 kb), so cores cross it with the distance scaled
+# by 20000/100000. No shipped map has a gap in that range.
+awk '{ if (NR > 4162) { $4 += 100000; $3 = sprintf("%.15g", $3 + 0.1) } print }' example.map > gap100.map
 
 # fd1/fd2.vcf: p1/p2 with every 400th site (from the 200th) turned into a fixed
 # difference, all 0|0 in p1 and all 1|1 in p2. With equal panel sizes these
@@ -251,6 +255,9 @@ golden ihs-tped       ihs.out          -- --ihs --tped p1.tped
 golden ihs-gap        ihs.out          -- --ihs --hap example.hap --map gap.map
 golden nsl-gap        nsl.out          -- --nsl --hap example.hap --map gap.map
 golden ihh12-gap      ihh12.out        -- --ihh12 --hap example.hap --map gap.map
+golden ihs-gap100     ihs.out          -- --ihs --hap example.hap --map gap100.map
+golden nsl-gap100     nsl.out          -- --nsl --hap example.hap --map gap100.map
+golden ihh12-gap100   ihh12.out        -- --ihh12 --hap example.hap --map gap100.map
 
 # norm cases read the RECORDED golden statistic tables, so they test norm alone.
 norm_golden() {
