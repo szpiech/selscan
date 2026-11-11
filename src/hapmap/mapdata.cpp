@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include "../gzstream.h"
+#include "../gzlinereader.h"
 #include <queue>
 #include <sstream>
 #include <limits>
@@ -178,7 +179,10 @@ void MapData::readMapDataTPED(string filename, size_t expected_loci, int expecte
 }
 
 void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_t>& skip_queue) {
-    igzstream fin;
+    // P1: read with the buffered GzLineReader and take CHROM, POS and ID
+    // from each line directly (igzstream with getline/>> was the slowest
+    // part of VCF loading). Empty lines are skipped, as the VCF readers do.
+    GzLineReader fin;
     cerr << "Opening " << filename << " to read map data...\n";
     fin.open(filename.c_str());
 
@@ -190,15 +194,10 @@ void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_
 
     string line;
     size_t nloci_before_filter = 0;
-    int numCommentedLines = 0;
     while (getline(fin, line))
     {
-        if (line[0] == '#') {
-            numCommentedLines++;
-        }
-        else {
-            nloci_before_filter++;
-        }
+        if (line.empty() || line[0] == '#') continue;
+        nloci_before_filter++;
     }
 
     if (nloci_before_filter-skip_queue.size() != expected_loci)
@@ -207,8 +206,6 @@ void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_
         exit(EXIT_FAILURE);
     }
 
-    fin.clear(); // clear error flags
-    //fin.seekg(fileStart);
     fin.close();
     fin.open(filename.c_str());
 
@@ -220,56 +217,41 @@ void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_
 
     cerr << "Loading map data for " << nloci_before_filter-skip_queue.size() << " loci\n";
 
-    for (int i = 0; i < numCommentedLines; i++) {
-        getline(fin, line);
-    }
+    this->initMapData(nloci_before_filter-skip_queue.size());
 
-    this->initMapData(nloci_before_filter-skip_queue.size()); 
-    
-    double Mb = 1000000.0;
-    
-    string chr;
+    const double Mb = 1000000.0;
 
-    //int n_chromosomes_included = 0;
+    // next whitespace-delimited field of line starting at p (as `>>` would)
+    auto nextField = [](const string &l, size_t &p) -> string {
+        while (p < l.size() && (l[p] == ' ' || l[p] == '\t')) ++p;
+        size_t q = p;
+        while (q < l.size() && l[q] != ' ' && l[q] != '\t') ++q;
+        string f = l.substr(p, q - p);
+        p = q;
+        return f;
+    };
 
+    size_t locus_before_filter = 0;
     size_t locus_after_filter = 0;
-    for (size_t locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
+    while (locus_before_filter < nloci_before_filter && getline(fin, line))
     {
-        if(!skip_queue.empty()){
-            if(skip_queue.front()==locus_before_filter){
-                skip_queue.pop();
-                string junk;
-                fin >> junk;
-                fin >>  junk;
-                fin >>  junk;
-                getline(fin, line);
-                continue;
-            }
+        if (line.empty() || line[0] == '#') continue;
+        if (!skip_queue.empty() && skip_queue.front() == locus_before_filter) {
+            skip_queue.pop();
+            locus_before_filter++;
+            continue;
         }
-        
-        fin >> mapEntries[locus_after_filter].chr;
-        fin >> mapEntries[locus_after_filter].physicalPos;
-        fin >> mapEntries[locus_after_filter].locusName;
-        //locus_query_map[mapEntries[locus].locusName] = locus;
-        //locus_query_map[to_string(mapEntries[locus_after_filter].physicalPos)] = locus_after_filter;
-        mapEntries[locus_after_filter].locId = locus_before_filter;
-
-        //if exists in map do nothing else insert
-        // if(chr_list.find(mapEntries[locus_after_filter].chr) == chr_list.end()){
-        //     chr_list[mapEntries[locus_after_filter].chr] = n_chromosomes_included++;
-        // }
-
-        mapEntries[locus_after_filter].geneticPos = (long double)(mapEntries[locus_after_filter].physicalPos)/Mb;
-        //cout<<mapEntries[locus_after_filter].geneticPos<<" "<<mapEntries[locus_after_filter].physicalPos<<endl;
-        getline(fin, line);
+        size_t p = 0;
+        MapEntry &e = mapEntries[locus_after_filter];
+        e.chr = nextField(line, p);
+        e.physicalPos = atoi(nextField(line, p).c_str());
+        e.locusName = nextField(line, p);
+        e.locId = locus_before_filter;
+        e.geneticPos = (long double)(e.physicalPos)/Mb;
         locus_after_filter++;
+        locus_before_filter++;
     }
 
-    // if(chr_list.size() == 0){
-    //     cerr<<"ERROR: No chromosomes found in map file.\n";
-    //     throw 0;
-    // }
-    
     fin.close();
 }
 

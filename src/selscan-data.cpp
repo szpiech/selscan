@@ -1,5 +1,6 @@
 
 #include "selscan-data.h"
+#include "gzlinereader.h"
 #include <set>
 
 void HapMap::initParamsInHap(HapData &hapData){
@@ -404,7 +405,7 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 // Column 4 (physical position) of every row of a TPED or map file.
 static vector<long> readPositionColumn(const string& filename)
 {
-    igzstream fin;
+    GzLineReader fin;   // P1: buffered reader
     fin.open(filename.c_str());
     if (fin.fail()) {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
@@ -431,7 +432,7 @@ static vector<long> readPositionColumn(const string& filename)
 // derived.
 static void scanDerivedCounts(const string& filename, char fmt, vector<long>& derived, long& nalleles)
 {
-    igzstream fin;
+    GzLineReader fin;   // P1: buffered reader
     fin.open(filename.c_str());
     if (fin.fail()) {
         cerr << "ERROR: Failed to open " << filename << " for reading.\n";
@@ -482,7 +483,7 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
 {
     VCFPass1Result result;
 
-    igzstream fin;
+    GzLineReader fin;   // P1: buffered reader
     fin.open(filename.c_str());
     if (fin.fail()) {
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
@@ -684,7 +685,7 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
 
 void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFPass1Result& pass1)
 {
-    igzstream fin;
+    GzLineReader fin;   // P1: buffered reader
     fin.open(filename.c_str());
     if (fin.fail()) {
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
@@ -931,7 +932,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
     initParamsInHap(hapData);
 
-    igzstream fin;
+    GzLineReader fin;   // P1: buffered reader
     queue<size_t> skiplist;   // keep your original queue-based skip structure
 
     LOG("Opening " << filename << " to count number of haplotypes and loci...");
