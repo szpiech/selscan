@@ -1604,7 +1604,6 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     double gpos, freq1, ihh12, data, normedData;
     bool crit;
     int numWindows = 0;
-    double maxAbs = -99999.9;
     
     for (int i = 0; i < nfiles; i++)
     {
@@ -1628,6 +1627,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
         int winEnd = winStart + winSize - 1;
         int numSNPs = 0;
         int numCrit = 0;
+        double maxAbs = -99999.9;   // per file (B45: carried over from the previous file)
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> chrs[i];

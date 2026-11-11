@@ -658,6 +658,17 @@ if selected norm-robust; then
         then pass "norm-bpwin:last-window:$st"
         else fail "norm-bpwin:last-window:$st" "exit $RC, last SNP $last, last window $wl"; fi
     done
+    # B45: iHH12 window maxima are per file. File A ends in a large score;
+    # file B's first window must report B's own maximum.
+    gzip -dc "$EXPECTED/ihh12.tsv.gz" > nm_B.ihh12.out
+    awk -F'\t' -v OFS='\t' -v n="$(wc -l < nm_B.ihh12.out)" 'NR==n {$5=50} {print}' nm_B.ihh12.out > nm_A.ihh12.out
+    run nm.log norm --ihh12 --bp-win --winsize 100000 --files nm_A.ihh12.out nm_B.ihh12.out
+    w1=$(awk -F'\t' 'NR==2 {print $2, $3, $7}' nm_B.ihh12.out.norm.100kb.windows 2>/dev/null)
+    mx=$(echo "$w1" | { read s e sc; awk -F'\t' -v s="$s" -v e="$e" 'NR>1 && $3>=s && $3<=e && (m=="" || $6>m) {m=$6} END {print m}' nm_B.ihh12.out.norm; })
+    sc=$(echo "$w1" | awk '{print $3}')
+    if [ "$RC" -eq 0 ] && [ -n "$mx" ] && awk -v a="$sc" -v b="$mx" 'BEGIN { d=a-b; if (d<0) d=-d; exit !(d < 1e-4) }'
+    then pass "norm-bpwin:ihh12-per-file-max"
+    else fail "norm-bpwin:ihh12-per-file-max" "exit $RC, first window of file B scored '$sc', its SNPs' maximum '$mx'"; fi
 fi
 
 if selected errors; then
