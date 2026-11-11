@@ -1862,9 +1862,17 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
 static inline int freqBin(double f, int numBins, const double threshold[], bool includeFreqOne)
 {
     if (f >= 1.0) return includeFreqOne ? numBins - 1 : -1;
-    for (int b = 0; b < numBins; b++)
-        if (f < threshold[b]) return b;
-    return numBins - 1; // f < 1.0 but at/after a rounded last edge
+    // B34: bins are left-closed [b/numBins, (b+1)/numBins). The index is
+    // computed directly rather than by comparing with (b+1)*step, which in
+    // floating point lands above some decimal edges (7 of 19 at 20 bins) and
+    // sent frequencies printed exactly on those edges to the bin below. The
+    // tolerance of 1e-6 in frequency covers selscan's 6-significant-digit
+    // printing of frequencies.
+    (void)threshold;
+    int b = (int)std::floor(f * numBins + 1e-6 * numBins);
+    if (b < 0) b = 0;
+    if (b >= numBins) b = numBins - 1;
+    return b;
 }
 
 int SelscanNorm::getMeanVarBins(double freq[], double data[], int nloci, double mean[], double variance[], int n[], int numBins, double threshold[], bool includeFreqOne)
