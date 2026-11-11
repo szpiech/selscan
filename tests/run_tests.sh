@@ -60,8 +60,6 @@ KNOWN_FAIL="
 norm-freq1-excluded:ihs  B4
 norm-single-bin-linear:xpehh  B4
 norm-single-bin-linear:xpnsl  B4
-xp-swap-antisymmetry:xpehh-unphased  B6
-xp-swap-antisymmetry:xpnsl-unphased  B6
 multistat==single:ihs--keep-low-freq  B27
 multistat==single:nsl--keep-low-freq  B27
 multistat==single:ihh12--keep-low-freq  B27

@@ -137,7 +137,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
         pooled->normalizer = square_alt(pooled->nhaps);
     }else if(p.WAGH){
         p1->normalizer = twice_num_pair(p1->n_c[0])+twice_num_pair(p1->n_c[1])+twice_num_pair(p1->n_c[2]);
-        p2->normalizer = twice_num_pair(p2->n_c[0])+twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[1]);
+        p2->normalizer = twice_num_pair(p2->n_c[0])+twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[2]);
         pooled->normalizer = twice_num_pair(pooled->n_c[0])+twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[2]);
     }else{
         p1->normalizer = twice_num_pair(p1->nhaps);
@@ -158,12 +158,16 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
     if(p.ALT){
         p1->curr_ehh_before_norm = square_alt(p1->n_c[2])+square_alt(p1->n_c[1])+square_alt(p1->n_c[0]);
-        p2->curr_ehh_before_norm = square_alt(p1->n_c[2])+square_alt(p2->n_c[1])+square_alt(p2->n_c[0]);
-        pooled->curr_ehh_before_norm = square_alt(p1->n_c[2])+square_alt(pooled->n_c[1])+square_alt(pooled->n_c[0]);
+        p2->curr_ehh_before_norm = square_alt(p2->n_c[2])+square_alt(p2->n_c[1])+square_alt(p2->n_c[0]);
+        pooled->curr_ehh_before_norm = square_alt(pooled->n_c[2])+square_alt(pooled->n_c[1])+square_alt(pooled->n_c[0]);
     }else{
         p1->curr_ehh_before_norm =  twice_num_pair(p1->n_c[2]) + twice_num_pair(p1->n_c[1])+twice_num_pair(p1->n_c[0]);
-        p2->curr_ehh_before_norm =  twice_num_pair(p1->n_c[2]) +  twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[0]);
-        pooled->curr_ehh_before_norm =  twice_num_pair(p1->n_c[2]) + twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[0]);
+        // Each group's core homozygosity from its OWN genotype-class counts.
+        // 2.1.x-3.0.1 used population 1's homozygous-derived count (p1->n_c[2])
+        // for population 2 and the pooled sample, so unphased XP-EHH/XP-nSL
+        // were wrong and not antisymmetric under swapping the populations.
+        p2->curr_ehh_before_norm =  twice_num_pair(p2->n_c[2]) +  twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[0]);
+        pooled->curr_ehh_before_norm =  twice_num_pair(pooled->n_c[2]) + twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[0]);
     }
 
     p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;
