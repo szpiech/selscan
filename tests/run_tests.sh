@@ -57,9 +57,6 @@ case "$BIN" in /*) ;; *) BIN="$PWD/$BIN" ;; esac
 # ------------------------------------------------------------ known failures
 # <check name> <finding id>. Remove an entry in the commit that fixes it.
 KNOWN_FAIL="
-multistat==single:ihs--keep-low-freq  B27
-multistat==single:nsl--keep-low-freq  B27
-multistat==single:ihh12--keep-low-freq  B27
 multiparam==single:pconfig2  B32
 multiparam==single:pconfig7  B32
 multiparam==single:pconfig9  B32

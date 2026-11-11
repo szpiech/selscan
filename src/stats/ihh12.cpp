@@ -187,7 +187,11 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
         i = (downstream)? i-1 : i+1; // update i 
 
-        if(p.MULTI_MAF){
+        // Skipping low-MAF sites here reproduces the loader's prefilter for runs
+        // that load once for several statistics or parameter sets; it applies
+        // only when that prefilter would (no --keep-low-freq). It used to ignore
+        // --keep-low-freq, so that flag was dropped in combined runs (B27).
+        if(p.MULTI_MAF && p.SKIP){
             if(hm->hapData->get_maf(i) < p.MAF){
                 skipped_due_to_multimaf++;
                 continue;
