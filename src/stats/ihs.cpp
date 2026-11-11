@@ -661,6 +661,7 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         double scale = double(p.SCALE_PARAMETER) / double(physicalDistance(i, prev_index, downstream) );
         if (scale > 1) scale = 1;
         distance *= scale;
+        const int gap = physicalDistance(i, prev_index, downstream);
         prev_index = i; // save previous index for genetic distance calculation
 
         if(p.CALC_IHS && !p.CALC_NSL){
@@ -668,6 +669,24 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
                 //DBG("Break reason for locus "<<locus<<":: EHH_CUTOFF. "<<curr_ehh1_before_norm*1.0/normalizer_1<< "<=" << p.EHH_CUTOFF <<endl);
                 break;
             }
+        }
+
+        // --max-gap: a core whose haplotypes must cross a gap larger than
+        // MAX_GAP before reaching a stop condition is not scored (manual 5.4.6,
+        // and what the unphased, XP and iHH12 kernels already do). The phased
+        // iHS/nSL kernel lacked this test since the v2.1 rewrite and integrated
+        // straight across gaps. Tested after the cutoff, so a core that has
+        // already decayed stops normally instead of being dropped.
+        if (gap > p.MAX_GAP){
+            {
+                std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: Reached a gap of " << gap
+                        << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }
+            delete[] group_count;
+            delete[] group_id;
+            delete[] isDerived;
+            return skipLocusPair();
         }
 
         if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ 
