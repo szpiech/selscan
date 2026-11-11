@@ -5,7 +5,7 @@
 */
 void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
 
-    unordered_map<int, vector<int> > m;
+    GroupSplitMap& m = threadSplitMap(0);   // P5
 
     EHH12_ehh_data ehhdata;
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
@@ -153,7 +153,7 @@ void EHH12::main(string query_list){
     
 }
 
-void EHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, EHH12_ehh_data* ehhdata){
+void EHH12::updateEHH_from_split(const GroupSplitMap& m, EHH12_ehh_data* ehhdata){
     double sum_del_update = 0;
     for (const auto &ele : m) {
         int old_group_id = ele.first;

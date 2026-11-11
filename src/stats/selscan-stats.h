@@ -4,6 +4,7 @@
 #include <time.h>
 #include <thread>
 #include "../binom.h"
+#include "groupsplit.h"
 #include "../selscan-data.h"
 #include <assert.h>
 

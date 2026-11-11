@@ -121,7 +121,7 @@ class EHH12 : public SelscanStats{
         vector<EHH12Output> output;
         map<string, int> locus_query_map;
         void calc_ehh12_unidirection(int locus, bool downstream);
-        void updateEHH_from_split(const unordered_map<int, vector<int> > & m, EHH12_ehh_data* ehhdata);
+        void updateEHH_from_split(const GroupSplitMap& m, EHH12_ehh_data* ehhdata);
 
         void init_output_and_querymap(){
             this->output.resize(hm->mapData->nloci);

@@ -83,7 +83,7 @@ void IHH12::findMaxTwo(int* arr, int n, int &max1, int &max2) {
     }
 }
 
-void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* ehhdata){
+void IHH12::updateEHH_from_split(const GroupSplitMap& m, IHH12_ehh_data* ehhdata){
     double sum_del_update = 0;
     for (const auto &ele : m) {
         int old_group_id = ele.first;
@@ -150,7 +150,7 @@ void IHH12::updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH
 double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
     double ihh12 = 0;
-    unordered_map<int, vector<int> > m;
+    GroupSplitMap& m = threadSplitMap(0);   // P5
 
     IHH12_ehh_data ehhdata;
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2

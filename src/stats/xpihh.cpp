@@ -7,7 +7,7 @@ XPIHH_ehh_data::~XPIHH_ehh_data(){
     delete[] group_id;
 }
 
-void XPIHH::updateGroup_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc){
+void XPIHH::updateGroup_from_split_unphased( GroupSplitMap& m, int* group_count, int* group_id, int& totgc){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
         int newgroup_size = ele.second.size() ;
@@ -25,7 +25,7 @@ void XPIHH::updateGroup_from_split_unphased( unordered_map<int, vector<int> >& m
     }
 }
 
-void XPIHH::updateEHH_from_split(const unordered_map<int, vector<int> > & m, XPIHH_ehh_data* ehhdata){
+void XPIHH::updateEHH_from_split(const GroupSplitMap& m, XPIHH_ehh_data* ehhdata){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
         int newgroup_size = ele.second.size() ;
@@ -246,11 +246,9 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         prev_index = i; 
 
-        std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map< int, std::vector<int>>());
-        unordered_map<int, vector<int> >& m = (* mp);
+        GroupSplitMap& m = threadSplitMap(0);   // P5
 
-        std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp_pooled(new std::unordered_map< int, std::vector<int>>());
-        unordered_map<int, vector<int> >& m_pooled = (* mp_pooled);
+        GroupSplitMap& m_pooled = threadSplitMap(1);   // P5
 
         if(p1->totgc != p1->nhaps){
             ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
@@ -366,8 +364,7 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         return calc_ehh_unidirection_unphased(locus, downstream);
     }
 
-    std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map< int, std::vector<int>>());
-    unordered_map<int, vector<int> >& m = (* mp);
+    GroupSplitMap& m = threadSplitMap(0);   // P5
 
     int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
     if(hm->hapData->nloci != hm->hapData2->nloci){

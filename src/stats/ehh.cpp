@@ -158,8 +158,7 @@ void EHH::calc_ehh_unidirection(int locus, bool downstream){
             //cout<<i<< " "<<output[i].pdist<<" "<<output[i].ehh0<<" "<<output[i].ehh1<<" "<<output[i].ehh<<endl;
         }else{
             // PHASE 2: GET MAP
-            std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
-            unordered_map<int, vector<int> >& m = (* mp);
+            GroupSplitMap& m = threadSplitMap(0);   // P5
             ACTION_ON_ALL_SET_BITS(get_all_1s(i, downstream), {
                 int old_group_id = group_id[set_bit_pos];
                 m[old_group_id].push_back(set_bit_pos);
@@ -338,8 +337,7 @@ void EHH::main(string query_list){
 
 void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
 
-    std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
-    unordered_map<int, vector<int> >& m = (* mp);
+    GroupSplitMap& m = threadSplitMap(0);   // P5
 
     int numHaps = hm->hapData->nhaps;
 

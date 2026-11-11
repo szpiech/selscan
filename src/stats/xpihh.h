@@ -181,8 +181,8 @@ class XPIHH : public SelscanStats{
         pair<double, double> calc_ehh_unidirection(int locus, bool downstream);
         pair<double, double> calc_ehh_unidirection_unphased(int locus, bool downstream);
 
-        void updateEHH_from_split(const unordered_map<int, vector<int> > & m, XPIHH_ehh_data* p);
-        void updateGroup_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc);
+        void updateEHH_from_split(const GroupSplitMap& m, XPIHH_ehh_data* p);
+        void updateGroup_from_split_unphased( GroupSplitMap& m, int* group_count, int* group_id, int& totgc);
 };
 
 

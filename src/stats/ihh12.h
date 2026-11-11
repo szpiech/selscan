@@ -119,7 +119,7 @@ class IHH12 : public SelscanStats{
     protected:
         int max_extend;
         //void static thread_main(int tid, unordered_map<int, vector<int> >& m, IHH12* obj);
-        void updateEHH_from_split(const unordered_map<int, vector<int> > & m, IHH12_ehh_data* p);
+        void updateEHH_from_split(const GroupSplitMap& m, IHH12_ehh_data* p);
     
     private:
         double calc_ihh12_at_locus(int locus);

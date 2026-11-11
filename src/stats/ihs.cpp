@@ -19,7 +19,7 @@
  * @param is2                Boolean array indicating if each chromosome has the ancestral allele at the core SNP.
  * @param group_core         Array tracking the core allele (1 = derived, 2 = ancestral, 0 = unknown) for each group.
  */
-void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, int* group_count, int* group_id, int& totgc, bool* is1, bool* is2, int* group_core){
+void IHS::updateEHH_from_split_unphased( GroupSplitMap& m, int* group_count, int* group_id, int& totgc, bool* is1, bool* is2, int* group_core){
     for (const auto &ele : m) {
         int old_group_id = ele.first;
         int newgroup_size = ele.second.size() ;
@@ -71,8 +71,7 @@ void IHS::updateEHH_from_split_unphased( unordered_map<int, vector<int> >& m, in
  */
 OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream){
     OutputUnphasedIHH skipLocusOutput = {SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE, SKIP_LOCUS_VALUE};
-    std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
-    unordered_map<int, vector<int> >& m = (* mp);
+    GroupSplitMap& m = threadSplitMap(0);   // P5
 
     int numHaps = hm->hapData->nhaps;
 
@@ -634,6 +633,14 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         }
     }
 
+    // P5: split bookkeeping for PHASE 2-3, allocated once per core
+    std::unique_ptr<int[]> split_cnt_own(new int[numHaps]()), split_new_own(new int[numHaps]), split_first_own(new int[numHaps]);
+    int* split_cnt = split_cnt_own.get();
+    int* split_new = split_new_own.get();
+    int* split_first = split_first_own.get();
+    std::vector<int> touched, setpos;
+    setpos.reserve(numHaps);
+
     int i = locus;  
     int prev_index = locus; // for multi-MAF
     int skipped_due_to_multimaf = 0; // for multi-MAF
@@ -724,51 +731,45 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             continue;
         }
 
-        // PHASE 2: GET MAP
-        std::unique_ptr<std::unordered_map<int, std::vector<int>>> mp(new std::unordered_map<int, std::vector<int>>());
-        unordered_map<int, vector<int> >& m = (* mp);
-
+        // PHASE 2-3: SPLIT GROUPS AT SITE i (P5)
+        // The haplotypes of group g that carry the set allele at site i form
+        // a new group unless they are all of g. Same partition and updates
+        // as GroupSplitMap (groupsplit.h), which the other kernels use;
+        // done inline here, without materialising member lists, because
+        // this kernel (iHS, nSL) is the most used and the inline form is
+        // 15-30% faster than GroupSplitMap on it.
         MyBitset* v2p = hm->hapData->hapEntries[i].hapbitset;
+        touched.clear();
+        setpos.clear();
         ACTION_ON_ALL_SET_BITS(v2p, {
-            int old_group_id = group_id[set_bit_pos];
-            m[old_group_id].push_back(set_bit_pos);
+            int g = group_id[set_bit_pos];
+            setpos.push_back(set_bit_pos);
+            if (split_cnt[g]++ == 0) { touched.push_back(g); split_first[g] = set_bit_pos; }
         });
-        
 
-        // PHASE 3: UPDATE EHH FROM SPLIT
+        for (const int g : touched) {
+            const int k = split_cnt[g];
+            split_cnt[g] = 0;
+            if (group_count[g] == k) { split_new[g] = -1; continue; }
+            split_new[g] = totgc;
 
-        for (const auto &ele : m) {
-            int old_group_id = ele.first;
-            int newgroup_size = ele.second.size() ;
-                            
-            if(group_count[old_group_id] == newgroup_size || newgroup_size == 0){
-                continue;
-            }
+            double del_update = -twice_num_pair_or_square(group_count[g], p.ALT) + twice_num_pair_or_square(k, p.ALT) + twice_num_pair_or_square(group_count[g] - k, p.ALT);
 
-            for(const int &v: ele.second){
-                group_id[v] = totgc;
-            }
-            
-            double del_update = -twice_num_pair_or_square(group_count[old_group_id], p.ALT) + twice_num_pair_or_square(newgroup_size, p.ALT) + twice_num_pair_or_square(group_count[old_group_id] - newgroup_size, p.ALT);
-            
-            group_count[old_group_id] -= newgroup_size;
-            group_count[totgc] += newgroup_size;
-            
-            totgc+=1;
-            
-            // uncomment for flipped
-            //bool isDerivedGroup =  (!hm->hapData->hapEntries[locus].flipped && isDerived[ele.second[0]]) || (hm->hapData->hapEntries[locus].flipped && !isAncestral[ele.second[0]]); // just check first element to know if it is derived. 
-            
-            bool isDerivedGroup =  isDerived[ele.second[0]];
-            if(isDerivedGroup) // if the core locus for this chr has 1 (derived), then update ehh1, otherwise ehh0
+            group_count[g] -= k;
+            group_count[totgc] += k;
+            totgc += 1;
+
+            if (isDerived[split_first[g]]) // the core allele is shared by the whole group
             {
                 curr_ehh1_before_norm += del_update;
             }else{
                 curr_ehh0_before_norm += del_update;
             }
         }
-
-        m.clear(); // CLEAR THE MAP //unordered_map<int, vector<int> >().swap(m);
+        for (const int v : setpos) {
+            const int ng = split_new[group_id[v]];
+            if (ng >= 0) group_id[v] = ng;
+        }
 
         // nSL has no EHH cutoff (manual; v2.0.3): it integrates until
         // --max-extend-nsl, all haplotypes unique, or the edge. 2.1-3.0.1 applied
