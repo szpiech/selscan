@@ -11,3 +11,4 @@ sample.*
 .DS_Store
 .vscode/
 unused/
+src/*.d

@@ -16,6 +16,13 @@ L_PATH = ../lib/linux
 # Libraries
 LDLIBS = -lm -pthread -lz -L$(L_PATH) -lgsl -lgslcblas
 
+# Header dependencies: each compile also writes <object>.d listing every header
+# it included, and those files are read back below, so editing a header
+# rebuilds every object that uses it. Without this an incremental build linked
+# stale objects (a changed class layout in stats/selscan-stats.h left ehh.o
+# with the old one and the binary crashed); `make clean` was the only cure.
+DEPFLAGS = -MMD -MP
+
 # Object files
 OBJ_STATS = xpihh.o ehh.o ihs.o ihh12.o pi.o ehh12.o
 OBJ_HAPMAP = hapdata.o mapdata.o bitset.o
@@ -30,39 +37,41 @@ selscan: $(OBJS)
 
 # Compilation rules
 selscan-main.o: selscan-main.cpp
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 selscan-data.o: selscan-data.cpp selscan-data.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 selscan-cli.o: selscan-cli.cpp selscan-cli.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 binom.o: binom.cpp binom.h
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 norm.o: norm.cpp norm.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 gene.o: gene.cpp gene.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 param_t.o: param_t.cpp param_t.h
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 gzstream.o: gzstream.cpp gzstream.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 thread_pool.o: thread_pool.cpp thread_pool.h
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 # Pattern rules
 %.o: hapmap/%.cpp hapmap/%.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 %.o: stats/%.cpp stats/%.h
-	$(CXX) $(CXXFLAGS) $(I_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(I_PATH) $(DEPFLAGS) -c $< -o $@
 
 # Cleanup
 clean:
-	rm -rf *.o selscan
+	rm -rf *.o *.d selscan
+
+-include $(wildcard *.d)
