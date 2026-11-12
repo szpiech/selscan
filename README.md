@@ -69,7 +69,7 @@ Missing genotypes are not allowed, and selscan stops with an error at any '.' al
 
 ```
 
-selscan v3.0.1 -- a program to calculate EHH-based scans for positive selection in genomes.
+selscan v3.1.0 -- a program to calculate EHH-based scans for positive selection in genomes.
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.
 
 selscan currently implements EHH, iHS, XP-EHH, XP-nSL, iHH12 and nSL.
@@ -294,12 +294,12 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
     
     To normalize selscan output across frequency bins:
     
-    ./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
+    selscan norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>
     
     To normalize selscan output and analyze non-overlapping windows of fixed bp for 
     extreme scores:
     
-    ./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
+    selscan norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win
 
 ----------Command Line Arguments----------
 
@@ -307,6 +307,7 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: 100
 
 --bp-win <bool>: Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.
+    	Each file must hold one chromosome, sorted by position.
 
 	Default: false
 
@@ -314,17 +315,18 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
     	Not used by default.
 	Default: -1.00
 
---crit-val <double>: Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
+--crit-val <double>: Set the critical value such that a SNP with |iHS| >= CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.
 	Default: 2.00
 
---files <string1> ... <stringN>: A list of files delimited by whitespace for
-    	joint normalization.
-    	Expected format for iHS or nSL files (no header):
-    	<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>
-    	Expected format for XP-EHH files (one line header):
-    	<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>
-    	Expected format for iHH12 files (one line header):
-    	<locus name> <physical pos> <freq1> <ihh12>
+--files <string1> ... <stringN>: A list of selscan output files, delimited by whitespace,
+    	for joint normalization. Each file starts with the header selscan writes:
+    	iHS:    chr id pos freq ihh1 ihh0 ihs (four more columns with --ihs-detail)
+    	nSL:    chr id pos freq ihh1 ihh0 nsl
+    	XP-EHH: chr id pos gpos p1 ihh1 p2 ihh2 xpehh
+    	XP-nSL: chr id pos gpos p1 sL1 p2 sL2 xpnsl
+    	iHH12:  chr id pos freq ihh12
+    	Output from selscan before v3 has no header and no chr column, and is
+    	not accepted.
 	Default: __infile__
 
 --fine-percentile <bool>: If set, will use fine grain percentiles (1,2,3,...,100) for normalization.
@@ -341,6 +343,10 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 
 --gene-gtf <string>: Provide a .gtf file with gene annotations. Extracts protein-coding genes only. Supports gzipped files
 	Default: __filegtf__
+
+--gene-out <string>: File name for the gene table. By default it is written next to the first
+	normalized input, as <input>.<BED or GTF file name>.genetable.
+	Default: __geneout__
 
 --gene-target <string>: Provide a .genetable for target gene set for permutation tests.
 	Default: __genetarget__
@@ -545,7 +551,7 @@ selscan can now calculate the nSL statistic described in A Ferrer-Admetlla, et a
 
 --xpehh <bool>: Do XP-EHH normalization.
 
-Exactly one of these must be specified when running norm (e.g. ./norm --ihs --files *.ihs.out or ./norm --xpehh --files *.xpehh.out).
+Exactly one of these must be specified when running norm (e.g. selscan norm --ihs --files *.ihs.out or selscan norm --xpehh --files *.xpehh.out).
 
 --vcf <string>: A VCF file containing haplotype data.
 	A map file must be specified with --map.

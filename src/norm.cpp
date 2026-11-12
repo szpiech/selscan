@@ -2126,6 +2126,10 @@ int SelscanNorm::checkStatFile(std::ifstream &fin, const std::string &filename, 
         if (ok.size() > 1) { cerr << " or '" << ok[1] << "'"; flog << " or '" << ok[1] << "'"; }
         cerr << ".\n";
         flog << ".\n";
+        if (header.compare(0, 4, "chr\t") != 0) {   // M11
+            cerr << "Output from selscan before v3 has no header and no chr column. Rerun selscan 3 to make files that norm accepts.\n";
+            flog << "Output from selscan before v3 has no header and no chr column. Rerun selscan 3 to make files that norm accepts.\n";
+        }
         throw 0;
     }
 

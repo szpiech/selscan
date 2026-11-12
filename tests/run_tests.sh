@@ -1023,6 +1023,16 @@ if selected help; then
     nv=$("$BIN" norm --help 2>&1 > /dev/null | tr -d '\r' | sed -n 's/^selscan v//p' | sed -n 1p)
     if [ -n "$nv" ] && [ "selscan $nv" = "$(printf '%s' "$v" | tr -d '\r')" ]; then pass "version:norm"
     else fail "version:norm" "norm says '$nv', selscan --version says '$v'"; fi
+    # M5, M11: the option lists in README.md are the verbatim --help output
+    # of selscan and of selscan norm (the first and second code blocks after
+    # "### selscan" headings)
+    for sub in "" "norm"; do
+        head="### selscan${sub:+ $sub}"
+        awk -v h="$head" '$0 == h { f = 1; next } f && /^```/ { if (++n == 2) exit; next } f && n == 1' "$ROOT_DIR/README.md" > rh.txt
+        "$BIN" $sub --help 2> /dev/null | tr -d '\r' | awk '{ a[NR] = $0 } END { n = NR; while (n > 0 && a[n] == "") n--; for (i = 1; i <= n; i++) print a[i] }' > hh.txt
+        if [ -s rh.txt ] && cmp -s rh.txt hh.txt; then pass "help:readme${sub:+-$sub}"
+        else fail "help:readme${sub:+-$sub}" "README.md section '$head' differs from --help ($(diff rh.txt hh.txt | grep -c '^[<>]') lines)"; fi
+    done
     "$BIN" > /dev/null 2> na.err; rc=$?
     if [ "$rc" -eq 1 ] && grep -q '^Usage: selscan' na.err; then pass "no-args-usage"
     else fail "no-args-usage" "exit $rc"; fi

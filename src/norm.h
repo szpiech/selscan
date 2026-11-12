@@ -84,12 +84,12 @@ class SelscanNorm{
     \n\
     To normalize selscan output across frequency bins:\n\
     \n\
-    ./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>\n\
+    selscan norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out>\n\
     \n\
     To normalize selscan output and analyze non-overlapping windows of fixed bp for \n\
     extreme scores:\n\
     \n\
-    ./norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win\n";
+    selscan norm [--ihs|--xpehh|--nsl|--xpnsl|--ihh12] --files <file1.*.out> ... <fileN.*.out> --bp-win\n";
 
     const string ARG_FREQ_BINS = "--bins";
     const int DEFAULT_FREQ_BINS = 100;
@@ -97,14 +97,15 @@ class SelscanNorm{
 
     const string ARG_FILES = "--files";
     const string DEFAULT_FILES = "__infile__";
-    const string HELP_FILES = "A list of files delimited by whitespace for\n\
-    \tjoint normalization.\n\
-    \tExpected format for iHS or nSL files (no header):\n\
-    \t<locus name> <physical pos> <freq> <ihh1/sL1> <ihh2/sL2> <ihs/nsl>\n\
-    \tExpected format for XP-EHH files (one line header):\n\
-    \t<locus name> <physical pos> <genetic pos> <freq1> <ihh1> <freq2> <ihh2> <xpehh>\n\
-    \tExpected format for iHH12 files (one line header):\n\
-    \t<locus name> <physical pos> <freq1> <ihh12>";
+    const string HELP_FILES = "A list of selscan output files, delimited by whitespace,\n\
+    \tfor joint normalization. Each file starts with the header selscan writes:\n\
+    \tiHS:    chr id pos freq ihh1 ihh0 ihs (four more columns with --ihs-detail)\n\
+    \tnSL:    chr id pos freq ihh1 ihh0 nsl\n\
+    \tXP-EHH: chr id pos gpos p1 ihh1 p2 ihh2 xpehh\n\
+    \tXP-nSL: chr id pos gpos p1 sL1 p2 sL2 xpnsl\n\
+    \tiHH12:  chr id pos freq ihh12\n\
+    \tOutput from selscan before v3 has no header and no chr column, and is\n\
+    \tnot accepted.";
 
     const string ARG_LOG = "--log";
     const string DEFAULT_LOG = "norm.log";
@@ -131,7 +132,8 @@ class SelscanNorm{
 
     const string ARG_BPWIN = "--bp-win";
     const bool DEFAULT_BPWIN = false;
-    const string HELP_BPWIN = "Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.\n";
+    const string HELP_BPWIN = "Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.\n\
+    \tEach file must hold one chromosome, sorted by position.\n";
 
     const string ARG_IHS = "--ihs";
     const bool DEFAULT_IHS = false;
@@ -159,7 +161,7 @@ class SelscanNorm{
 
     const string ARG_CRIT_NUM = "--crit-val";
     const double DEFAULT_CRIT_NUM = 2;
-    const string HELP_CRIT_NUM = "Set the critical value such that a SNP with |iHS| > CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.";
+    const string HELP_CRIT_NUM = "Set the critical value such that a SNP with |iHS| >= CRIT_VAL is marked as an extreme SNP.  Default as in Voight et al.";
 
     const string ARG_CRIT_PERCENT = "--crit-percent";
     const double DEFAULT_CRIT_PERCENT = -1;
