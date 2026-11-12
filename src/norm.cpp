@@ -929,6 +929,11 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         //Load information into vectors for analysis
         int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
+        // B36, B46: the window analysis needs one chromosome per file in
+        // position order, and starts at --win-offset
+        const int firstWinStart = winStart;
+        string prevChr;
+        int prevPos = 0;
         int numSNPs = 0;
         int numCrit = 0;
         double maxAbs = -99999.9;
@@ -947,6 +952,17 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
             fin >> data;
             fin >> normedData;
             fin >> crit;
+
+            if (j > 0 && (chrs[i] != prevChr || pos < prevPos))
+            {
+                string what = (chrs[i] != prevChr) ? ("chromosome " + chrs[i] + " follows " + prevChr) : ("position " + to_string(pos) + " follows " + to_string(prevPos));
+                cerr << "ERROR: " << normedfiles[i] << ": " << what << " (data line " << j + 1 << "). Window analysis (" << ARG_BPWIN << ") needs one chromosome per file, sorted by position.\n";
+                flog << "ERROR: " << normedfiles[i] << ": " << what << " (data line " << j + 1 << "). Window analysis (" << ARG_BPWIN << ") needs one chromosome per file, sorted by position.\n";
+                throw 1;
+            }
+            prevChr = chrs[i];
+            prevPos = pos;
+            if (pos < firstWinStart) continue;   // before --win-offset (B46)
 
             while (pos > winEnd)
             {
@@ -1213,6 +1229,11 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
         //Load information into vectors for analysis
         int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
+        // B36, B46: the window analysis needs one chromosome per file in
+        // position order, and starts at --win-offset
+        const int firstWinStart = winStart;
+        string prevChr;
+        int prevPos = 0;
         int numSNPs = 0;
         int numCritTop = 0;
         int numCritBot = 0;
@@ -1231,6 +1252,17 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
             fin >> data;
             fin >> normedData;
             fin >> crit;
+
+            if (j > 0 && (chrs[i] != prevChr || pos < prevPos))
+            {
+                string what = (chrs[i] != prevChr) ? ("chromosome " + chrs[i] + " follows " + prevChr) : ("position " + to_string(pos) + " follows " + to_string(prevPos));
+                cerr << "ERROR: " << normedfiles[i] << ": " << what << " (data line " << j + 1 << "). Window analysis (" << ARG_BPWIN << ") needs one chromosome per file, sorted by position.\n";
+                flog << "ERROR: " << normedfiles[i] << ": " << what << " (data line " << j + 1 << "). Window analysis (" << ARG_BPWIN << ") needs one chromosome per file, sorted by position.\n";
+                throw 1;
+            }
+            prevChr = chrs[i];
+            prevPos = pos;
+            if (pos < firstWinStart) continue;   // before --win-offset (B46)
 
             while (pos > winEnd)
             {
@@ -1434,6 +1466,11 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
         //Load information into vectors for analysis
         int winStart = 1 + this->WINOFFSET;
         int winEnd = winStart + winSize - 1;
+        // B36, B46: the window analysis needs one chromosome per file in
+        // position order, and starts at --win-offset
+        const int firstWinStart = winStart;
+        string prevChr;
+        int prevPos = 0;
         int numSNPs = 0;
         int numCrit = 0;
         double maxAbs = -99999.9;   // per file (B45: carried over from the previous file)
@@ -1446,6 +1483,17 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
             fin >> data;
             fin >> normedData;
             fin >> crit;
+
+            if (j > 0 && (chrs[i] != prevChr || pos < prevPos))
+            {
+                string what = (chrs[i] != prevChr) ? ("chromosome " + chrs[i] + " follows " + prevChr) : ("position " + to_string(pos) + " follows " + to_string(prevPos));
+                cerr << "ERROR: " << normedfiles[i] << ": " << what << " (data line " << j + 1 << "). Window analysis (" << ARG_BPWIN << ") needs one chromosome per file, sorted by position.\n";
+                flog << "ERROR: " << normedfiles[i] << ": " << what << " (data line " << j + 1 << "). Window analysis (" << ARG_BPWIN << ") needs one chromosome per file, sorted by position.\n";
+                throw 1;
+            }
+            prevChr = chrs[i];
+            prevPos = pos;
+            if (pos < firstWinStart) continue;   // before --win-offset (B46)
 
             while (pos > winEnd)
             {

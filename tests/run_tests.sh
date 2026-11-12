@@ -768,6 +768,23 @@ if selected norm-robust; then
     run ms1.log norm --ihs --bins 20 --files ms.ihs.out --bp-win --min-snps 0
     if [ "$RC" -eq 1 ] && grep -q -- '--min-snps must be at least 1' ms1.log; then pass "norm-min-snps-0"
     else fail "norm-min-snps-0" "exit $RC (expected 1 with a --min-snps message)"; fi
+    # B46: with --win-offset, SNPs before the offset are not counted in the
+    # first window (3.0.1 added them to it)
+    gzip -dc "$EXPECTED/ihs.tsv.gz" > wo.ihs.out
+    run wo1.log norm --ihs --bins 20 --files wo.ihs.out --bp-win --win-offset 50000 --min-snps 1
+    got=$(awk -F'\t' 'NR==2 {print $2 ":" $4}' wo.ihs.out.20bins.norm.100kb.windows 2>/dev/null)
+    want=$(awk -F'\t' 'NR>1 && $3 >= 50001 && $3 <= 150000 {n++} END {print "50001:" n+0}' wo.ihs.out.20bins.norm)
+    if [ "$RC" -eq 0 ] && [ "$got" = "$want" ]; then pass "norm-bpwin:win-offset"
+    else fail "norm-bpwin:win-offset" "exit $RC, first window start:nsnps '$got', expected '$want'"; fi
+    # B36: window analysis needs one chromosome per file in position order;
+    # a second chromosome or a position decrease is an error (3.0.1 labelled
+    # every window with the last chromosome and merged the SNPs)
+    { cat wo.ihs.out.20bins.norm; awk -F'\t' 'BEGIN { OFS="\t" } NR>1 { $1="chr2"; print }' wo.ihs.out.20bins.norm; } > wo_2chr.norm
+    awk 'NR==3 { held=$0; next } NR==4 { print; print held; next } { print }' wo.ihs.out.20bins.norm > wo_unsorted.norm
+    run wo2.log norm --ihs --norm-files wo_2chr.norm --bp-win --min-snps 1; r1=$RC
+    run wo3.log norm --ihs --norm-files wo_unsorted.norm --bp-win --min-snps 1; r2=$RC
+    if [ "$r1" -eq 1 ] && grep -q 'chromosome chr2 follows' wo2.log && [ "$r2" -eq 1 ] && grep -q 'one chromosome per file, sorted by position' wo3.log; then pass "norm-bpwin:one-sorted-chromosome"
+    else fail "norm-bpwin:one-sorted-chromosome" "exit $r1/$r2 (expected 1 and 1 with a message)"; fi
     # B51: the --ihs-detail column count is taken from the first data line.
     # 3.0.1 counted the second; a blank line there gave 0 extra columns and
     # every later row was misread (3.0.1: no rows written; 3 of 503 after
