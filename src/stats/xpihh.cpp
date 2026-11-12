@@ -247,6 +247,13 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         GroupSplitMap& m_pooled = threadSplitMap(1);   // P5
 
+        // A population whose individuals are all unique is no longer
+        // integrated (PI decision; the phased kernel and the iHS --alt rule
+        // B9 do the same). Its binomial EHH is 0 then, so this changes only
+        // --alt, where the all-unique EHH is 1/n.
+        const bool open1 = (p1->totgc != p1->nhaps);
+        const bool open2 = (p2->totgc != p2->nhaps);
+
         if(p1->totgc != p1->nhaps){
             ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
                 int old_group_id = p1->group_id[set_bit_pos];
@@ -334,11 +341,14 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
             p2->curr_ehh_before_norm += gcsquare;
         }
 
-        ihh_p1 += 0.5*distance*(p1->curr_ehh_before_norm + p1->prev_ehh_before_norm)/p1->normalizer;
-        p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;   
-
-        ihh_p2 += 0.5*distance*(p2->curr_ehh_before_norm + p2->prev_ehh_before_norm)/p2->normalizer;
-        p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
+        if (open1) {
+            ihh_p1 += 0.5*distance*(p1->curr_ehh_before_norm + p1->prev_ehh_before_norm)/p1->normalizer;
+            p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;
+        }
+        if (open2) {
+            ihh_p2 += 0.5*distance*(p2->curr_ehh_before_norm + p2->prev_ehh_before_norm)/p2->normalizer;
+            p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
+        }
 
         // check if current locus is beyond 1Mb
         if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;

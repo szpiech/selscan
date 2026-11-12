@@ -164,7 +164,7 @@ identical() {
 
 # ---------------------------------------------------------------- case list
 CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh ehh12 ehh12-alt ehh12-minor
-ihs-unphased ihs-unphased-keep nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
+ihs-unphased ihs-unphased-keep nsl-unphased xpehh-unphased xpehh-alt xpehh-unphased-alt xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
 threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv
@@ -255,6 +255,8 @@ golden ehh12-minor    ehh12.Locus1003.out -- --ehh12 Locus1003 --hap example.hap
 golden ihs-unphased   ihs.out          -- --ihs --unphased --vcf p1.vcf.gz --pmap
 golden nsl-unphased   nsl.out          -- --nsl --unphased --vcf p1.vcf.gz
 golden xpehh-unphased xpehh.out        -- --xpehh --unphased --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
+golden xpehh-alt      xpehh.alt.out    -- --xpehh --alt --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
+golden xpehh-unphased-alt xpehh.alt.out -- --xpehh --unphased --alt --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
 golden xpnsl-unphased xpnsl.out        -- --xpnsl --unphased --vcf p1.vcf.gz --vcf-ref p2.vcf.gz
 golden ehh-unphased   ehh.chr1:29243.out   -- --ehh chr1:29243 --unphased --vcf p1.vcf.gz --pmap
 golden ihs-hap        ihs.out          -- --ihs --hap example.hap --map example.map
