@@ -94,6 +94,9 @@ public:
 
 
     void printHelp();
+    // replace the text after "Default: " in a flag's help, for defaults
+    // that depend on the machine (e.g. --threads)
+    void setDefaultText(const string &flag, const string &text);
 
     bool parseCommandLine(int argc, char *argv[]);
 

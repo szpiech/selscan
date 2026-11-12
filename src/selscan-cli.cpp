@@ -22,6 +22,7 @@
 void initalizeParameters(param_t &params,int argc, char *argv[]){
 	params.setPreamble(PREAMBLE);
     params.addFlag(ARG_THREAD, DEFAULT_THREAD, "", HELP_THREAD);
+    params.setDefaultText(ARG_THREAD, "number of logical CPUs");   // the same help on every machine
     params.addFlag(ARG_FILENAME_POP1, DEFAULT_FILENAME_POP1, "", HELP_FILENAME_POP1);
     params.addFlag(ARG_FILENAME_POP2, DEFAULT_FILENAME_POP2, "", HELP_FILENAME_POP2);
 

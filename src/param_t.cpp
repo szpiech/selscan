@@ -488,3 +488,10 @@ void param_t::setPreamble(string str)
 bool param_t::flagWasSet(const std::string &flag) {
     return isSet.count(flag) > 0 && isSet[flag];
 }
+void param_t::setDefaultText(const string &flag, const string &text)
+{
+    auto it = help.find(flag);
+    if (it == help.end()) return;
+    size_t p = it->second.rfind("\n\tDefault: ");
+    if (p != string::npos) it->second = it->second.substr(0, p) + "\n\tDefault: " + text;
+}
