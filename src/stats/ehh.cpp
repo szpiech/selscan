@@ -1,3 +1,4 @@
+#include <memory>
 #include "ehh.h"
 #include <cassert>
 
@@ -277,10 +278,13 @@ void EHH::main(string query_list){
         ofstream ehhOUT(outFilename+".out");
 
         if(p.UNPHASED){
+            for (int i = 0; i < numSnps; i++){
+                output[i].print = false;   // rows of a previous locus (B30)
+            }
             calc_ehh_unidirection_unphased(locus, true); // downstream
             calc_ehh_unidirection_unphased(locus, false); // upstream
 
-            ehhOUT << std::fixed <<   "chr\tpdist\tgdist\tehh2\tehh0\tcehh\tehh" << "\n";
+            ehhOUT << std::fixed <<   "chr\tpdist\tgdist\tehh2\tehh0\tcehh2\tcehh0\tehh" << "\n";
             for (int i = 0; i < numSnps; i++){
                 if(!output[i].print){
                     continue;
@@ -290,7 +294,8 @@ void EHH::main(string query_list){
                 <<  output[i].gdist << "\t"
                 << output[i].ehh2 << "\t"
                 << output[i].ehh0  << "\t"
-                << output[i].cehh  << "\t"
+                << output[i].cehh2  << "\t"
+                << output[i].cehh0  << "\t"
                 << output[i].ehh  << "";
                 ehhOUT << endl;
             }
@@ -336,35 +341,31 @@ void EHH::main(string query_list){
 
 
 void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
+    // B30: the table written by --ehh --unphased. At every site it shows the
+    // current EHH of the two homozygous classes (ehh2, ehh0), their
+    // complements (cehh2: individuals not homozygous 2; cehh0: not
+    // homozygous 0), and whole-sample EHH. 3.0.1 never set the complement,
+    // printed 0 for whole-sample EHH at the core, froze ehh2/ehh0 once they
+    // fell below --cutoff (that gate belongs to the iHS integration, not to
+    // the decay table), printed nan for a class of fewer than 2, and leaked
+    // its work arrays on the early returns.
 
     GroupSplitMap& m = threadSplitMap(0);   // P5
 
-    int numHaps = hm->hapData->nhaps;
+    const int numHaps = hm->hapData->nhaps;
 
-    double curr_ehh_before_norm[3];
-    double curr_cehh_before_norm[3];
-    double ehh_before_norm = 0;
+    std::unique_ptr<int[]> group_count_own(new int[numHaps]()), group_id_own(new int[numHaps]()), group_core_own(new int[numHaps]());
+    std::unique_ptr<bool[]> is1_own(new bool[numHaps]()), is2_own(new bool[numHaps]());
+    int* group_count = group_count_own.get();
+    int* group_id = group_id_own.get();
+    int* group_core = group_core_own.get();
+    bool* is1 = is1_own.get();
+    bool* is2 = is2_own.get();
 
     int n_c[3] = {0,0,0};
-
-    int* group_count = new int[numHaps];
-    int* group_id =  new int[numHaps];
-    int* group_core =  new int[numHaps];
-    bool* is1 =  new bool[numHaps];
-    bool* is2 =  new bool[numHaps];
-    
-    for(int i = 0; i<numHaps; i++){ //hopefully this will be vectorized with compile time flags
-        group_count[i] = 0;
-        is1[i] = false;
-        is2[i] = false;
-    }
-
-    int totgc=0;
-
-    n_c[1] = hm->hapData->get_n_c1(locus); //hm->hapData->hapEntries[locus].hapbitset->num_1s;
-    n_c[2] = hm->hapData->get_n_c2(locus); // hm->hapData->hapEntries[locus].xorbitset->num_1s;
+    n_c[1] = hm->hapData->get_n_c1(locus);
+    n_c[2] = hm->hapData->get_n_c2(locus);
     n_c[0] = numHaps - n_c[1] - n_c[2]; // assume no missing
-    
     if(n_c[1] + n_c[2] + n_c[0] != numHaps){
         HANDLE_ERROR("n_c1 + n_c2 + n_c0 != numHaps");
     }
@@ -373,46 +374,38 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
 
     double normalizer[3];
     double normalizer_not[3];
-    double normalizer_just = twice_num_pair_or_square(numHaps, p.ALT);
+    const double normalizer_just = twice_num_pair_or_square(numHaps, p.ALT);
     for(int i = 0; i<3; i++){
         normalizer[i] = twice_num_pair_or_square(n_c[i], p.ALT);
-        normalizer_not[i] = twice_num_pair_or_square(numHaps - n_c[i], p.ALT); 
+        normalizer_not[i] = twice_num_pair_or_square(numHaps - n_c[i], p.ALT);
     }
+    auto ratio = [](double num, double den){ return den == 0 ? double(UNDEFINED_EHH) : num / den; };
 
+    // group_count[0..2]: most, second most and least frequent genotype class
     for(int i = 0; i<3; i++){
-        curr_ehh_before_norm[i] = normalizer[i];
-        curr_cehh_before_norm[i] = normalizer_not[i];
         group_count[i] = n_c[orderStr[i]-'0'];
         group_core[i] = orderStr[i]-'0';
     }
-
-    //group_count
-    //[0] = most occurring
-    //[1] = second most occurring
-    //[2] = least occurring
-
     int pos_of_012[3] = {0,0,0};
     for(int i = 0; i<3; i++){
         pos_of_012[orderStr[i]-'0'] = i ;
     }
-
     for (int i = 0; i<numHaps; i++){
         group_id[i] = pos_of_012[0];
     }
-
     ACTION_ON_ALL_SET_BITS(get_all_1s(locus), {
         is1[set_bit_pos] = true;
-        group_id[set_bit_pos] = pos_of_012[1];   
+        group_id[set_bit_pos] = pos_of_012[1];
     });
-
     ACTION_ON_ALL_SET_BITS(get_all_2s(locus), {
         is2[set_bit_pos] = true;
-        group_id[set_bit_pos] = pos_of_012[2]; 
+        group_id[set_bit_pos] = pos_of_012[2];
     });
-   
+
+    int totgc = 0;
     if(group_count[0] == numHaps){ //monomorphic site
         totgc+=1;
-    }else if(group_count[2] == 0 ){ //second clause is redundant
+    }else if(group_count[2] == 0 ){
         if(group_count[0] + group_count[1] != numHaps){
             HANDLE_ERROR("gc2==0 locus: "+to_string(locus));
         }
@@ -421,7 +414,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
         totgc+=3;
     }
 
-    if(n_c[1] == numHaps || n_c[0] == numHaps || n_c[2] == numHaps){ 
+    if(n_c[1] == numHaps || n_c[0] == numHaps || n_c[2] == numHaps){
         (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
@@ -429,51 +422,34 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
     }
 
     double freqHetGT = n_c[1]*1.0/numHaps;
-    if (freqHetGT > 1-p.MAF) 
+    if (freqHetGT > 1-p.MAF)
     {
         (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
                 << " (number " << locus << ") has too many hets. Skipping calculation at this locus. "
                 << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
         return;
     }
+    if (normalizer[2] == 0 || normalizer[0] == 0) {
+        (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
+                << " has a homozygous class of fewer than 2 individuals. Undefined EHH is reported as " << UNDEFINED_EHH << ".\n";
+    }
 
-    output[locus].ehh0 = curr_ehh_before_norm[0]*1.0/normalizer[0];
-    output[locus].ehh2 = curr_ehh_before_norm[2]*1.0/normalizer[2];
-    output[locus].ehh = ehh_before_norm*1.0/normalizer_just;
+    // core: each class and its complement start at 1, as in the unphased
+    // iHS kernel; whole-sample EHH is the homozygosity of the 3 classes
+    output[locus].ehh2 = ratio(normalizer[2], normalizer[2]);
+    output[locus].ehh0 = ratio(normalizer[0], normalizer[0]);
+    output[locus].cehh2 = ratio(normalizer_not[2], normalizer_not[2]);
+    output[locus].cehh0 = ratio(normalizer_not[0], normalizer_not[0]);
+    output[locus].ehh = ratio(normalizer[0] + normalizer[1] + normalizer[2], normalizer_just);
     output[locus].gdist = 0;
     output[locus].pdist = 0;
     output[locus].print = true;
-    
 
     int i = locus;  // locus == core_locus
-    //int prev_index = locus;
-
-
-    while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
-
-        bool edgeBreak = false;
-        edgeBreak = nextLocOutOfBounds(i, downstream);
-        if(edgeBreak) {
-            // (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
-            //         << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
-            break;
-        }
+    while(true){
+        if(nextLocOutOfBounds(i, downstream)) break;
         i = (downstream) ? i-1 : i+1;
-        //prev_index = i;
 
-        // if (physicalDistance(i,downstream) > p.MAX_GAP)
-        // {
-        //     (*flog) << "WARNING: Reached a gap of " << physicalDistance(i,downstream)
-        //             << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-        //     return;
-        // }
-
-        /* let us print values at monomorphic sites too
-        if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, do not compute unnecessarily
-            continue; 
-        }
-        */
-        
         ACTION_ON_ALL_SET_BITS(get_all_2s(i), {
             int old_group_id = group_id[set_bit_pos];
             m[old_group_id].push_back(set_bit_pos);
@@ -488,7 +464,7 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
         updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
         m.clear();
 
-        // equivalent to calcHomozoygosity (without the normalization)
+        // homozygosity of each class, of each complement and of the sample
         double cehh2_before_norm = 0;
         double cehh0_before_norm = 0;
         double ehh2_before_norm = 0;
@@ -509,46 +485,19 @@ void EHH::calc_ehh_unidirection_unphased(int locus, bool downstream){
             ehh_before_norm += gcsquare;
         }
 
-        if(double(curr_ehh_before_norm[0]*1.0/normalizer[0]) > p.EHH_CUTOFF){
-            curr_ehh_before_norm[0] = ehh0_before_norm;
-        }
-
-        if(double(curr_ehh_before_norm[2]*1.0/normalizer[2]) > p.EHH_CUTOFF ){
-            curr_ehh_before_norm[2] = ehh2_before_norm;
-        }
-            
-        if(true){  //this is how it's in selscan, does not depend on cutoff
-            curr_cehh_before_norm[0] = cehh0_before_norm;
-            curr_cehh_before_norm[2] = cehh2_before_norm;
-        }
-
-        //if(totgc == numHaps) {
-            // std::cerr<<"DEBUG::: Break reason for locus "<<locus<<":: ALL_UNIQUE."<<endl;
-            // break;
-        //}
-
-        if(physicalDistance(i,locus, downstream) >= p.QWIN) {
-            //std::cerr<<"Break reason for locus "<<locus<<":: MAX_EXTEND."<<endl;
-           break;
-        }
-
-        output[i].ehh0 = curr_ehh_before_norm[0]*1.0/normalizer[0];
-        output[i].ehh2 = curr_ehh_before_norm[2]*1.0/normalizer[2];
-        output[i].ehh = ehh_before_norm*1.0/normalizer_just;
+        output[i].ehh2 = ratio(ehh2_before_norm, normalizer[2]);
+        output[i].ehh0 = ratio(ehh0_before_norm, normalizer[0]);
+        output[i].cehh2 = ratio(cehh2_before_norm, normalizer_not[2]);
+        output[i].cehh0 = ratio(cehh0_before_norm, normalizer_not[0]);
+        output[i].ehh = ratio(ehh_before_norm, normalizer_just);
         output[i].pdist = downstream? -physicalDistance(i,locus, downstream): physicalDistance(i,locus, downstream);
         output[i].gdist = downstream? -geneticDistance(i,locus, downstream): geneticDistance(i,locus, downstream);
         output[i].print = true;
 
-        // @DEBUG_BLOCK
-        // if(downstream){
-        //     cout<<locus<<":::l "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
-        // }else{
-        //     cout<<locus<<":::r "<<i << " "<<curr_cehh_before_norm[0]/normalizer_not[0]<<" "<<curr_ehh_before_norm[0]/normalizer[0]<<" "<<ciHH[0]<<" "<<iHH[0]<<endl;
-        // }
+        // same window rule as the phased table
+        if(physicalDistance(i,locus, downstream) > p.QWIN) {
+            output[i].print = false;
+            break;
+        }
     }
-    delete[] group_count;
-    delete[] group_id;
-    delete[] is1;
-    delete[] is2;
-    delete[] group_core;
 }

@@ -167,7 +167,7 @@ CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh e
 ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
-threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants maf-symmetry pi-edges errors help"
+threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants maf-symmetry pi-edges ehh-unphased-multi errors help"
 
 if [ "$LIST" = 1 ]; then for c in $CASES; do echo "$c"; done; exit 0; fi
 if [ ! -x "$BIN" ]; then echo "ERROR: no binary at $BIN (run make in src/ first)." >&2; exit 70; fi
@@ -831,6 +831,14 @@ if selected arg-messages; then
     chk flag-as-value "is an option" --ihs --vcf --pmap
     chk pmap-with-map "is not used for genetic distance" --ihs --vcf p1.vcf.gz --pmap --map example.map
     chk wagh-without-xp "applies only to XP" --ihs --vcf p1.vcf.gz --pmap --wagh
+fi
+
+if selected ehh-unphased-multi; then
+    # B30: with several loci in one unphased --ehh run, each table equals the
+    # single-locus run (3.0.1 kept the previous locus's rows)
+    run eu1.log --ehh chr1:29273,chr1:135961 --unphased --vcf p1.vcf.gz --pmap --out eu_ab
+    run eu2.log --ehh chr1:135961 --unphased --vcf p1.vcf.gz --pmap --out eu_b
+    identical "ehh-unphased-multi" eu_ab.ehh.chr1:135961.out eu_b.ehh.chr1:135961.out
 fi
 
 if selected help; then
