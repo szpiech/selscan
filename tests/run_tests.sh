@@ -167,7 +167,9 @@ CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh e
 ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
-threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv norm-invariants maf-symmetry pi-edges ehh-unphased-multi errors help"
+threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv
+hap-reader xp-intersect norm-invariants maf-symmetry pi-edges xp-validate
+norm-robust errors numeric-args arg-messages ehh-unphased-multi help"
 
 if [ "$LIST" = 1 ]; then for c in $CASES; do echo "$c"; done; exit 0; fi
 if [ ! -x "$BIN" ]; then echo "ERROR: no binary at $BIN (run make in src/ first)." >&2; exit 70; fi
