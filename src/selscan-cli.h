@@ -301,11 +301,11 @@ const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before 
 
 const string ARG_PI = "--pi";
 const bool DEFAULT_PI = false;
-const string HELP_PI = "Set this flag to calculate mean pairwise sequence difference in a sliding window.";
+const string HELP_PI = "Set this flag to calculate mean pairwise sequence difference in non-overlapping windows.";
 
 const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
-const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
+const string HELP_PI_WIN = "Window size in bp for calculating pi.";
 
 // @UNCOMMENT
 // const string ARG_MISSING_FLAG = "--missing";

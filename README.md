@@ -198,10 +198,10 @@ To calculate XP-EHH:
 --out <string>: The basename for all output files.
 	Default: outfile
 
---pi <bool>: Set this flag to calculate mean pairwise sequence difference in a sliding window.
+--pi <bool>: Set this flag to calculate mean pairwise sequence difference in non-overlapping windows.
 	Default: false
 
---pi-win <int>: Sliding window size in bp for calculating pi.
+--pi-win <int>: Window size in bp for calculating pi.
 	Default: 100
 
 --pmap <bool>: Use physical map instead of a genetic map.
@@ -586,10 +586,10 @@ Exactly one of these must be specified when running norm (e.g. selscan norm --ih
 
 17OCT2014 - Release of 1.0.4. A pairwise sequence difference module has been introduced.  This module isn't multithreaded at the moment, but still runs quite fast.  Calculating pi in 100bp windows with 198 haplotypes with 707,980 variants on human chr22 finishes in 77s on the test machine.  Using 100kb windows, it finishes in 34s.  Two new command line options.
 
---pi <bool>: Set this flag to calculate mean pairwise sequence difference in a sliding window.
+--pi <bool>: Set this flag to calculate mean pairwise sequence difference in non-overlapping windows.
 	Default: false
 
---pi-win <int>: Sliding window size in bp for calculating pi.
+--pi-win <int>: Window size in bp for calculating pi.
 	Default: 100
 
 15SEP2014 - Release of 1.0.3.  **A critical bug in the XP-EHH module was introduced in version 1.0.2 and had been fixed in 1.0.3.  Do not use 1.0.2 for calculating XP-EHH scores.**  Thanks to David McWilliams for finding this error.  1.0.3 also introduces support for gzipped input files.  You may pass hap.gz, map.gz. and tped.gz files interchangably with unzipped files using the same command line arguments.  A new command line option is available.
