@@ -655,7 +655,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
 
         if(!HAVE_WINFILE){
-            string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPEHH ? "xpehh" : (XPNSL ? "xpnsl" : "ihh12")));
+            string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPNSL ? "xpnsl" : (XPEHH ? "xpehh" : "ihh12")));   // --xpnsl also sets XPEHH (U14)
             genex.annotateSNPs(geneFile, useGTF, normFilenames, XP, stat, minSNPs);
             
         }

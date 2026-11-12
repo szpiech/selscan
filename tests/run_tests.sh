@@ -596,6 +596,14 @@ if selected norm-robust; then
               printf "%.3g", m }' nr_xg.bed.xpehh.genetable 2>/dev/null)
     if [ "$RC" -eq 0 ] && awk -v d="$d" 'BEGIN { exit !(d != "" && d+0 < 1e-4) }'; then pass "norm-gene:xp-bottom-adj"
     else fail "norm-gene:xp-bottom-adj" "exit $RC, max |bottom_score_adj - residual| = '$d'"; fi
+    # U14: an XP-nSL gene table is named and labelled xpnsl (3.0.1 wrote
+    # <bed>.xpehh.genetable, because --xpnsl also sets the XP-EHH flag)
+    gzip -dc "$EXPECTED/xpnsl.tsv.gz" > nr_xn.xpnsl.out
+    run nr12.log norm --xpnsl --files nr_xn.xpnsl.out
+    cp nr_xg.bed nr_xn.bed
+    run nr13.log norm --xpnsl --norm-files nr_xn.xpnsl.out.norm --gene-bed nr_xn.bed --min-snps 1
+    if [ "$RC" -eq 0 ] && [ -s nr_xn.bed.xpnsl.genetable ] && [ ! -e nr_xn.bed.xpehh.genetable ]; then pass "norm-gene:xpnsl-name"
+    else fail "norm-gene:xpnsl-name" "exit $RC; files: $(ls nr_xn.bed.*.genetable 2>/dev/null | tr '\n' ' ')"; fi
     # B37: BED genes cover 1-based start+1..end inclusive. A gene ending
     # exactly at a SNP must count it (3.0.1 dropped the last base).
     P=$(awk -F'\t' 'NR==202 {print $3}' nr_a.ihs.out.20bins.norm)
