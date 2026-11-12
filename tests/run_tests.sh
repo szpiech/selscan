@@ -247,7 +247,7 @@ golden xpehh          xpehh.out        -- --xpehh --vcf p1.vcf.gz --vcf-ref p2.v
 golden xpehh-wagh     xpehh.out        -- --xpehh --wagh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
 golden xpnsl          xpnsl.out        -- --xpnsl --vcf p1.vcf.gz --vcf-ref p2.vcf.gz
 golden ihh12          ihh12.out        -- --ihh12 --vcf p1.vcf.gz --pmap
-golden pi             pi.100bp.out noheader -- --pi --vcf p1.vcf.gz --pmap
+golden pi             pi.100bp.out     -- --pi --vcf p1.vcf.gz --pmap
 golden ehh            ehh.chr1:29243.out   -- --ehh chr1:29243 --vcf p1.vcf.gz --pmap
 golden ehh12          ehh12.chr1:29243.out -- --ehh12 chr1:29243 --vcf p1.vcf.gz --pmap
 golden ehh12-alt      ehh12.Locus4077.alt.out -- --ehh12 Locus4077 --alt --hap example.hap --map example.map
@@ -617,9 +617,10 @@ if selected pi-edges; then
         } }' > pi_large.vcf
     run pl.log --pi --pi-win 100 --vcf pi_large.vcf --pmap --out pl
     r=$(awk -v n=46400 '
-        NR == 2 { want = (n/2) * (n/2) / (n * (n-1) / 2); d = $3 - want; if (d < 0) d = -d
-                  if (d > 1e-5 * want) printf "window 101-200 pi = %s, expected %.6g; ", $3, want }
-        END { if (NR != 3) printf "%d windows, expected 3", NR }' pl.pi.100bp.out 2>/dev/null)
+        NR == 1 && $0 != "chr\tstart\tend\tpi" { printf "header '%s'; ", $0 }
+        NR == 3 { want = (n/2) * (n/2) / (n * (n-1) / 2); d = $4 - want; if (d < 0) d = -d
+                  if (d > 1e-5 * want) printf "window 101-200 pi = %s, expected %.6g; ", $4, want }
+        END { if (NR != 4) printf "%d windows, expected 3", NR - 1 }' pl.pi.100bp.out 2>/dev/null)
     if [ "$RC" -eq 0 ] && [ -s pl.pi.100bp.out ] && [ -z "$r" ]; then pass "pi-large-n"
     else fail "pi-large-n" "${r:-exit $RC}"; fi
     # pi-edge: the last position is 0 and then -1 (mod --pi-win); both read past
@@ -628,7 +629,7 @@ if selected pi-edges; then
         gzip -dc p1.vcf.gz | awk -v last=$last 'BEGIN { OFS = "\t" } /^#/ { print; next }
             { r++; if (r <= 3) { $2 = (r == 3 ? last : r * 50); print } }' > pe.vcf
         run pe.log --pi --pi-win 100 --vcf pe.vcf --pmap --out pe
-        nw=0; [ -f pe.pi.100bp.out ] && nw=$(($(wc -l < pe.pi.100bp.out)))
+        nw=0; [ -f pe.pi.100bp.out ] && nw=$(($(wc -l < pe.pi.100bp.out) - 1))   # less the header
         if [ "$RC" -eq 0 ] && [ "$nw" = 3 ]; then pass "pi-edge:last=$last"
         else fail "pi-edge:last=$last" "exit $RC, $nw windows (expected 3)"; fi
         rm -f pe.pi.100bp.out

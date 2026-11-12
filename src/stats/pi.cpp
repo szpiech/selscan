@@ -16,9 +16,15 @@ void PI::main()
     const int max_physpos = hm->mapData->mapEntries[hm->mapData->nloci - 1].physicalPos;
     const int last_window = (max_physpos - 1) / winsize;
 
+    // Header and chr column, tab-delimited, as the 3.0.0 change log states
+    // for every output; .pi had neither and was space-delimited (M8).
+    // selscan reads one chromosome per file, so chr is that of the first locus.
+    const string &chr = hm->mapData->mapEntries[0].chr;
+    (*fout) << "chr\tstart\tend\tpi\n";
+
     int locus = 0;
     for (int i = 0; i <= last_window; i++){
-        (*fout) << i*winsize + 1 << " " << (i+1)*winsize << " ";
+        (*fout) << chr << "\t" << i*winsize + 1 << "\t" << (i+1)*winsize << "\t";
         const int end = (i+1)*winsize;
         pi = 0;
         while (locus < hm->mapData->nloci && hm->mapData->mapEntries[locus].physicalPos <= end){
