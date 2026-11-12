@@ -50,8 +50,6 @@
 
 using namespace std;
 
-const int MISSING = -9999;  // TO_BE_DELETED
-const char MISSING_CHAR = '9';  // TO_BE_DELETED
 struct VCFPass1Result {
     queue<size_t> skiplist;
 
@@ -104,49 +102,6 @@ public:
     void readHapDataVCFXP(string filename, string filename2, HapData& hapData, HapData& hapData2);
 
 
-    char randomZeroOrOne() {
-        // Create a random device to seed the generator
-        std::random_device rd; 
-        
-        // Use a Mersenne Twister engine
-        std::mt19937 gen(rd()); 
-        
-        // Define a uniform distribution for integers between 0 and 1
-        std::uniform_int_distribution<int> dist(0, 1);
-        
-        // Return the random number
-        int randomNum  = dist(gen);
-
-         // Convert integer 0 or 1 to character '0' or '1'
-        char randomChar = static_cast<char>(randomNum + '0');
-        return randomChar;
-    }
-
-    pair<int, int> countFieldsAndOnes(const string &str)
-    {
-        string::const_iterator it;
-        int ones = 0;
-        int result;
-        int numFields = 0;
-        int seenChar = 0;
-        for (it = str.begin() ; it < str.end(); it++)
-        {
-            if(*it == '1'){
-                ones++;
-            }
-            result = isspace(*it);
-            if (result == 0 && seenChar == 0)
-            {
-                numFields++;
-                seenChar = 1;
-            }
-            else if (result != 0)
-            {
-                seenChar = 0;
-            }
-        }
-        return make_pair(numFields, ones);
-    }
 
 
     void rebuild_skipqueue_with_new_skips(queue<size_t>& skiplist, const vector<size_t>& new_skips)
