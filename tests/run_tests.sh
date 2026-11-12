@@ -464,6 +464,19 @@ if selected input-format; then
     run if7.log --ihs --hap example.hap --map if_short.map --out if_s
     if [ "$RC" -eq 1 ] && grep -q 'if_short.map has 8321 rows, but the genotype data have 8324 loci' if7.log; then pass "input-format:map-count-message"
     else fail "input-format:map-count-message" "exit $RC"; fi
+    # B33: a haploid GT is an error that says so, with or without --unphased,
+    # in the single-population and XP readers. 3.0.1 read the second allele
+    # from the next sample's field (accepted with --unphased, "Unphased
+    # entries detected" without), and accepted a three-allele call.
+    gzip -dc p1.vcf.gz | awk 'BEGIN { FS = OFS = "\t" } /^#/ { print; next } { n++ } n == 6 { $13 = "1" } { print }' > if_hap.vcf
+    gzip -dc p1.vcf.gz | awk 'BEGIN { FS = OFS = "\t" } /^#/ { print; next } { n++ } n == 6 { $13 = "0|1|1" } { print }' > if_tri.vcf
+    run if8.log --ihs --vcf if_hap.vcf --pmap --out if_h; r1=$RC
+    run if9.log --ihs --unphased --vcf if_hap.vcf --pmap --out if_h; r2=$RC
+    run if10.log --xpehh --vcf if_hap.vcf --vcf-ref p2.vcf.gz --pmap --out if_h; r3=$RC
+    run if11.log --ihs --unphased --vcf if_tri.vcf --pmap --out if_h; r4=$RC
+    if [ "$r1$r2$r3$r4" = "1111" ] && grep -q "Haploid genotype '1' at pos" if8.log && grep -q 'Haploid genotype' if9.log \
+        && grep -q 'Haploid genotype' if10.log && grep -q "Malformed genotype field '0|1|1'" if11.log; then pass "input-format:vcf-gt-shape"
+    else fail "input-format:vcf-gt-shape" "exit $r1/$r2/$r3/$r4 (expected 1 for each, with the matching message)"; fi
 fi
 
 if selected xp-intersect; then

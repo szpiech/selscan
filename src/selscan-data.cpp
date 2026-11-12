@@ -225,6 +225,31 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
 
 
 
+// B33: shape of a GT field. Returns 0 for a diploid call ('a|b' or 'a/b'
+// followed by ':', a tab or the end of the line), 1 for a haploid call ('a'
+// alone) and 2 for anything else. 3.0.1 read a fixed 3 characters, so a
+// haploid call took its second allele from the next sample's field.
+static inline int gtShape(const char* g, const char* end)
+{
+    const ptrdiff_t n = end - g;
+    // common case first: 'a|b' or 'a/b' then a tab, ':' or the end of the line
+    if (n >= 3 && (g[1] == '|' || g[1] == '/') && g[2] != '\t' && g[2] != ':' &&
+        (n == 3 || g[3] == '\t' || g[3] == ':' || g[3] == '\r' || g[3] == '\n'))
+        return (g[0] == '\t' || g[0] == ':') ? 2 : 0;
+    auto stop = [end](const char* q) { return q >= end || *q == '\t' || *q == ':' || *q == '\r' || *q == '\n'; };
+    if (stop(g)) return 2;
+    if (stop(g + 1)) return 1;
+    return 2;
+}
+
+// text of the genotype field at g, for error messages
+static inline string gtText(const char* g, const char* end)
+{
+    const char* q = g;
+    while (q < end && *q != '\t' && *q != ':' && *q != '\r' && *q != '\n') ++q;
+    return string(g, q);
+}
+
 // true if the line has a non-whitespace character (U9: blank lines are skipped)
 static inline bool hasData(const string &l)
 {
@@ -642,7 +667,8 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
         {
             const char* g = pcur;
 
-            if (end - g >= 3) {
+            const int shape = gtShape(g, end);
+            if (shape == 0) {
                 const char a1 = g[0];
                 const char sep = g[1];
                 const char a2 = g[2];
@@ -667,10 +693,14 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
                 } else {
                     number_of_1s += v1 + v2;
                 }
+            } else if (shape == 1) {
+                bad_site("Haploid genotype '" + gtText(g, end) + "' at pos " + to_string(new_physpos) + " in " + filename
+                         + ". selscan needs diploid genotypes (a|b, or a/b with " + ARG_UNPHASED + ").");
             } else {
-                bad_site("Malformed genotype field at pos " + to_string(new_physpos) + " in " + filename + ".");
+                bad_site("Malformed genotype field '" + gtText(g, end) + "' at pos " + to_string(new_physpos) + " in " + filename + ".");
             }
 
+            if (shape == 0) pcur = g + 3;   // the GT field is known up to here
             while (pcur < end && *pcur != '\t') ++pcur;
             if (pcur < end) ++pcur;
             seen_ngts++;
@@ -1123,8 +1153,8 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             {
                 const char* g = pcur;
 
-                // Need at least GT chars at positions 0,1,2
-                if (end - g >= 3) {
+                const int shape = gtShape(g, end);   // B33
+                if (shape == 0) {
                     const char allele1   = g[0];
                     const char separator = g[1];
                     const char allele2   = g[2];
@@ -1143,8 +1173,6 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                         }
                     }
 
-                    // If UNPHASED is on, '/' is allowed. If not, this still accepts '|'.
-                    // No extra action needed here except for malformed alleles above.
 
                     // Branch-light genotype decode:
                     // '0' -> 0, '1' -> 1
@@ -1159,13 +1187,18 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                     }
                 } else {
                     if (!p.MULTI_ALLELIC) {
-                        HANDLE_ERROR("Malformed genotype field at pos " << physpos);
+                        if (shape == 1) {
+                            HANDLE_ERROR("Haploid genotype '" << gtText(g, end) << "' at pos " << physpos << " in " << filename
+                                         << ". selscan needs diploid genotypes (a|b, or a/b with " << ARG_UNPHASED << ").");
+                        }
+                        HANDLE_ERROR("Malformed genotype field '" << gtText(g, end) << "' at pos " << physpos << " in " << filename << ".");
                     } else {
                         skip_due_to_missing = true;
                     }
                 }
 
                 // Move to next sample field
+                if (shape == 0) pcur = g + 3;   // the GT field is known up to here
                 while (pcur < end && *pcur != '\t') ++pcur;
                 if (pcur < end) ++pcur;
                 seen_ngts++;
@@ -1178,7 +1211,8 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
             {
                 const char* g = pcur;
 
-                if (end - g >= 3) {
+                const int shape = gtShape(g, end);   // B33
+                if (shape == 0) {
                     const char allele1   = g[0];
                     const char separator = g[1];
                     const char allele2   = g[2];
@@ -1198,7 +1232,7 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
 
                     if (separator != '|') {
                         if (!p.MULTI_ALLELIC) {
-                            HANDLE_ERROR("Unphased entries detected (/ is used). Make sure you run with --unphased flag for correct results.");
+                            HANDLE_ERROR("Unphased entries detected (/ is used) at pos " << physpos << " in " << filename << ". Make sure you run with --unphased flag for correct results.");
                         } else {
                             skip_due_to_missing = true;
                         }
@@ -1210,12 +1244,17 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                     number_of_1s += a1 + a2;
                 } else {
                     if (!p.MULTI_ALLELIC) {
-                        HANDLE_ERROR("Malformed genotype field at pos " << physpos);
+                        if (shape == 1) {
+                            HANDLE_ERROR("Haploid genotype '" << gtText(g, end) << "' at pos " << physpos << " in " << filename
+                                         << ". selscan needs diploid genotypes (a|b, or a/b with " << ARG_UNPHASED << ").");
+                        }
+                        HANDLE_ERROR("Malformed genotype field '" << gtText(g, end) << "' at pos " << physpos << " in " << filename << ".");
                     } else {
                         skip_due_to_missing = true;
                     }
                 }
 
+                if (shape == 0) pcur = g + 3;   // the GT field is known up to here
                 while (pcur < end && *pcur != '\t') ++pcur;
                 if (pcur < end) ++pcur;
                 seen_ngts++;
