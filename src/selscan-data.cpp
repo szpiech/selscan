@@ -781,7 +781,7 @@ void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFP
     }else{
         if (p.SKIP) {
             LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF << ".");
-            LOG("Removed " << pass1.skipcount << " low frequency variants from haplotype data.");
+            LOG("Removed " << pass1.skipcount << " records (duplicated positions, " << ARG_MULTIALLELIC << ", or below the MAF cutoff).");
         } else {
             LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF << ".");
         }
@@ -866,7 +866,7 @@ void HapMap::readHapDataVCF_pass2(string filename,  HapData& hapData, const VCFP
         LOG("Done removing " << pass1.skipcount << " loci.");
     }else{
         if (p.SKIP) {
-            LOG("Done removing " << pass1.skipcount << " low frequency variants from haplotype data.");
+            LOG("Done removing " << pass1.skipcount << " records.");
         }
     }
     
@@ -1012,6 +1012,8 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     size_t nloci_before_filtering = 0;   // number of variant records seen
     size_t skipcount = 0;                // number of records skipped
     size_t nNonSNP = 0;                  // records removed by --filter-vcf (B39 message)
+    size_t nSkipDup = 0, nSkipFilter = 0, nSkipMaf = 0;   // removals by reason (M10 log)
+    char lastSkipReason = 0;             // reason of the most recent skipped record: 'd', 'f' or 'm'
     int current_ngts = -1;               // number of genotype/sample columns
 
     // duplicate-position tracking
@@ -1284,6 +1286,12 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
                 }
                 skiplist.push(nloci_before_filtering - 2);
                 skipcount++;
+                nSkipDup++;
+            } else if (lastSkipReason == 'f' || lastSkipReason == 'm') {
+                // the first record was already removed by another filter;
+                // count it with the duplicated positions
+                (lastSkipReason == 'f' ? nSkipFilter : nSkipMaf)--;
+                nSkipDup++;
             }
         }
 
@@ -1291,6 +1299,9 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         if (skip_due_to_maf || skip_due_to_multiallelic || skip_due_to_missing || skip_due_to_duplicate_pos) {
             skiplist.push(nloci_before_filtering - 1);
             skipcount++;
+            if (skip_due_to_duplicate_pos) { nSkipDup++; lastSkipReason = 'd'; }
+            else if (skip_due_to_multiallelic || skip_due_to_missing) { nSkipFilter++; lastSkipReason = 'f'; }
+            else { nSkipMaf++; lastSkipReason = 'm'; }
         }
     }
 
@@ -1395,8 +1406,14 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         locus++;
     }
 
-    if (p.SKIP) {
-        LOG("Removed " << skipcount << " low frequency variants from haplotype data.");
+    // 3.0.1 reported every removed record as a low frequency variant
+    if (skipcount > 0) {
+        string why;
+        auto part = [&why](size_t n, const string &what) { if (n) why += (why.empty() ? "" : ", ") + to_string(n) + " " + what; };
+        part(nSkipDup, "at duplicated positions (all records at such a position)");
+        part(nSkipFilter, "removed by " + ARG_MULTIALLELIC);
+        part(nSkipMaf, "below the MAF cutoff");
+        LOG("Removed " << skipcount << " records: " << why << ".");
     }
 
     LOG("====");
