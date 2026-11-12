@@ -296,62 +296,27 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
         prev_index = i;  // save last index that was not skipped
 
 
-        /*
-        if( at i it is monomorphic){
-            // {std::lock_guard<std::mutex> lock(mutex_log);
-            // (*flog) << "WARNING: locus " << hm->mapData->mapEntries[locus].locusName
-            //         << " (number " << locus << ") is monomorphic. Skipping calculation at this locus. "
-            //         << "het: " <<  n_c[1] << " hom0: " << n_c[0] << " hom1: " << n_c[2] << ".\n";
-            // }//unlock
-            // hm->mapData->mapEntries[locus].skipLocus = true;
-            // break;
-            // if you wish to continue
-            for(int i : {0, 2}){
-                if(normalizer[i]!=0){
-                    iHH[i] += (curr_ehh_before_norm[i] * 1.0 / normalizer[i]  + prev_ehh_before_norm[i] * 1.0  / normalizer[i] ) * 0.5 * distance;
-                }
-                if(normalizer_not[i]!=0){
-                    ciHH[i] += (curr_cehh_before_norm[i] * 1.0  / normalizer_not[i] + prev_cehh_before_norm[i] * 1.0  / normalizer_not[i]) * 0.5  *  distance;
-                }
-            }
-            continue; 
+        // B42: a site where every individual has the same genotype splits no
+        // group, so it skips the two splits and then takes the same gated
+        // integration and stop tests as any site. 3.0.1 integrated it
+        // without the cutoff gate, never updated prev_ehh, skipped the
+        // --max-extend tests, and set prev_ehh where prev_cehh was meant.
+        const bool monomorphic = (hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps);
+        if (!monomorphic) {
+            ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[i].xorbitset, {
+                int old_group_id = group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);
+            });
+            updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
+            m.clear();
+
+            ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[i].hapbitset, {
+                int old_group_id = group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);
+            });
+            updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
+            m.clear();
         }
-        */
-
-       if(hm->hapData->get_n_c0(i) == numHaps or hm->hapData->get_n_c1(i) == numHaps or hm->hapData->get_n_c2(i) == numHaps){ // monomorphic check, compute separately          
-            DBG("WARNING: Monomorphic site at locus "<<i);
-            //no need to do grouping logic  unnecessarily
-            for(int i : {0, 2}){
-                if(normalizer[i]!=0){
-                    iHH[i] += (curr_ehh_before_norm[i] * 1.0 / normalizer[i]  + prev_ehh[i] ) * 0.5 * distance;
-                }else{
-                    iHH[i] += prev_ehh[i] * 0.5 * distance;
-                    prev_ehh[i] = 0; // AC = 0 or 1, this ensures only first two points are used for area calculation
-                }
-
-                if(normalizer_not[i]!=0){
-                    ciHH[i] += (curr_cehh_before_norm[i] * 1.0  / normalizer_not[i] + prev_cehh[i]) * 0.5  *  distance;
-                }else{
-                    ciHH[i] += prev_cehh[i] * 0.5 * distance;
-                    prev_ehh[i] = 0; // AC = 0 or 1, this ensures only first two points are used for area calculation
-                }
-            }
-            continue; 
-        }
-        
-        ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[i].xorbitset, {
-            int old_group_id = group_id[set_bit_pos];
-            m[old_group_id].push_back(set_bit_pos);
-        });
-        updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
-        m.clear();
-
-        ACTION_ON_ALL_SET_BITS(hm->hapData->hapEntries[i].hapbitset, {
-            int old_group_id = group_id[set_bit_pos];
-            m[old_group_id].push_back(set_bit_pos);
-        });
-        updateEHH_from_split_unphased(m, group_count, group_id, totgc, is1, is2, group_core);
-        m.clear();
 
         // equivalent to calcHomozoygosity (without the normalization-by-tot-core-pairs)
         double cehh2_before_norm = 0;
@@ -646,6 +611,16 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
     int skipped_due_to_multimaf = 0; // for multi-MAF
     while(true){ // Upstream: for ( int i = locus+1; i<all_positions.size(); i++ )
 
+        // B28: the cutoff is tested before the edge, so a core whose EHH
+        // decays at the outermost site is scored (3.0.1 tested the edge first
+        // and dropped it as "reached chromosome edge"; v2.0.3 tested the
+        // cutoff first).
+        if(p.CALC_IHS && !p.CALC_NSL){
+            if(curr_ehh1_before_norm*1.0/normalizer_1 <= p.EHH_CUTOFF and curr_ehh0_before_norm*1.0/normalizer_0  <= p.EHH_CUTOFF){
+                break;
+            }
+        }
+
         bool edgeBreak = false;
         edgeBreak = (downstream)? (i-1 < 0) : (i+1 >= numSnps);
         //edgeBreak = nextLocOutOfBounds(i, downstream);
@@ -685,13 +660,6 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         const int gap = physicalDistance(i, prev_index, downstream);
         prev_index = i; // save previous index for genetic distance calculation
 
-        if(p.CALC_IHS && !p.CALC_NSL){
-            if(curr_ehh1_before_norm*1.0/normalizer_1 <= p.EHH_CUTOFF and curr_ehh0_before_norm*1.0/normalizer_0  <= p.EHH_CUTOFF){   // or cutoff, change for benchmarking against hapbin
-                //DBG("Break reason for locus "<<locus<<":: EHH_CUTOFF. "<<curr_ehh1_before_norm*1.0/normalizer_1<< "<=" << p.EHH_CUTOFF <<endl);
-                break;
-            }
-        }
-
         // --max-gap: a core whose haplotypes must cross a gap larger than
         // MAX_GAP before reaching a stop condition is not scored (manual 5.4.6,
         // and what the unphased, XP and iHH12 kernels already do). The phased
@@ -707,29 +675,11 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
             return skipLocusPair();
         }
 
-        if(hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0 ){ 
-            // monomorphic check, it is possible to skip compute to speed it up
-            assert(normalizer_1!=0);
-            ihh1 += (prev_ehh1_before_norm + curr_ehh1_before_norm) * distance * 0.5 / normalizer_1;
-            
-            assert(normalizer_0!=0);
-            ihh0 += (prev_ehh0_before_norm + curr_ehh0_before_norm) * distance * 0.5 / normalizer_0;
-
-            if(OUT_EHHS){
-                string neg = downstream? "-" : ""; // if downstream, then negative distance
-                double ehh1 = curr_ehh1_before_norm / normalizer_1;
-                double ehh0 = curr_ehh0_before_norm / normalizer_0;
-                double ehh = (curr_ehh1_before_norm + curr_ehh0_before_norm) / twice_num_pair_or_square(n_c1+n_c0, p.ALT);
-                //if in range
-                ehhs_out << std::fixed << neg << physicalDistance(i, locus, downstream)  << "\t"
-                <<  neg <<  geneticDistance(i, locus, downstream) << "\t"
-                << ehh1 << "\t"
-                << ehh0 << "\t"
-                << ehh << "";
-                ehhs_out << endl;
-            }
-            continue;
-        }
+        // B42: a monomorphic site splits no group, so it only skips the split
+        // below and then takes the same gated integration and stop tests as
+        // any site. 3.0.1 integrated both alleles without the cutoff gate
+        // and skipped the --max-extend tests at such sites.
+        const bool monomorphic = (hm->hapData->get_n_c0(i) == 0 or hm->hapData->get_n_c1(i) == 0);
 
         // PHASE 2-3: SPLIT GROUPS AT SITE i (P5)
         // The haplotypes of group g that carry the set allele at site i form
@@ -738,37 +688,39 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         // done inline here, without materialising member lists, because
         // this kernel (iHS, nSL) is the most used and the inline form is
         // 15-30% faster than GroupSplitMap on it.
-        MyBitset* v2p = hm->hapData->hapEntries[i].hapbitset;
-        touched.clear();
-        setpos.clear();
-        ACTION_ON_ALL_SET_BITS(v2p, {
-            int g = group_id[set_bit_pos];
-            setpos.push_back(set_bit_pos);
-            if (split_cnt[g]++ == 0) { touched.push_back(g); split_first[g] = set_bit_pos; }
-        });
+        if (!monomorphic) {
+            MyBitset* v2p = hm->hapData->hapEntries[i].hapbitset;
+            touched.clear();
+            setpos.clear();
+            ACTION_ON_ALL_SET_BITS(v2p, {
+                int g = group_id[set_bit_pos];
+                setpos.push_back(set_bit_pos);
+                if (split_cnt[g]++ == 0) { touched.push_back(g); split_first[g] = set_bit_pos; }
+            });
 
-        for (const int g : touched) {
-            const int k = split_cnt[g];
-            split_cnt[g] = 0;
-            if (group_count[g] == k) { split_new[g] = -1; continue; }
-            split_new[g] = totgc;
+            for (const int g : touched) {
+                const int k = split_cnt[g];
+                split_cnt[g] = 0;
+                if (group_count[g] == k) { split_new[g] = -1; continue; }
+                split_new[g] = totgc;
 
-            double del_update = -twice_num_pair_or_square(group_count[g], p.ALT) + twice_num_pair_or_square(k, p.ALT) + twice_num_pair_or_square(group_count[g] - k, p.ALT);
+                double del_update = -twice_num_pair_or_square(group_count[g], p.ALT) + twice_num_pair_or_square(k, p.ALT) + twice_num_pair_or_square(group_count[g] - k, p.ALT);
 
-            group_count[g] -= k;
-            group_count[totgc] += k;
-            totgc += 1;
+                group_count[g] -= k;
+                group_count[totgc] += k;
+                totgc += 1;
 
-            if (isDerived[split_first[g]]) // the core allele is shared by the whole group
-            {
-                curr_ehh1_before_norm += del_update;
-            }else{
-                curr_ehh0_before_norm += del_update;
+                if (isDerived[split_first[g]]) // the core allele is shared by the whole group
+                {
+                    curr_ehh1_before_norm += del_update;
+                }else{
+                    curr_ehh0_before_norm += del_update;
+                }
             }
-        }
-        for (const int v : setpos) {
-            const int ng = split_new[group_id[v]];
-            if (ng >= 0) group_id[v] = ng;
+            for (const int v : setpos) {
+                const int ng = split_new[group_id[v]];
+                if (ng >= 0) group_id[v] = ng;
+            }
         }
 
         // nSL has no EHH cutoff (manual; v2.0.3): it integrates until

@@ -163,6 +163,18 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
 
     while(true){
 
+        // Truncate on EHH12, the quantity being integrated (manual eq. 14; PI
+        // decision). 2.1-3.0.1 truncated on whole-sample EHH, which decays
+        // sooner than EHH12 because EHH12 pools the two most frequent
+        // haplotypes, so iHH12 stopped while EHH12 was still above the cutoff.
+        // B28: tested first, before the edge and gap tests, so a core whose
+        // EHH12 decays at the outermost site, or just before a large gap, is
+        // scored (3.0.1 dropped it).
+        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh12_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh12_before_norm /twice_num_pair(ehhdata.nhaps));
+        if(breaking_ehh <= p.EHH_CUTOFF){
+            break;
+        }
+
         bool edgeBreak = false;
         //edgeBreak = (downstream)? (i-1 < 0) : (i+1 >= numSnps); //change v3
         edgeBreak = nextLocOutOfBounds(i, downstream); 
@@ -214,21 +226,6 @@ double IHH12::calc_ehh_unidirection(int locus, bool downstream){
         prev_index = i;  // save last index that was not skipped
 
 
-        // Truncate on EHH12, the quantity being integrated (manual eq. 14; PI
-        // decision). 2.1-3.0.1 truncated on whole-sample EHH, which decays
-        // sooner than EHH12 because EHH12 pools the two most frequent
-        // haplotypes, so iHH12 stopped while EHH12 was still above the cutoff.
-        double breaking_ehh = (p.ALT ? ehhdata.curr_ehh12_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh12_before_norm /twice_num_pair(ehhdata.nhaps));
-        if(breaking_ehh <= p.EHH_CUTOFF){
-            /*DEBUG :
-            if(downstream){
-                cout<<"breaking ehh down: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
-            }else{
-                cout<<"breaking ehh up: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
-            }
-             */
-            break;
-        }
 
         // if(distance> max_gap){
         //     gap_skip = true;

@@ -164,11 +164,11 @@ identical() {
 
 # ---------------------------------------------------------------- case list
 CASES="ihs ihs-detail ihs-alt ihs-keep nsl xpehh xpehh-wagh xpnsl ihh12 pi ehh ehh12 ehh12-alt ehh12-minor
-ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
+ihs-unphased ihs-unphased-keep nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
 threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv
-hap-reader input-format xp-intersect norm-invariants maf-symmetry pi-edges xp-validate
+hap-reader input-format edge-decay xp-intersect norm-invariants maf-symmetry pi-edges xp-validate
 norm-robust errors numeric-args arg-messages ehh-unphased-multi help"
 
 if [ "$LIST" = 1 ]; then for c in $CASES; do echo "$c"; done; exit 0; fi
@@ -241,6 +241,7 @@ golden ihs            ihs.out          -- --ihs --vcf p1.vcf.gz --pmap
 golden ihs-detail     ihs.out          -- --ihs --ihs-detail --vcf p1.vcf.gz --pmap
 golden ihs-alt        ihs.alt.out      -- --ihs --alt --trunc-ok --vcf p1.vcf.gz --pmap
 golden ihs-keep       ihs.out          -- --ihs --keep-low-freq --vcf p1.vcf.gz --pmap
+golden ihs-unphased-keep ihs.out      -- --ihs --unphased --keep-low-freq --vcf p1.vcf.gz --pmap
 golden nsl            nsl.out          -- --nsl --vcf p1.vcf.gz
 golden xpehh          xpehh.out        -- --xpehh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
 golden xpehh-wagh     xpehh.out        -- --xpehh --wagh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
@@ -486,6 +487,20 @@ if selected input-format; then
     run if13.log --ihs --vcf p1.vcf.gz --map if_off.map --out if_m; r2=$RC
     if [ "$r1" -eq 0 ] && [ "$r2" -eq 1 ] && grep -q 'data row 11 of if_off.map' if13.log; then pass "input-format:vcf-map-positions"
     else fail "input-format:vcf-map-positions" "exit $r1/$r2 (expected 0, then 1 naming row 11)"; fi
+fi
+
+if selected edge-decay; then
+    # B28: the EHH cutoff is tested before the chromosome edge, so a core
+    # whose EHH (iHS) or EHH12 (iHH12) decays at the outermost site is
+    # scored. With example.hap cut to 8176 sites (iHS) or 8102 sites (iHH12)
+    # the reference implementation scores 4708 and 5276 cores; 57cce23
+    # dropped 9 and 8 of them as "reached chromosome edge".
+    awk '{ NF = 8176; print }' example.hap > ed_a.hap; awk 'NR <= 8176' example.map > ed_a.map
+    awk '{ NF = 8102; print }' example.hap > ed_b.hap; awk 'NR <= 8102' example.map > ed_b.map
+    run ed1.log --ihs --hap ed_a.hap --map ed_a.map --out ed_a; n1=$(awk 'END { print NR - 1 }' ed_a.ihs.out 2>/dev/null)
+    run ed2.log --ihh12 --hap ed_b.hap --map ed_b.map --out ed_b; n2=$(awk 'END { print NR - 1 }' ed_b.ihh12.out 2>/dev/null)
+    if [ "$n1" = 4708 ]; then pass "edge-decay:ihs"; else fail "edge-decay:ihs" "$n1 cores (reference: 4708)"; fi
+    if [ "$n2" = 5276 ]; then pass "edge-decay:ihh12"; else fail "edge-decay:ihh12" "$n2 cores (reference: 5276)"; fi
 fi
 
 if selected xp-intersect; then
