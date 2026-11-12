@@ -315,7 +315,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         //be used to calculate E[X] and E[X^2]
         for (int i = 0; i < nfiles; i++)
         {
-            char str[10];
+            char str[16];
             snprintf(str, sizeof str, "%d", numBins);
             if(IHS || NSL) outfilename[i] = filename[i] + "." + str + "bins.norm";
             if(XPEHH || SOFT) outfilename[i] = filename[i] + ".norm";
@@ -444,7 +444,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
             cerr << "Reading all data.\n";
             double *freq1 = new double[totalLoci];
-            double *freq2;
+            double *freq2 = nullptr;
             if(XPEHH) freq2 = new double[totalLoci];
             double *score = new double[totalLoci];
             //read in all data
@@ -702,7 +702,7 @@ void analyzeSNPWindows(string normedfiles[],int fileLoci[], int nfiles, int snpW
   ofstream fout;
   string* winfilename = new string[nfiles];
 
-  char str[10];
+  char str[16];
   sprintf(str,"%d",snpWinSize);
 
   string name;
@@ -894,7 +894,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     ofstream fout;
     string *winfilename = new string[nfiles];
 
-    char str[10];
+    char str[16];
     snprintf(str, sizeof str, "%d", winSize / 1000);
 
     string name;
@@ -1175,7 +1175,7 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     ofstream fout;
     string *winfilename = new string[nfiles];
 
-    char str[10];
+    char str[16];
     snprintf(str, sizeof str, "%d", winSize / 1000);
 
     string name, header;
@@ -1397,7 +1397,7 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     ofstream fout;
     string *winfilename = new string[nfiles];
 
-    char str[10];
+    char str[16];
     snprintf(str, sizeof str, "%d", winSize / 1000);
 
     string name, header;

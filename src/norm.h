@@ -129,19 +129,8 @@ class SelscanNorm{
     const int DEFAULT_MINSNPS = 10;
     const string HELP_MINSNPS = "Only consider a bp window if it has at least this many SNPs.";
 
-    // const string ARG_SNPWIN = "--snp-win";
-    // const bool DEFAULT_SNPWIN = false;
-    // const string HELP_SNPWIN = "<not implemented> If set, will use windows of a constant\n\
-    // \tSNP size with varying bp length.";
-
-    // const string ARG_SNPWINSIZE = "--snp-win-size";
-    // const int DEFAULT_SNPWINSIZE = 50;
-    // const string HELP_SNPWINSIZE = "<not implemented> The number of SNPs in a window.";
-
     const string ARG_BPWIN = "--bp-win";
     const bool DEFAULT_BPWIN = false;
-    //const string HELP_BPWIN = "If set, will use windows of a constant bp size with varying\n\
-    //\tnumber of SNPs.";
     const string HELP_BPWIN = "Use fixed-size bp windows (variable SNP count); outputs .windows with max/min score.\n";
 
     const string ARG_IHS = "--ihs";
