@@ -414,6 +414,7 @@ Default: __logfile__.
     - Changed: norm frequency bins are left-closed.
     - Changed: norm writes the gene table next to its first input, as <input>.<BED file name>.genetable. NEW: --gene-out sets its path.
     - Changed: The unphased --ehh table reports EHH for each homozygote class and its complement (ehh2, ehh0, cehh2, cehh0, ehh).
+    - Changed: Under --alt, unphased XP-EHH and XP-nSL stop integrating a population once its individuals are all unique, as phased XP and iHS do.
     - Fixed: --max-gap is now applied to phased iHS and nSL.
     - Fixed: XP-EHH and XP-nSL no longer drop sites at joint frequency 0.5 or, unphased, sites without heterozygotes.
     - Fixed: Unphased XP population 2 values, the --wagh normalization, and the unphased iHS cutoff.
@@ -431,6 +432,7 @@ Default: __logfile__.
     - Fixed: Blank lines are skipped in hap, thap, tped and map files, and unphased alleles are checked for 0/1 coding.
     - Fixed (norm): --bp-win honours --win-offset and stops if a file holds more than one chromosome or is unsorted. --min-snps must be at least 1.
     - Fixed (norm): --ihs-detail output can be normalized. Input headers are checked before any output is written, and inputs with no data are an error.
+    - Fixed: Positions of 2^31 bp or more, or non-numeric positions, are an error (they were silently wrapped).
     - Improved: Clearer messages when a map does not match the genotype file, and the log gives the reason each VCF record was removed.
     - NEW: --version and --perm-seed. --help prints to stdout.
     - Improved: VCF loading is about 4x faster, iHS 3-5x, and nSL about 7x, and memory use is lower.
