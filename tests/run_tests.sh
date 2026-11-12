@@ -604,6 +604,14 @@ if selected norm-robust; then
     run nr13.log norm --xpnsl --norm-files nr_xn.xpnsl.out.norm --gene-bed nr_xn.bed --min-snps 1
     if [ "$RC" -eq 0 ] && [ -s nr_xn.bed.xpnsl.genetable ] && [ ! -e nr_xn.bed.xpehh.genetable ]; then pass "norm-gene:xpnsl-name"
     else fail "norm-gene:xpnsl-name" "exit $RC; files: $(ls nr_xn.bed.*.genetable 2>/dev/null | tr '\n' ' ')"; fi
+    # U16: gene-table rows have as many fields as the header (iHS/nSL rows
+    # ended with an extra tab)
+    run nr14.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_genes.bed --min-snps 1
+    for gt in nr_genes.bed.ihs.genetable nr_xg.bed.xpehh.genetable nr_xn.bed.xpnsl.genetable; do
+        bad=$(awk -F'\t' 'NR==1 { n=NF; next } NF != n { b++ } END { print b+0 }' "$gt" 2>/dev/null)
+        if [ -s "$gt" ] && [ "$bad" = 0 ]; then pass "norm-gene:fields:${gt#nr_}"
+        else fail "norm-gene:fields:${gt#nr_}" "$bad rows with a different field count from the header"; fi
+    done
     # B37: BED genes cover 1-based start+1..end inclusive. A gene ending
     # exactly at a SNP must count it (3.0.1 dropped the last base).
     P=$(awk -F'\t' 'NR==202 {print $3}' nr_a.ihs.out.20bins.norm)

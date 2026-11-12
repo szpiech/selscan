@@ -538,7 +538,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                     genetable << chr << "\t" << geneStart << "\t" << geneEnd << "\t"
                           << gene_name << "\t" << len << "\t" << nwin << "\t"
                           << row.nsnps_crit_top*1.0/nwin << "\t" 
-                          << maxScore << "\t" << res_score << "\t" << "\n";
+                          << maxScore << "\t" << res_score << "\n";   // no trailing tab (U16)
 
                 }
                 
