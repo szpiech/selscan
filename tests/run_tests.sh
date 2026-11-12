@@ -100,6 +100,8 @@ RC=0
 # a run writes in the scratch directory are converted to LF so that the
 # comparisons and the awk/grep checks see the same text on every platform.
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) CRLF=1 ;; *) CRLF=0 ;; esac
+# On Windows a ':' in a --ehh/--ehh12 locus ID becomes '_' in the file name.
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) FC=_ ;; *) FC=: ;; esac
 run() {
     local log="$1"; shift
     [ "$CRLF" = 1 ] && touch "$WORK/.run-stamp"
@@ -248,8 +250,8 @@ golden xpehh-wagh     xpehh.out        -- --xpehh --wagh --vcf p1.vcf.gz --vcf-r
 golden xpnsl          xpnsl.out        -- --xpnsl --vcf p1.vcf.gz --vcf-ref p2.vcf.gz
 golden ihh12          ihh12.out        -- --ihh12 --vcf p1.vcf.gz --pmap
 golden pi             pi.100bp.out     -- --pi --vcf p1.vcf.gz --pmap
-golden ehh            ehh.chr1:29243.out   -- --ehh chr1:29243 --vcf p1.vcf.gz --pmap
-golden ehh12          ehh12.chr1:29243.out -- --ehh12 chr1:29243 --vcf p1.vcf.gz --pmap
+golden ehh            "ehh.chr1${FC}29243.out"   -- --ehh chr1:29243 --vcf p1.vcf.gz --pmap
+golden ehh12          "ehh12.chr1${FC}29243.out" -- --ehh12 chr1:29243 --vcf p1.vcf.gz --pmap
 golden ehh12-alt      ehh12.Locus4077.alt.out -- --ehh12 Locus4077 --alt --hap example.hap --map example.map
 golden ehh12-minor    ehh12.Locus1003.out -- --ehh12 Locus1003 --hap example.hap --map example.map
 golden ihs-unphased   ihs.out          -- --ihs --unphased --vcf p1.vcf.gz --pmap
@@ -258,7 +260,7 @@ golden xpehh-unphased xpehh.out        -- --xpehh --unphased --vcf p1.vcf.gz --v
 golden xpehh-alt      xpehh.alt.out    -- --xpehh --alt --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
 golden xpehh-unphased-alt xpehh.alt.out -- --xpehh --unphased --alt --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap
 golden xpnsl-unphased xpnsl.out        -- --xpnsl --unphased --vcf p1.vcf.gz --vcf-ref p2.vcf.gz
-golden ehh-unphased   ehh.chr1:29243.out   -- --ehh chr1:29243 --unphased --vcf p1.vcf.gz --pmap
+golden ehh-unphased   "ehh.chr1${FC}29243.out"   -- --ehh chr1:29243 --unphased --vcf p1.vcf.gz --pmap
 golden ihs-hap        ihs.out          -- --ihs --hap example.hap --map example.map
 golden nsl-thap       nsl.out          -- --nsl --thap example.thap --map example.map
 golden xpehh-hap      xpehh.out        -- --xpehh --hap example2.p1.hap --ref example2.p2.hap --map example2.map
@@ -327,7 +329,7 @@ if selected multistat; then
     identical "multistat==single:pi-with-ihs" m_pi.pi.100bp.out s_pi.pi.100bp.out
     identical "multistat==single:ihs-with-pi" m_pi.ihs.out s_ihs.ihs.out
     run m.log --ihs --ehh chr1:29243 --vcf p1.vcf.gz --pmap --out m_ehh
-    identical "multistat==single:ehh-with-ihs" m_ehh.ehh.chr1:29243.out s_ehh.ehh.chr1:29243.out
+    identical "multistat==single:ehh-with-ihs" "m_ehh.ehh.chr1${FC}29243.out" "s_ehh.ehh.chr1${FC}29243.out"
     run m.log --ihs --xpehh --vcf p1.vcf.gz --vcf-ref p2.vcf.gz --pmap --out m_xp
     identical "multistat==single:xpehh-with-ihs" m_xp.xpehh.out s_xp.xpehh.out
     identical "multistat==single:ihs-with-xpehh" m_xp.ihs.out s_ihs.ihs.out
@@ -1018,7 +1020,7 @@ if selected ehh-unphased-multi; then
     # single-locus run (3.0.1 kept the previous locus's rows)
     run eu1.log --ehh chr1:29273,chr1:135961 --unphased --vcf p1.vcf.gz --pmap --out eu_ab
     run eu2.log --ehh chr1:135961 --unphased --vcf p1.vcf.gz --pmap --out eu_b
-    identical "ehh-unphased-multi" eu_ab.ehh.chr1:135961.out eu_b.ehh.chr1:135961.out
+    identical "ehh-unphased-multi" "eu_ab.ehh.chr1${FC}135961.out" "eu_b.ehh.chr1${FC}135961.out"
 fi
 
 if selected help; then

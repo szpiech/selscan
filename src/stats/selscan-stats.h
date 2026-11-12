@@ -7,6 +7,7 @@
 #include "groupsplit.h"
 #include "../selscan-data.h"
 #include <assert.h>
+#include <cstring>
 
 // #ifdef __APPLE__
 // #include <TargetConditionals.h>
@@ -53,14 +54,30 @@ class SelscanStats {
 
         int numThreads;
 
+    // Windows does not allow backslash or / : * ? " < > | in file names, and NTFS
+    // writes "name:rest" to a hidden stream of "name", so a locus ID such as
+    // chr1:29243 gave an empty-looking file. On Windows these characters
+    // become '_' in the per-locus --ehh/--ehh12 file name, and the log
+    // records the name used. Other platforms keep the ID as given.
+    string fileSafe(const string &query){
+#ifdef _WIN32
+        string safe = query;
+        for (char &c : safe) if (strchr("\\/:*?\"<>|", c)) c = '_';
+        if (safe != query) (*flog) << "Locus " << query << ": output file name uses " << safe << ".\n";
+        return safe;
+#else
+        return query;
+#endif
+    }
+
     string get_filename_base(string statname, string queryfile =""){
         string outFilename = p.outFilename + "." + statname;
         if(statname == "pi"){
             outFilename += "." + to_string(p.PI_WIN) + "bp";
             //else if (p.CALC_PI) p.outFilename += ".pi." + string(PI_WIN_str) + "bp";
         }
-        if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + queryfile;
-        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + queryfile;
+        if(statname == "ehh" && p.SINGLE_EHH) outFilename += "." + fileSafe(queryfile);
+        if(statname == "ehh12" && p.SINGLE_EHH12) outFilename += "." + fileSafe(queryfile);
         if (p.ALT) outFilename += ".alt";
         return outFilename;
     }
