@@ -188,15 +188,12 @@ pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool down
 
         if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
         {
-            {std::lock_guard<std::mutex> lock(mutex_log);
-            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
-                    << ". \n";
+            {std::lock_guard<std::mutex> lock(mutex_log);   // one lock per message (M7)
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ".";
+            if (!p.TRUNC) (*flog) << " Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
+            (*flog) << "\n";
             }//unlock
             if (!p.TRUNC){
-                //hm->mapData->mapEntries[locus].skipLocus = true;
-                {std::lock_guard<std::mutex> lock(mutex_log);
-                (*flog) << ARG_TRUNC << "set. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
-                }//unlock
                 return skipLocusPair();
             }
             break;
@@ -497,16 +494,13 @@ pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
         bool edgeBreak = nextLocOutOfBounds(i, downstream);
         if(edgeBreak)
         {
-            {std::lock_guard<std::mutex> lock(mutex_log);
-            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
-                    << ". \n";
+            {std::lock_guard<std::mutex> lock(mutex_log);   // one lock per message (M7)
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ".";
+            if (!p.TRUNC) (*flog) << " Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
+            (*flog) << "\n";
             }//unlock
 
             if (!p.TRUNC){
-                {std::lock_guard<std::mutex> lock(mutex_log);
-                (*flog) << "Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
-                (*flog) << "\n";
-                }//unlock
                 return skipLocusPair();
             }
             break;

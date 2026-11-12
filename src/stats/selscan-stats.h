@@ -375,12 +375,10 @@ class SelscanStats {
             if(p.MULTI_CHR){
                 if(downstream){
                     if(hm->mapData->mapEntries[locus-1].chr != hm->mapData->mapEntries[locus].chr){
-                        cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
                         return true;
                     }
                 }else{
                     if(hm->mapData->mapEntries[locus+1].chr != hm->mapData->mapEntries[locus].chr){
-                        cerr<<"Chr-out-of-bounds: pos"<<locus<<endl;
                         return true;
                     }
                 }

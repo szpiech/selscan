@@ -245,21 +245,15 @@ OutputUnphasedIHH IHS::calc_ehh_unidirection_unphased(int locus, bool downstream
 
         bool edgeBreak = nextLocOutOfBounds(i, downstream);
         if(edgeBreak) {
-            {
+            {   // one lock for the whole message, so lines from different
+                // cores do not interleave (M7)
                 std::lock_guard<std::mutex> lock(mutex_log);
                 (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
-                    << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName ;
+                    << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName
+                    << (p.TRUNC ? "" : " Skipping calculation.") << endl;
             }
-            
             if (!p.TRUNC){
-                {
-                    std::lock_guard<std::mutex> lock(mutex_log);
-                     (*flog) << "Skipping calculation." << endl;
-                }
                 return skipLocusOutput;
-            }else{
-                std::lock_guard<std::mutex> lock(mutex_log);
-                (*flog) << endl;
             }
             break;
         }
@@ -627,11 +621,8 @@ pair<double, double> IHS::calc_ehh_unidirection(int locus, bool downstream){
         if(edgeBreak) {
             {std::lock_guard<std::mutex> lock(mutex_log);
             (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF
-                    << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << endl;
-            if (!p.TRUNC){
-                (*flog) << "Skipping calculation.";
-            }
-            (*flog) << endl;
+                    << ". position: "<< hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName
+                    << (p.TRUNC ? "" : " Skipping calculation.") << endl;
             }//unlock
             if (!p.TRUNC){
                 return skipLocusPair();
