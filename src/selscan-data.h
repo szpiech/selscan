@@ -33,6 +33,7 @@
 
 #include <chrono>
 #include <queue>
+#include <deque>
 #include <cmath>
 
 #include "hapmap/bitset.h"
@@ -50,21 +51,27 @@
 
 using namespace std;
 
-struct VCFPass1Result {
-    queue<size_t> skiplist;
-
-    size_t nloci_before_filtering = 0;
-    size_t skipcount = 0;
+// M9: one pass over a VCF file. Each record is checked and filtered, and
+// its alleles are written to bitsets in the same pass; the bitsets of kept
+// records go to HapData without a second read of the file. Kept loci are
+// held as parallel vectors (8-24 bytes each) to keep the extra memory
+// during loading small.
+struct VCFRecords {
     int current_ngts = -1;
-
-    // allele counts per locus
-    vector<int> num_1s;
-    vector<int> num_2s;
-
-    // XP only: position and FNV-1a hash of "REF\tALT" per record, file order
+    size_t nloci_before_filtering = 0;
+    size_t n_nonsnp = 0;                     // removed by --filter-vcf
+    size_t nSkipDup = 0, nSkipFilter = 0, nSkipMaf = 0;
+    // kept loci, in file order
+    vector<MyBitset*> hap;                   // 1s (phased) or heterozygotes (unphased)
+    vector<MyBitset*> xr;                    // unphased only: homozygous derived
+    vector<int> derived;                     // XP only: derived-allele count
+    queue<size_t> skipQueue;                 // record indices of removed records, in order
+    deque<MapEntry> map;                     // only when the map is taken from this file
+    // XP only, for every record: position, FNV-1a hash of "REF\tALT", removed by a per-file rule
     vector<size_t> physpos;
     vector<uint64_t> refalt_hash;
-    size_t n_nonsnp = 0;   // records removed by --filter-vcf
+    vector<char> skipped;
+    void freeAll() { for (auto b : hap) delete b; for (auto b : xr) delete b; hap.clear(); xr.clear(); }
 };
 class HapMap{
 public:
@@ -95,39 +102,14 @@ public:
 
 
     // P1: map entries of kept query-VCF loci, recorded during the haplotype pass
-    vector<MapEntry> vcfMap;
-    void captureVCFMapEntry(const string &line, size_t locus);
-    VCFPass1Result readHapDataVCF_pass1(string filename);
-    void readHapDataVCF_pass2(string filename, HapData& hapData, const VCFPass1Result& pass1);
+    deque<MapEntry> vcfMap;   // M9: deque, so growing it never copies and setFromEntries frees it as it goes
+    VCFRecords readVCFRecords(const string &filename, bool xp, bool captureMap);
+    void installVCFRecords(VCFRecords &rs, HapData &hapData, bool captureMap);
     void readHapDataVCFXP(string filename, string filename2, HapData& hapData, HapData& hapData2);
 
 
 
 
-    void rebuild_skipqueue_with_new_skips(queue<size_t>& skiplist, const vector<size_t>& new_skips)
-    {
-        vector<size_t> all_skips;
-
-        // Copy old skips out of queue
-        while (!skiplist.empty()) {
-            all_skips.push_back(skiplist.front());
-            skiplist.pop();
-        }
-
-        // Add new skips
-        for (size_t idx : new_skips) {
-            all_skips.push_back(idx);
-        }
-
-        // Sort + deduplicate
-        sort(all_skips.begin(), all_skips.end());
-        all_skips.erase(unique(all_skips.begin(), all_skips.end()), all_skips.end());
-
-        // Rebuild queue
-        for (size_t idx : all_skips) {
-            skiplist.push(idx);
-        }
-    }
 
     int countFields(const string &str)
     {

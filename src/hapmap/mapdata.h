@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <queue>
+#include <deque>
 
 using namespace std;
 
@@ -53,7 +54,7 @@ public:
 
     //allocates the arrays and populates them with -9 or "--" depending on type
     void initMapData(int nloci);
-    void setFromEntries(const vector<MapEntry> &entries);
+    void setFromEntries(std::deque<MapEntry> &entries);   // moves the entries out, freeing the deque as it goes
     void releaseMapData();
 
     //reads in map data and also does basic checks on integrity of format

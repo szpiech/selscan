@@ -462,6 +462,10 @@ public:
     //     }
     // }
 
+    // M9: take ownership of per-locus bitsets filled while reading (xr
+    // may be empty for phased data, which use the shared zero bitset)
+    void adoptLoci(int nhaps, vector<MyBitset*> &hap, vector<MyBitset*> &xr);
+
     void addAllele1(int locus, int hapId){
         hapEntries[locus].hapbitset->set_bit(hapId);
         hapEntries[locus].hapbitset->num_1s+= 1;

@@ -55,6 +55,35 @@ void HapData::initHapData(int nhaps, int nloci)
     INIT_SUCCESS = true;
 }
 
+void HapData::adoptLoci(int nhaps, vector<MyBitset*> &hap, vector<MyBitset*> &xr)
+{
+    const int nloci = static_cast<int>(hap.size());
+    if (nhaps < 1 || nloci < 1)
+    {
+        for (auto b : hap) delete b;
+        for (auto b : xr) delete b;
+        std::string msg = "number of haplotypes (" + std::to_string(nhaps) + ") and number of loci ("
+                          + std::to_string(nloci) + ") must be positive.";
+        if (nhaps >= 1 && nloci == 0) msg += " No loci remain after filtering (check --maf and the input).";
+        throw std::runtime_error(msg);
+    }
+    cout << "=====" << endl;
+    std::cout << "After filtering: \n"
+          << "  Haplotypes: " << nhaps << "\n"
+          << "  Loci:       " << nloci << std::endl;
+    cout << "=====" << endl;
+    this->hapEntries = new struct HapEntry[nloci];
+    this->nhaps = nhaps;
+    this->nloci = nloci;
+    if (!unphased) zeroBitset = new MyBitset(nhaps);
+    for (int j = 0; j < nloci; j++){
+        hapEntries[j].hapbitset = hap[j];
+        hapEntries[j].xorbitset = unphased ? xr[j] : zeroBitset;
+    }
+    vector<MyBitset*>().swap(hap); vector<MyBitset*>().swap(xr);
+    INIT_SUCCESS = true;
+}
+
 void HapData::releaseHapData()
 {
     if (hapEntries == NULL) return;
