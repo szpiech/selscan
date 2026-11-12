@@ -72,6 +72,40 @@ one src/Makefile for every platform, also with header dependencies.
 | 3c79b85 | P6, B51 | none on well-formed input; norm read/normalise passes buffered (5M rows 10.8 -> 6.6 s); `--ihs-detail` column count from the first data line |
 | 4c51bce | P5 | none; group splitting without per-step allocation (nSL 85.8 -> 14.9 s, single thread) |
 | 47776f7 | B40 | none at the suite's sizes; exact pair counts (nCk(n,2) was off above 59,092 haplotypes; the factln cache race is gone) |
+| df805d8 | notes | step 6 rows in this file |
+| 828a5c5 | Q-GSL | none in goldens; GSL replaced by src/selscan-numeric.h (sort, quantile, mean bit-identical to GSL 2.8 over 20,000 trials); permutation p-values change with the new generator (seed 7: 0.30437, was 0.29946) |
+| 8d8a2af | M4 | none; one src/Makefile (STATIC, UNIVERSAL, MACOS_MIN), objects in src/build/, `check`/`install`/`clean` |
+| 92a4848 | M13 | tests only; default relative tolerance 1e-5 (x86_64 last-digit differences) |
+| f20d92c | M12 | none; clang -Wall -Wextra clean, builds as C++20 |
+| 088b5a9 | M6, Q12 | none; bin/, releases/, lib/, include/ untracked |
+| e71e8d3 | U17 | norm banner prints the selscan version (was 3.0.0) |
+| 6f604d6 | M5 | help text corrected; README option lists are the `--help` output |
+| ef1dab4 | ci | none; CI and release workflows (not yet run) |
+| 770f5a9 | release | version 3.1.0; README change log entry |
+| 2363b85 | docs | none; INSTALL shortened |
+| 57cce23 | U14 | XP-nSL gene tables named and labelled xpnsl (were xpehh) |
+| 6632be3 | U16 | iHS/nSL gene-table rows lose a trailing tab |
+| 1039bdd | U15 | gene table written as `<first input>.<BED/GTF name>.genetable`; `--gene-out` |
+| e75e861 | M12 | none; three GCC-only warnings cleared |
+| 42f6e46 | docs | change log line for U15 |
+| 1609dc9 | B30 | unphased `--ehh` table is `chr pdist gdist ehh2 ehh0 cehh2 cehh0 ehh`; ehh-unphased re-recorded |
+| f613f11 | B35 | none in goldens; `--min-snps` below 1 is an error |
+| a5fb829 | B36, B46 | none in goldens; SNPs before `--win-offset` are not counted; a second chromosome or a position decrease in `--bp-win` input is an error |
+| 7c499f6 | U3, U11 | none in goldens; `--ihs-detail` input normalises (13-column .norm); headers checked before output; inputs with no data rows are an error |
+| c9bfe6a | B14, U9 | xpehh-hap re-recorded (12,738 -> 12,773 rows; example2.p*.hap have 125 rows, the 125th haplotype was all-ancestral) |
+| d8f2a3a | tests | none; `--list` names every block |
+| 3dbabf4 | U9, U1 | none on well-formed input; blank lines skipped in thap/tped/map; unphased 0/1 coding checked; map mismatch message gives raw counts |
+| ca6fb1c | B33 | none on well-formed input; haploid and malformed GT fields are errors |
+| ac0c362 | U13 | none; default thread count at least 1 |
+| fd11639 | U8 | none when the map matches; with `--vcf --map`, a map position that differs from its VCF POS is an error |
+| 11643d6 | B28, B42 | ihs-keep re-recorded, new ihs-unphased-keep; cores whose EHH decays at the outermost site are now scored (big50k iHS: 3 more cores, other rows identical) |
+| 9aaadb6 | M7 | log only; one line per edge warning; stderr debug line removed |
+| 862b578 | M10 | none; example multiallele/multichr VCFs readable; VCF log gives the reason for each removed record |
+| f10c485 | M11 | norm `--help` text; README checked against `--help` |
+| 70e3809 | docs | change log lines (approved) |
+| 28bcbdc | B43 | unphased XP `--alt` values (a population stops at all-unique); new goldens xpehh-alt and xpehh-unphased-alt |
+| ee0e68f | B44 | none on valid input; positions of 2^31 or more, or non-numeric, are an error |
+| 19e6ca0 | M9 | none; unused helpers removed |
 
 Each commit message gives the measured differences in full.
 
@@ -95,6 +129,9 @@ Corrections to later commit messages:
   above 59,092); there is no B52. The pair counts no longer call nCk, so
   the race is gone by construction. TSan does not run on the macOS build
   machine, so no TSan rerun was made.
+- e71e8d3 (U17) also changes the test script: on MSYS2, run() converts
+  CRLF to LF in captured output, so the text checks pass on Windows. The
+  message does not say so.
 
 ## Validation against an independent reference
 
@@ -157,6 +194,25 @@ remove the 12 duplicated positions.
   1M-row XP-EHH and iHH12 tables, and on an `--ihs-detail` table with
   15-17-digit fields and nan/inf/-0/NaN/1.5x tokens.
 
+- B30, unphased `--ehh`: every column within 4.9e-7 of a first-principles
+  computation on a synthetic 40-individual, 399-site VCF, with several loci
+  per run. v2.0.3 is not a reference here (its unphased table differs in
+  definition).
+- B28 and B42 (11643d6): phased iHS 921/921 cores on simA (1,455/1,455 with
+  `--max-gap 1e9`), iHH12 2,157/2,157 and 2,309/2,309; with a monomorphic
+  site after every 25th site and `--keep-low-freq`, iHS 1,568/1,568, nSL
+  2,320/2,320, unphased iHS 2,474/2,474; p1 with `--keep-low-freq`, iHS
+  563/563 and unphased iHS 1,419/1,419. All within 5e-6.
+- B43: the reference rounded sum((c/n)^2), so an EHH exactly at the 0.05
+  cutoff (980/19600 for 140 haplotypes) compared above it. With exact
+  arithmetic phased XP-EHH `--alt` matches on simB (3,083/3,083) and, with
+  the all-unique rule, on p1/p2 (2,083/2,083); unphased XP-EHH `--alt`
+  after 28bcbdc matches 2,155/2,155. Binomial XP cannot tie (sum c(c-1)
+  is even, 973 is odd), which is why it always matched.
+- Unphased nSL (B29) was not validated. On simA it differs from the reference
+  (max 1.6, 19 cores fewer) in every build, and v2.0.3 gives a third set.
+  See Known open issues.
+
 v2.1.3 is not a baseline for the XP fixes. It drops the same 14
 joint-frequency-0.5 sites as 3.0.1 and agrees with 3.0.1 exactly on every
 site they share.
@@ -206,6 +262,25 @@ site they share.
   B38 adds `--perm-seed` and reports (count+1)/(n+1); B18 treats any
   non-finite score or frequency as missing and logs the count; the norm
   log records bin means and variances at 17 significant digits.
+- Step 7 (PI): GSL is replaced; bin/ and releases/ are untracked and
+  binaries go out as GitHub release assets; the macOS deployment target
+  stays at 11.0 (so no std::to_chars); the version is 3.1.0.
+- U15 (PI): the gene table goes next to the first normalised input, with
+  `--gene-out` to set the path.
+- B30 (PI): the unphased `--ehh` table has both complements (cehh2,
+  cehh0). Undefined values print -1, as in the phased table (choice made
+  here).
+- B16 (PI): '.' genotypes are an error in every reader.
+- B36: a second chromosome or unsorted positions in `--bp-win` input is an
+  error; restarting windows per chromosome belongs to the deferred
+  multi-chromosome work (choice made here).
+- B44 (PI): positions of 2^31 or more are rejected; 64-bit positions are
+  deferred with the multi-chromosome work.
+- B43 (PI): under `--alt`, both XP kernels stop integrating a population
+  once its haplotypes (or individuals) are all unique, as iHS does (B9).
+- B29, unphased nSL (PI): the stopping rule is kept as it is for 3.1.0.
+- U8: with `--vcf --map`, map and VCF must agree on position; chromosome
+  names and IDs are not compared (choice made here).
 - Step 6 findings and choices made here, not by the PI: B50 and B51
   were found during step 6 and are not in the review report. P5 visits
   groups in first-touched order; results do not depend on it (integer
@@ -243,37 +318,37 @@ the computation. It may matter on network filesystems.
 ## Known open issues
 
 - KNOWN_FAIL in tests/run_tests.sh is empty since 02aaea8 (B39).
-- B43 (phased XP-EHH `--alt`) differs from the reference at 862 of 2083
-  sites. Part of it is explained: XP integrates each population only while
-  that population is not all-unique, and under `--alt` the all-unique EHH
-  floor is 1/n, not 0. That accounts for 53 sites; 809 are unexplained.
-  Binomial XP-EHH matches exactly.
+- B29: unphased nSL stops only when all individuals are unique, so the
+  complement iHH keeps growing after both homozygote EHHs reach 0. The
+  reference stops when both reach 0, and v2.0.3 differs from both. Kept
+  as is for 3.1.0 (PI); the rule should be settled against the method.
+- XP-nSL applies the pooled `--cutoff` in every version, but the manual
+  (4.5) says it has no cutoff. Either the manual or the definition must
+  change (in the manual corrections list for the PI).
+- The .pi output has no header and is space-delimited, unlike every other
+  output.
+- Positions above 2^31 - 1 and several chromosomes per file (`--multi-chr`,
+  B31/U7) are not supported; both are planned together.
+- M9 (rest): the single-population VCF reader and the shared XP pass still
+  parse records separately. They apply the same checks now.
+- The manual PDF has no source in the repository. A list of corrections
+  for 3.1.0 was given to the PI (manual_corrections_3.1.0.md).
 - iHH12 `--alt` code mixes squared and binomial terms for the top two
   haplotypes. Left alone deliberately: the EHH12 adjustment is 2*t1*t2 under
   either measure, and iHH12 `--alt` was identical before and after the
   equivalent change.
-- The loader differences found while building the harness (duplicated
-  positions, jointly monomorphic XP sites) are resolved by f985491 and
-  28f0f22; tped-equiv and thap-equiv now run on the unfiltered p1/p2.
-- `--filter-vcf` (the multi-allelic filter) tests REF/ALT for single
-  A/C/G/T bases, so on 0/1-coded VCFs such as example/ it removes every
-  record (B39, filter-vcf-01).
-- No golden case runs unphased `--wagh`, so that part of feec363 is
-  untested.
+- `--filter-vcf` tests REF/ALT for single A/C/G/T bases, so on 0/1-coded
+  VCFs such as example/p1.vcf.gz it removes every record (B39,
+  filter-vcf-01).
+- No golden case runs unphased `--wagh`.
 - B24 is a regression check only on release builds: the out-of-bounds
-  write ran silently on a018ca0 but crashed (SIGTRAP) on a 22769f4
-  build, and a libc++-hardened build aborts on it.
-- norm items from the review not yet addressed: B35 (`--min-snps 0`), B36
-  (window analysis assumes one sorted chromosome per file), B46
-  (`--win-offset` counts leading SNPs), U3 (`--ihs-detail` input), U11
-  (empty inputs), M11 (help and manual).
-- norm speed after P6: about 2.5 of 6.6 s on 5M rows is `%.6g`
-  formatting. `std::to_chars` would remove most of it but needs macOS
-  13.3 or later in Apple's libc++; this waits for the release deployment
-  target (step 7). The separate counting pass (checkIHSfile and its XP
-  and iHH12 versions, about 0.9 s) remains.
+  write ran silently on a018ca0 but crashed (SIGTRAP) on a 22769f4 build,
+  and a libc++-hardened build aborts on it.
+- norm speed: about 2.5 of 6.6 s on 5M rows is `%.6g` formatting.
+  `std::to_chars` would remove most of it but needs macOS 13.3; the
+  deployment target stays at 11.0 (PI).
 - binom.cpp (nCk, factln) is no longer used by the kernels since 47776f7 (B40).
-- iHS/nSL gene-table rows end with an extra tab (one more field than the
-  header); left as is.
-- `--multi-chr` is deferred until after the bug fixes; it is a new feature
-  to add.
+- The CI and release workflows (ef1dab4) have not run; they run on the
+  first push. The GCC build on Rocky 9.7 (GCC 11.5) at 2363b85 passed
+  `make check` with 4 GCC-only warnings; e75e861 clears three and the
+  B30 rewrite removed the code of the fourth. Not rerun on GCC since.
