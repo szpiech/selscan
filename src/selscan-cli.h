@@ -114,11 +114,9 @@ To calculate XP-EHH:\n\
 ./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>\n";
 
 const string ARG_THREAD = "--threads";
-// hardware_concurrency() may return 0 when the count is unknown (U13)
-const int DEFAULT_THREAD = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+const int DEFAULT_THREAD = 1;   // PI decision (3.1.0); 3.0.1 used the hardware thread count
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
-\tPartitions loci across threads. The default is the number of\n\
-\tlogical CPUs of the machine selscan runs on.";
+\tPartitions loci across threads.";
 
 const string ARG_FILENAME_POP1_TPED = "--tped";
 const string DEFAULT_FILENAME_POP1_TPED = "__hapfile1";

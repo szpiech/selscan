@@ -226,9 +226,8 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 	Default: __thapfile2
 
 --threads <int>: The number of threads to spawn during the calculation.
-	Partitions loci across threads. The default is the number of
-	logical CPUs of the machine selscan runs on.
-	Default: number of logical CPUs
+	Partitions loci across threads.
+	Default: 1
 
 --tped <string>: A TPED file containing haplotype and map data.
 	Variants should be coded 0/1
