@@ -212,6 +212,11 @@ class SelscanNorm{
     const string HELP_NORM_FILES = "Provide a list of normalized selscan output files to be used for "
                                       "window-based output and/or gene annotation (requires --gene-bed and/or --bp-win).";
 
+    const string ARG_GENE_OUT = "--gene-out";
+    const string DEFAULT_GENE_OUT = "__geneout__";
+    const string HELP_GENE_OUT = "File name for the gene table. By default it is written next to the first\n\
+\tnormalized input, as <input>.<BED or GTF file name>.genetable.";
+
     const string ARG_GENE_SETA = "--gene-target";
     const string DEFAULT_GENE_SETA = "__genetarget__";
     const string HELP_GENE_SETA = "Provide a .genetable for target gene set for permutation tests.";

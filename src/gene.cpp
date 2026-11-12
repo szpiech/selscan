@@ -191,7 +191,7 @@ std::pair<double,double> GeneAnalyzer::fit_length_regression(
 void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
                                   std::vector<std::string> normFiles,
                                   bool XP, string stat,
-                                  int minSNPs)
+                                  int minSNPs, const std::string &tableFile)
 {
             // Force ".norm" prefix behavior (always)
         // {
@@ -465,7 +465,7 @@ void GeneAnalyzer::annotateSNPs(std::string geneFile, bool useGTF,
         if (SINGLE_GENE_TABLE)
         {
             std::ofstream genetable;
-            std::string genetablefile = geneFile + "." + stat + ".genetable";
+            const std::string &genetablefile = tableFile;   // chosen by the caller (U15)
             genetable.open(genetablefile.c_str());
             if (genetable.fail())
             {

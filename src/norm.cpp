@@ -45,6 +45,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     params.addFlag(ARG_FINE_PERCENTILE, DEFAULT_FINE_PERCENTILE, "", HELP_FINE_PERCENTILE); //added in v3
     params.addFlag(ARG_BED, DEFAULT_BED, "", HELP_BED); //added in v3
     params.addFlag(ARG_GTF, DEFAULT_GTF, "", HELP_GTF); //added in v3.1
+    params.addFlag(ARG_GENE_OUT, DEFAULT_GENE_OUT, "", HELP_GENE_OUT); // U15
 
     params.addListFlag(ARG_WIN_FILES, DEFAULT_WIN_FILES, "", HELP_WIN_FILES);
     params.addListFlag(ARG_NORM_FILES, DEFAULT_NORM_FILES, "", HELP_NORM_FILES); //added in v3
@@ -99,6 +100,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     
     string geneBedFile = params.getStringFlag(ARG_BED);
     string geneGTFFile = params.getStringFlag(ARG_GTF);
+    string geneOut = params.getStringFlag(ARG_GENE_OUT);
 
     //bool HAVE_WINFILE; //= params.flagWasSet(ARG_WIN_FILES);
     //bool HAVE_NORMFILE; // = params.flagWasSet(ARG_NORM_FILES);
@@ -610,6 +612,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     bool XP = (XPEHH || XPNSL);
 
     if(LOG_ONLY) DO_GENE = false;
+    if(geneOut != DEFAULT_GENE_OUT && (!DO_GENE || HAVE_WINFILE)){
+        cerr << "WARNING: " << ARG_GENE_OUT << " is ignored: no gene table is written in this run.\n";
+        flog << "WARNING: " << ARG_GENE_OUT << " is ignored: no gene table is written in this run.\n";
+    }
     if(DO_GENE){ 
         cerr << "Annotating " << nfiles << " files using " << geneFile << "\n";
         
@@ -656,7 +662,17 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         if(!HAVE_WINFILE){
             string stat = IHS ? "ihs" : (NSL ? "nsl" : (XPNSL ? "xpnsl" : (XPEHH ? "xpehh" : "ihh12")));   // --xpnsl also sets XPEHH (U14)
-            genex.annotateSNPs(geneFile, useGTF, normFilenames, XP, stat, minSNPs);
+            // U15: the gene table goes next to the first normalized input,
+            // named after it and the gene file, so runs that share one BED
+            // do not overwrite each other (3.0.1 wrote <bed>.<stat>.genetable
+            // beside the BED). --gene-out sets the path.
+            string tableFile = geneOut;
+            if (tableFile == DEFAULT_GENE_OUT) {
+                size_t slash = geneFile.find_last_of("/\\");
+                string geneBase = (slash == string::npos) ? geneFile : geneFile.substr(slash + 1);
+                tableFile = normFilenames[0] + "." + geneBase + ".genetable";
+            }
+            genex.annotateSNPs(geneFile, useGTF, normFilenames, XP, stat, minSNPs, tableFile);
             
         }
         

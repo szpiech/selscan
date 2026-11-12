@@ -566,21 +566,21 @@ if selected norm-robust; then
     # B23: --norm-files + --gene-bed without --bp-win deleted uninitialised
     # pointers after writing its output (3.0.1: exit 134/139)
     run nr1.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_genes.bed --min-snps 1
-    if [ "$RC" -eq 0 ] && [ -s nr_genes.bed.ihs.genetable ]; then pass "norm-gene:norm-files"
+    if [ "$RC" -eq 0 ] && [ -s nr_a.ihs.out.20bins.norm.nr_genes.bed.genetable ]; then pass "norm-gene:norm-files"
     else fail "norm-gene:norm-files" "exit $RC"; fi
-    rm -f nr_genes.bed.ihs.genetable
+    rm -f nr_a.ihs.out.20bins.norm.nr_genes.bed.genetable
     # B24: --files a b --first --gene-bed wrote past the end of a vector. The
     # release build hides it (undefined behaviour); a libc++-hardened build
     # aborted. Regression check only.
     run nr2.log norm --ihs --bins 20 --files nr_a.ihs.out nr_b.ihs.out --first --gene-bed nr_genes.bed --min-snps 1
-    if [ "$RC" -eq 0 ] && [ -s nr_genes.bed.ihs.genetable ]; then pass "norm-gene:first"
+    if [ "$RC" -eq 0 ] && [ -s nr_a.ihs.out.20bins.norm.nr_genes.bed.genetable ]; then pass "norm-gene:first"
     else fail "norm-gene:first" "exit $RC"; fi
-    rm -f nr_genes.bed.ihs.genetable
+    rm -f nr_a.ihs.out.20bins.norm.nr_genes.bed.genetable
     # B25: with fewer than 3 genes the length regression is skipped and the
     # adjusted score is NA; 3.0.1 aborted in GSL with one gene
     head -1 nr_genes.bed > nr_one.bed
     run nr3.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_one.bed --min-snps 1
-    adj=$(awk -F'\t' 'NR==2 {print $9}' nr_one.bed.ihs.genetable 2>/dev/null)
+    adj=$(awk -F'\t' 'NR==2 {print $9}' nr_a.ihs.out.20bins.norm.nr_one.bed.genetable 2>/dev/null)
     if [ "$RC" -eq 0 ] && [ "$adj" = NA ] && grep -q 'length regression' nr3.log; then pass "norm-gene:one-gene"
     else fail "norm-gene:one-gene" "exit $RC, top_score_adj '$adj'"; fi
     # B26: XP bottom_score_adj must be the residual of bottom_score on
@@ -593,32 +593,44 @@ if selected norm-robust; then
         END { if (n < 3) { print "n=" n; exit } ml=sl/n; my=sy/n
               for (i=1;i<=n;i++) { sxy+=(L[i]-ml)*(y[i]-my); sxx+=(L[i]-ml)^2 }
               b=sxy/sxx; m=0; for (i=1;i<=n;i++) { r=y[i]-my-b*(L[i]-ml)-a[i]; if (r<0) r=-r; if (r>m) m=r }
-              printf "%.3g", m }' nr_xg.bed.xpehh.genetable 2>/dev/null)
+              printf "%.3g", m }' nr_x.xpehh.out.norm.nr_xg.bed.genetable 2>/dev/null)
     if [ "$RC" -eq 0 ] && awk -v d="$d" 'BEGIN { exit !(d != "" && d+0 < 1e-4) }'; then pass "norm-gene:xp-bottom-adj"
     else fail "norm-gene:xp-bottom-adj" "exit $RC, max |bottom_score_adj - residual| = '$d'"; fi
-    # U14: an XP-nSL gene table is named and labelled xpnsl (3.0.1 wrote
+    # U14: an XP-nSL run writes its own gene table (3.0.1 wrote
     # <bed>.xpehh.genetable, because --xpnsl also sets the XP-EHH flag)
     gzip -dc "$EXPECTED/xpnsl.tsv.gz" > nr_xn.xpnsl.out
     run nr12.log norm --xpnsl --files nr_xn.xpnsl.out
     cp nr_xg.bed nr_xn.bed
     run nr13.log norm --xpnsl --norm-files nr_xn.xpnsl.out.norm --gene-bed nr_xn.bed --min-snps 1
-    if [ "$RC" -eq 0 ] && [ -s nr_xn.bed.xpnsl.genetable ] && [ ! -e nr_xn.bed.xpehh.genetable ]; then pass "norm-gene:xpnsl-name"
-    else fail "norm-gene:xpnsl-name" "exit $RC; files: $(ls nr_xn.bed.*.genetable 2>/dev/null | tr '\n' ' ')"; fi
+    if [ "$RC" -eq 0 ] && [ -s nr_xn.xpnsl.out.norm.nr_xn.bed.genetable ] && ! ls ./*xpehh.genetable > /dev/null 2>&1; then pass "norm-gene:xpnsl-name"
+    else fail "norm-gene:xpnsl-name" "exit $RC; files: $(ls ./*.genetable 2>/dev/null | tr '\n' ' ')"; fi
     # U16: gene-table rows have as many fields as the header (iHS/nSL rows
     # ended with an extra tab)
     run nr14.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_genes.bed --min-snps 1
-    for gt in nr_genes.bed.ihs.genetable nr_xg.bed.xpehh.genetable nr_xn.bed.xpnsl.genetable; do
+    for gt in nr_a.ihs.out.20bins.norm.nr_genes.bed.genetable nr_x.xpehh.out.norm.nr_xg.bed.genetable nr_xn.xpnsl.out.norm.nr_xn.bed.genetable; do
         bad=$(awk -F'\t' 'NR==1 { n=NF; next } NF != n { b++ } END { print b+0 }' "$gt" 2>/dev/null)
         if [ -s "$gt" ] && [ "$bad" = 0 ]; then pass "norm-gene:fields:${gt#nr_}"
         else fail "norm-gene:fields:${gt#nr_}" "$bad rows with a different field count from the header"; fi
     done
+    # U15: the gene table goes next to the normalized input, named after it
+    # and the BED, so runs that share a BED keep separate tables (3.0.1
+    # wrote <bed>.<stat>.genetable beside the BED); --gene-out sets the path
+    mkdir -p nr_bedsdir; cp nr_genes.bed nr_bedsdir/g.bed
+    gzip -dc "$EXPECTED/ihs-hap.tsv.gz" > nr_c.ihs.out
+    run nr15.log norm --ihs --bins 20 --files nr_c.ihs.out --gene-bed nr_bedsdir/g.bed --min-snps 1; r1=$RC
+    run nr16.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_bedsdir/g.bed --min-snps 1; r2=$RC
+    run nr17.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_bedsdir/g.bed --min-snps 1 --gene-out nr_custom.tsv; r3=$RC
+    if [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ] && [ "$r3" -eq 0 ] && [ -s nr_c.ihs.out.20bins.norm.g.bed.genetable ] && [ -s nr_a.ihs.out.20bins.norm.g.bed.genetable ] \
+       && ! cmp -s nr_c.ihs.out.20bins.norm.g.bed.genetable nr_a.ihs.out.20bins.norm.g.bed.genetable \
+       && cmp -s nr_custom.tsv nr_a.ihs.out.20bins.norm.g.bed.genetable && [ -z "$(ls nr_bedsdir | grep -v '^g.bed$')" ]; then pass "norm-gene:table-path"
+    else fail "norm-gene:table-path" "exit $r1/$r2/$r3; tables: $(ls ./*g.bed.genetable nr_custom.tsv nr_bedsdir 2>/dev/null | tr '\n' ' ')"; fi
     # B37: BED genes cover 1-based start+1..end inclusive. A gene ending
     # exactly at a SNP must count it (3.0.1 dropped the last base).
     P=$(awk -F'\t' 'NR==202 {print $3}' nr_a.ihs.out.20bins.norm)
     nb=$(awk -F'\t' -v P="$P" 'NR>1 && $3 >= P-999 && $3 <= P' nr_a.ihs.out.20bins.norm | wc -l | tr -d ' ')
     printf 'chr1\t%d\t%d\tENDP\nchr1\t100000\t150000\tF1\nchr1\t300000\t350000\tF2\n' $((P-1000)) "$P" > nr_end.bed
     run nr6.log norm --ihs --norm-files nr_a.ihs.out.20bins.norm --gene-bed nr_end.bed --min-snps 1
-    ns=$(awk -F'\t' '$4=="ENDP" {print $6}' nr_end.bed.ihs.genetable 2>/dev/null)
+    ns=$(awk -F'\t' '$4=="ENDP" {print $6}' nr_a.ihs.out.20bins.norm.nr_end.bed.genetable 2>/dev/null)
     if [ "$RC" -eq 0 ] && [ "$ns" = "$nb" ]; then pass "norm-gene:snp-at-gene-end"
     else fail "norm-gene:snp-at-gene-end" "exit $RC, nsnps '$ns', expected $nb"; fi
     # ... and windows (1-based inclusive) overlap a gene that starts on their
@@ -640,8 +652,8 @@ if selected norm-robust; then
     # B38: the permutation test reads norm's own gene tables (top_score_adj),
     # is reproducible with --perm-seed, and reports (count+1)/(n+1). The
     # six-gene XP table is split into alternate genes.
-    awk 'NR==1 || NR%2==0' nr_xg.bed.xpehh.genetable > nr_setA.tab
-    awk 'NR==1 || NR%2==1' nr_xg.bed.xpehh.genetable > nr_setB.tab
+    awk 'NR==1 || NR%2==0' nr_x.xpehh.out.norm.nr_xg.bed.genetable > nr_setA.tab
+    awk 'NR==1 || NR%2==1' nr_x.xpehh.out.norm.nr_xg.bed.genetable > nr_setB.tab
     run nr10.log norm --gene-target nr_setA.tab --gene-background nr_setB.tab --perm-seed 11; r1=$RC
     p1=$(sed -n 's/.*one-sided p-value (A > B): //p' nr10.log)
     run nr11.log norm --gene-target nr_setA.tab --gene-background nr_setB.tab --perm-seed 11

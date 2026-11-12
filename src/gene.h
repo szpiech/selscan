@@ -204,7 +204,7 @@ public:
     void annotateSNPs(std::string geneFile, bool useGTF,
                                   std::vector<std::string> windowFiles,
                                   bool XP, string stat,
-                                  int minSNPs);
+                                  int minSNPs, const std::string &tableFile);
 
     void annotateWindows(std::string geneFile, bool useGTF, vector<std::string> windowFiles);
 };
