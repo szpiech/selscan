@@ -8,6 +8,25 @@
 
 using namespace std;
 
+// B44: physical positions are stored as int. A position field must be a
+// whole number from 0 to 2,147,483,647; anything else (including the
+// positions of chromosomes longer than 2.1 Gb) is rejected. 3.0.1 wrapped
+// or clamped such values silently.
+const char* const POS_LIMIT_MSG = " is not a whole number from 0 to 2147483647. Positions of 2^31 bp or more are not supported in this version.";
+inline bool parsePosition(const char* s, const char* e, int &out)
+{
+    if (s >= e) return false;
+    long long x = 0;
+    for (const char* p = s; p < e; ++p) {
+        if (*p < '0' || *p > '9') return false;
+        x = x * 10 + (*p - '0');
+        if (x > 2147483647LL) return false;
+    }
+    out = static_cast<int>(x);
+    return true;
+}
+inline bool parsePosition(const string &f, int &out) { return parsePosition(f.data(), f.data() + f.size(), out); }
+
 struct MapEntry
 {
     int physicalPos; // uint64_t physicalPos;

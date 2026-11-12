@@ -62,6 +62,13 @@ void MapData::readMapData(string filename, size_t expected_loci, bool USE_PMAP, 
             cerr << "ERROR: line " << lineNum << " of " << filename << " has " << current_cols
                  << " columns, but expected " << num_cols << ".\n";
             exit(EXIT_FAILURE);
+        }        {   // B44: column 4 is the physical position
+            istringstream ss(line); string a, b, c, f4; int d;
+            ss >> a >> b >> c >> f4;
+            if (!parsePosition(f4, d)) {
+                cerr << "ERROR: position '" << f4 << "' on line " << lineNum << " of " << filename << POS_LIMIT_MSG << "\n";
+                exit(EXIT_FAILURE);
+            }
         }
     }
 

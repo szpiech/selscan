@@ -440,15 +440,19 @@ static vector<long> readPositionColumn(const string& filename)
         throw 1;
     }
     vector<long> pos;
-    string line, a, b, c;
-    long d;
+    string line, a, b, c, f4;
     int lineNum = 0;
     while (getline(fin, line)) {
         lineNum++;
         if (!hasData(line)) continue;   // U9
         istringstream ss(line);
-        if (!(ss >> a >> b >> c >> d)) {
+        int d = 0;
+        if (!(ss >> a >> b >> c >> f4)) {
             cerr << "ERROR: line " << lineNum << " of " << filename << " has no physical position in column 4.\n";
+            throw 1;
+        }
+        if (!parsePosition(f4, d)) {   // B44
+            cerr << "ERROR: position '" << f4 << "' on line " << lineNum << " of " << filename << POS_LIMIT_MSG << "\n";
             throw 1;
         }
         pos.push_back(d);
@@ -557,13 +561,6 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
         return p;
     };
 
-    auto parse_int_fast = [](const char* s, const char* e) -> int {
-        int x = 0;
-        for (const char* p = s; p < e; ++p) {
-            x = x * 10 + (*p - '0');
-        }
-        return x;
-    };
 
     auto count_samples_from_header = [&](const string& header_line) -> int {
         int tabs = 0;
@@ -610,7 +607,10 @@ VCFPass1Result HapMap::readHapDataVCF_pass1(string filename)
             if (pcur < end) ++pcur;
         }
 
-        int new_physpos = parse_int_fast(field_starts[1], field_ends[1]);
+        int new_physpos = 0;
+        if (!parsePosition(field_starts[1], field_ends[1], new_physpos)) {   // B44
+            HANDLE_ERROR("POS '" + string(field_starts[1], field_ends[1]) + "' of record " + to_string(result.nloci_before_filtering) + " in " + filename + POS_LIMIT_MSG);
+        }
 
         if (p.CALC_XP || p.CALC_XPNSL) {
             // The XP reader pairs the two files by position, which needs both
@@ -1039,13 +1039,6 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
     };
 
     // Fast integer parse for POS column
-    auto parse_int_fast = [](const char* s, const char* e) -> int {
-        int x = 0;
-        for (const char* p = s; p < e; ++p) {
-            x = x * 10 + (*p - '0');
-        }
-        return x;
-    };
 
     // Determine number of sample columns from #CHROM header line
     auto count_samples_from_header = [&](const string& header_line) -> int {
@@ -1107,7 +1100,10 @@ void HapMap::readHapDataVCF(string filename, HapData& hapData)
         }
 
         // POS column
-        const int new_physpos = parse_int_fast(field_starts[1], field_ends[1]);
+        int new_physpos = 0;
+        if (!parsePosition(field_starts[1], field_ends[1], new_physpos)) {   // B44
+            HANDLE_ERROR("POS '" + string(field_starts[1], field_ends[1]) + "' of record " + to_string(nloci_before_filtering) + " in " + filename + POS_LIMIT_MSG);
+        }
 
         // Duplicate-position logic
         if (physpos == new_physpos) {

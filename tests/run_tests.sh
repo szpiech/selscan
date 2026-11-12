@@ -489,6 +489,19 @@ if selected input-format; then
     run if13.log --ihs --vcf p1.vcf.gz --map if_off.map --out if_m; r2=$RC
     if [ "$r1" -eq 0 ] && [ "$r2" -eq 1 ] && grep -q 'data row 11 of if_off.map' if13.log; then pass "input-format:vcf-map-positions"
     else fail "input-format:vcf-map-positions" "exit $r1/$r2 (expected 0, then 1 naming row 11)"; fi
+    # B44: positions are stored as int, so a position of 2^31 or more (or one
+    # that is not a whole number) is an error in VCF, map and TPED input.
+    # 2147483647 itself is accepted. 3.0.1 wrapped or clamped such values.
+    gzip -dc p1.vcf.gz | awk 'BEGIN { FS = OFS = "\t" } /^#/ { print; next } { n++; if (n == 3916) $2 = 3000000000; print }' > if_big.vcf
+    awk 'NR == 8324 { $4 = 2147483648 } { print }' example.map > if_big.map
+    awk 'END { n = NR } { r[NR] = $0 } END { for (i = 1; i < n; i++) print r[i]; split(r[n], f, " "); f[4] = 4000000000; s = f[1]; for (i = 2; i <= length(f); i++) s = s " " f[i]; print s }' p1.tped > if_big.tped
+    awk 'END { n = NR } { r[NR] = $0 } END { for (i = 1; i < n; i++) print r[i]; split(r[n], f, " "); f[4] = 2147483647; s = f[1]; for (i = 2; i <= length(f); i++) s = s " " f[i]; print s }' p1.tped > if_max.tped
+    run if14.log --ihs --vcf if_big.vcf --pmap --out if_p; r1=$RC
+    run if15.log --ihs --hap example.hap --map if_big.map --out if_p; r2=$RC
+    run if16.log --ihs --tped if_big.tped --pmap --out if_p; r3=$RC
+    run if17.log --ihs --tped if_max.tped --pmap --out if_p; r4=$RC
+    if [ "$r1$r2$r3$r4" = "1110" ] && grep -q "POS '3000000000'" if14.log && grep -q "position '2147483648'" if15.log && grep -q "position '4000000000'" if16.log; then pass "input-format:position-range"
+    else fail "input-format:position-range" "exit $r1/$r2/$r3/$r4 (expected 1/1/1/0)"; fi
 fi
 
 if selected edge-decay; then
