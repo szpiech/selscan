@@ -53,25 +53,17 @@ cd src && make
 make check     # optional: run the regression suite
 ```
 
-The same Makefile builds on Linux, macOS and Windows (MSYS2 with MinGW-w64). selscan needs a C++17 compiler and zlib, and nothing else. See INSTALL for build options (static Linux binaries, macOS universal binaries).
+selscan requires a C++17 compiler and zlib. The same Makefile works on Linux, macOS, and Windows (MSYS2). See INSTALL for build options.
 
 ## 📦 Precompiled Binaries
 
-Precompiled binaries are attached to each release on the [Releases page](https://github.com/szpiech/selscan/releases):
-
-- **Linux** (x86_64): needs glibc 2.28 or newer (RHEL, Rocky and Alma 8 and later, Debian 10 and later, Ubuntu 20.04 and later).
-- **macOS** (universal, Apple Silicon and Intel): macOS 11 or newer.
-- **Windows** (x86_64): a static .exe.
-
-Binaries are no longer kept in the repository. Those for earlier versions remain in its history (`bin/` and `releases/`).
+Binaries for Linux (x86_64, glibc 2.28 or newer), macOS (universal, macOS 11 or newer), and Windows (x86_64) are attached to each [release](https://github.com/szpiech/selscan/releases). Binaries for earlier versions are in the history of `bin/` and `releases/`.
 
 ## 📖 Usage   
 
 For details, refer to the manual.
 
-Genotypes must not be missing: selscan stops with an error at any `.` allele in VCF, hap or TPED input.
-
-The option lists below are the output of `selscan --help` and `selscan norm --help`.
+Missing genotypes are not allowed, and selscan stops with an error at any '.' allele. The options below are the output of `selscan --help` and `selscan norm --help`.
 
 ### selscan
 
@@ -407,6 +399,27 @@ Default: __logfile__.
 
 ## 📝 Change Log
 ```
+12NOV2026 - selscan v3.1.0: Bug fixes, corrected definitions, and faster loading and scans.
+    - WARNING: nSL, iHH12, XP-nSL, and --alt values differ from v3.0.x because they now follow their definitions (see Changed).
+    - Changed: nSL has no EHH cutoff and is limited only by --max-extend-nsl.
+    - Changed: iHH12 stops when EHH12 falls below --cutoff and applies the gap scale once (it was applied twice).
+    - Changed: XP-nSL counts distance in retained sites, as nSL does.
+    - Changed: --alt uses squared haplotype frequencies for all statistics.
+    - Changed: norm frequency bins are left-closed.
+    - Fixed: --max-gap is now applied to phased iHS and nSL.
+    - Fixed: XP-EHH and XP-nSL no longer drop sites at joint frequency 0.5 or, unphased, sites without heterozygotes.
+    - Fixed: Unphased XP population 2 values, the --wagh normalization, and the unphased iHS cutoff.
+    - Fixed: A combined run (e.g. --ihs --nsl) now gives the same values as each statistic run alone.
+    - Fixed: XP VCF files are paired by position and REF/ALT instead of by line, and unpaired sites are counted in the log.
+    - Fixed: The XP readers reject missing ('.') genotypes, which were read as 0.
+    - Fixed: Every input format drops all records at a duplicated position.
+    - Fixed (norm): Gene tables, window percentiles, --crit-percent (iHH12 is now one-tailed), --log-input, the permutation test, and several crashes.
+    - Fixed: --ehh, --ehh12, and --pi crashes. Errors now exit with status 1 and a message.
+    - NEW: --version and --perm-seed. --help prints to stdout.
+    - Improved: VCF loading is about 4x faster, iHS 3-5x, and nSL about 7x, and memory use is lower.
+    - selscan no longer requires GSL, and `make check` runs the regression tests.
+    - Binaries are attached to GitHub releases instead of being kept in the repository.
+
 30APR2026 - selscan v3.0.1: Fixed issue #162: corrected an issue where BED files were incorrectly interpreted as GTF in norm.cpp and resolved segmentation fault (appearing in linux only) from out-of-bounds access in GeneAnalyzer::annotateWindows.
 
 31MAR2026 - selscan v3.0.0: Normalization and downstream analysis enhanced. 

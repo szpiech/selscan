@@ -5,6 +5,6 @@
 #ifndef __SELSCAN_VERSION_H__
 #define __SELSCAN_VERSION_H__
 
-#define SELSCAN_VERSION "3.0.1"
+#define SELSCAN_VERSION "3.1.0"
 
 #endif
