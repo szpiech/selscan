@@ -108,6 +108,12 @@ one src/Makefile for every platform, also with header dependencies.
 | 19e6ca0 | M9 | none; unused helpers removed |
 | af3dccc | notes | step 7 and 8 rows in this file |
 | eb703ec | help | `--threads` help says "Default: number of logical CPUs" (was the build machine's count), so README matches `--help` on every machine |
+| 30561ab, 9d70bed | notes | GCC 11.5 check of eb703ec; corrections to the 4535177 and 4c51bce messages |
+| 91b0348 | docs | change log lines for the unphased XP `--alt` rule and B44 (approved) |
+| 9b9a29d | threads | `--threads` defaults to 1 (was the number of logical CPUs) |
+| 65dcc65 | M8 | .pi output has a header (chr start end pi), a chr column, and tabs; pi golden re-recorded |
+| 8a06bdf | B53 | none; frees norm arrays that LeakSanitizer reported (3.0.1 leak) |
+| 58adc49 | M9 | none; VCF read in one pass, decompression on a second thread (load 0.18-0.36 s on big50k, was 0.77-1.59 s) |
 
 Each commit message gives the measured differences in full.
 
@@ -289,6 +295,12 @@ site they share.
 - B43 (PI): under `--alt`, both XP kernels stop integrating a population
   once its haplotypes (or individuals) are all unique, as iHS does (B9).
 - B29, unphased nSL (PI): the stopping rule is kept as it is for 3.1.0.
+- XP-nSL (PI): keeps the pooled `--cutoff`. The manual (4.5) says it has
+  no cutoff, so the manual changes (manual_corrections_3.1.0.md).
+- `--threads` (PI): the default is 1.
+- .pi output (PI): a header line, a chr column, and tabs, as the other
+  outputs have.
+- M9 (PI): one VCF parser for single-population and XP input.
 - U8: with `--vcf --map`, map and VCF must agree on position; chromosome
   names and IDs are not compared (choice made here).
 - Step 6 findings and choices made here, not by the PI: B50 and B51
@@ -321,6 +333,11 @@ VCF loading (P1, 3.1-3.4 -> 0.81-0.82 s on big50k), group splitting
 (P5), exact pair counts (B40), norm I/O (P6). Peak memory: P4 and P2 (p4
 iHS, 4 threads, 44.7 -> 7.0 MiB).
 
+M9 (58adc49) reads each VCF once and decompresses on a second thread.
+Load time on big50k, 3.0.1 / 65dcc65 / 58adc49: `--pi` 3.17 / 0.77 /
+0.18 s, unphased iHS 7.61 / 0.93 / 0.32 s, XP-EHH (two files) 4.94 /
+1.59 / 0.36 s. Peak memory is 0.9-1.4 MiB above 65dcc65.
+
 Tried and not committed: writing rows with "\n" instead of `endl` (one
 flush per row). No measurable change on local disk; the writes overlap
 the computation. It may matter on network filesystems.
@@ -332,15 +349,8 @@ the computation. It may matter on network filesystems.
   complement iHH keeps growing after both homozygote EHHs reach 0. The
   reference stops when both reach 0, and v2.0.3 differs from both. Kept
   as is for 3.1.0 (PI); the rule should be settled against the method.
-- XP-nSL applies the pooled `--cutoff` in every version, but the manual
-  (4.5) says it has no cutoff. Either the manual or the definition must
-  change (in the manual corrections list for the PI).
-- The .pi output has no header and is space-delimited, unlike every other
-  output.
 - Positions above 2^31 - 1 and several chromosomes per file (`--multi-chr`,
   B31/U7) are not supported; both are planned together.
-- M9 (rest): the single-population VCF reader and the shared XP pass still
-  parse records separately. They apply the same checks now.
 - The manual PDF has no source in the repository. A list of corrections
   for 3.1.0 was given to the PI (manual_corrections_3.1.0.md).
 - iHH12 `--alt` code mixes squared and binomial terms for the top two
@@ -367,3 +377,8 @@ the computation. It may matter on network filesystems.
   (-Wunused-but-set-variable), whose code the B30 rewrite removed. The
   e75e861 message counts kinds of warning ("three", "the fourth"), not
   places.
+  58adc49 also builds there with no warnings and passes `make check`,
+  and the suite passes 220/0/0 under GCC 11.5 ASan+UBSan (leak detection
+  on) and TSan. The ASan run found B53, which would have failed 11 norm
+  tests in the CI sanitizer job. ASan and TSan do not run on the macOS
+  build machine (the runtimes fail at startup), so they are run on Rocky.

@@ -414,6 +414,8 @@ Default: __logfile__.
     - Changed: norm writes the gene table next to its first input, as <input>.<BED file name>.genetable. NEW: --gene-out sets its path.
     - Changed: The unphased --ehh table reports EHH for each homozygote class and its complement (ehh2, ehh0, cehh2, cehh0, ehh).
     - Changed: Under --alt, unphased XP-EHH and XP-nSL stop integrating a population once its individuals are all unique, as phased XP and iHS do.
+    - Changed: --threads defaults to 1 (it was the number of logical CPUs).
+    - Changed: The --pi output has a header line (chr start end pi), a chr column, and tab-separated columns.
     - Fixed: --max-gap is now applied to phased iHS and nSL.
     - Fixed: XP-EHH and XP-nSL no longer drop sites at joint frequency 0.5 or, unphased, sites without heterozygotes.
     - Fixed: Unphased XP population 2 values, the --wagh normalization, and the unphased iHS cutoff.
@@ -434,7 +436,7 @@ Default: __logfile__.
     - Fixed: Positions of 2^31 bp or more, or non-numeric positions, are an error (they were silently wrapped).
     - Improved: Clearer messages when a map does not match the genotype file, and the log gives the reason each VCF record was removed.
     - NEW: --version and --perm-seed. --help prints to stdout.
-    - Improved: VCF loading is about 4x faster, iHS 3-5x, and nSL about 7x, and memory use is lower.
+    - Improved: VCF loading is 13-24x faster, iHS 3-5x, and nSL about 7x.
     - selscan no longer requires GSL, and `make check` runs the regression tests.
     - Binaries are attached to GitHub releases instead of being kept in the repository.
 
