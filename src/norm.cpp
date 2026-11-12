@@ -450,10 +450,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
                 cerr << "Skipping outputting normalized output as --log-only flag is set.\n";
             }
 
-
-
-            
-            
+            // B53: these were freed only in the XP branch
+            delete [] threshold;
+            delete [] mean;
+            delete [] variance;
+            delete [] n;
         }
         else if (XPEHH || SOFT) {
 
@@ -1432,6 +1433,8 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     delete [] nSNPs;
     delete [] fracCritTop;
     delete [] fracCritBot;
+    delete [] maxScore;   // B53: maxScore and minScore were never freed
+    delete [] minScore;
 
     delete [] winfilename;
 
