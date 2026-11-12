@@ -106,6 +106,8 @@ one src/Makefile for every platform, also with header dependencies.
 | 28bcbdc | B43 | unphased XP `--alt` values (a population stops at all-unique); new goldens xpehh-alt and xpehh-unphased-alt |
 | ee0e68f | B44 | none on valid input; positions of 2^31 or more, or non-numeric, are an error |
 | 19e6ca0 | M9 | none; unused helpers removed |
+| af3dccc | notes | step 7 and 8 rows in this file |
+| eb703ec | help | `--threads` help says "Default: number of logical CPUs" (was the build machine's count), so README matches `--help` on every machine |
 
 Each commit message gives the measured differences in full.
 
@@ -349,6 +351,7 @@ the computation. It may matter on network filesystems.
   deployment target stays at 11.0 (PI).
 - binom.cpp (nCk, factln) is no longer used by the kernels since 47776f7 (B40).
 - The CI and release workflows (ef1dab4) have not run; they run on the
-  first push. The GCC build on Rocky 9.7 (GCC 11.5) at 2363b85 passed
-  `make check` with 4 GCC-only warnings; e75e861 clears three and the
-  B30 rewrite removed the code of the fourth. Not rerun on GCC since.
+  first push. On Rocky 9.7 with GCC 11.5, eb703ec builds with no
+  warnings and passes `make check` (220 passed, 0 failed). At 2363b85
+  there were 4 GCC-only warnings; e75e861 cleared three and the B30
+  rewrite removed the code of the fourth.
