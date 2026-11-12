@@ -762,6 +762,12 @@ if selected norm-robust; then
     nout=$(ls lo.ihs.out.*norm* lo.xpehh.out.*norm* 2>/dev/null | wc -l | tr -d ' ')
     if [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ] && [ "$nout" = 0 ] && grep -q 'mean' lo1.norm.log; then pass "norm-log-only"
     else fail "norm-log-only" "exit $r1/$r2, $nout normalised or window files written"; fi
+    # B35: --min-snps below 1 is an error (with 0, empty windows put
+    # uninitialised values into the window quantiles; 3.0.1 exited 0)
+    gzip -dc "$EXPECTED/ihs.tsv.gz" > ms.ihs.out
+    run ms1.log norm --ihs --bins 20 --files ms.ihs.out --bp-win --min-snps 0
+    if [ "$RC" -eq 1 ] && grep -q -- '--min-snps must be at least 1' ms1.log; then pass "norm-min-snps-0"
+    else fail "norm-min-snps-0" "exit $RC (expected 1 with a --min-snps message)"; fi
     # B51: the --ihs-detail column count is taken from the first data line.
     # 3.0.1 counted the second; a blank line there gave 0 extra columns and
     # every later row was misread (3.0.1: no rows written; 3 of 503 after

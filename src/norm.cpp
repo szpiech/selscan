@@ -201,6 +201,14 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         return 1;
     }
 
+    // B35: with 0, empty windows were counted but never filled, and their
+    // uninitialised values went into the quantile tables
+    if (minSNPs < 1)
+    {
+        cerr << "ERROR: " << ARG_MINSNPS << " must be at least 1.\n";
+        return 1;
+    }
+
     if (critNum <= 0)
     {
         cerr << "ERROR: Must give a positive critical value for |iHS| scores.\n";
