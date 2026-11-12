@@ -1,46 +1,28 @@
 Building selscan from source
 ============================
 
-selscan needs a C++17 compiler and zlib. It has been built with GCC 11
-(Rocky Linux 9) and Apple clang 16. It no longer uses GSL. Normalisation is run as `selscan norm`; there
-is no separate norm binary.
+selscan requires a C++17 compiler and zlib. It has been built with GCC 11 (Rocky Linux 9) and Apple clang 16. Normalization is run with `selscan norm`, and there is no separate norm binary.
 
     cd src
-    make            # builds src/selscan
-    make check      # optional: runs the regression suite in tests/
-    make install    # optional: copies selscan to /usr/local/bin
-                    # (make install PREFIX=$HOME installs to ~/bin)
+    make            # builds src/selscan (src/selscan.exe on Windows)
+    make check      # runs the regression tests in tests/
+    make install    # copies selscan to /usr/local/bin (PREFIX=$HOME for ~/bin)
+    make clean      # removes src/build/ and the binary
 
-The binary is written to src/ (src/selscan.exe on Windows). Object files
-go to src/build/; `make clean` removes them and the binary.
-
-Platforms
----------
-
-Linux: install a compiler and the zlib headers, e.g.
-`dnf install gcc-c++ zlib-devel` (RHEL, Rocky, Alma, Fedora) or
-`apt install g++ zlib1g-dev` (Debian, Ubuntu).
+Linux: install a compiler and the zlib headers, e.g. `dnf install gcc-c++ zlib-devel` or `apt install g++ zlib1g-dev`.
 
 macOS: install the Xcode command line tools (`xcode-select --install`).
-zlib is part of macOS.
 
-Windows: use MSYS2 (https://www.msys2.org). In the MINGW64 shell, run
-`pacman -S make mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib`, then build as
-above.
+Windows: install MSYS2 (https://www.msys2.org). In the MINGW64 shell, run `pacman -S make mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib`, then build as above.
 
-Options
--------
+Options are given on the make command line, e.g. `make STATIC=1`:
 
-Set these on the make command line, e.g. `make STATIC=1`:
+    CXX=...         compiler
+    CXXFLAGS=...    compiler flags (default -O3)
+    STATIC=1        Linux: link libstdc++, libgcc, and zlib statically (glibc stays dynamic).
+                    Windows: a static .exe.
+    UNIVERSAL=1     macOS: one binary for Apple Silicon and Intel.
+    MACOS_MIN=11.0  macOS: oldest supported macOS version.
 
-    CXX=...         compiler to use
-    CXXFLAGS=...    optimisation and debugging flags (default -O3)
-    STATIC=1        Linux: link libstdc++, libgcc and zlib statically, so the
-                    binary needs only the system glibc. Windows: a fully
-                    static .exe.
-    UNIVERSAL=1     macOS: one binary for Apple Silicon and Intel Macs.
-    MACOS_MIN=11.0  macOS: the oldest macOS the binary should run on.
-
-A debug build with the undefined-behaviour sanitizer:
-
-    make CXXFLAGS="-O1 -g -fsanitize=undefined" LDFLAGS=-fsanitize=undefined
+For a debug build with the undefined-behavior sanitizer, use
+`make CXXFLAGS="-O1 -g -fsanitize=undefined" LDFLAGS=-fsanitize=undefined`.
