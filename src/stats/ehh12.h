@@ -7,7 +7,7 @@
         uint64_t bitset = (hapbitset->bits)[k];                 \
         while (bitset != 0) {                        \
             uint64_t t = bitset & -bitset;           \
-            int r = __builtin_ctzl(bitset);          \
+            int r = __builtin_ctzll(bitset);          \
             int set_bit_pos = (k * 64 + r);          \
             bitset ^= t;                             \
             ACTION;                                  \

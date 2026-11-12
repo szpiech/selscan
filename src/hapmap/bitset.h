@@ -126,7 +126,7 @@ class MyBitset{
             uint64_t bitset = bits[k];
             while (bitset != 0) {
                 uint64_t t = bitset & -bitset; // Get the lowest set bit
-                int r = __builtin_ctzl(bitset); // Get the index of the lowest set      
+                int r = __builtin_ctzll(bitset); // Get the index of the lowest set      
                 int set_bit_pos = (k * WORDSZ + r); // Calculate the position of the set bit
                 bitset ^= t; // Clear the lowest set bit
                 action(set_bit_pos); // Perform the action on the set bit position
@@ -138,7 +138,7 @@ class MyBitset{
             uint64_t bitset = bits[k];
             while (bitset != 0) {
                 uint64_t t = bitset & -bitset;
-                int r = __builtin_ctzl(bitset);
+                int r = __builtin_ctzll(bitset);
                 // DO ACTION HERE
                 bitset ^= t;
             }
@@ -156,7 +156,7 @@ class MyBitset{
             bitset = bits[k];
             while (bitset != 0) {
                 uint64_t t = bitset & -bitset;
-                int r = __builtin_ctzl(bitset);
+                int r = __builtin_ctzll(bitset);
                 v[i++] = k * WORDSZ + r; //idea: reserve 1 counts
                 bitset ^= t;
             }
@@ -172,7 +172,7 @@ class MyBitset{
             
             while (bitset != 0) {
             uint64_t t = bitset & -bitset;
-            int r = __builtin_ctzl(bitset);
+            int r = __builtin_ctzll(bitset);
             
             //std::cout<<(k * WORDSZ + r) << std::endl;
             
