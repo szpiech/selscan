@@ -6,8 +6,28 @@
 #include <queue>
 #include <sstream>
 #include <limits>
+#include <cctype>
 
 using namespace std;
+
+// true if the line has a non-whitespace character (U9: blank lines are skipped)
+static inline bool hasData(const string &l)
+{
+    for (char c : l) if (!std::isspace(static_cast<unsigned char>(c))) return true;
+    return false;
+}
+
+// U1: the map and the genotype input must have the same number of loci
+// before filtering. skip_queue holds the genotype loci removed by filters,
+// so expected_loci + skip_queue.size() is the genotype file's count.
+static void checkLocusCount(const string &filename, size_t mapRows, size_t expected_loci, size_t nskipped, const string &what)
+{
+    if (mapRows != expected_loci + nskipped) {
+        cerr << "ERROR: " << filename << " has " << mapRows << " " << what << ", but the genotype data have "
+             << expected_loci + nskipped << " loci (before filtering). They must match one to one.\n";
+        exit(EXIT_FAILURE);
+    }
+}
 
 /**
  * reads in map data and also does basic checks on integrity of format
@@ -30,23 +50,22 @@ void MapData::readMapData(string filename, size_t expected_loci, bool USE_PMAP, 
     size_t nloci_before_filter = 0;
     int num_cols = 4;
     int current_cols = 0;
+    size_t lineNum = 0;
     while (getline(fin, line))
     {
+        lineNum++;
+        if (!hasData(line)) continue;   // U9
         nloci_before_filter++;
         current_cols = countFields(line);
         if (current_cols != num_cols)
         {
-            cerr << "ERROR: line " << nloci_before_filter << " of " << filename << " has " << current_cols
-                 << ", but expected " << num_cols << ".\n";
+            cerr << "ERROR: line " << lineNum << " of " << filename << " has " << current_cols
+                 << " columns, but expected " << num_cols << ".\n";
             exit(EXIT_FAILURE);
         }
     }
 
-    if (nloci_before_filter - (skip_queue.size()) != expected_loci)
-    {
-        cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci_before_filter-skip_queue.size() << ".\n";
-        exit(EXIT_FAILURE);
-    }
+    checkLocusCount(filename, nloci_before_filter, expected_loci, skip_queue.size(), "rows");
 
     fin.clear(); // clear error flags
     fin.close();
@@ -66,23 +85,19 @@ void MapData::readMapData(string filename, size_t expected_loci, bool USE_PMAP, 
     size_t locus_after_filter = 0;
     for (size_t locus_before_filter = 0; locus_before_filter < nloci_before_filter; locus_before_filter++)
     {
+        while (getline(fin, line) && !hasData(line)) {}   // U9
         if(!skip_queue.empty()){
             if(skip_queue.front()==locus_before_filter){
                 skip_queue.pop();
-                string junk;
-                fin >> junk;
-                fin >> junk;
-                fin >>  junk;
-                fin >>  junk;
-                getline(fin, line);
                 continue;
             }
         }
 
-        fin >> mapEntries[locus_after_filter].chr;
-        fin >> mapEntries[locus_after_filter].locusName;
-        fin >> mapEntries[locus_after_filter].geneticPos;
-        fin >> mapEntries[locus_after_filter].physicalPos;
+        istringstream ss(line);
+        ss >> mapEntries[locus_after_filter].chr;
+        ss >> mapEntries[locus_after_filter].locusName;
+        ss >> mapEntries[locus_after_filter].geneticPos;
+        ss >> mapEntries[locus_after_filter].physicalPos;
         
 
         //locus_query_map[mapEntries[locus_after_filter].locusName] = locus_after_filter;
@@ -94,7 +109,6 @@ void MapData::readMapData(string filename, size_t expected_loci, bool USE_PMAP, 
         if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos/Mb);
 
         locus_after_filter++;
-        getline(fin, line);
     }
 
     fin.close();
@@ -116,23 +130,22 @@ void MapData::readMapDataTPED(string filename, size_t expected_loci, int expecte
     size_t nloci = 0;
     int num_cols = 4;
     int current_cols = 0;
+    size_t lineNum = 0;
     while (getline(fin, line))
     {
+        lineNum++;
+        if (!hasData(line)) continue;   // U9
         nloci++;
         current_cols = countFields(line);
         if (current_cols != num_cols + expected_haps)
         {
-            cerr << "ERROR: line " << nloci << " of " << filename << " has " << current_cols
-                 << ", but expected " << num_cols + expected_haps << ".\n";
+            cerr << "ERROR: line " << lineNum << " of " << filename << " has " << current_cols
+                 << " columns, but expected " << num_cols + expected_haps << ".\n";
             exit(EXIT_FAILURE);
         }
     }
 
-    if (nloci - (skip_queue.size()) != expected_loci)
-    {
-        cerr << "ERROR: Expected " << expected_loci << " loci in map file but found " << nloci - skip_queue.size()  << ".\n";
-        exit(EXIT_FAILURE);
-    }
+    checkLocusCount(filename, nloci, expected_loci, skip_queue.size(), "rows");
 
     fin.clear(); // clear error flags
     fin.close();
@@ -157,18 +170,18 @@ void MapData::readMapDataTPED(string filename, size_t expected_loci, int expecte
     size_t locus_after_filter = 0;
     for (size_t locus = 0; locus < nloci; locus++)  // locus = locus_before_filter
     {
+        while (getline(fin, line) && !hasData(line)) {}   // U9
         if(!skip_queue.empty()){
             if(skip_queue.front()==locus){
                 skip_queue.pop();
-                getline(fin, line);
                 continue;
             }
         }
-        fin >> mapEntries[locus_after_filter].chr;
-        fin >> mapEntries[locus_after_filter].locusName;
-        fin >> mapEntries[locus_after_filter].geneticPos;
-        fin >> mapEntries[locus_after_filter].physicalPos;
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip rest of the line
+        istringstream ss(line);
+        ss >> mapEntries[locus_after_filter].chr;
+        ss >> mapEntries[locus_after_filter].locusName;
+        ss >> mapEntries[locus_after_filter].geneticPos;
+        ss >> mapEntries[locus_after_filter].physicalPos;
 
         if (USE_PMAP) mapEntries[locus_after_filter].geneticPos = double(mapEntries[locus_after_filter].physicalPos)/Mb;
     
@@ -200,11 +213,7 @@ void MapData::readMapDataVCF(string filename, size_t expected_loci, queue <size_
         nloci_before_filter++;
     }
 
-    if (nloci_before_filter-skip_queue.size() != expected_loci)
-    {
-        cerr << "ERROR: Expected " << expected_loci << " loci in file but found " << nloci_before_filter-skip_queue.size() << ".\n";
-        exit(EXIT_FAILURE);
-    }
+    checkLocusCount(filename, nloci_before_filter, expected_loci, skip_queue.size(), "variant records");
 
     fin.close();
     fin.open(filename.c_str());

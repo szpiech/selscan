@@ -221,6 +221,7 @@ public:
      */ 
     void initParamsInHap(HapData& hap);
     void readHapDataTHAP(string filename, HapData& hap);
+    void checkHapRow(const string &haps, const string &filename, int lineNum, bool firstRow);
     void readHapDataTPED(string filename, HapData& hap);
     void readHapDataVCF(string filename, HapData& hap);
     void readHapDataMSHap(string filename, HapData& hap);

@@ -225,6 +225,31 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
 
 
 
+// true if the line has a non-whitespace character (U9: blank lines are skipped)
+static inline bool hasData(const string &l)
+{
+    for (char c : l) if (!std::isspace(static_cast<unsigned char>(c))) return true;
+    return false;
+}
+
+// 0/1 coding of one row of a --thap or --tped file, checked in pass 1 for
+// every row and in both modes (3.0.1 never checked rows with --unphased).
+// With --unphased the haplotype count is checked on the first row, before
+// the pairs are read.
+void HapMap::checkHapRow(const string &haps, const string &filename, int lineNum, bool firstRow)
+{
+    for (size_t k = 0; k < haps.size(); k++) {
+        if (haps[k] != '0' && haps[k] != '1') {
+            HANDLE_ERROR("line " + std::to_string(lineNum) + " of " + filename + " has '" + string(1, haps[k]) +
+                          "' for haplotype " + std::to_string(k + 1) + ". Alleles must be coded 0/1 only.");
+        }
+    }
+    if (firstRow && p.UNPHASED && haps.size() % 2 != 0) {
+        HANDLE_ERROR(filename + " has " + std::to_string(haps.size()) + " haplotypes. With " + ARG_UNPHASED +
+                      " they are read as pairs (two per individual), so the number must be even.");
+    }
+}
+
 //reads in haplotype data and also does basic checks on integrity of format
 //returns a populated HaplotypeData structure if successful
 //impute hap IMPUTE HAP is transposed format where row represents loci,  column replesent individual
@@ -254,14 +279,18 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
 
     //Counts number of haps (rows) and number of loci (cols)
     //if any lines differ, send an error message and throw an exception
+    int lineNum = 0;
     while (getline(fin, line))
     {
+        lineNum++;
+        if (!hasData(line)) continue;   // U9
         nloci_before_filter++;
         line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
             return std::isspace(static_cast<unsigned char>(c));
         }), line.end());
         current_nhaps = line.length(); // number of haps 
-        
+        checkHapRow(line, filename, lineNum, previous_nhaps < 0);
+
         int number_of_2s = 0; // for unphased
         int number_of_1s = 0;
         for (int hap = 0; hap < current_nhaps; hap++){ 
@@ -330,22 +359,18 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
     {
         HANDLE_ERROR("Failed to open " + filename + " for reading.");
     }
-    getline(fin, line);
-    stringstream ss;
-    char allele1;
     int locus_after_filter = 0;
     for (int locus = 0; locus < nloci_before_filter; locus++)
     {
+        while (getline(fin, line) && !hasData(line)) {}   // U9
         if(!skiplist.empty()){
             if(skiplist.front() == locus){
                 skiplist.pop();
                 hapData.skipQueue.push(locus);
-                getline(fin, line);
                 continue;
             }
         }
 
-        ss.str(line);
         line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
                 return std::isspace(static_cast<unsigned char>(c));
             }), line.end());
@@ -364,22 +389,16 @@ void HapMap::readHapDataTHAP(string filename, HapData& hapData)
                     }
                 }
             }
-        }else{ // PHASED
+        }else{ // PHASED (0/1 coding checked in pass 1)
             for (int hap = 0; hap < current_nhaps; hap++)
-            {   
-                ss >> allele1;
-                if (allele1 != '0' && allele1 != '1')
-                {
-                    HANDLE_ERROR("Alleles must be coded 0/1 only.");
-                }
-                if(allele1=='1'){
+            {
+                if(line[hap]=='1'){
                     hapData.addAllele1(locus_after_filter, hap);
                 }
             }
         }
 
         locus_after_filter++;
-        getline(fin, line);
     }
     fin.close();
 }
@@ -398,10 +417,13 @@ static vector<long> readPositionColumn(const string& filename)
     vector<long> pos;
     string line, a, b, c;
     long d;
+    int lineNum = 0;
     while (getline(fin, line)) {
+        lineNum++;
+        if (!hasData(line)) continue;   // U9
         istringstream ss(line);
         if (!(ss >> a >> b >> c >> d)) {
-            cerr << "ERROR: line " << pos.size() + 1 << " of " << filename << " has no physical position in column 4.\n";
+            cerr << "ERROR: line " << lineNum << " of " << filename << " has no physical position in column 4.\n";
             throw 1;
         }
         pos.push_back(d);
@@ -425,6 +447,7 @@ static void scanDerivedCounts(const string& filename, char fmt, vector<long>& de
     derived.clear(); nalleles = 0;
     string line, tok;
     while (getline(fin, line)) {
+        if (!hasData(line)) continue;   // U9
         if (fmt == 't') {
             istringstream ss(line);
             long n = 0, d = 0; int col = 0;
@@ -1464,10 +1487,11 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
 
     //Counts number of haps (cols) and number of loci (rows)
     //if any lines differ, send an error message and throw an exception
+    int lineNum = 0;
     while (getline(fin, line))
     {
-        //getline(fin,line);
-        //if(fin.eof()) break;
+        lineNum++;
+        if (!hasData(line)) continue;   // U9
         nloci_before_filter++; // each line contributes to a locus
         current_nhaps = countFields(line) - numMapCols; // here, current_nhaps (count of fields) is the number of haps 
         
@@ -1490,7 +1514,10 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
         line_haps.erase(std::remove_if(line_haps.begin(), line_haps.end(), [](char c) {
             return std::isspace(static_cast<unsigned char>(c));
         }), line_haps.end());  // erase spaces inside and outside
-
+        if (static_cast<int>(line_haps.size()) != current_nhaps) {
+            HANDLE_ERROR("line " + std::to_string(lineNum) + " of " + filename + " has a genotype field longer than one character. Alleles must be coded 0/1 only.");
+        }
+        checkHapRow(line_haps, filename, lineNum, previous_nhaps < 0);
 
         int number_of_2s = 0; // for unphased
         int number_of_1s = 0;
@@ -1569,7 +1596,7 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
     int locus_after_filter = 0;
     for (int locus = 0; locus < nloci_before_filter; locus++)
     {
-        getline(fin, line);
+        while (getline(fin, line) && !hasData(line)) {}   // U9
         if(!skiplist.empty()){
             if(skiplist.front() == locus){
                 skiplist.pop();    
@@ -1613,14 +1640,10 @@ void HapMap::readHapDataTPED(string filename, HapData &hapData)
                     }
                 }
             }
-        }else{ // PHASED
+        }else{ // PHASED (0/1 coding checked in pass 1)
             for (int hap = 0; hap < current_nhaps; hap++)
-            {   
+            {
                 char allele1 = line_haps[hap];
-                if (allele1 != '0' && allele1 != '1')
-                {
-                    HANDLE_ERROR("Alleles must be coded 0/1 only.");
-                }
                 if(allele1=='1'){
                     hapData.addAllele1(locus_after_filter, hap);
                 }

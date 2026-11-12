@@ -168,7 +168,7 @@ ihs-unphased nsl-unphased xpehh-unphased xpnsl-unphased ehh-unphased
 ihs-hap nsl-thap xpehh-hap ihs-tped ihs-gap nsl-gap ihh12-gap ihs-gap100 nsl-gap100 ihh12-gap100
 norm-ihs norm-nsl norm-xpehh norm-ihh12 norm-ihs-bpwin
 threads multistat multiparam xp-swap maxgap xp-fixed-diff tped-equiv
-hap-reader xp-intersect norm-invariants maf-symmetry pi-edges xp-validate
+hap-reader input-format xp-intersect norm-invariants maf-symmetry pi-edges xp-validate
 norm-robust errors numeric-args arg-messages ehh-unphased-multi help"
 
 if [ "$LIST" = 1 ]; then for c in $CASES; do echo "$c"; done; exit 0; fi
@@ -436,6 +436,34 @@ if selected hap-reader; then
     run hr5.log --ihs --hap example.hap --map example.map --out hr_e
     run hr6.log --ihs --hap hr_blank.hap --map example.map --out hr_bl
     identical "hap-reader:blank-lines" hr_e.ihs.out hr_bl.ihs.out
+fi
+
+if selected input-format; then
+    # U9: blank and whitespace-only lines are skipped in --thap, --tped and
+    # --map files (3.0.1 stopped with a column-count or position error).
+    awk '{ print } NR == 10 { print ""; print "  " } END { print "" }' example.thap > if_bl.thap
+    awk '{ print } NR == 5 { print "" } END { print "" }' example.map > if_bl.map
+    awk '{ print } NR == 7 { print "" } END { print "" }' p1.tped > if_bl.tped
+    run if1.log --ihs --thap example.thap --map example.map --out if_t0
+    run if2.log --ihs --thap if_bl.thap --map if_bl.map --out if_t1
+    identical "input-format:blank-lines-thap-map" if_t0.ihs.out if_t1.ihs.out
+    run if3.log --ihs --tped p1.tped --pmap --out if_p0
+    run if4.log --ihs --tped if_bl.tped --pmap --out if_p1
+    identical "input-format:blank-lines-tped" if_p0.ihs.out if_p1.ihs.out
+    # With --unphased, --thap and --tped alleles are checked for 0/1 coding
+    # (3.0.1 read anything other than 1 as 0).
+    awk 'NR == 6 { sub(/.$/, "2") } { print }' example.thap > if_bad.thap
+    awk 'NR == 4 { sub(/.$/, "9") } { print }' p1.tped > if_bad.tped
+    run if5.log --ihs --unphased --thap if_bad.thap --map example.map --out if_b1; r1=$RC
+    run if6.log --ihs --unphased --tped if_bad.tped --pmap --out if_b2; r2=$RC
+    if [ "$r1" -eq 1 ] && [ "$r2" -eq 1 ] && grep -q 'line 6 of if_bad.thap' if5.log && grep -q 'line 4 of if_bad.tped' if6.log; then pass "input-format:unphased-01-coding"
+    else fail "input-format:unphased-01-coding" "exit $r1/$r2 (expected 1 naming the line)"; fi
+    # U1: a map/genotype size mismatch reports the size of each input before
+    # filtering (3.0.1 printed two post-filter counts that matched neither).
+    awk 'NR <= 8321' example.map > if_short.map
+    run if7.log --ihs --hap example.hap --map if_short.map --out if_s
+    if [ "$RC" -eq 1 ] && grep -q 'if_short.map has 8321 rows, but the genotype data have 8324 loci' if7.log; then pass "input-format:map-count-message"
+    else fail "input-format:map-count-message" "exit $RC"; fi
 fi
 
 if selected xp-intersect; then
