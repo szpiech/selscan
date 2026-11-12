@@ -134,6 +134,14 @@ Corrections to later commit messages:
 - e71e8d3 (U17) also changes the test script: on MSYS2, run() converts
   CRLF to LF in captured output, so the text checks pass on Windows. The
   message does not say so.
+- 4535177 (B26) says its check "Fails on 9fbb6d7 (max difference
+  3.54)". The build measured was a018ca0, which has the same code for that
+  column. Rerun on 2026-11-12 with the 4535177 test script and an
+  a018ca0 build: max difference 3.54.
+- 4c51bce (P5) says the inline split is "15-30% faster" than
+  GroupSplitMap. The measured gains were 13% (nSL 50k, 17.2 -> 14.9 s),
+  16% (iHS 50k, 3.86 -> 3.23 s) and 19% (iHS p4, 6.51 -> 5.24 s), so
+  13-20% is the correct range.
 
 ## Validation against an independent reference
 
@@ -353,5 +361,9 @@ the computation. It may matter on network filesystems.
 - The CI and release workflows (ef1dab4) have not run; they run on the
   first push. On Rocky 9.7 with GCC 11.5, eb703ec builds with no
   warnings and passes `make check` (220 passed, 0 failed). At 2363b85
-  there were 4 GCC-only warnings; e75e861 cleared three and the B30
-  rewrite removed the code of the fourth.
+  GCC warned at five places: four in norm (-Wcomment at norm.h:134 and
+  143, -Wformat-truncation at norm.cpp:317, -Wmaybe-uninitialized at
+  norm.cpp:494), cleared by e75e861, and one in stats/ehh.cpp:345
+  (-Wunused-but-set-variable), whose code the B30 rewrite removed. The
+  e75e861 message counts kinds of warning ("three", "the fourth"), not
+  places.
