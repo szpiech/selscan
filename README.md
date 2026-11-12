@@ -413,6 +413,7 @@ Default: __logfile__.
     - Changed: --alt uses squared haplotype frequencies for all statistics.
     - Changed: norm frequency bins are left-closed.
     - Changed: norm writes the gene table next to its first input, as <input>.<BED file name>.genetable. NEW: --gene-out sets its path.
+    - Changed: The unphased --ehh table reports EHH for each homozygote class and its complement (ehh2, ehh0, cehh2, cehh0, ehh).
     - Fixed: --max-gap is now applied to phased iHS and nSL.
     - Fixed: XP-EHH and XP-nSL no longer drop sites at joint frequency 0.5 or, unphased, sites without heterozygotes.
     - Fixed: Unphased XP population 2 values, the --wagh normalization, and the unphased iHS cutoff.
@@ -422,6 +423,15 @@ Default: __logfile__.
     - Fixed: Every input format drops all records at a duplicated position.
     - Fixed (norm): Gene tables, window percentiles, --crit-percent (iHH12 is now one-tailed), --log-input, the permutation test, and several crashes.
     - Fixed: --ehh, --ehh12, and --pi crashes. Errors now exit with status 1 and a message.
+    - Fixed: iHS and iHH12 no longer drop cores whose EHH decays at the last site before the chromosome edge.
+    - Fixed: With --keep-low-freq, monomorphic sites no longer inflate iHS and nSL.
+    - Fixed: --hap files with an odd number of haplotypes are read correctly (the last haplotype was ignored).
+    - Fixed: Haploid or malformed VCF genotypes are an error. With --unphased they were misread.
+    - Fixed: With --vcf and --map, each map position must match its VCF record.
+    - Fixed: Blank lines are skipped in hap, thap, tped and map files, and unphased alleles are checked for 0/1 coding.
+    - Fixed (norm): --bp-win honours --win-offset and stops if a file holds more than one chromosome or is unsorted. --min-snps must be at least 1.
+    - Fixed (norm): --ihs-detail output can be normalized. Input headers are checked before any output is written, and inputs with no data are an error.
+    - Improved: Clearer messages when a map does not match the genotype file, and the log gives the reason each VCF record was removed.
     - NEW: --version and --perm-seed. --help prints to stdout.
     - Improved: VCF loading is about 4x faster, iHS 3-5x, and nSL about 7x, and memory use is lower.
     - selscan no longer requires GSL, and `make check` runs the regression tests.
