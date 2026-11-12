@@ -406,6 +406,7 @@ Default: __logfile__.
     - Changed: XP-nSL counts distance in retained sites, as nSL does.
     - Changed: --alt uses squared haplotype frequencies for all statistics.
     - Changed: norm frequency bins are left-closed.
+    - Changed: norm writes the gene table next to its first input, as <input>.<BED file name>.genetable. NEW: --gene-out sets its path.
     - Fixed: --max-gap is now applied to phased iHS and nSL.
     - Fixed: XP-EHH and XP-nSL no longer drop sites at joint frequency 0.5 or, unphased, sites without heterozygotes.
     - Fixed: Unphased XP population 2 values, the --wagh normalization, and the unphased iHS cutoff.
