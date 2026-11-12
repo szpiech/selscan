@@ -1,0 +1,108 @@
+# Build and run the regression suite (tests/run_tests.sh) on every push and
+# pull request: Linux (GCC and clang), macOS (universal binary), Windows
+# (MSYS2 MinGW-w64), and a Linux build with AddressSanitizer and UBSan.
+# Each run: block sets its own shell options so it can be pasted into a
+# terminal and behave the same way.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: linux (${{ matrix.cxx }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zlib
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y zlib1g-dev
+      - name: Build
+        run: |
+          set -euxo pipefail
+          make -C src -j4 CXX=${{ matrix.cxx }} CXXFLAGS="-O3 -Werror"
+          ./src/selscan --version
+      - name: Test
+        run: |
+          set -euxo pipefail
+          make -C src check
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zlib
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y zlib1g-dev
+      - name: Build with ASan and UBSan
+        run: |
+          set -euxo pipefail
+          make -C src -j4 CXXFLAGS="-O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=undefined" LDFLAGS="-fsanitize=address,undefined"
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          set -euxo pipefail
+          make -C src check
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: |
+          set -euxo pipefail
+          make -C src -j4 UNIVERSAL=1 MACOS_MIN=11.0 CXXFLAGS="-O3 -Werror"
+          lipo -archs src/selscan
+          ./src/selscan --version
+      - name: Test (native slice)
+        run: |
+          set -euxo pipefail
+          make -C src check
+      - name: Test (x86_64 slice, if Rosetta is installed)
+        run: |
+          set -euxo pipefail
+          if arch -x86_64 /usr/bin/true 2> /dev/null; then
+            printf '#!/bin/sh\nexec arch -x86_64 "%s" "$@"\n' "$PWD/src/selscan" > selscan-x86_64
+            chmod +x selscan-x86_64
+            tests/run_tests.sh --bin "$PWD/selscan-x86_64"
+          else
+            echo "Rosetta not available on this runner; x86_64 slice not tested"
+          fi
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Keep LF line endings in the checkout
+        shell: pwsh
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: make diffutils gzip mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib
+      - name: Build
+        run: |
+          set -euxo pipefail
+          make -C src -j4 STATIC=1 CXXFLAGS="-O3 -Werror"
+          ./src/selscan.exe --version
+      - name: Test
+        run: |
+          set -euxo pipefail
+          make -C src check

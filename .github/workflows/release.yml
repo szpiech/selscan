@@ -1,0 +1,189 @@
+# Release binaries, built when a tag v* is pushed (or by hand from the
+# Actions tab, which builds and tests without publishing):
+#
+#   linux    manylinux_2_28 container (AlmaLinux 8, glibc 2.28). libstdc++,
+#            libgcc and zlib are linked statically; glibc stays dynamic.
+#            The build fails if the binary needs a glibc symbol newer than
+#            2.28 or any shared library other than glibc's.
+#   macos    universal (arm64 + x86_64), runs on macOS 11 and later.
+#   windows  MSYS2 MinGW-w64, fully static .exe.
+#
+# Each binary passes the regression suite on its build machine before it is
+# packaged. On a tag, the binaries are attached to a DRAFT GitHub release,
+# which has to be published by hand.
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ZLIB_VERSION: 1.3.1
+  ZLIB_SHA256: 9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test tools
+        run: |
+          set -euxo pipefail
+          dnf install -y diffutils gzip
+      - name: Build static zlib
+        run: |
+          set -euxo pipefail
+          curl -fsSL -o zlib.tar.gz "https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz"
+          echo "${ZLIB_SHA256}  zlib.tar.gz" | sha256sum -c -
+          tar xzf zlib.tar.gz
+          cd "zlib-${ZLIB_VERSION}"
+          CFLAGS="-O3 -fPIC" ./configure --static --prefix=/opt/zlib
+          make -j4
+          make install
+      - name: Build selscan
+        run: |
+          set -euxo pipefail
+          g++ --version
+          make -C src -j4 STATIC=1 CXXFLAGS="-O3 -Werror" CPPFLAGS=-I/opt/zlib/include LDFLAGS=-L/opt/zlib/lib
+          strip src/selscan
+      - name: Check the binary's dependencies
+        run: |
+          set -euxo pipefail
+          objdump -p src/selscan | awk '/NEEDED/ {print $2}' | tee needed.txt
+          if grep -Eq 'libstdc\+\+|libgcc_s|libz' needed.txt; then
+            echo "ERROR: the binary needs a shared library that should be static"; exit 1
+          fi
+          max=$(objdump -T src/selscan | grep -oE 'GLIBC_[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/GLIBC_//' | sort -V | tail -n 1)
+          echo "newest glibc symbol: $max"
+          if [ "$(printf '%s\n' "$max" 2.28 | sort -V | tail -n 1)" != 2.28 ]; then
+            echo "ERROR: needs glibc $max, newer than 2.28"; exit 1
+          fi
+      - name: Test
+        run: |
+          set -euxo pipefail
+          make -C src check
+      - name: Package
+        run: |
+          set -euxo pipefail
+          v=$(./src/selscan --version | awk '{print $2}')
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "v$v" != "${GITHUB_REF_NAME}" ]; then
+            echo "ERROR: selscan --version says $v but the tag is ${GITHUB_REF_NAME}"; exit 1
+          fi
+          mkdir -p "selscan-$v-linux-x86_64"
+          cp src/selscan LICENSE.md README.md "selscan-$v-linux-x86_64/"
+          tar czf "selscan-$v-linux-x86_64.tar.gz" "selscan-$v-linux-x86_64"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: selscan-*-linux-x86_64.tar.gz
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: |
+          set -euxo pipefail
+          make -C src -j4 UNIVERSAL=1 MACOS_MIN=11.0 CXXFLAGS="-O3 -Werror"
+          strip src/selscan
+      - name: Check the binary
+        run: |
+          set -euxo pipefail
+          archs=$(lipo -archs src/selscan)
+          echo "architectures: $archs"
+          case "$archs" in *x86_64*arm64*|*arm64*x86_64*) ;; *) echo "ERROR: not universal"; exit 1 ;; esac
+          otool -l src/selscan | grep -A4 LC_BUILD_VERSION | grep minos
+          otool -L src/selscan | awk '/^[[:space:]]/ {print $1}' | sort -u | tee libs.txt
+          if grep -v -E '^/usr/lib/|^/System/' libs.txt; then
+            echo "ERROR: links a library outside the system"; exit 1
+          fi
+      - name: Test
+        run: |
+          set -euxo pipefail
+          make -C src check
+          if arch -x86_64 /usr/bin/true 2> /dev/null; then
+            printf '#!/bin/sh\nexec arch -x86_64 "%s" "$@"\n' "$PWD/src/selscan" > selscan-x86_64
+            chmod +x selscan-x86_64
+            tests/run_tests.sh --bin "$PWD/selscan-x86_64"
+          fi
+      - name: Package
+        run: |
+          set -euxo pipefail
+          v=$(./src/selscan --version | awk '{print $2}')
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "v$v" != "${GITHUB_REF_NAME}" ]; then
+            echo "ERROR: selscan --version says $v but the tag is ${GITHUB_REF_NAME}"; exit 1
+          fi
+          mkdir -p "selscan-$v-macos-universal"
+          cp src/selscan LICENSE.md README.md "selscan-$v-macos-universal/"
+          tar czf "selscan-$v-macos-universal.tar.gz" "selscan-$v-macos-universal"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: selscan-*-macos-universal.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Keep LF line endings in the checkout
+        shell: pwsh
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: make diffutils gzip zip mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib
+      - name: Build
+        run: |
+          set -euxo pipefail
+          make -C src -j4 STATIC=1 CXXFLAGS="-O3 -Werror"
+          strip src/selscan.exe
+      - name: Check the binary's dependencies
+        run: |
+          set -euxo pipefail
+          objdump -p src/selscan.exe | grep 'DLL Name' | tee dlls.txt
+          if grep -iE 'DLL Name: (lib|zlib)' dlls.txt; then
+            echo "ERROR: the .exe needs a MinGW DLL; it should be static"; exit 1
+          fi
+      - name: Test
+        run: |
+          set -euxo pipefail
+          make -C src check
+      - name: Package
+        run: |
+          set -euxo pipefail
+          v=$(./src/selscan.exe --version | tr -d '\r' | awk '{print $2}')
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "v$v" != "${GITHUB_REF_NAME}" ]; then
+            echo "ERROR: selscan --version says $v but the tag is ${GITHUB_REF_NAME}"; exit 1
+          fi
+          mkdir -p "selscan-$v-windows-x86_64"
+          cp src/selscan.exe LICENSE.md README.md "selscan-$v-windows-x86_64/"
+          zip -r "selscan-$v-windows-x86_64.zip" "selscan-$v-windows-x86_64"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: selscan-*-windows-x86_64.zip
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -la dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: dist/*
