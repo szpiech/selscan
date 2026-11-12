@@ -477,6 +477,15 @@ if selected input-format; then
     if [ "$r1$r2$r3$r4" = "1111" ] && grep -q "Haploid genotype '1' at pos" if8.log && grep -q 'Haploid genotype' if9.log \
         && grep -q 'Haploid genotype' if10.log && grep -q "Malformed genotype field '0|1|1'" if11.log; then pass "input-format:vcf-gt-shape"
     else fail "input-format:vcf-gt-shape" "exit $r1/$r2/$r3/$r4 (expected 1 for each, with the matching message)"; fi
+    # U8: with --vcf and --map, each map row must have the POS of the VCF
+    # record it is matched to. A map built from the VCF is accepted; one row
+    # moved by 1 bp (order kept) is an error. 3.0.1 compared only counts.
+    gzip -dc p1.vcf.gz | awk '/^#/ {next} { printf "%s %s %.10g %s\n", $1, $3, $2/1e6, $2 }' > if_ok.map
+    awk 'NR == 11 { $4 = $4 + 1 } { print }' if_ok.map > if_off.map
+    run if12.log --ihs --vcf p1.vcf.gz --map if_ok.map --out if_m; r1=$RC
+    run if13.log --ihs --vcf p1.vcf.gz --map if_off.map --out if_m; r2=$RC
+    if [ "$r1" -eq 0 ] && [ "$r2" -eq 1 ] && grep -q 'data row 11 of if_off.map' if13.log; then pass "input-format:vcf-map-positions"
+    else fail "input-format:vcf-map-positions" "exit $r1/$r2 (expected 0, then 1 naming row 11)"; fi
 fi
 
 if selected xp-intersect; then

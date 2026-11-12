@@ -1781,6 +1781,19 @@ void HapMap::loadHapMapData(){
         // combined run used physical distance.
         if(!p.USE_PMAP && p.mapFilename.compare(DEFAULT_FILENAME_MAP) != 0) {
             mapData->readMapData(p.mapFilename, hapData->nloci, p.USE_PMAP, hapData->skipQueue);
+            // U8: map rows are matched to VCF records by order, so they must
+            // agree on position (the output takes chr, id and pos from the
+            // map). 3.0.1 compared only the counts.
+            if (vcfMap.size() == (size_t)mapData->nloci) {
+                for (int i = 0; i < mapData->nloci; i++) {
+                    const MapEntry &m = mapData->mapEntries[i];
+                    if (m.physicalPos != vcfMap[i].physicalPos) {
+                        HANDLE_ERROR("data row " + to_string(m.locId + 1) + " of " + p.mapFilename + " (" + m.locusName + ") has position "
+                                     + to_string(m.physicalPos) + ", but the matching record of " + p.vcfFilename + " has POS "
+                                     + to_string(vcfMap[i].physicalPos) + ". With " + ARG_FILENAME_MAP + ", the map must list the VCF records in the same order, at the same positions.");
+                    }
+                }
+            }
         }
         else if (vcfMap.size() == (size_t)hapData->nloci) {
             // P1: physical positions recorded while the haplotypes were read
