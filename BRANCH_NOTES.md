@@ -114,6 +114,11 @@ one src/Makefile for every platform, also with header dependencies.
 | 65dcc65 | M8 | .pi output has a header (chr start end pi), a chr column, and tabs; pi golden re-recorded |
 | 8a06bdf | B53 | none; frees norm arrays that LeakSanitizer reported (3.0.1 leak) |
 | 58adc49 | M9 | none; VCF read in one pass, decompression on a second thread (load 0.18-0.36 s on big50k, was 0.77-1.59 s) |
+| 21083bc | docs | change log lines for M9, `--threads` and the .pi header (approved); notes through 58adc49 |
+| 4dfb127 | help | `--pi` help says non-overlapping windows (approved) |
+| 3ac4081 | B53 | none; norm frees its per-file arrays on error returns and on throw (first CI run) |
+| 899662b | B54 | Windows only: correct results with more than 32 haplotypes; Linux and macOS byte-identical |
+| 51e32c2 | U18 | Windows only: `\ / : * ? " < > \|` in a `--ehh`/`--ehh12` locus ID become `_` in the file name |
 
 Each commit message gives the measured differences in full.
 
@@ -301,6 +306,8 @@ site they share.
 - .pi output (PI): a header line, a chr column, and tabs, as the other
   outputs have.
 - M9 (PI): one VCF parser for single-population and XP input.
+- U18 (PI): only Windows changes the per-locus `--ehh`/`--ehh12` file
+  name; Linux and macOS keep the locus ID as given.
 - U8: with `--vcf --map`, map and VCF must agree on position; chromosome
   names and IDs are not compared (choice made here).
 - Step 6 findings and choices made here, not by the PI: B50 and B51
@@ -368,17 +375,21 @@ the computation. It may matter on network filesystems.
   `std::to_chars` would remove most of it but needs macOS 13.3; the
   deployment target stays at 11.0 (PI).
 - binom.cpp (nCk, factln) is no longer used by the kernels since 47776f7 (B40).
-- The CI and release workflows (ef1dab4) have not run; they run on the
-  first push. On Rocky 9.7 with GCC 11.5, eb703ec builds with no
-  warnings and passes `make check` (220 passed, 0 failed). At 2363b85
-  GCC warned at five places: four in norm (-Wcomment at norm.h:134 and
-  143, -Wformat-truncation at norm.cpp:317, -Wmaybe-uninitialized at
-  norm.cpp:494), cleared by e75e861, and one in stats/ehh.cpp:345
-  (-Wunused-but-set-variable), whose code the B30 rewrite removed. The
-  e75e861 message counts kinds of warning ("three", "the fourth"), not
-  places.
-  58adc49 also builds there with no warnings and passes `make check`,
-  and the suite passes 220/0/0 under GCC 11.5 ASan+UBSan (leak detection
-  on) and TSan. The ASan run found B53, which would have failed 11 norm
-  tests in the CI sanitizer job. ASan and TSan do not run on the macOS
-  build machine (the runtimes fail at startup), so they are run on Rocky.
+- CI first ran at 4dfb127 (push of code-review). Linux g++, Linux clang++
+  and macOS (both slices) passed 220/0/0. The sanitizer job failed 4
+  norm error-path tests (exit 134, B53 leaks reported with
+  abort_on_error=1) and Windows (MSYS2 MINGW64) failed 32 tests: 27 from
+  B54 (inputs with 50 or 125 haplotypes) and 5 from U18 (':' in EHH file
+  names). The office runs had missed B53 on the error paths because they
+  ran ASan without abort_on_error; they now use the CI options. At
+  51e32c2, on Rocky 9.7 with GCC 11.5: no warnings, `make check`
+  220/0/0, ASan+UBSan with the CI options 220/0/0, TSan 220/0/0. The
+  Windows fixes need the next CI run to confirm. The release workflow
+  has not run (it runs on a tag). ASan and TSan do not run on the macOS
+  build machine (the runtimes fail at startup).
+  At 2363b85 GCC warned at five places: four in norm (-Wcomment at
+  norm.h:134 and 143, -Wformat-truncation at norm.cpp:317,
+  -Wmaybe-uninitialized at norm.cpp:494), cleared by e75e861, and one in
+  stats/ehh.cpp:345 (-Wunused-but-set-variable), whose code the B30
+  rewrite removed. The e75e861 message counts kinds of warning ("three",
+  "the fourth"), not places.

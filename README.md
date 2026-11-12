@@ -416,6 +416,8 @@ Default: __logfile__.
     - Changed: Under --alt, unphased XP-EHH and XP-nSL stop integrating a population once its individuals are all unique, as phased XP and iHS do.
     - Changed: --threads defaults to 1 (it was the number of logical CPUs).
     - Changed: The --pi output has a header line (chr start end pi), a chr column, and tab-separated columns.
+    - Changed: On Windows, the characters \ / : * ? " < > | in a --ehh or --ehh12 locus ID become _ in the output file name (the log gives the name).
+    - Fixed: Windows builds since v2.1 gave wrong results or crashed for data with more than 32 haplotypes.
     - Fixed: --max-gap is now applied to phased iHS and nSL.
     - Fixed: XP-EHH and XP-nSL no longer drop sites at joint frequency 0.5 or, unphased, sites without heterozygotes.
     - Fixed: Unphased XP population 2 values, the --wagh normalization, and the unphased iHS cutoff.
