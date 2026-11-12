@@ -285,8 +285,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }
 
 
-    // Allocated on the --files (DO_NORM) or --norm-files --bp-win paths only;
-    // freed once at the end (B23).
+    // Allocated on the --files (DO_NORM) or --norm-files --bp-win paths only
+    // (B23). The vectors own the storage, so the early error returns free it
+    // too (B53); the pointers are what the helpers take.
+    vector<string> outfilenameStore;
+    vector<int> fileLociStore;
     string *outfilename = nullptr;
     int *fileLoci = nullptr;
     
@@ -311,8 +314,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     if(DO_NORM){
         cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
 
-        outfilename = new string[nfiles];
-        fileLoci = new int[nfiles];
+        outfilenameStore.assign(nfiles, string());
+        fileLociStore.assign(nfiles, 0);
+        outfilename = outfilenameStore.data();
+        fileLoci = fileLociStore.data();
         ifstream fin;
 
         int totalLoci = 0;
@@ -573,8 +578,10 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             cerr << "Using " << nfiles << " normalized output files for window-based analysis.\n";
         }else{
             cerr << "You have provided " << nfiles << " normalized files for window-based analysis.\n";
-            outfilename = new string[nfiles];
-            fileLoci = new int[nfiles];
+            outfilenameStore.assign(nfiles, string());
+            fileLociStore.assign(nfiles, 0);
+            outfilename = outfilenameStore.data();
+            fileLoci = fileLociStore.data();
             ifstream fin;
             int totalLoci = 0;
                    //For each file, open it, and check it for integrity
@@ -701,8 +708,6 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
         
     }
             
-    delete [] outfilename;
-    delete [] fileLoci;
     flog.close();
        
 
@@ -908,15 +913,18 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
-    vector<int> *winStarts = new vector<int>[nfiles];
-    vector<int> *nSNPs = new vector<int>[nfiles];
-    vector<double> *fracCrit = new vector<double>[nfiles];
-    vector<double> *maxAbsScore = new vector<double>[nfiles];
-
+    vector<vector<int>> winStartsStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<int> *winStarts = winStartsStore.data();
+    vector<vector<int>> nSNPsStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<int> *nSNPs = nSNPsStore.data();
+    vector<vector<double>> fracCritStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *fracCrit = fracCritStore.data();
+    vector<vector<double>> maxAbsScoreStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *maxAbsScore = maxAbsScoreStore.data();
     ifstream fin;
     ofstream fout;
-    string *winfilename = new string[nfiles];
-
+    vector<string> winfilenameStore(nfiles);   // owns the storage, freed on throw (B53)
+    string *winfilename = winfilenameStore.data();
     char str[16];
     snprintf(str, sizeof str, "%d", winSize / 1000);
 
@@ -1190,11 +1198,6 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
 
     delete [] quantileBound;
     delete [] topWindowBoundary;
-    delete [] winStarts;
-    delete [] nSNPs;
-    delete [] fracCrit;
-    delete [] winfilename;
-    delete [] maxAbsScore; // added 
 
     return;
 }
@@ -1205,17 +1208,22 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
-    vector<int> *winStarts = new vector<int>[nfiles];
-    vector<int> *nSNPs = new vector<int>[nfiles];
-    vector<double> *fracCritTop = new vector<double>[nfiles];
-    vector<double> *fracCritBot = new vector<double>[nfiles];
-    vector<double> *maxScore = new vector<double>[nfiles];
-    vector<double> *minScore = new vector<double>[nfiles];
-
+    vector<vector<int>> winStartsStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<int> *winStarts = winStartsStore.data();
+    vector<vector<int>> nSNPsStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<int> *nSNPs = nSNPsStore.data();
+    vector<vector<double>> fracCritTopStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *fracCritTop = fracCritTopStore.data();
+    vector<vector<double>> fracCritBotStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *fracCritBot = fracCritBotStore.data();
+    vector<vector<double>> maxScoreStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *maxScore = maxScoreStore.data();
+    vector<vector<double>> minScoreStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *minScore = minScoreStore.data();
     ifstream fin;
     ofstream fout;
-    string *winfilename = new string[nfiles];
-
+    vector<string> winfilenameStore(nfiles);   // owns the storage, freed on throw (B53)
+    string *winfilename = winfilenameStore.data();
     char str[16];
     snprintf(str, sizeof str, "%d", winSize / 1000);
 
@@ -1429,15 +1437,6 @@ void SelscanNorm::analyzeXPEHHBPWindows(string normedfiles[], int fileLoci[], in
     delete [] quantileBoundBot;
     delete [] topWindowBoundaryBot;
 
-    delete [] winStarts;
-    delete [] nSNPs;
-    delete [] fracCritTop;
-    delete [] fracCritBot;
-    delete [] maxScore;   // B53: maxScore and minScore were never freed
-    delete [] minScore;
-
-    delete [] winfilename;
-
     return;
 }
 
@@ -1447,15 +1446,18 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
     cerr << "\nAnalyzing BP windows:\n\n";
     //int totalLoci = 0;
     //for (int i = 0; i < nfiles; i++) totalLoci+=fileLoci[i];
-    vector<int> *winStarts = new vector<int>[nfiles];
-    vector<int> *nSNPs = new vector<int>[nfiles];
-    vector<double> *fracCrit = new vector<double>[nfiles];
-    vector<double> *maxAbsScore = new vector<double>[nfiles];
-
+    vector<vector<int>> winStartsStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<int> *winStarts = winStartsStore.data();
+    vector<vector<int>> nSNPsStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<int> *nSNPs = nSNPsStore.data();
+    vector<vector<double>> fracCritStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *fracCrit = fracCritStore.data();
+    vector<vector<double>> maxAbsScoreStore(nfiles);   // owns the storage, freed on throw (B53)
+    vector<double> *maxAbsScore = maxAbsScoreStore.data();
     ifstream fin;
     ofstream fout;
-    string *winfilename = new string[nfiles];
-
+    vector<string> winfilenameStore(nfiles);   // owns the storage, freed on throw (B53)
+    string *winfilename = winfilenameStore.data();
     char str[16];
     snprintf(str, sizeof str, "%d", winSize / 1000);
 
@@ -1623,12 +1625,6 @@ void SelscanNorm::analyzeIHH12BPWindows(string normedfiles[], int fileLoci[], in
 
     delete [] quantileBound;
     delete [] topWindowBoundary;
-    delete [] winStarts;
-    delete [] nSNPs;
-    delete [] fracCrit;
-    delete [] winfilename;
-
-    delete [] maxAbsScore;
 
     return;
 }
