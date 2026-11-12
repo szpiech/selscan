@@ -408,6 +408,34 @@ if selected tped-equiv; then
     else fail "dup-positions:hap" "exit $RC, $nd of the duplicated loci reported, log note $(grep -q 'Dropped 2 records' dp.log && echo present || echo absent)"; fi
 fi
 
+if selected hap-reader; then
+    # B14: each --hap row is one haplotype. 3.0.1 read rows in pairs, so with
+    # an odd row count the last haplotype stayed all-ancestral. 49 rows as
+    # --hap and transposed as --thap must give the same iHS.
+    awk 'NR < 50' example.hap > hr_odd.hap
+    awk '{ for (i = 1; i <= NF; i++) m[i] = (NR == 1) ? $i : m[i] " " $i } END { for (i = 1; i <= NF; i++) print m[i] }' hr_odd.hap > hr_odd.thap
+    run hr1.log --ihs --hap hr_odd.hap --map example.map --out hr_h
+    run hr2.log --ihs --thap hr_odd.thap --map example.map --out hr_t
+    identical "hap-reader:odd-rows" hr_h.ihs.out hr_t.ihs.out
+    # B14: with --unphased the rows are pairs, so an odd count is an error
+    # (3.0.1 dropped the last row).
+    run hr3.log --ihs --unphased --hap hr_odd.hap --map example.map --out hr_u
+    if [ "$RC" -eq 1 ] && grep -q 'must be even' hr3.log; then pass "hap-reader:unphased-odd-rows"
+    else fail "hap-reader:unphased-odd-rows" "exit $RC (expected 1)"; fi
+    # B14: every row is checked for 0/1 coding, including the last of an odd
+    # count (3.0.1 never read it).
+    { cat hr_odd.hap; awk 'NR == 50 { sub(/^0/, "2"); sub(/^1/, "2"); print }' example.hap; } > hr_bad.hap
+    run hr4.log --ihs --hap hr_bad.hap --map example.map --out hr_b
+    if [ "$RC" -eq 1 ] && grep -q 'line 50 of hr_bad.hap' hr4.log; then pass "hap-reader:non-01-allele"
+    else fail "hap-reader:non-01-allele" "exit $RC (expected 1 naming line 50)"; fi
+    # U9: blank lines in a --hap file are skipped (3.0.1 stopped at a
+    # trailing blank line).
+    awk '{ print } NR == 10 { print "" } END { print "" }' example.hap > hr_blank.hap
+    run hr5.log --ihs --hap example.hap --map example.map --out hr_e
+    run hr6.log --ihs --hap hr_blank.hap --map example.map --out hr_bl
+    identical "hap-reader:blank-lines" hr_e.ihs.out hr_bl.ihs.out
+fi
+
 if selected xp-intersect; then
     # XP VCF input is paired by position and REF/ALT (B15). Start from p1/p2
     # without duplicated positions (u1/u2 list the same positions), then

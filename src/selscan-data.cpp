@@ -75,97 +75,108 @@ void HapMap::readHapDataMSHap(string filename, HapData &hapData)
         exit(EXIT_FAILURE);
     }
 
+    // Each row is one haplotype. With --unphased, rows 2i and 2i+1 are the
+    // two haplotypes of individual i. 3.0.1 handled rows in pairs in both
+    // modes, so with an odd row count the last haplotype was never read or
+    // checked and stayed all-ancestral (B14). Blank lines are skipped (U9).
+    auto stripSpace = [](string &s) {
+        s.erase(std::remove_if(s.begin(), s.end(), [](char c) {
+            return std::isspace(static_cast<unsigned char>(c));
+        }), s.end());
+    };
+
     string line;
     string prev_line;
     int current_nhaps = 0;
 
     vector<int> skiplist;
 
-    getline(fin, prev_line); // first line
-    prev_line.erase(std::remove_if(prev_line.begin(), prev_line.end(), [](char c) {
-            return std::isspace(static_cast<unsigned char>(c));
-        }), prev_line.end());  // erase spaces inside and outside
+    int lineNum = 0;
+    while (getline(fin, prev_line)) { lineNum++; stripSpace(prev_line); if (!prev_line.empty()) break; }
+    if (prev_line.empty()) {
+        HANDLE_ERROR(filename + " has no haplotype rows.");
+    }
 
-    int nloci_before_filter =  prev_line.length(); // number of loci before MAF filtering
+    int nloci_before_filter = prev_line.length(); // number of loci before MAF filtering
 
     vector<int> number_of_1s_per_locus(nloci_before_filter, 0);
     vector<int> number_of_2s_per_locus(nloci_before_filter, 0);
 
- //Counts number of haps (rows) and number of loci (cols)
- //if any lines differ, send an error message and throw an exception
+    // PHASE 1: count rows and alleles, and check the format, before anything
+    // is allocated.
+    int num_rows = 0;
+    line = prev_line;
+    do
+    {
+        stripSpace(line);
+        if (line.empty()) continue;
 
- int hap = 1;
- while (getline(fin, line))
- {
-     line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
-         return std::isspace(static_cast<unsigned char>(c));
-     }), line.end());  // erase spaces inside and outside
+        if (static_cast<int>(line.length()) != nloci_before_filter) {
+            HANDLE_ERROR("line " + std::to_string(lineNum) + " of " + filename + " has " + std::to_string(line.length()) +
+                          " loci, but the first line has " + std::to_string(nloci_before_filter) + ".");
+        }
+        for (int loc = 0; loc < nloci_before_filter; loc++) {
+            if (line[loc] != '0' && line[loc] != '1') {
+                HANDLE_ERROR("line " + std::to_string(lineNum) + " of " + filename + " has '" + string(1, line[loc]) +
+                              "' at locus " + std::to_string(loc + 1) + ". Alleles must be coded 0/1 only.");
+            }
+        }
 
-     if(prev_line.length() != line.length()){
-         HANDLE_ERROR("ERROR: line " + std::to_string(hap) + " of " + filename + " has " + std::to_string(line.length()) +
-                       " loci, but the previous line has " + std::to_string(prev_line.length()));
-     }
+        if (p.UNPHASED) {
+            if (num_rows % 2 == 1) {
+                for (int loc = 0; loc < nloci_before_filter; loc++) {
+                    int g = (line[loc] == '1') + (prev_line[loc] == '1');
+                    if (g == 2) number_of_2s_per_locus[loc]++;
+                    else if (g == 1) number_of_1s_per_locus[loc]++;
+                }
+            }
+        } else {
+            for (int loc = 0; loc < nloci_before_filter; loc++) {
+                if (line[loc] == '1') number_of_1s_per_locus[loc]++;
+            }
+        }
 
-     for(int loc=0; loc<nloci_before_filter; loc++){
-         if(p.UNPHASED){
-             if (hap % 2 == 1){
-                 if(line[loc]=='1'  && prev_line[loc]=='1'){
-                     number_of_2s_per_locus[loc]++;
-                 }else if ( (line[loc]=='1' && prev_line[loc]=='0') || (line[loc]=='0' && prev_line[loc]=='1') ){ // ==1
-                     number_of_1s_per_locus[loc]++;
-                 }
-             }
-         }else{
-             if (hap % 2 == 1){
-                 if(line[loc]=='1'){
-                     number_of_1s_per_locus[loc]++;
-                 }
-                 if(prev_line[loc]=='1'){
-                     number_of_1s_per_locus[loc]++;
-                 }
-             }
-             
-         }
-     }
-         
-     prev_line = line; // store the previous line
-     hap++;
- }
- 
- int num_rows = hap;
- current_nhaps = (p.UNPHASED) ? num_rows/2 : num_rows;
+        prev_line = line;
+        num_rows++;
+    } while ((lineNum++, getline(fin, line)));
 
- int n_maf_skipped = 0;
- for(int loc=0; loc<nloci_before_filter; loc++){
-     if(preSkipAt(loc)){
-         skiplist.push_back(loc);
-     }else if(shouldSkipLocus(number_of_1s_per_locus[loc], number_of_2s_per_locus[loc], num_rows)){
-         skiplist.push_back(loc);
-         n_maf_skipped++;
-     }
- }
- 
- fin.clear(); // clear error flags
- fin.close();
+    if (p.UNPHASED && num_rows % 2 != 0) {
+        HANDLE_ERROR(filename + " has " + std::to_string(num_rows) +
+                      " haplotype rows. With " + ARG_UNPHASED + " the rows are read as pairs (two per individual), so the number must be even.");
+    }
+    current_nhaps = (p.UNPHASED) ? num_rows/2 : num_rows;
 
- number_of_1s_per_locus.clear();
- number_of_2s_per_locus.clear();
+    int n_maf_skipped = 0;
+    for(int loc=0; loc<nloci_before_filter; loc++){
+        if(preSkipAt(loc)){
+            skiplist.push_back(loc);
+        }else if(shouldSkipLocus(number_of_1s_per_locus[loc], number_of_2s_per_locus[loc], num_rows)){
+            skiplist.push_back(loc);
+            n_maf_skipped++;
+        }
+    }
 
-// === Logging summary ===
+    fin.clear(); // clear error flags
+    fin.close();
 
-if (p.SKIP) {
-    LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF);
-    LOG("Removed " << n_maf_skipped << " low frequency variants from haplotype data.");
-} else {
-    LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF);
-}
- 
+    number_of_1s_per_locus.clear();
+    number_of_2s_per_locus.clear();
+
+    // === Logging summary ===
+
+    if (p.SKIP) {
+        LOG(ARG_SKIP << " set. Removing all variants < " << p.MAF);
+        LOG("Removed " << n_maf_skipped << " low frequency variants from haplotype data.");
+    } else {
+        LOG(ARG_KEEP << " set. NOT removing variants < " << p.MAF);
+    }
+
     hapData.initHapData(current_nhaps, nloci_before_filter - skiplist.size());
-    
+
     //PHASE 2: Open input File 2nd time To Load into Data Structure
     LOG("Re-loading input to read " << current_nhaps << " haplotypes and "
         << (nloci_before_filter - skiplist.size()) << " loci into data structures.");
-    
+
     fin.open(filename.c_str());
     if (fin.fail())
     {
@@ -173,66 +184,39 @@ if (p.SKIP) {
         exit(EXIT_FAILURE);
     }
 
-    stringstream ss;
-
-
-    // getline(fin, prev_line);
-    // ss.str(prev_line);
-    // prev_line.erase(std::remove_if(prev_line.begin(), prev_line.end(), [](char c) {
-    //         return std::isspace(static_cast<unsigned char>(c));
-    //     }), prev_line.end());
-   
     prev_line = "";
-    for (int hap = 0; hap < num_rows; hap++)
+    int hap = 0;
+    while (hap < num_rows && getline(fin, line))
     {
-        getline(fin, line);
-        line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
-            return std::isspace(static_cast<unsigned char>(c));
-        }), line.end());   
+        stripSpace(line);
+        if (line.empty()) continue;
 
         int skip_idx = 0;
         int loc_after_filter = 0;
         for(int loc=0; loc<nloci_before_filter; loc++){
-            
-            if (skip_idx < static_cast<int>(skiplist.size())) {
-                if ( loc == skiplist[skip_idx]) {
-                    if(hap==num_rows-1){
-                        hapData.skipQueue.push(loc);
-                    }
-                    ++skip_idx;  // move to the next skip index
-                    continue;    // skip printing this locus
+
+            if (skip_idx < static_cast<int>(skiplist.size()) && loc == skiplist[skip_idx]) {
+                if(hap==num_rows-1){
+                    hapData.skipQueue.push(loc);
                 }
+                ++skip_idx;  // move to the next skip index
+                continue;
             }
-            
+
             if(p.UNPHASED){
                 if (hap % 2 == 1){
-                    if(line[loc]=='1'  && prev_line[loc]=='1'){
-                        hapData.addAllele2(loc_after_filter, (hap-1)/2);
-                    }else if ( (line[loc]=='1' && prev_line[loc]=='0') || (line[loc]=='0' && prev_line[loc]=='1') ){ // ==1
-                        hapData.addAllele1(loc_after_filter, (hap-1)/2);
-                    }
+                    int g = (line[loc] == '1') + (prev_line[loc] == '1');
+                    if (g == 2) hapData.addAllele2(loc_after_filter, (hap-1)/2);
+                    else if (g == 1) hapData.addAllele1(loc_after_filter, (hap-1)/2);
                 }
             }else{
-                if (hap % 2 == 1){
-                    if((prev_line[loc]!='1' && prev_line[loc]!='0') || (line[loc]!='1' && line[loc]!='0')){
-                        HANDLE_ERROR("Alleles must be coded 0/1 only.");
-                    }
-
-                    if(prev_line[loc]=='1'){
-                        hapData.addAllele1(loc_after_filter, (hap-1));
-                    } 
-                    if (line[loc]=='1'){
-                        hapData.addAllele1(loc_after_filter, hap);
-                    }
-
-                }
-                
+                if (line[loc]=='1') hapData.addAllele1(loc_after_filter, hap);
             }
             loc_after_filter++;
         }
 
         prev_line = line; // store the previous line
-        
+        hap++;
     }
     fin.close();
 
