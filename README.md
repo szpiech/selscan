@@ -362,11 +362,10 @@ in the construction of your haplotypes please use the --keep-low-freq flag.
 --log <string>: The log file name.
 	Default: norm.log
 
---log-input <string>: Specifies the log file used as an input for normalization.
-If provided, frequency-bin or mean/variance normalization is applied from the log-input file.
-Cannot be used together with --bins.
-Default: __logfile__.
-
+--log-input <string>: A norm log from an earlier run. The means and variances in it
+    	(per frequency bin for iHS and nSL) are used to normalize --files.
+    	For iHS and nSL the number of bins is read from the log, and --bins,
+    	if given, must agree. Cannot be used with --qbins.
 	Default: __logfile__
 
 --log-only <bool>: If set, outputs only the log file with normalization info (mean, variance) and skips normalized output. Useful with --log-input.

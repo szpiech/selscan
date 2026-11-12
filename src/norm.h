@@ -171,10 +171,10 @@ class SelscanNorm{
     // Added in v3
     const string ARG_LOG_INPUT = "--log-input";
     const string DEFAULT_LOG_INPUT = "__logfile__";
-    const string HELP_LOG_INPUT =     "Specifies the log file used as an input for normalization.\n"
-    "If provided, frequency-bin or mean/variance normalization is applied from the log-input file.\n"
-    "Cannot be used together with --bins.\n"
-    "Default: __logfile__.\n";
+    const string HELP_LOG_INPUT =     "A norm log from an earlier run. The means and variances in it\n"
+    "    \t(per frequency bin for iHS and nSL) are used to normalize --files.\n"
+    "    \tFor iHS and nSL the number of bins is read from the log, and --bins,\n"
+    "    \tif given, must agree. Cannot be used with --qbins.";
 
     // const string ARG_LOG_OUTPUT = "--log-output-only";
     // const string DEFAULT_LOG_OUTPUT = "__logfile__";
