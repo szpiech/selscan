@@ -105,12 +105,14 @@ void runStat(std::unique_ptr<HapMap>& hm, param_main &p)
     if (hm->mapData->nloci < p.numThreads)
     {
         p.numThreads = hm->mapData->nloci; // p.numThreads = 1;
-        cerr << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
-        *(hm->flog) << "WARNING: there are fewer loci than threads requested.  Running with " << p.numThreads << " thread instead.\n";
+        const string s = (p.numThreads == 1) ? " thread" : " threads";
+        cerr << "WARNING: there are fewer loci than threads requested. Running with " << p.numThreads << s << ", one per locus.\n";
+        *(hm->flog) << "WARNING: there are fewer loci than threads requested. Running with " << p.numThreads << s << ", one per locus.\n";
     }
 
+    // 0 means the hardware count is unknown; then there is nothing to compare (U13)
     int max_supported_thread = std::thread::hardware_concurrency();
-    if(p.numThreads > max_supported_thread){
+    if(max_supported_thread > 0 && p.numThreads > max_supported_thread){
         cerr << "WARNING: Requested "<< p.numThreads<<" threads, but maximum number of threads supported by hardware is "<< max_supported_thread <<"."<<endl;
         *(hm->flog) << "WARNING: Requested "<< p.numThreads<<" threads, but maximum number of threads supported by hardware is "<< max_supported_thread <<"."<<endl;
     }

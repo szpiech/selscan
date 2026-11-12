@@ -16,6 +16,7 @@
 #define __SELSCAN_CLI_H__
 
 
+#include <algorithm>
 #include <thread>
 
 
@@ -113,7 +114,8 @@ To calculate XP-EHH:\n\
 ./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>\n";
 
 const string ARG_THREAD = "--threads";
-const int DEFAULT_THREAD = std::thread::hardware_concurrency();
+// hardware_concurrency() may return 0 when the count is unknown (U13)
+const int DEFAULT_THREAD = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
 \tPartitions loci across threads. The default is the number of\n\
 \tlogical CPUs of the machine selscan runs on.";
