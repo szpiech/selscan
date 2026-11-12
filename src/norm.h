@@ -261,9 +261,8 @@ class SelscanNorm{
 
     //returns number of lines in file
     //throws 0 if the file fails
-    int checkIHSfile(ifstream &fin, bool norm = false);
-    int checkXPEHHfile(ifstream &fin, bool norm = false);
-    int checkIHH12file(ifstream &fin, bool norm = false);
+    static vector<string> expectedHeaders(const string &stat, bool norm);
+    int checkStatFile(ifstream &fin, const string &filename, const string &stat, bool norm);
 
     void readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[]);
     void readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[]);

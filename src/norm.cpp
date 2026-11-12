@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "norm.h"
 #include "normio.h"
 #include <limits>
@@ -304,6 +305,9 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
     }
     flog << "\n\n";
 
+    // column name of the score, used to check input headers (U3); --xpnsl also sets XPEHH (U14)
+    const string statLabel = IHS ? "ihs" : (NSL ? "nsl" : (XPNSL ? "xpnsl" : (XPEHH ? "xpehh" : "ihh12")));
+
     if(DO_NORM){
         cerr << "You have provided " << nfiles << " output files for joint normalization.\n";
 
@@ -344,9 +348,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             //check integrity of file and keep count of the number of lines
             try
             {
-                if (IHS || NSL) fileLoci[i] = checkIHSfile(fin);
-                if (SOFT) fileLoci[i] = checkIHH12file(fin);
-                if (XPEHH) fileLoci[i] = checkXPEHHfile(fin);
+                fileLoci[i] = checkStatFile(fin, filename[i], statLabel, false);
                 totalLoci += fileLoci[i];
             }
             catch (...)
@@ -358,6 +360,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
         cerr << "\nTotal loci: " << totalLoci << endl; // across all files
         flog << "\nTotal loci: " << totalLoci << endl; // across all files
+        if (totalLoci == 0) {   // U11
+            cerr << "ERROR: the input files have no data rows.\n";
+            flog << "ERROR: the input files have no data rows.\n";
+            return 1;
+        }
 
 
         string chr;
@@ -591,9 +598,7 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
                 //check integrity of file and keep count of the number of lines
                 try
                 {
-                    if (IHS || NSL) fileLoci[i] = checkIHSfile(fin, true);
-                    if (SOFT) fileLoci[i] = checkIHH12file(fin, true);
-                    if (XPEHH) fileLoci[i] = checkXPEHHfile(fin, true);
+                    fileLoci[i] = checkStatFile(fin, filename[i], statLabel, true);
                     totalLoci += fileLoci[i];
                 }
                 catch (...)
@@ -606,6 +611,11 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
 
             cerr << "\nTotal loci: " << totalLoci << endl; // across all files
             flog << "\nTotal loci: " << totalLoci << endl; // across all files
+            if (totalLoci == 0) {   // U11
+                cerr << "ERROR: the input files have no data rows.\n";
+                flog << "ERROR: the input files have no data rows.\n";
+                return 1;
+            }
         }
 
 
@@ -643,16 +653,20 @@ int SelscanNorm::runToolNorm(int argc, char *argv[])
             }
         }else{ // no --files, no --win-files, but maybe --norm-files
             cerr << "You have provided " << nfiles << " normalized files for gene-based analysis.\n";
-            ifstream fin;
             for (int i = 0; i < nfiles; i++)
             {
-                fin.open(filename[i].c_str());
-                if (IHS || NSL) checkIHSfile(fin, true);
-                if (SOFT)  checkIHH12file(fin, true);
-                if (XPEHH) checkXPEHHfile(fin, true);
+                // one stream per file: reopening an open ifstream fails, so
+                // 3.0.1 checked only the first file (U3)
+                ifstream fin(filename[i].c_str());
+                if (fin.fail()) {
+                    cerr << "ERROR: Cannot open " << filename[i] << "\n";
+                    flog << "ERROR: Cannot open " << filename[i] << "\n";
+                    return 1;
+                }
+                try { checkStatFile(fin, filename[i], statLabel, true); }
+                catch (...) { return 1; }
                 normFilenames[i] = normFiles[i];
             }
-            fin.close();
             
         }
 
@@ -939,8 +953,9 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
         double maxAbs = -99999.9;
 
         //skip header line
-        string header;
+        string header, junk;
         getline(fin, header);
+        int numExtra = countFields(header) - 9;   // --ihs-detail columns (U3)
         for (int j = 0; j < fileLoci[i]; j++)
         {
             fin >> chrs[i];
@@ -950,6 +965,7 @@ void SelscanNorm::analyzeIHSBPWindows(string normedfiles[], int fileLoci[], int 
             fin >> ihh1;
             fin >> ihh2;
             fin >> data;
+            for (int k = 0; k < numExtra; k++) fin >> junk;
             fin >> normedData;
             fin >> crit;
 
@@ -1892,27 +1908,14 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
     int numInBin = 0;
     fin.getline(header);
 
-    const std::string expectedHeaderIHS = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
-    const std::string expectedHeaderNSL = "chr\tid\tpos\tfreq\tihh1\tihh0\tnsl";
+    // header checked in checkStatFile before any output is opened (U3)
+    if (!header.empty() && header.back() == '\r') header.pop_back();
+    fout.put(header + (NSL ? "\tnorm_nsl\tcrit\n" : "\tnorm_ihs\tcrit\n"));
 
-    if (NSL){
-         if(expectedHeaderNSL != header){
-            cerr << "ERROR: Expected header '" << expectedHeaderNSL << "' but found '" << header << "' in file " << filename << "\n";
-            flog << "ERROR: Expected header '" << expectedHeaderNSL << "' but found '" << header << "' in file " << filename << "\n";
-            exit(EXIT_FAILURE);
-        }
-        fout.put(header + "\tnorm_nsl\tcrit\n");
-    } else{
-         if(expectedHeaderIHS != header){
-            cerr << "ERROR: Expected header '" << expectedHeaderIHS <<  "' but found '" << header << "' in file " << filename << "\n";
-            flog << "ERROR: Expected header '" << expectedHeaderIHS <<  "' but found '" << header << "' in file " << filename << "\n";
-            exit(EXIT_FAILURE);
-        }
-        fout.put(header + "\tnorm_ihs\tcrit\n");
-    }
-
-    // number of columns beyond the 7 used (--ihs-detail adds 4)
-    int numColsToSkip = std::max(0, fin.fieldsInNextLine() - 7);
+    // --ihs-detail adds 4 columns after the score; they are copied to the
+    // .norm rows so that rows match the header (U3)
+    int numExtra = countFields(header) - 7;
+    std::vector<std::string> extra(numExtra);
 
     for (int j = 0; j < fileLoci; j++)
     {
@@ -1925,7 +1928,7 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
         data = fin.num();   // non-finite counted in readAllIHS (B18)
         if (std::isnan(data)) data = MISSING;
 
-        fin.skip(numColsToSkip);
+        for (auto &x : extra) fin.str(x);
 
         if (data == MISSING || std::isnan(freq)) continue;
         {
@@ -1944,6 +1947,7 @@ void SelscanNorm::normalizeIHSDataByBins(string &filename, string &outfilename, 
             fout.putG(ihh1); fout.put('\t');
             fout.putG(ihh2); fout.put('\t');
             fout.putG(data); fout.put('\t');
+            for (auto &x : extra) { fout.put(x); fout.put('\t'); }
             fout.putG(normedData); fout.put('\t');
             if (normedData >= upperCutoff || normedData <= lowerCutoff) fout.put("1\n", 2);
             else fout.put("0\n", 2);
@@ -1974,6 +1978,7 @@ void SelscanNorm::normalizeXPEHHDataByBins(string &filename, string &outfilename
     int numInBin = 0;
 
     fin.getline(header);
+    if (!header.empty() && header.back() == '\r') header.pop_back();
     if (XPNSL){
         fout.put(header + "\tnorm_xpnsl\tcrit\n");
     } else{
@@ -2043,13 +2048,8 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
 
     fin.getline(header);
 
-    const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh12";
-    if (header != expectedHeader) {     //check that header matches expected format
-        flog << "ERROR: Expected header '" << expectedHeader << "' but found '" << header << "' in file " << filename << "\n";
-        cerr << "ERROR: Expected header '" << expectedHeader << "' but found '" << header << "' in file " << filename << "\n";
-        exit(EXIT_FAILURE);
-    }
-
+    // header checked in checkStatFile before any output is opened (U3)
+    if (!header.empty() && header.back() == '\r') header.pop_back();
     fout.put(header + "\tnorm_ihh12\tcrit\n");
 
     for (int j = 0; j < fileLoci; j++)
@@ -2088,110 +2088,71 @@ void SelscanNorm::normalizeIHH12DataByBins(string &filename, string &outfilename
     }
 }
 
-// returns number of loci (lines) in IHS file
-int SelscanNorm::checkIHSfile(std::ifstream &fin, bool norm)
+// The exact header selscan writes for each statistic (with norm and crit
+// appended for .norm files). --ihs-detail adds four iHH columns. (U3)
+std::vector<std::string> SelscanNorm::expectedHeaders(const std::string &stat, bool norm)
 {
-    std::string line;
-    
-    // Base expected column counts (unnormalized)
-    int expected_cols = 7;
-    int expected_cols_alternate = 11; // --ihs-detail
+    std::vector<std::string> h;
+    if (stat == "ihs" || stat == "nsl") {
+        std::string base = "chr\tid\tpos\tfreq\tihh1\tihh0\t" + stat;
+        h.push_back(base);
+        h.push_back(base + "\tihh1_left\tihh1_right\tihh0_left\tihh0_right");
+    }
+    else if (stat == "xpehh") h.push_back("chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh");
+    else if (stat == "xpnsl") h.push_back("chr\tid\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl");
+    else h.push_back("chr\tid\tpos\tfreq\tihh12");
+    if (norm) for (auto &s : h) s += "\tnorm_" + stat + "\tcrit";
+    return h;
+}
 
-    // Add norm + crit if normalized
-    if (norm) {
-        expected_cols += 2;
-        expected_cols_alternate += 2;
+// Checks the header and that every row has as many columns as the header,
+// before any output is written (U3). Returns the number of data rows.
+int SelscanNorm::checkStatFile(std::ifstream &fin, const std::string &filename, const std::string &stat, bool norm)
+{
+    std::streampos start = fin.tellg();
+    std::string header, line;
+    if (!std::getline(fin, header)) {
+        cerr << "ERROR: " << filename << " is empty.\n";
+        flog << "ERROR: " << filename << " is empty.\n";
+        throw 0;
+    }
+    if (!header.empty() && header.back() == '\r') header.pop_back();
+
+    std::vector<std::string> ok = expectedHeaders(stat, norm);
+    if (std::find(ok.begin(), ok.end(), header) == ok.end()) {
+        string kind = string(norm ? "normalized " : "") + "--" + stat + " files";
+        cerr << "ERROR: " << filename << " has the header '" << header << "', but " << kind << " have '" << ok[0] << "'";
+        flog << "ERROR: " << filename << " has the header '" << header << "', but " << kind << " have '" << ok[0] << "'";
+        if (ok.size() > 1) { cerr << " or '" << ok[1] << "'"; flog << " or '" << ok[1] << "'"; }
+        cerr << ".\n";
+        flog << ".\n";
+        throw 0;
     }
 
-    int current_cols = 0;
-
-    // beginning of the file stream
-    std::streampos start = fin.tellg();
-
-    int nloci = 0;
-
-    // Skip header
-    std::string header;
-    std::getline(fin, header);
-
-    // const std::string expectedHeader =
-    //     norm
-    //     ? "chr\tid\tpos\tfreq\tihh1\tihh0\tihs\tnorm_ihs\tcrit"
-    //     : "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
-
-    // if (header != expectedHeader) {
-    //     std::cerr << "WARNING: Expected header '" << expectedHeader
-    //               << "' but found '" << header << "' in IHS file.\n";
-    // }
-
+    int ncols = countFields(header);
+    int nloci = 0, lineNum = 1;
     while (std::getline(fin, line))
     {
-        if (line.empty()) continue;
-
+        lineNum++;
+        if (line.empty() || line == "\r") continue;
         nloci++;
-        current_cols = countFields(line);
-
-        if (current_cols != expected_cols &&
-            current_cols != expected_cols_alternate)
+        int current_cols = countFields(line);
+        if (current_cols != ncols)
         {
-            std::cerr << "ERROR: line " << nloci
-                      << " has " << current_cols
-                      << " columns, but expected "
-                      << expected_cols << " or "
-                      << expected_cols_alternate << " columns.\n";
+            cerr << "ERROR: " << filename << " line " << lineNum << " has " << current_cols << " columns, but the header has " << ncols << ".\n";
+            flog << "ERROR: " << filename << " line " << lineNum << " has " << current_cols << " columns, but the header has " << ncols << ".\n";
             throw 0;
         }
     }
+    if (nloci == 0) {   // U11
+        cerr << "WARNING: " << filename << " has a header but no data rows.\n";
+        flog << "WARNING: " << filename << " has a header but no data rows.\n";
+    }
 
-    // rewind stream
     fin.clear();
     fin.seekg(start);
-
     return nloci;
 }
-
-
-// //returns number of lines in file
-// int SelscanNorm::checkIHSfile(ifstream &fin)
-// {
-//     string line;
-//     int expected_cols = 7; // 6;
-//     int expected_cols_alternate = 11; // 10; // this is the case if --ihs-detail is specified (four extra columns for iHH left/right and ancestral/derived)
-//     int current_cols = 0;
-
-//     //beginning of the file stream
-//     int start = fin.tellg();
-
-//     int nloci = 0;
-    
-//     string header;
-//     getline(fin, header); //added in v3, skip header line
-//     //if header does not match expected format, throw error
-//     const std::string expectedHeader = "chr\tid\tpos\tfreq\tihh1\tihh0\tihs";
-//     if (header != expectedHeader) {
-//         cerr << "WARNING: Expected header '" << expectedHeader << "' but found '" << header << "' in IHS file.\n"; 
-//     }
-
-//     while (getline(fin, line))
-//     {
-//         nloci++;
-//         current_cols = countFields(line);
-//         if ((current_cols != expected_cols && current_cols != expected_cols_alternate) && nloci > 1)
-//         {
-//             cerr << "ERROR: line " << nloci << " has " << current_cols
-//                  << " columns, but expected " << expected_cols << " or " << expected_cols_alternate << " columns.\n";
-//             throw 0;
-//         }
-//         //previous_cols = current_cols;
-//     }
-
-//     nloci--; //added in v3, skip header line
-
-//     fin.clear();
-//     fin.seekg(start);
-
-//     return nloci;
-// }
 
 void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles, double freq[], double score[])
 {
@@ -2202,7 +2163,7 @@ void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles
     {
         NormTokenReader fin(filename[i]);   // P6
         fin.getline(junk); // header
-        int numColsToSkip = std::max(0, fin.fieldsInNextLine() - 7); // --ihs-detail columns
+        int numColsToSkip = countFields(junk) - 7; // --ihs-detail columns
 
         for (int j = 0; j < fileLoci[i]; j++)
         {
@@ -2218,121 +2179,6 @@ void SelscanNorm::readAllIHS(vector<string> filename, int fileLoci[], int nfiles
         }
     }
 }
-
-// returns number of loci (lines) in XP-EHH file
-int SelscanNorm::checkXPEHHfile(std::ifstream &fin, bool norm)
-{
-    std::string line;
-
-    int expected_cols = 9; // raw XP-EHH
-    if (norm) {
-        expected_cols += 2; // norm_xpehh + crit
-    }
-
-    int current_cols = 0;
-
-    // beginning of the file stream
-    std::streampos start = fin.tellg();
-
-    int nloci = 0;
-
-    // Skip header
-    std::string header;
-    std::getline(fin, header);
-
-    // const std::string expectedHeader =
-    //     norm
-    //     ? "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\tnorm_xpehh\tcrit"
-    //     : "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh";
-
-    // if (header != expectedHeader) {
-    //     std::cerr << "WARNING: Expected header '" << expectedHeader
-    //               << "' but found '" << header << "' in XP-EHH file.\n";
-    // }
-
-    while (std::getline(fin, line))
-    {
-        if (line.empty()) continue;
-
-        nloci++;
-        current_cols = countFields(line);
-
-        if (current_cols != expected_cols)
-        {
-            std::cerr << "ERROR: line " << nloci
-                      << " has " << current_cols
-                      << " columns, but expected "
-                      << expected_cols << " columns.\n";
-            throw 0;
-        }
-    }
-
-    // rewind stream
-    fin.clear();
-    fin.seekg(start);
-
-    return nloci;
-}
-
-
-
-// returns number of loci (lines) in IHH12 file
-int SelscanNorm::checkIHH12file(std::ifstream &fin, bool norm)
-{
-    std::string line;
-
-    int expected_cols = 5; // raw: chr id pos p1 ihh12
-
-    // Add norm + crit if normalized
-    if (norm) {
-        expected_cols += 2; // norm_ihh12 + crit
-    }
-
-    int current_cols = 0;
-
-    // beginning of the file stream
-    std::streampos start = fin.tellg();
-
-    int nloci = 0;
-
-    // Skip header
-    std::string header;
-    std::getline(fin, header);
-
-    // const std::string expectedHeader =
-    //     norm
-    //     ? "chr\tid\tpos\tp1\tihh12\tnorm_ihh12\tcrit"
-    //     : "chr\tid\tpos\tp1\tihh12";
-
-    // if (header != expectedHeader) {
-    //     std::cerr << "WARNING: Expected header '" << expectedHeader
-    //               << "' but found '" << header << "' in IHH12 file.\n";
-    // }
-
-    while (std::getline(fin, line))
-    {
-        if (line.empty()) continue;
-
-        nloci++;
-        current_cols = countFields(line);
-
-        if (current_cols != expected_cols)
-        {
-            std::cerr << "ERROR: line " << nloci
-                      << " has " << current_cols
-                      << " columns, but expected "
-                      << expected_cols << " columns.\n";
-            throw 0;
-        }
-    }
-
-    // rewind stream
-    fin.clear();
-    fin.seekg(start);
-
-    return nloci;
-}
-
 
 void SelscanNorm::readAllXPEHH(vector<string> filename, int fileLoci[], int nfiles, double freq1[], double freq2[], double score[])
 {

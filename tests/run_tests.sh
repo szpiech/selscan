@@ -785,15 +785,61 @@ if selected norm-robust; then
     run wo3.log norm --ihs --norm-files wo_unsorted.norm --bp-win --min-snps 1; r2=$RC
     if [ "$r1" -eq 1 ] && grep -q 'chromosome chr2 follows' wo2.log && [ "$r2" -eq 1 ] && grep -q 'one chromosome per file, sorted by position' wo3.log; then pass "norm-bpwin:one-sorted-chromosome"
     else fail "norm-bpwin:one-sorted-chromosome" "exit $r1/$r2 (expected 1 and 1 with a message)"; fi
-    # B51: the --ihs-detail column count is taken from the first data line.
-    # 3.0.1 counted the second; a blank line there gave 0 extra columns and
-    # every later row was misread (3.0.1: no rows written; 3 of 503 after
-    # the B18 token parsing).
-    gzip -dc "$EXPECTED/ihs.tsv.gz" | awk -F'\t' 'BEGIN { OFS="\t" } NR==1 { print; next } { print $0, 0.1, 0.2, 0.3, 0.4; if (NR==2) print "" }' > dl_b.ihs.out
+    # B51: a blank line after the first data row does not change how the
+    # --ihs-detail columns are read. 3.0.1 counted the columns on the second
+    # line, so a blank line there gave 0 extra columns and every later row was
+    # misread. The count now comes from the header (U3).
+    gzip -dc "$EXPECTED/ihs.tsv.gz" | awk -F'\t' 'BEGIN { OFS="\t" } NR==1 { print $0, "ihh1_left", "ihh1_right", "ihh0_left", "ihh0_right"; next } { print $0, 0.1, 0.2, 0.3, 0.4; if (NR==2) print "" }' > dl_b.ihs.out
     grep -v '^$' dl_b.ihs.out > dl_a.ihs.out
     run dl1.log norm --ihs --bins 20 --files dl_a.ihs.out
     run dl2.log norm --ihs --bins 20 --files dl_b.ihs.out
     identical "norm-detail-blank-line" dl_a.ihs.out.20bins.norm dl_b.ihs.out.20bins.norm
+    # U3: --ihs-detail output can be normalised. The four extra columns are
+    # copied to the .norm rows (header and rows both have 13 columns), and the
+    # other columns and the windows match a run without --ihs-detail.
+    # 3.0.1 stopped with a header error after writing an empty .norm.
+    gzip -dc "$EXPECTED/ihs-detail.tsv.gz" > dt.ihs.out
+    gzip -dc "$EXPECTED/ihs.tsv.gz" > dp.ihs.out
+    run dt.log norm --ihs --bins 20 --files dt.ihs.out --bp-win --min-snps 1; r1=$RC
+    run dp.log norm --ihs --bins 20 --files dp.ihs.out --bp-win --min-snps 1
+    ncols=$(awk -F'\t' '{ print NF }' dt.ihs.out.20bins.norm 2>/dev/null | sort -u | tr '\n' ' ')
+    if [ "$r1" -eq 0 ] && [ "$ncols" = "13 " ] && cut -f1-7,12-13 dt.ihs.out.20bins.norm | cmp -s - dp.ihs.out.20bins.norm \
+        && cmp -s dt.ihs.out.20bins.norm.100kb.windows dp.ihs.out.20bins.norm.100kb.windows; then pass "norm-detail:normalized"
+    else fail "norm-detail:normalized" "exit $r1, column counts '$ncols' (expected 13 only)"; fi
+    # U3: the header is checked before any output is written. A file with
+    # another statistic's header fails and leaves no .norm (3.0.1 found the
+    # problem after the bin pass and left an empty .norm).
+    run dw.log norm --nsl --bins 20 --files dp.ihs.out
+    if [ "$RC" -eq 1 ] && grep -q 'has the header' dw.log && ! grep -q 'Calculating mean' dw.log; then pass "norm-header:checked-first"
+    else fail "norm-header:checked-first" "exit $RC (expected 1 before the bin pass)"; fi
+    cp dp.ihs.out dw.ihs.out; sed -i.bak '1s/ihs$/nsl/' dw.ihs.out
+    run dw2.log norm --ihs --bins 20 --files dw.ihs.out
+    if [ "$RC" -eq 1 ] && [ ! -e dw.ihs.out.20bins.norm ]; then pass "norm-header:no-empty-norm"
+    else fail "norm-header:no-empty-norm" "exit $RC (expected 1 and no .norm file)"; fi
+    # U3: with --norm-files and a gene file, every file is checked; 3.0.1
+    # reopened one stream for all files and checked only the first.
+    printf 'chr1\t50000\t150000\tG1\n' > dg.bed
+    head -5 dp.ihs.out.20bins.norm | cut -f1-8 > dg_bad.norm
+    run dg.log norm --ihs --norm-files dp.ihs.out.20bins.norm dg_bad.norm --gene-bed dg.bed --min-snps 1
+    if [ "$RC" -eq 1 ] && grep -q 'dg_bad.norm has the header' dg.log; then pass "norm-header:gene-norm-files"
+    else fail "norm-header:gene-norm-files" "exit $RC (expected 1 naming dg_bad.norm)"; fi
+    # U11: inputs with no data rows are an error (3.0.1 exited 0 with an
+    # all-nan bin table and an empty .norm). A 0-byte file is reported as
+    # empty.
+    head -1 dp.ihs.out > ho.ihs.out
+    gzip -dc "$EXPECTED/xpehh.tsv.gz" | awk 'NR==1' > ho.xpehh.out
+    : > ho0.ihs.out
+    run ho1.log norm --ihs --bins 20 --files ho.ihs.out; r1=$RC
+    run ho2.log norm --xpehh --files ho.xpehh.out; r2=$RC
+    run ho3.log norm --ihs --bins 20 --files ho0.ihs.out; r3=$RC
+    if [ "$r1" -eq 1 ] && [ "$r2" -eq 1 ] && [ "$r3" -eq 1 ] && grep -q 'no data rows' ho1.log && grep -q 'no data rows' ho2.log && grep -q 'is empty' ho3.log \
+        && [ ! -e ho.ihs.out.20bins.norm ] && [ ! -e ho.xpehh.out.norm ]; then pass "norm-empty-input"
+    else fail "norm-empty-input" "exit $r1/$r2/$r3 (expected 1 for each)"; fi
+    # U11: a header-only file next to a file with data gives a warning and
+    # the run continues.
+    run ho4.log norm --ihs --bins 20 --files dp.ihs.out ho.ihs.out
+    if [ "$RC" -eq 0 ] && grep -q 'ho.ihs.out has a header but no data rows' ho4.log; then pass "norm-empty-input:one-of-two"
+    else fail "norm-empty-input:one-of-two" "exit $RC (expected 0 with a warning)"; fi
 fi
 
 if selected errors; then
