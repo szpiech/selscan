@@ -1,6 +1,9 @@
 <!-- badges: start -->
-[![Version](https://img.shields.io/badge/version-3.0.1-green.svg)](https://shields.io/)
+[![Version](https://img.shields.io/badge/version-3.1.0-green.svg)](https://shields.io/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Bioconda downloads](https://img.shields.io/conda/dn/bioconda/selscan.svg?label=bioconda%20downloads)](https://anaconda.org/bioconda/selscan)
+[![Bioconda version](https://img.shields.io/conda/vn/bioconda/selscan.svg)](https://anaconda.org/bioconda/selscan)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/selscan/README.html)
 <!--badges: end -->
 
 
