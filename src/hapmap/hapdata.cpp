@@ -1,0 +1,190 @@
+#include <stdexcept>
+#include <string>
+#include "hapdata.h"
+#include "../gzstream.h"
+#include "../selscan-cli.h"
+#include <algorithm>
+#include <sstream>
+#include <memory>
+#include <limits>
+#include<set>
+
+HapData::~HapData(){
+    releaseHapData();
+}
+
+///
+/// @brief Sets up structure according to nhaps and nloci
+void HapData::initHapData(int nhaps, int nloci)
+{
+    // B39: throw a std::runtime_error carrying the message (was `throw 0`,
+    // which nothing caught: exit 134); main reports it and exits 1
+    if (nhaps > std::numeric_limits<int>::max() || nloci > std::numeric_limits<int>::max())
+    {
+        throw std::runtime_error("number of haplotypes (" + std::to_string(nhaps) + ") and number of loci ("
+                                 + std::to_string(nloci) + ") exceed maximum value.");
+    }
+
+    if (nhaps < 1 || nloci < 1)
+    {
+        std::string msg = "number of haplotypes (" + std::to_string(nhaps) + ") and number of loci ("
+                          + std::to_string(nloci) + ") must be positive.";
+        if (nhaps >= 1 && nloci == 0) msg += " No loci remain after filtering (check --maf and the input).";
+        throw std::runtime_error(msg);
+    }
+    cout << "=====" << endl;
+    std::cout << "After filtering: \n"
+          << "  Haplotypes: " << nhaps << "\n"
+          << "  Loci:       " << nloci << std::endl;
+    cout << "=====" << endl;
+    this->hapEntries = new struct HapEntry[nloci];
+    this->nhaps = nhaps;
+    this->nloci = nloci;
+    
+    // P2: in phased mode xorbitset is never written (addAllele2 requires
+    // unphased data) and is only read as all zero, so every locus points to
+    // one shared zero bitset instead of allocating its own.
+    if (!unphased) zeroBitset = new MyBitset(nhaps);
+    for (int j = 0; j < nloci; j++){
+        hapEntries[j].hapbitset = new MyBitset(nhaps);
+        hapEntries[j].xorbitset = unphased ? new MyBitset(nhaps) : zeroBitset;
+        if(MISSING_ALLOWED && unphased){
+            hapEntries[j].missbitset = new MyBitset(nhaps);
+        }
+    }
+    INIT_SUCCESS = true;
+}
+
+void HapData::adoptLoci(int nhaps, vector<MyBitset*> &hap, vector<MyBitset*> &xr)
+{
+    const int nloci = static_cast<int>(hap.size());
+    if (nhaps < 1 || nloci < 1)
+    {
+        for (auto b : hap) delete b;
+        for (auto b : xr) delete b;
+        std::string msg = "number of haplotypes (" + std::to_string(nhaps) + ") and number of loci ("
+                          + std::to_string(nloci) + ") must be positive.";
+        if (nhaps >= 1 && nloci == 0) msg += " No loci remain after filtering (check --maf and the input).";
+        throw std::runtime_error(msg);
+    }
+    cout << "=====" << endl;
+    std::cout << "After filtering: \n"
+          << "  Haplotypes: " << nhaps << "\n"
+          << "  Loci:       " << nloci << std::endl;
+    cout << "=====" << endl;
+    this->hapEntries = new struct HapEntry[nloci];
+    this->nhaps = nhaps;
+    this->nloci = nloci;
+    if (!unphased) zeroBitset = new MyBitset(nhaps);
+    for (int j = 0; j < nloci; j++){
+        hapEntries[j].hapbitset = hap[j];
+        hapEntries[j].xorbitset = unphased ? xr[j] : zeroBitset;
+    }
+    vector<MyBitset*>().swap(hap); vector<MyBitset*>().swap(xr);
+    INIT_SUCCESS = true;
+}
+
+void HapData::releaseHapData()
+{
+    if (hapEntries == NULL) return;
+
+    //we have a MyBitset for every locus
+    for (int j = 0; j < nloci; j++){
+        delete hapEntries[j].hapbitset ; //MyBitset destructor called
+        if (hapEntries[j].xorbitset != zeroBitset) delete hapEntries[j].xorbitset;
+        delete hapEntries[j].missbitset;   // (was never freed)
+    }
+    delete zeroBitset;
+    zeroBitset = nullptr;
+    delete [] hapEntries;
+    hapEntries = NULL;
+    this->nhaps = -9;
+    this->nloci = -9;
+    return;
+}
+
+// DISABLED@FEATURE_XOR_FOR_SPEEDUP_SUPPORT
+// void HapData::xor_for_phased_and_unphased(){
+//     // disabling XOR for now
+//     if(!unphased){
+//         if(MISSING_ALLOWED){
+//             return;
+//         }
+//         for(int nloci_after_filtering = 0; nloci_after_filtering < this->nloci; nloci_after_filtering++){
+//             if(nloci_after_filtering==0){
+//                 // if(nloci<=1){
+//                 //     throw "ERROR: Dataset has only 1 locus, XOR out of bound.";    
+//                 // }
+//                 // CHANGEXOR
+//                 MyBitset* b1 =(hapEntries[0].hapbitset);
+//                 MyBitset* b2 = (hapEntries[1].hapbitset);
+//                 int sum = 0;
+//                 for (int k = 0; k < b1->nwords; k++) {
+//                     hapEntries[0].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
+//                     sum += __builtin_popcountll(hapEntries[0].xorbitset->bits[k]);
+//                 }
+//                 hapEntries[0].xorbitset->num_1s = sum;
+                
+//             }else{
+                
+//                 MyBitset* b1 =(hapEntries[nloci_after_filtering].hapbitset);
+//                 MyBitset* b2 = (hapEntries[nloci_after_filtering-1].hapbitset);
+
+//                 int sum = 0;
+//                 for (int k = 0; k < b1->nwords; k++) {
+//                     hapEntries[nloci_after_filtering].xorbitset->bits[k] = b1->bits[k] ^ b2->bits[k];
+//                     sum += __builtin_popcountll(hapEntries[nloci_after_filtering].xorbitset->bits[k]);
+//                 }
+//                 hapEntries[nloci_after_filtering].xorbitset->num_1s = sum;
+                                 
+//             }
+//         }
+//     }    
+
+//     // FLIP TEST
+//     // PHASE 4:  FLIP
+//     // for (int locus = 0; locus < nloci_after_filtering; locus++){
+//     //     if(hapEntries[locus].flipped){
+//     //         vector<int> zero_positions(nhaps - hapEntries[locus].positions.size());
+//     //         int j = 0;
+//     //         int front_one = hapEntries[locus].positions[j++];
+//     //         for(int i=0; i<nhaps; i++){
+//     //             if(i==front_one){
+//     //                 front_one = hapEntries[locus].positions[j++];
+//     //             }else{
+//     //                 zero_positions.push_back(i);
+//     //             }   
+//     //         }
+//     //         hapEntries[locus].positions = zero_positions;
+//     //     }
+//     // }
+//     // //PHASE 4: FLIP
+
+//     /*
+//     if(benchmark_flag == "XOR" || benchmark_flag == "FLIP_ONLY" ){
+//         for (int locus_after_filter = 0; locus_after_filter < this->nloci; locus_after_filter++){
+//             if(hapEntries[locus_after_filter].positions.size() > this->nhaps/2){
+//                 hapEntries[locus_after_filter].flipped = true;
+
+//                 vector<int> copy_pos;
+//                 copy_pos.reserve(this->nhaps - hapEntries[locus_after_filter].positions.size());
+//                 int cnt = 0;
+//                 for(int i = 0; i< this->nhaps; i++){
+//                     int curr =  hapEntries[locus_after_filter].positions[cnt];
+//                     if(i==curr){
+//                         cnt++;
+//                     }else{
+//                         copy_pos.push_back(i);
+//                     }
+//                 }
+                
+//                 this->hapEntries[locus_after_filter].positions = copy_pos;
+//                 copy_pos.clear();
+//             }else{
+//                 this->hapEntries[locus_after_filter].flipped = false;
+//             }
+//         }
+//     }
+//     */
+// }
+

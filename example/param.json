@@ -1,0 +1,254 @@
+{
+  "params": [
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.05
+    },
+    {
+      "maf": 0.01,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.05,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.1,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.15,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    },
+    {
+      "maf": 0.2,
+      "max-extend": 1000000,
+      "cutoff": 0.1
+    }
+  ]
+}

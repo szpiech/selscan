@@ -15,22 +15,71 @@
 #ifndef __SELSCAN_CLI_H__
 #define __SELSCAN_CLI_H__
 
+
+#include <algorithm>
+#include <thread>
+
+
 #include "param_t.h"
+#include "version.h"
 #include <string>
 
 using namespace std;
 
-const string VERSION = "2.0.3a";
+
+#define LOG(msg) do { \
+        std::cerr << msg << std::endl; \
+        if (flog) (*flog) << msg << std::endl; \
+    } while (0)
+    
+    
+    #ifdef DEBUG
+        #define DBG(x) do { std::cerr << "[DEBUG] " << x << std::endl; } while (0)
+    #else
+        #define DBG(x) do {} while (0)
+    #endif
+    
+    #include <stdexcept>
+    
+    #ifdef DEBUG
+        #define HANDLE_ERROR(msg) do { \
+            std::cerr << "[DEBUG ERROR] " << msg << std::endl; \
+            *flog << "[ERROR] " << msg << std::endl; \
+            throw 1; \
+        } while(0)
+        #define HANDLE_ERROR_NOLOG(msg) do { \
+            std::cerr << "[ERROR] " << msg << std::endl; \
+            throw 1; \
+        } while(0)
+    #else
+        #define HANDLE_ERROR(msg) do { \
+            std::cerr << "[ERROR] " << msg << std::endl; \
+            *flog << "[ERROR] " << msg << std::endl; \
+            exit(EXIT_FAILURE); \
+        } while(0)
+        #define HANDLE_ERROR_NOLOG(msg) do { \
+                std::cerr << "[ERROR] " << msg << std::endl; \
+                exit(EXIT_FAILURE); \
+            } while(0)
+    #endif
+
+
+
+
+
+const string VERSION = SELSCAN_VERSION;
 
 const string PREAMBLE = "\nselscan v" + VERSION + " -- a program to calculate EHH-based scans for positive selection in genomes.\n\
 Source code and binaries can be found at <https://www.github.com/szpiech/selscan>.\n\
 \n\
-selscan currently implements EHH, iHS, XP-EHH, and nSL.\n\
+selscan currently implements EHH, iHS, XP-EHH, XP-nSL, iHH12 and nSL.\n\
 \n\
 Citations:\n\
 \n\
 selscan: ZA Szpiech and RD Hernandez (2014) MBE 31: 2824-2827.\n\
          ZA Szpiech (2024) Bioinformatics 40: btae006.\n\
+         A Rahman, TQ Smith, and ZA Szpiech (2025). MBE, 42(11), msaf275.\n\
+         A Rahman, TQ Smith, and ZA Szpiech (2026). HPGG, 6(2), 0005. https://doi.org/10.47248/hpgg2606020005\n\
 iHH12: R Torres et al. (2018) PLoS Genetics 15: e1007898.\n\
        N Garud et al. (2015) PLoS Genetics 11: 1–32.\n\
 nSL: A Ferrer-Admetlla et al. (2014) MBE 31: 1275-1291.\n\
@@ -65,7 +114,7 @@ To calculate XP-EHH:\n\
 ./selscan --xpehh --vcf <vcf> --vcf-ref <vcf> --map <mapfile> --out <outfile>\n";
 
 const string ARG_THREAD = "--threads";
-const int DEFAULT_THREAD = 1;
+const int DEFAULT_THREAD = 1;   // PI decision (3.1.0); 3.0.1 used the hardware thread count
 const string HELP_THREAD = "The number of threads to spawn during the calculation.\n\
 \tPartitions loci across threads.";
 
@@ -83,15 +132,16 @@ const string HELP_FILENAME_POP2_TPED = "A TPED file containing haplotype and map
 
 const string ARG_FILENAME_POP1_VCF = "--vcf";
 const string DEFAULT_FILENAME_POP1_VCF = "__hapfile1";
-const string HELP_FILENAME_POP1_VCF = "A VCF file containing haplotype data.\n\
-\tA map file must be specified with --map.";
+const string HELP_FILENAME_POP1_VCF = "A VCF file containing haplotype data. Give a genetic map\n\
+\twith --map, or use --pmap for physical distance (nSL and XP-nSL\n\
+\tneed neither).";
 
 const string ARG_FILENAME_POP2_VCF = "--vcf-ref";
 const string DEFAULT_FILENAME_POP2_VCF = "__hapfile2";
-const string HELP_FILENAME_POP2_VCF = "A VCF file containing haplotype and map data.\n\
-\tVariants should be coded 0/1. This is the 'reference'\n\
-\tpopulation for XP calculations and should contain the same number\n\
-\tof loci as the query population. Ignored otherwise.";
+const string HELP_FILENAME_POP2_VCF = "A VCF file containing haplotype data for the 'reference'\n\
+\tpopulation in XP calculations. Variants should be coded 0/1.\n\
+\tSites are paired with --vcf by position and REF/ALT; unpaired\n\
+\tsites are dropped and counted in the log. Ignored otherwise.";
 
 const string ARG_FILENAME_POP1 = "--hap";
 const string DEFAULT_FILENAME_POP1 = "__hapfile1";
@@ -104,10 +154,23 @@ const string HELP_FILENAME_POP2 = "A hapfile with one row per haplotype, and one
 \tvariant. Variants should be coded 0/1. This is the 'reference'\n\
 \tpopulation for XP calculations.  Ignored otherwise.";
 
+
+const string ARG_FILENAME_POP1_THAP = "--thap";
+const string DEFAULT_FILENAME_POP1_THAP = "__thapfile1";
+const string HELP_FILENAME_POP1_THAP = "A hapfile in IMPUTE hap format with one column per haplotype, and one row per\n\
+\tvariant. Variants should be coded 0/1";
+
+const string ARG_FILENAME_POP2_THAP = "--thap-ref";
+const string DEFAULT_FILENAME_POP2_THAP = "__thapfile2";
+const string HELP_FILENAME_POP2_THAP = "A hapfile in IMPUTE hap format with one column per haplotype, and row per\n\
+\tvariant. Variants should be coded 0/1. This is the 'reference'\n\
+\tpopulation for XP calculations.  Ignored otherwise.";
+
+
 const string ARG_FILENAME_MAP = "--map";
 const string DEFAULT_FILENAME_MAP = "__mapfile";
 const string HELP_FILENAME_MAP = "A mapfile with one row per variant site.\n\
-\tFormatted <chr#> <locusID> <genetic pos> <physical pos>.";
+\tFormatted <chr> <locusID> <genetic pos> <physical pos>.";
 
 const string ARG_PMAP = "--pmap";
 const bool DEFAULT_PMAP = false;
@@ -119,7 +182,8 @@ const string HELP_OUTFILE = "The basename for all output files.";
 
 const string ARG_CUTOFF = "--cutoff";
 const double DEFAULT_CUTOFF = 0.05;
-const string HELP_CUTOFF = "The EHH decay cutoff.";
+const string HELP_CUTOFF = "The EHH decay cutoff. nSL integrates without a cutoff\n\
+\t(see --max-extend-nsl).";
 
 const string ARG_MAX_GAP = "--max-gap";
 const int DEFAULT_MAX_GAP = 200000;
@@ -155,9 +219,9 @@ const string ARG_SOFT = "--ihh12";
 const bool DEFAULT_SOFT = false;
 const string HELP_SOFT = "Set this flag to calculate iHH12.";
 
-const string ARG_SOFT_K = "--k";
-const int DEFAULT_SOFT_K = 2;
-const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
+// const string ARG_SOFT_K = "--k";
+// const int DEFAULT_SOFT_K = 2;
+// const string HELP_SOFT_K = "Specify K to compute for iHH1K.";
 
 const string ARG_XP = "--xpehh";
 const bool DEFAULT_XP = false;
@@ -181,8 +245,23 @@ const string HELP_MAF = "If a site has a MAF below this value, the program will 
 
 const string ARG_EHH = "--ehh";
 const string DEFAULT_EHH = "__NO_LOCUS__";
-const string HELP_EHH = "Calculate EHH of the '1' and '0' haplotypes at the specified\n\
-\tlocus. Output: <physical dist> <genetic dist> <'1' EHH> <'0' EHH>";
+const string HELP_EHH = "Calculate EHH at the given loci (comma-separated locus IDs:\n\
+\tlocus1,locus2,...), one output file per locus. Columns: chr, pdist, gdist\n\
+\t(physical and genetic distance from the locus), derEHH and ancEHH (EHH of\n\
+\tthe haplotypes carrying the '1' and the '0' allele at the locus), EHH (all haplotypes).";
+
+const string ARG_EHHS = "--ehhs";
+const string DEFAULT_EHHS = "-";
+const string HELP_EHHS = "Specifies one or more comma-separated genomic positions (in bp) for which EHH is computed. "
+"Format: pos1,pos2,pos3,... (e.g., 1500,5200,7800).\n"
+"Outputs a separate file for each specified locus if valid EHH values are present.\n"
+"Output columns: <chr> <physical dist> <genetic dist> <'1' EHH> <'0' EHH>.\n";
+
+const string ARG_EHH12 = "--ehh12";
+const string DEFAULT_EHH12 = "__NO_LOCUS__";
+const string HELP_EHH12 = "Calculate EHH12 at the given loci (comma-separated locus IDs),\n\
+\tone output file per locus. Columns: chr, pdist, gdist, ehh1 (EHH of all\n\
+\thaplotypes), ehh12 (EHH12) and ehh2d1 (EHH2/1).";
 
 const string ARG_QWIN = "--ehh-win";
 const int DEFAULT_QWIN = 100000;
@@ -190,7 +269,7 @@ const string HELP_QWIN = "When calculating EHH, this is the length of the window
 \tin each direction from the query locus.";
 
 const string ARG_MAX_EXTEND = "--max-extend";
-const int DEFAULT_MAX_EXTEND = 1000000;
+const int DEFAULT_MAX_EXTEND = 1000000;         //1000000
 const string HELP_MAX_EXTEND = "The maximum distance an EHH decay curve is allowed to extend from the core.\n\
 \tSet <= 0 for no restriction.";
 
@@ -208,6 +287,12 @@ const string ARG_KEEP = "--keep-low-freq";
 const bool DEFAULT_KEEP = false;
 const string HELP_KEEP = "Include low frequency variants in the construction of your haplotypes.";
 
+
+const string ARG_MULTIALLELIC = "--filter-vcf";
+const bool DEFAULT_MULTIALLELIC = false;
+const string HELP_MULTIALLELIC = "Filter VCF to keep only biallelic SNPs with canonical alleles (A, C, G, T); excludes indels/MNPs/ambiguous bases.";
+
+
 const string ARG_TRUNC = "--trunc-ok";
 const bool DEFAULT_TRUNC = false;
 const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before reaching the cutoff,\n\
@@ -216,18 +301,37 @@ const string HELP_TRUNC = "If an EHH decay reaches the end of a sequence before 
 
 const string ARG_PI = "--pi";
 const bool DEFAULT_PI = false;
-const string HELP_PI = "Set this flag to calculate mean pairwise sequence difference in a sliding window.";
+const string HELP_PI = "Set this flag to calculate mean pairwise sequence difference in non-overlapping windows.";
 
 const string ARG_PI_WIN = "--pi-win";
 const int DEFAULT_PI_WIN = 100;
-const string HELP_PI_WIN = "Sliding window size in bp for calculating pi.";
+const string HELP_PI_WIN = "Window size in bp for calculating pi.";
 
-const string ARG_RESCALE = "--rescale";
-const bool DEFAULT_RESCALE = false;
-const string HELP_RESCALE = "Set this flag to rescale homozygosities.";
+// @UNCOMMENT
+// const string ARG_MISSING_FLAG = "--missing";
+// const bool DEFAULT_MISSING_FLAG = false;
+// const string HELP_MISSING_FLAG = "Set this flag to allow missing data.";
 
+const string ARG_MULTI_CHR = "--multi-chr";
+const string DEFAULT_MULTI_CHR = "__ALL_CHR__";
+const string HELP_MULTI_CHR = "Comma-separated list of chromosomes to include in the analysis.";
 
-bool initalizeParameters(param_t &params,int argc, char *argv[]);
-bool checkParameters(param_t &params,int argc, char *argv[]);
+// @UNCOMMENT
+// const string ARG_IMPUTE_FLAG = "--impute";
+// const bool DEFAULT_IMPUTE_FLAG = false;
+// const string HELP_IMPUTE_FLAG = "Set this flag to allow imputing missing data using new algorithm.";
+
+const string ARG_MULTI_PARAMS = "--multi-param";
+const string DEFAULT_MULTI_PARAMS = "__jsonFile";
+const string HELP_MULTI_PARAMS = "Specify a JSON file with multiple parameter sets.\n\
+\tEach set should match the structure of command-line arguments.\n\
+\tThe program will run the analysis for each set, generating separate outputs.\n\
+\tUseful for batch processing and exploring different configurations.\n";
+
+void initalizeParameters(param_t &params,int argc, char *argv[]);
+void checkParameters(param_main &params);
+void getBaseParamFromCmdLine(param_t& params, param_main &p);
+void jsonParse(param_main &base_p, vector<param_main> &multi_params);
+//bool checkParameters(param_t &params,int argc, char *argv[]);
 
 #endif

@@ -1,0 +1,199 @@
+#include "ehh12.h"
+
+/**
+ * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
+*/
+void EHH12::calc_ehh12_unidirection(int locus, bool downstream){
+
+    GroupSplitMap& m = threadSplitMap(0);   // P5
+
+    EHH12_ehh_data ehhdata;
+    int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
+
+    ehhdata.init(hm->hapData->nhaps, get_all_1s(locus));
+    ehhdata.initialize_core(p.ALT);
+
+    if(downstream){
+        if(ehhdata.n_c[1] == 0 || ehhdata.n_c[0] == 0){
+            (*flog) << "WARNING: monomorphic site is being used as core."<<endl;
+        }
+    }
+
+    // Normalise by the measure the numerators use: N^2 under --alt (squared
+    // frequencies), N(N-1) otherwise. 3.0.1 always divided by N(N-1), so
+    // --alt EHH, EHH12 and EHH2/1 were scaled by N/(N-1). (The EHH12 top-two
+    // adjustment is 2*t1*t2 under either measure, so it needs no change.)
+    output[locus].ehh1 = ehhdata.curr_ehh_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+    output[locus].ehh12 = ehhdata.curr_ehh12_before_norm  / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+    output[locus].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+    output[locus].pdist = 0;
+    output[locus].gdist = 0;
+    output[locus].print = true;
+
+
+    int i = locus;
+    //int prev_index = locus;
+    while(true){
+
+        if(physicalDistance(i, locus, downstream) >= p.QWIN){ //check if currentLocus is beyond 1Mb
+            break;
+        }
+
+        // double breaking_ehh = (p.ALT ? ehhdata.curr_ehh_before_norm / square_alt(ehhdata.nhaps) : ehhdata.curr_ehh_before_norm /twice_num_pair(ehhdata.nhaps));
+        // if(breaking_ehh <= p.EHH_CUTOFF){
+        //     /*DEBUG :
+        //     if(downstream){
+        //         cout<<"breaking ehh down: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
+        //     }else{
+        //         cout<<"breaking ehh up: "<<locus<<" "<<breaking_ehh<<" "<<ihh12[locus]<<endl;
+        //     }
+        //      */
+        //     break;
+        // }
+
+        bool breakReachedEdge = false;
+        breakReachedEdge = downstream? (i == 0) : (i == numSnps-1);
+        
+        
+        if(breakReachedEdge){ //nextLocus < 0 || nextLocus >= numSnps to avoid going to negative
+            //(*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ". " << endl;
+            break;
+        }
+
+        //at this point we ensured that nextLocus (i-1 or i+1) is within bounds
+        i = downstream? i-1 : i+1; //proceed to next locus
+        // int physicalDistance_old = physicalDistance(i,downstream); //double check if i or nextlocus
+        // if (physicalDistance_old > p.MAX_GAP)
+        // {
+        //     (*flog) << "WARNING: Reached a gap of " << physicalDistance_old << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " <<  hm->mapData->mapEntries[i].physicalPos << " id: " <<  hm->mapData->mapEntries[i].locusName << "\n";
+        //     return;
+        // }
+
+        ehhdata.v = get_all_1s(i);
+        ACTION_ON_ALL_SET_BITS(ehhdata.v, {
+            int old_group_id = ehhdata.group_id[set_bit_pos];
+            m[old_group_id].push_back(set_bit_pos); 
+        });
+        
+        updateEHH_from_split(m, &ehhdata);
+        m.clear();
+
+        //if(!downstream) cout<<current_ehh1<<" "<<previous_ehh1<<" "<<current_ehh12<<" "<<previous_ehh12<<" "<<ihh12[locus] <<" "<<scale * distance<< endl;
+
+        output[i].ehh1 = ehhdata.curr_ehh_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+        output[i].ehh12 = ehhdata.curr_ehh12_before_norm  / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+        output[i].ehh2d1 = ehhdata.curr_ehh12d1_before_norm / (p.ALT ? square_alt(ehhdata.nhaps) : twice_num_pair(ehhdata.nhaps));
+        output[i].pdist = downstream? -physicalDistance(i,locus, downstream): physicalDistance(i,locus, downstream);
+        output[i].gdist = downstream? -geneticDistance(i,locus, downstream): geneticDistance(i,locus, downstream);
+        output[i].print = true;
+        if (physicalDistance(i, locus, downstream) >= p.QWIN) break;
+
+        //prev_index = i; //store previous index for next iteration
+    }
+}
+
+void EHH12::main(string query_list){
+    //init_global_fout("ehh12");
+    init_output_and_querymap();
+    
+    int numSnps = hm->mapData->nloci;
+
+    std::vector<std::string> tokens;
+    std::stringstream ss(query_list);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        if (token.empty()) {
+            throw std::invalid_argument("Empty token found in query string.");
+        }
+
+        tokens.push_back(token);
+    }
+
+    // Extra check: no trailing comma
+    if (!query_list.empty() && query_list.back() == ',') {
+        throw std::invalid_argument("Query string ends with a comma.");
+    }
+
+
+    for(const string& query: tokens){
+        int locus = this->queryFound(query);
+        if(locus == -1){
+            continue;
+        }
+
+        string outFilename = get_filename_base("ehh12", query);
+        ofstream ehhOUT(outFilename+".out");
+
+        if(p.UNPHASED){
+            HANDLE_ERROR("--unphased and --ehh12 not compatible");
+        }else{
+            calc_ehh12_unidirection(locus, true); // downstream
+            calc_ehh12_unidirection(locus, false); // upstream
+
+            ehhOUT << std::fixed <<   "chr\tpdist\tgdist\tehh1\tehh12\tehh2d1" << "\n";
+            for (int i = 0; i < numSnps; i++){
+                if(!output[i].print){
+                    continue;
+                }
+
+                ehhOUT.precision(6);
+                ehhOUT << std::fixed <<   hm->mapData->mapEntries[i].chr << "\t"
+                <<   output[i].pdist  << "\t"
+                <<  output[i].gdist << "\t"
+                << output[i].ehh1 << "\t"
+                << output[i].ehh12  << "\t"
+                << output[i].ehh2d1  << "";
+                ehhOUT << endl;
+            }
+        }
+        ehhOUT.close();
+    }
+
+    
+}
+
+void EHH12::updateEHH_from_split(const GroupSplitMap& m, EHH12_ehh_data* ehhdata){
+    double sum_del_update = 0;
+    for (const auto &ele : m) {
+        int old_group_id = ele.first;
+        int newgroup_size = ele.second.size() ;
+
+        if(ehhdata->group_count[old_group_id] == newgroup_size || newgroup_size == 0){ //if a group becomes empty, we don't increment num_groups, we just reuse that group
+            continue;
+        }
+
+        for(int v: ele.second){
+            ehhdata->group_id[v] = ehhdata->totgc;
+        }
+
+        double del_update = -twice_num_pair(ehhdata->group_count[old_group_id]) + twice_num_pair(newgroup_size) + twice_num_pair(ehhdata->group_count[old_group_id] - newgroup_size);
+        if(p.ALT){
+            del_update = -square_alt(ehhdata->group_count[old_group_id]) +   square_alt(newgroup_size) + square_alt(ehhdata->group_count[old_group_id] - newgroup_size);
+        }
+
+        ehhdata->group_count[old_group_id] -= newgroup_size;
+        ehhdata->group_count[ehhdata->totgc] += newgroup_size;
+        ehhdata->totgc += 1;
+
+        sum_del_update += del_update;
+    }
+    ehhdata->curr_ehh_before_norm += sum_del_update;
+    int top1, top2;
+    findMaxTwo(ehhdata->group_count, ehhdata->totgc, top1, top2);
+
+    // Same measure as curr_ehh_before_norm (n^2 under --alt). For EHH12 the
+    // pooled adjustment is 2*t1*t2 either way, but EHH2/1 subtracts the top
+    // term alone, which differs by t1 between the two measures.
+    double firstFreq = p.ALT ? square_alt(top1) : ((top1 > 1) ? twice_num_pair(top1) : 0);
+    double secondFreq = p.ALT ? square_alt(top2) : ((top2 > 1) ?  twice_num_pair(top2): 0);
+    double comboFreq = p.ALT ? square_alt(top1 + top2) : (((top1 + top2) > 1) ? twice_num_pair((top1 + top2)) : 0);
+    
+    //double normfac = twice_num_pair(ehhdata->nhaps);
+
+    ehhdata->curr_ehh12_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq - secondFreq + comboFreq;
+    ehhdata->curr_ehh12d1_before_norm = ehhdata->curr_ehh_before_norm  - firstFreq;
+
+    //ehhdata->curr_ehh12_before_norm *= normfac;
+    //cout<<"t1 t2 "<<top1<<" "<<top2<<" "<<firstFreq/normfac<<" "<<secondFreq/normfac<<" "<< comboFreq/normfac<<endl;
+}

@@ -1,73 +1,88 @@
-# Makefile for selscan
+# Makefile for selscan: Linux, macOS, and Windows (MSYS2 / MinGW-w64).
+#
+#   make            build ./selscan
+#   make check      build, then run the regression suite in ../tests
+#   make install    copy selscan to $(PREFIX)/bin (PREFIX defaults to /usr/local)
+#   make clean      remove the build directory and the binary
+#
+# Needs a C++17 compiler and zlib (headers and library). Set any of these
+# on the command line or in the environment:
+#
+#   CXX             compiler (make's default is g++, which is clang on macOS)
+#   CXXFLAGS        optimisation and debugging flags (default -O3)
+#   CPPFLAGS, LDFLAGS, LDLIBS
+#   STATIC=1        Linux: link libstdc++, libgcc and zlib statically and
+#                   keep glibc dynamic, as the release binaries are built.
+#                   Windows: a fully static .exe.
+#   UNIVERSAL=1     macOS: one binary for arm64 and x86_64.
+#   MACOS_MIN=11.0  macOS: oldest macOS the binary runs on.
+#
+# Example debug build with UBSan:
+#   make CXXFLAGS="-O1 -g -fsanitize=undefined" LDFLAGS=-fsanitize=undefined
 
-#debugging
-#G++FLAG = -g -Wall -Werror
-#For dynamic linking
-#LINK_OPTS = -L$(L_PATH) -lgsl -lgslcblas
+CXXFLAGS ?= -O3
+override CXXFLAGS += -std=c++17 -Wall -Wextra
+override CPPFLAGS += -MMD -MP
+PREFIX ?= /usr/local
 
-#for osx/macos-arm systems
-CC = g++
-G++FLAG = -O3 -m64 
-#-mmmx -msse -msse2
-LINK_OPTS2 = -lpthread -lz
-I_PATH = -I../include
-L_PATH = ../lib/macos-arm
-#L_PATH = ../lib/osx
+ifeq ($(OS),Windows_NT)
+  PLATFORM := windows
+else
+  PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+endif
 
-#for linux systems
-#CC = g++
-#G++FLAG = -O3 -m64 -mmmx -msse -msse2
-#LINK_OPTS2 = -pthread -lz
-#I_PATH = -I../include
-#L_PATH = ../lib/linux
+EXE :=
+SYSLIBS := -lz
+ifeq ($(PLATFORM),windows)
+  EXE := .exe
+  ifeq ($(STATIC),1)
+    override LDFLAGS += -static
+  endif
+else ifeq ($(PLATFORM),darwin)
+  ifeq ($(UNIVERSAL),1)
+    override CXXFLAGS += -arch arm64 -arch x86_64
+  endif
+  ifneq ($(MACOS_MIN),)
+    override CXXFLAGS += -mmacosx-version-min=$(MACOS_MIN)
+  endif
+else
+  ifeq ($(STATIC),1)
+    override LDFLAGS += -static-libstdc++ -static-libgcc
+    SYSLIBS := -Wl,-Bstatic -lz -Wl,-Bdynamic
+  endif
+  SYSLIBS += -lm
+endif
+override LDLIBS += $(SYSLIBS) -pthread
 
-#for windows, using MinGW build environment
-#CC = g++.exe
-#G++FLAG = -DPTW32_STATIC_LIB -O3 -static-libgcc -static-libstdc++
-#LINK_OPTS2 = ../lib/win32/libpthreadGC2.a ../lib/win32/libz.a 
-#I_PATH = -I../include -I../include/win32 
-#L_PATH = ../lib/win32
+SRCS := selscan-main.cpp selscan-cli.cpp selscan-data.cpp param_t.cpp \
+        norm.cpp gene.cpp binom.cpp gzstream.cpp thread_pool.cpp \
+        hapmap/hapdata.cpp hapmap/mapdata.cpp hapmap/bitset.cpp \
+        stats/ehh.cpp stats/ehh12.cpp stats/ihs.cpp stats/ihh12.cpp \
+        stats/pi.cpp stats/xpihh.cpp
+BUILD := build
+OBJS := $(SRCS:%.cpp=$(BUILD)/%.o)
+BIN := selscan$(EXE)
 
-#For static linking of norm program to gsl libs
-LINK_OPTS = $(L_PATH)/libgsl.a $(L_PATH)/libgslcblas.a
+all: $(BIN)
 
-all : selscan norm
+$(BIN): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-selscan : selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o
-	$(CC) $(G++FLAG) -o selscan selscan-main.o selscan-maintools.o selscan-data.o selscan-cli.o binom.o selscan-pbar.o param_t.o gzstream.o hamming_t.o $(LINK_OPTS2)
+$(BUILD)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-selscan-main.o : selscan-main.cpp
-	$(CC) $(G++FLAG) -c selscan-main.cpp $(I_PATH)
+# header dependencies written by -MMD
+-include $(OBJS:.o=.d)
 
-selscan-maintools.o : selscan-maintools.cpp selscan-maintools.h
-	$(CC) $(G++FLAG) -c selscan-maintools.cpp $(I_PATH)
+check: $(BIN)
+	../tests/run_tests.sh --bin ./$(BIN)
 
-selscan-data.o : selscan-data.cpp selscan-data.h
-	$(CC) $(G++FLAG) -c selscan-data.cpp $(I_PATH)
+install: $(BIN)
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BIN) $(DESTDIR)$(PREFIX)/bin/
 
-selscan-cli.o : selscan-cli.cpp selscan-cli.h
-	$(CC) $(G++FLAG) -c selscan-cli.cpp $(I_PATH)
+clean:
+	rm -rf $(BUILD) $(BIN)
 
-selscan-pbar.o : selscan-pbar.cpp selscan-pbar.h
-	$(CC) $(G++FLAG) -c selscan-pbar.cpp $(I_PATH)
-
-binom.o : binom.cpp binom.h
-	$(CC) $(G++FLAG) -c binom.cpp
-
-norm : norm.o param_t.o
-	$(CC) $(G++FLAG) -o norm norm.o param_t.o $(LINK_OPTS)
-
-norm.o : norm.cpp
-	$(CC) $(G++FLAG) -c norm.cpp $(I_PATH)
-
-param_t.o : param_t.cpp param_t.h
-	$(CC) $(G++FLAG) -c param_t.cpp
-
-gzstream.o : gzstream.cpp gzstream.h
-	$(CC) $(G++FLAG) -c gzstream.cpp $(I_PATH)
-
-hamming_t.o : hamming_t.cpp hamming_t.h
-	$(CC) $(G++FLAG) -c hamming_t.cpp $(I_PATH)
-
-clean :
-	rm *.o
+.PHONY: all check install clean

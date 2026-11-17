@@ -1,0 +1,742 @@
+#include <memory>
+#include "xpihh.h"
+#include "../thread_pool.h"
+
+XPIHH_ehh_data::~XPIHH_ehh_data(){
+    delete[] group_count;
+    delete[] group_id;
+}
+
+void XPIHH::updateGroup_from_split_unphased( GroupSplitMap& m, int* group_count, int* group_id, int& totgc){
+    for (const auto &ele : m) {
+        int old_group_id = ele.first;
+        int newgroup_size = ele.second.size() ;
+
+        if(group_count[old_group_id] == newgroup_size || newgroup_size == 0){
+            continue;
+        }
+        for(int v: ele.second){
+            group_id[v] = totgc;
+        }
+         
+        // update group count of newly split 2 groups 
+        group_count[old_group_id] -= newgroup_size;
+        group_count[totgc++] += newgroup_size;
+    }
+}
+
+void XPIHH::updateEHH_from_split(const GroupSplitMap& m, XPIHH_ehh_data* ehhdata){
+    for (const auto &ele : m) {
+        int old_group_id = ele.first;
+        int newgroup_size = ele.second.size() ;
+
+        if(ehhdata->group_count[old_group_id] == newgroup_size || newgroup_size == 0){ //if a group becomes empty, we don't increment num_groups, we just reuse that group
+            continue;
+        }
+
+        for(int v: ele.second){
+            ehhdata->group_id[v] = ehhdata->totgc;
+            if(v > ehhdata->nhaps || v < 0){
+                HANDLE_ERROR("set_bit_pos out of bounds in XPIHH::updateEHH_from_split");
+            }
+        }
+        
+        double del_update = -twice_num_pair(ehhdata->group_count[old_group_id]) + twice_num_pair(newgroup_size) + twice_num_pair(ehhdata->group_count[old_group_id] - newgroup_size);
+        if(p.ALT){
+            del_update = -square_alt(ehhdata->group_count[old_group_id]) +   square_alt(newgroup_size) + square_alt(ehhdata->group_count[old_group_id] - newgroup_size);
+        }
+        
+        ehhdata->group_count[old_group_id] -= newgroup_size;
+        if(old_group_id > ehhdata->nhaps || old_group_id < 0){
+            cerr<<old_group_id<<" "<<ehhdata->nhaps<<endl;
+            HANDLE_ERROR("set_bit_pos out of bounds in XPIHH::updateEHH_from_split");
+        }
+        ehhdata->group_count[ehhdata->totgc] += newgroup_size;  
+        if(ehhdata->totgc > ehhdata->nhaps || ehhdata->totgc < 0){
+            //cout<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
+            throw std::runtime_error("set_bit_pos out of bounds");
+            exit(1);
+        }
+        
+        ehhdata->totgc += 1;
+        ehhdata->curr_ehh_before_norm += del_update;
+        if(ehhdata->totgc > ehhdata->nhaps){
+            //cerr<<ehhdata->totgc<<" "<<ehhdata->nhaps<<endl;
+            throw std::runtime_error("totgc out of bounds");
+            exit(1);
+        }
+    }
+}
+
+// ----------------------------------- //
+
+
+pair<double, double> XPIHH::calc_ehh_unidirection_unphased(int locus,  bool downstream){
+    int numSnps = hm->hapData->nloci; // must be same for both hapData and hapData2
+
+    double ihh_p1 = 0;
+    double ihh_p2 = 0;
+
+    // P4: owned by unique_ptr so every return path frees them
+    std::unique_ptr<XPIHH_ehh_data_unphased> p1_own(new XPIHH_ehh_data_unphased()), p2_own(new XPIHH_ehh_data_unphased()), pooled_own(new XPIHH_ehh_data_unphased());
+    XPIHH_ehh_data_unphased* p1 = p1_own.get();
+    XPIHH_ehh_data_unphased* p2 = p2_own.get();
+    XPIHH_ehh_data_unphased* pooled = pooled_own.get();
+    
+    p1->nhaps = hm->hapData->nhaps;
+    p2->nhaps = hm->hapData2->nhaps;
+    pooled->nhaps = p1->nhaps + p2->nhaps;
+
+    p1->group_count = new int[p1->nhaps];
+    p2->group_count = new int[p2->nhaps];
+    pooled->group_count = new int[pooled->nhaps];
+
+    p1->group_id = new int[p1->nhaps];
+    p2->group_id = new int[p2->nhaps];
+    pooled->group_id = new int[pooled->nhaps];
+
+    // init group_count and group_id  to 0
+    for(int i = 0; i< p1->nhaps; i++){
+        p1->group_count[i] = 0;
+        //p1->group_id[i] = 0;
+        pooled->group_count[i] = 0;
+        //pooled->group_id[i] = 0;
+    }
+
+     // init  group_count and group_id to 0
+    for(int i = 0; i< p2->nhaps; i++){
+        p2->group_count[i] = 0;
+        //p2->group_id[i] = 0;
+        pooled->group_count[p1->nhaps + i] = 0;
+        //pooled->group_id[p1->nhaps + i] = 0;
+    }
+
+    p1->n_c[1] = hm->hapData->get_n_c1(locus);
+    p2->n_c[1] = hm->hapData2->get_n_c1(locus);
+        
+    p1->n_c[0] = hm->hapData->get_n_c0(locus);
+    p2->n_c[0] = hm->hapData2->get_n_c0(locus);
+
+    p1->n_c[2] = hm->hapData->get_n_c2(locus);
+    p2->n_c[2] = hm->hapData2->get_n_c2(locus);
+
+    pooled->n_c[0] = p1->n_c[0] + p2->n_c[0];
+    pooled->n_c[1] = p1->n_c[1] + p2->n_c[1];
+    pooled->n_c[2] = p1->n_c[2] + p2->n_c[2];
+
+    if(pooled->n_c[1] + pooled->n_c[2] + pooled->n_c[0] != pooled->nhaps){
+        std::ostringstream oss;
+        oss << pooled->n_c[1] << " "
+            << pooled->n_c[2] << " "
+            << pooled->n_c[0] << " "
+            << pooled->nhaps << "\n";
+        HANDLE_ERROR(oss.str() + "n_c1 + n_c2 + n_c0 != numHaps");
+    }
+
+    if(p.ALT){
+        p1->normalizer = square_alt(p1->nhaps);
+        p2->normalizer = square_alt(p2->nhaps);
+        pooled->normalizer = square_alt(pooled->nhaps);
+    }else if(p.WAGH){
+        p1->normalizer = twice_num_pair(p1->n_c[0])+twice_num_pair(p1->n_c[1])+twice_num_pair(p1->n_c[2]);
+        p2->normalizer = twice_num_pair(p2->n_c[0])+twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[2]);
+        pooled->normalizer = twice_num_pair(pooled->n_c[0])+twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[2]);
+    }else{
+        p1->normalizer = twice_num_pair(p1->nhaps);
+        p2->normalizer = twice_num_pair(p2->nhaps);
+        pooled->normalizer = twice_num_pair(pooled->nhaps);
+    }
+
+    MyBitset* p1_all1 = hm->hapData->hapEntries[locus].hapbitset;
+    MyBitset* p2_all1 = hm->hapData2->hapEntries[locus].hapbitset;
+
+    MyBitset* p1_all2 = hm->hapData->hapEntries[locus].xorbitset;
+    MyBitset* p2_all2 = hm->hapData2->hapEntries[locus].xorbitset;
+
+    //assign groups
+    pooled->assign_groups(p1_all1, p1_all2, p2_all1, p2_all2, p1->nhaps);
+    p1->assign_groups(p1_all1, p1_all2);
+    p2->assign_groups(p2_all1, p2_all2);
+
+    if(p.ALT){
+        p1->curr_ehh_before_norm = square_alt(p1->n_c[2])+square_alt(p1->n_c[1])+square_alt(p1->n_c[0]);
+        p2->curr_ehh_before_norm = square_alt(p2->n_c[2])+square_alt(p2->n_c[1])+square_alt(p2->n_c[0]);
+        pooled->curr_ehh_before_norm = square_alt(pooled->n_c[2])+square_alt(pooled->n_c[1])+square_alt(pooled->n_c[0]);
+    }else{
+        p1->curr_ehh_before_norm =  twice_num_pair(p1->n_c[2]) + twice_num_pair(p1->n_c[1])+twice_num_pair(p1->n_c[0]);
+        // Each group's core homozygosity from its OWN genotype-class counts.
+        // 2.1.x-3.0.1 used population 1's homozygous-derived count (p1->n_c[2])
+        // for population 2 and the pooled sample, so unphased XP-EHH/XP-nSL
+        // were wrong and not antisymmetric under swapping the populations.
+        p2->curr_ehh_before_norm =  twice_num_pair(p2->n_c[2]) +  twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[0]);
+        pooled->curr_ehh_before_norm =  twice_num_pair(pooled->n_c[2]) + twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[0]);
+    }
+
+    p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;
+    p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
+    pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
+
+    int i = locus;     
+    int prev_index = locus; 
+    while(true){
+        double pooled_ehh = (p.ALT ? pooled->curr_ehh_before_norm / square_alt(pooled->nhaps) : pooled->curr_ehh_before_norm/twice_num_pair(pooled->nhaps));
+
+        // TODO: should i do for WAGH as well?
+        if(pooled_ehh <= p.EHH_CUTOFF){
+            break;
+        }
+
+        if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
+        {
+            {std::lock_guard<std::mutex> lock(mutex_log);   // one lock per message (M7)
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ".";
+            if (!p.TRUNC) (*flog) << " Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
+            (*flog) << "\n";
+            }//unlock
+            if (!p.TRUNC){
+                return skipLocusPair();
+            }
+            break;
+        }
+
+
+        if(downstream){
+            if (--i < 0) break;
+        }else{
+            if (++i >= numSnps) break;
+        }
+
+        // if(downstream){
+        //     if (--i < 0) break;
+        // }else{
+        //     if (++i >= numSnps) break;
+        // }
+        // bool edgeBreak = nextLocOutOfBounds(i, downstream);
+        // if(edgeBreak) {
+        //     break;
+        // }
+
+
+
+        if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
+        {
+            {std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i, prev_index, downstream)
+                    << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock
+            return skipLocusPair();
+        }
+
+        double scale, distance;
+        if(p.CALC_XPNSL){
+            // One unit per retained site, as in the phased kernel and in nSL
+            // (B47). snpDistance() counts raw file-1 records, including ones
+            // removed before analysis.
+            distance = 1;
+        }else{
+            distance = geneticDistance(i, prev_index, downstream);   // why was it physicalDistance before?
+        }
+
+        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, prev_index, downstream);   
+        if(scale > 1) scale = 1;
+        distance *= scale;
+
+        prev_index = i; 
+
+        GroupSplitMap& m = threadSplitMap(0);   // P5
+
+        GroupSplitMap& m_pooled = threadSplitMap(1);   // P5
+
+        // A population whose individuals are all unique is no longer
+        // integrated (PI decision; the phased kernel and the iHS --alt rule
+        // B9 do the same). Its binomial EHH is 0 then, so this changes only
+        // --alt, where the all-unique EHH is 1/n.
+        const bool open1 = (p1->totgc != p1->nhaps);
+        const bool open2 = (p2->totgc != p2->nhaps);
+
+        if(p1->totgc != p1->nhaps){
+            ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
+                int old_group_id = p1->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);         
+            });
+            updateGroup_from_split_unphased(m, p1->group_count, p1->group_id, p1->totgc);
+            m.clear();
+
+            ACTION_ON_ALL_SET_BITS(get_all_2s(i), {
+                int old_group_id = p1->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);    
+                //m_pooled[old_group_id].push_back(set_bit_pos);     
+            });
+            updateGroup_from_split_unphased(m, p1->group_count, p1->group_id, p1->totgc);
+            m.clear();
+        }
+        
+        if(p2->totgc != p2->nhaps){
+            ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(i), {
+                int old_group_id = p2->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);  
+            });
+            updateGroup_from_split_unphased(m, p2->group_count, p2->group_id, p2->totgc);
+            m.clear();
+
+            ACTION_ON_ALL_SET_BITS(get_all_2s_pop2(i), {
+                int old_group_id = p2->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);  
+            });
+            updateGroup_from_split_unphased(m, p2->group_count, p2->group_id, p2->totgc);
+            m.clear();
+        }
+
+        if(pooled->totgc != pooled->nhaps){
+            //NOW POOLED 1
+            ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
+                int old_group_id = pooled->group_id[set_bit_pos];
+                m_pooled[old_group_id].push_back(set_bit_pos); 
+            });
+      
+            ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(i), {
+                int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
+                m_pooled[old_group_id].push_back(set_bit_pos + p1->nhaps);  
+            });
+
+            updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
+            m_pooled.clear(); 
+
+            ACTION_ON_ALL_SET_BITS(get_all_2s(i), {
+                int old_group_id = pooled->group_id[set_bit_pos];
+                m_pooled[old_group_id].push_back(set_bit_pos);  
+            });
+
+            ACTION_ON_ALL_SET_BITS(get_all_2s_pop2(i), {
+                int old_group_id = pooled->group_id[set_bit_pos  + p1->nhaps];
+                m_pooled[old_group_id].push_back(set_bit_pos + p1->nhaps);
+            });
+
+            updateGroup_from_split_unphased(m_pooled, pooled->group_count, pooled->group_id, pooled->totgc);
+
+            // no need to update pooled ihh as we are not interested in it
+            m_pooled.clear(); 
+        }
+
+        pooled->curr_ehh_before_norm = 0;
+        for(int x = 0; x<pooled->totgc; x++){
+            long double gcsquare = twice_num_pair_or_square(pooled->group_count[x],p.ALT);
+            pooled->curr_ehh_before_norm += gcsquare;
+        }
+        pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm; // no need to update pooled ihh as we are not interested in it
+        
+        ///. NOW UPDATE EHH COUNT
+        // equivalent to calcHomozoygosity (without the normalization)
+        // DO IT FOR p1
+        p1->curr_ehh_before_norm = 0;
+        for(int x = 0; x<p1->totgc; x++){
+            long double gcsquare = twice_num_pair_or_square(p1->group_count[x],p.ALT);
+            p1->curr_ehh_before_norm += gcsquare;
+        }
+
+        //do it for p2
+        p2->curr_ehh_before_norm = 0;
+        for(int x = 0; x<p2->totgc; x++){
+            long double gcsquare = twice_num_pair_or_square(p2->group_count[x],p.ALT);
+            p2->curr_ehh_before_norm += gcsquare;
+        }
+
+        if (open1) {
+            ihh_p1 += 0.5*distance*(p1->curr_ehh_before_norm + p1->prev_ehh_before_norm)/p1->normalizer;
+            p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;
+        }
+        if (open2) {
+            ihh_p2 += 0.5*distance*(p2->curr_ehh_before_norm + p2->prev_ehh_before_norm)/p2->normalizer;
+            p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
+        }
+
+        // check if current locus is beyond 1Mb
+        if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;
+        if(p.CALC_XPNSL && abs(i - locus) >= max_extend) break;   // retained sites (B47)
+        // if(downstream){
+        //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
+
+        // }else{
+        //     cout<<locus<<":::r "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
+        // }
+    }
+    return make_pair(ihh_p1, ihh_p2);
+}
+
+/**
+ * Calculate EHH in only one direction until cutoff is hit - upstream or downstream
+*/
+pair<double, double> XPIHH::calc_ehh_unidirection(int locus,  bool downstream){
+    if(p.UNPHASED){
+        return calc_ehh_unidirection_unphased(locus, downstream);
+    }
+
+    GroupSplitMap& m = threadSplitMap(0);   // P5
+
+    if(hm->hapData->nloci != hm->hapData2->nloci){
+        HANDLE_ERROR("Number of loci in both reference and non-reference hapData should be same.");
+    }
+
+    double ihh_p1 = 0;
+    double ihh_p2 = 0;
+
+    // P4: owned by unique_ptr so every return path frees them
+    std::unique_ptr<XPIHH_ehh_data> p1_own(new XPIHH_ehh_data()), p2_own(new XPIHH_ehh_data()), pooled_own(new XPIHH_ehh_data());
+    XPIHH_ehh_data* p1 = p1_own.get();
+    XPIHH_ehh_data* p2 = p2_own.get();
+    XPIHH_ehh_data* pooled = pooled_own.get();
+    
+    p1->nhaps = hm->hapData->nhaps;
+    p2->nhaps = hm->hapData2->nhaps;
+    pooled->nhaps = p1->nhaps + p2->nhaps;
+
+    p1->group_count = new int[p1->nhaps];
+    p2->group_count = new int[p2->nhaps];
+    pooled->group_count = new int[pooled->nhaps];
+
+    p1->group_id = new int[p1->nhaps];
+    p2->group_id = new int[p2->nhaps];
+    pooled->group_id = new int[pooled->nhaps];
+
+    for(int i = 0; i< p1->nhaps; i++){
+        p1->group_count[i] = 0;
+        p1->group_id[i] = 0;
+        pooled->group_count[i] = 0;
+        pooled->group_id[i] = 0;
+    }
+
+    for(int i = 0; i< p2->nhaps; i++){
+        p2->group_count[i] = 0;
+        p2->group_id[i] = 0;
+        pooled->group_count[p1->nhaps + i] = 0;
+        pooled->group_id[p1->nhaps + i] = 0;
+    }
+
+    p1->n_c[1] = hm->hapData->get_n_c1(locus);
+    p2->n_c[1] = hm->hapData2->get_n_c1(locus);
+        
+    p1->n_c[0] = p1->nhaps - p1->n_c[1];
+    p2->n_c[0] = p2->nhaps - p2->n_c[1];
+
+    pooled->n_c[1] = p1->n_c[1] + p2->n_c[1];
+    pooled->n_c[0] = pooled->nhaps - pooled->n_c[1];
+
+    if(p.ALT){
+        p1->normalizer = square_alt(p1->nhaps);
+        p2->normalizer = square_alt(p2->nhaps);
+        pooled->normalizer = square_alt(pooled->nhaps);
+    }else if(p.WAGH){
+        p1->normalizer = twice_num_pair(p1->n_c[0])+twice_num_pair(p1->n_c[1]);
+        p2->normalizer = twice_num_pair(p2->n_c[0])+twice_num_pair(p2->n_c[1]);
+        pooled->normalizer = twice_num_pair(pooled->n_c[0])+twice_num_pair(pooled->n_c[1]);
+    }else{
+        p1->normalizer = twice_num_pair(p1->nhaps);
+        p2->normalizer = twice_num_pair(p2->nhaps);
+        pooled->normalizer = twice_num_pair(pooled->nhaps);
+    }
+
+    //init core
+    if(p1->n_c[1]==0 || p1->n_c[1]==p1->nhaps){    //monomorphic
+        p1->group_count[0] = p1->nhaps;
+        p1->totgc+=1;
+    }else{
+        p1->group_count[1] = p1->n_c[1];
+        p1->group_count[0] = p1->n_c[0];
+        p1->totgc+=2;
+        ACTION_ON_ALL_SET_BITS(get_all_1s(locus), {
+            p1->group_id[set_bit_pos] = 1;
+        });
+    }
+
+    if(p2->n_c[1]==0 || p2->n_c[1]==p2->nhaps){    //monomorphic
+        p2->group_count[0] = p2->nhaps;
+        p2->totgc+=1;
+    }else{
+        p2->group_count[1] = p2->n_c[1];
+        p2->group_count[0] = p2->n_c[0];
+        p2->totgc+=2;
+        ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(locus), {
+            p2->group_id[set_bit_pos] = 1;
+        });
+    }
+
+    if(pooled->n_c[1]==0 || pooled->n_c[1]==pooled->nhaps){    //monomorphic
+        pooled->group_count[0] = pooled->nhaps;
+        pooled->totgc+=1;
+    }else{
+        pooled->group_count[1] = pooled->n_c[1];
+        pooled->group_count[0] = pooled->n_c[0];
+        pooled->totgc+=2;
+
+        ACTION_ON_ALL_SET_BITS(get_all_1s(locus), {
+            pooled->group_id[set_bit_pos] = 1;
+        });
+        ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(locus), {
+            pooled->group_id[set_bit_pos + p1->nhaps] = 1;
+        });
+    }
+
+    if(p.ALT){
+        p1->curr_ehh_before_norm = square_alt(p1->n_c[1])+square_alt(p1->n_c[0]);
+        p2->curr_ehh_before_norm = square_alt(p2->n_c[1])+square_alt(p2->n_c[0]);
+        pooled->curr_ehh_before_norm = square_alt(pooled->n_c[1])+square_alt(pooled->n_c[0]);
+    }else{
+        p1->curr_ehh_before_norm = twice_num_pair(p1->n_c[1])+twice_num_pair(p1->n_c[0]);
+        p2->curr_ehh_before_norm = twice_num_pair(p2->n_c[1])+twice_num_pair(p2->n_c[0]);
+        pooled->curr_ehh_before_norm = twice_num_pair(pooled->n_c[1])+twice_num_pair(pooled->n_c[0]);
+    }
+
+    p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;
+    p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
+    pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
+    
+    int i = locus;     
+    int prev_index = locus;
+    while(true){
+        double pooled_ehh = (p.ALT ? pooled->curr_ehh_before_norm / square_alt(pooled->nhaps) : pooled->curr_ehh_before_norm/twice_num_pair(pooled->nhaps));
+        
+        // TODO: should i do for WAGH as well?
+        if(pooled_ehh <= p.EHH_CUTOFF){
+            break;
+        }
+
+        //if ((downstream && i-1<0) || (!downstream && i+1>=numSnps))
+        bool edgeBreak = nextLocOutOfBounds(i, downstream);
+        if(edgeBreak)
+        {
+            {std::lock_guard<std::mutex> lock(mutex_log);   // one lock per message (M7)
+            (*flog) << "WARNING: Reached chromosome edge before EHH decayed below " << p.EHH_CUTOFF << ".";
+            if (!p.TRUNC) (*flog) << " Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName;
+            (*flog) << "\n";
+            }//unlock
+
+            if (!p.TRUNC){
+                return skipLocusPair();
+            }
+            break;
+        }
+
+        i = downstream ? i - 1 : i + 1;
+        // if(downstream){
+        //     if (--i < 0) break;
+        // }else{
+        //     if (++i >= numSnps) break;
+        // }
+
+        if (physicalDistance(i, prev_index, downstream) > p.MAX_GAP)
+        {
+            {std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: Reached a gap of " << physicalDistance(i, prev_index, downstream)
+                    << "bp > " << p.MAX_GAP << "bp. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock
+            
+            return skipLocusPair();
+            //hm->mapData->mapEntries[locus].skipLocus = true;
+            //break;
+        }
+
+        double scale, distance;
+        if(p.CALC_XPNSL){
+            distance = 1;   // one unit per retained site (B47)
+        }else{
+            distance = geneticDistance(i, prev_index, downstream); // why was it physicalDistance before?
+        }
+        scale = double(p.SCALE_PARAMETER) / physicalDistance(i, prev_index, downstream);   
+        if(scale > 1) scale = 1;
+        distance *= scale;
+        prev_index = i;
+
+        if(p1->totgc != p1->nhaps){
+            ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
+                int old_group_id = p1->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);      
+            });
+            
+            updateEHH_from_split(m, p1);
+            ihh_p1 += 0.5*distance*(p1->curr_ehh_before_norm + p1->prev_ehh_before_norm)/p1->normalizer;
+    
+            m.clear();
+
+            p1->prev_ehh_before_norm = p1->curr_ehh_before_norm;   
+        }
+        
+        if(p2->totgc != p2->nhaps){
+            ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(i), {
+                int old_group_id = p2->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos);  
+            });
+            updateEHH_from_split(m, p2);
+            ihh_p2 += 0.5*distance*(p2->curr_ehh_before_norm + p2->prev_ehh_before_norm)/p2->normalizer;
+            p2->prev_ehh_before_norm = p2->curr_ehh_before_norm;
+            m.clear();
+        }
+        
+        if(pooled->totgc != pooled->nhaps){
+            //NOW POOLED 1
+            ACTION_ON_ALL_SET_BITS(get_all_1s(i), {
+                int old_group_id = pooled->group_id[set_bit_pos];
+                m[old_group_id].push_back(set_bit_pos); 
+            });
+            //for pooled2
+            ACTION_ON_ALL_SET_BITS(get_all_1s_pop2(i), {
+                int old_group_id = pooled->group_id[set_bit_pos + p1->nhaps];
+                m[old_group_id].push_back(set_bit_pos + p1->nhaps);  
+            });
+
+            updateEHH_from_split(m, pooled);
+            pooled->prev_ehh_before_norm = pooled->curr_ehh_before_norm;
+            // no need to update pooled ihh as we are not interested in it
+            m.clear(); 
+        }
+
+        // check if current locus is beyond 1Mb
+        if(!p.CALC_XPNSL && physicalDistance(i,locus, downstream) >= max_extend) break;
+        if(p.CALC_XPNSL && abs(i - locus) >= max_extend) break;   // retained sites (B47)
+        // if(downstream){
+        //     cout<<locus<<":::l "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
+
+        // }else{
+        //     cout<<locus<<":::r "<<i << " "<<pooled->totgc<<" "<<p1->totgc<<" "<<p2->totgc<<"  p"<<pooled->curr_ehh_before_norm/pooled->normalizer<<" "<<p1->curr_ehh_before_norm/p1->normalizer<<" "<<p2->curr_ehh_before_norm/p2->normalizer<<" "<<ihh_p1<<" "<<ihh_p2<<endl;
+        // }
+    }
+
+
+    return make_pair(ihh_p1, ihh_p2);
+}
+
+void XPIHH::main()
+{
+    if(p.CALC_XPNSL){
+        this->max_extend = ( p.MAX_EXTEND_NSL <= 0 ) ? physicalDistance(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND_NSL;
+        init_global_fout("xpnsl");
+    }else{
+        this->max_extend = ( p.MAX_EXTEND <= 0 ) ? physicalDistance(0,hm->hapData->nloci-1,true) : p.MAX_EXTEND;
+        init_global_fout("xpehh");
+    }
+
+    int nloci = hm->mapData->nloci;
+    if(hm->hapData->nloci != hm->hapData2->nloci){
+        HANDLE_ERROR("Number of SNPs in both hapData and hapData2 should be same.");
+    }
+
+    // if (p.CALC_XPNSL){
+    //     for (int i = 0; i < hm->mapData->nloci; i++){
+    //         hm->mapData->mapEntries[i].geneticPos = i;
+    //     }
+    // }
+
+    if (p.CALC_XP) LOG("Starting XP-EHH calculations.");
+    if (p.CALC_XPNSL) LOG("Starting XP-nSL calculations.");
+
+    if (p.CALC_XP) (*fout) << "chr\tid\tpos\tgpos\tp1\tihh1\tp2\tihh2\txpehh\n";
+    if (p.CALC_XPNSL) (*fout) << "chr\tid\tpos\tgpos\tp1\tsL1\tp2\tsL2\txpnsl\n";
+
+    if(numThreads==1){
+        for (int i = 0; i < nloci; i++)
+        {
+            pair<double, double> ihh_p1_p2 = calc_xpihh(i);
+            double ihh_p1 = ihh_p1_p2.first;
+            double ihh_p2 = ihh_p1_p2.second;
+            
+            if ( !skipLocus(ihh_p1_p2))
+            {
+                (*fout) << hm->mapData->mapEntries[i].chr << "\t" << hm->mapData->mapEntries[i].locusName << "\t"
+                        << hm->mapData->mapEntries[i].physicalPos << "\t"
+                        << hm->mapData->mapEntries[i].geneticPos << "\t"
+                        << hm->hapData->calcFreq(i) << "\t"  //<< freq1[i] << "\t"
+                        << ihh_p1 << "\t"
+                        << hm->hapData2->calcFreq(i) << "\t"  //<< freq2[i] << "\t"
+                        << ihh_p2 << "\t"
+                        << log10(ihh_p1 / ihh_p2) << endl;
+            }
+        }
+    }else{
+        ThreadPool pool(p.numThreads);
+        std::vector< std::future<pair<double, double> > > results;
+        for(int i = 0; i <  hm->mapData->nloci; ++i) {
+            results.emplace_back(
+                pool.enqueue([i,this] {
+                    return this->calc_xpihh(i);
+                })
+            );
+        }
+        int locus = 0;
+        for(auto && result: results){ // this is a blocking call
+            pair<double, double> ihh_p1_p2 = result.get(); 
+            double ihh_p1 = ihh_p1_p2.first;
+            double ihh_p2 = ihh_p1_p2.second;
+
+            if (!skipLocus(ihh_p1_p2))
+            {
+                (*fout) << hm->mapData->mapEntries[locus].chr << "\t" << hm->mapData->mapEntries[locus].locusName << "\t"
+                        << hm->mapData->mapEntries[locus].physicalPos << "\t"
+                        << hm->mapData->mapEntries[locus].geneticPos << "\t"
+                        << hm->hapData->calcFreq(locus) << "\t"  //<< freq1[i] << "\t"
+                        << ihh_p1 << "\t"
+                        << hm->hapData2->calcFreq(locus) << "\t"  //<< freq2[i] << "\t"
+                        << ihh_p2 << "\t";
+                (*fout) << log10(ihh_p1 / ihh_p2) << endl;
+            }
+
+            locus++;
+            if(locus>hm->mapData->nloci){
+                HANDLE_ERROR("locus out of bounds");
+            }
+        }
+    }
+    LOG("Finished XP-EHH.");
+}
+
+/**
+ * populate ihh_p1 and ihh_p2 at the end with correct values
+*/
+pair<double, double> XPIHH::calc_xpihh(int locus)
+{
+
+    if(p.UNPHASED){
+        // No variation means one genotype class holds every individual in the
+        // pooled sample. 3.0.0-3.0.1 skipped a site whenever EITHER homozygous
+        // class was empty, which also removed segregating sites carried by
+        // heterozygotes plus one homozygous class.
+        const int c0 = hm->hapData->get_n_c0(locus) + hm->hapData2->get_n_c0(locus);
+        const int c1 = hm->hapData->get_n_c1(locus) + hm->hapData2->get_n_c1(locus);
+        const int c2 = hm->hapData->get_n_c2(locus) + hm->hapData2->get_n_c2(locus);
+        if( c1 + c2 == 0 || c0 + c1 == 0 || c0 + c2 == 0 ){  
+            {std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock
+            return skipLocusPair();
+        }
+    }else{
+        if (hm->hapData->get_n_c1(locus)  + hm->hapData2->get_n_c1(locus) == 0 || hm->hapData->get_n_c0(locus)  + hm->hapData2->get_n_c0(locus) == 0 ){
+            {std::lock_guard<std::mutex> lock(mutex_log);
+                (*flog) << "WARNING: no variation. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock{
+            return skipLocusPair();
+        }
+    }
+    
+    //works for both phased and unphased
+    pair<double, double> right = calc_ehh_unidirection(locus, false);
+    if(skipLocus(right)){
+        return skipLocusPair();
+    }
+
+    pair<double, double> left = calc_ehh_unidirection(locus, true); 
+    if(skipLocus(left)){
+        return skipLocusPair();
+    }
+
+    double ihh1 = (left.first + right.first);
+    double ihh2 = (left.second + right.second);
+
+    if(ihh1 == 0 || ihh2 == 0){
+        {std::lock_guard<std::mutex> lock(mutex_log);
+            (*flog) << "WARNING: ihh is zero. Skipping calculation at position " << hm->mapData->mapEntries[locus].physicalPos << " id: " << hm->mapData->mapEntries[locus].locusName << "\n";
+            }//unlock
+            
+        return skipLocusPair();
+    }
+
+    return make_pair(ihh1, ihh2);
+}

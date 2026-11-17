@@ -1,3 +1,6 @@
+#include <limits>
+#include <cmath>
+#include <cerrno>
 #include "param_t.h"
 #include <cstdlib>
 #include <cstdio>
@@ -30,7 +33,8 @@ bool param_t::addFlag(string flag, double value, string label, string descriptio
     {
         string buffer;
         char charBuffer[100];
-        sprintf(charBuffer, "%.2f", value);
+        //sprintf(charBuffer, "%.2f", value);
+        snprintf(charBuffer, sizeof(charBuffer), "%.2f", value);
         buffer = charBuffer;
         argd[flag] = value;
         help[flag] = "<double>: " + description + "\n\tDefault: " + buffer;
@@ -51,7 +55,8 @@ bool param_t::addFlag(string flag, int value, string label, string description)
     {
         string buffer;
         char charBuffer[100];
-        sprintf(charBuffer, "%d", value);
+        //sprintf(charBuffer, "%d", value);
+        snprintf(charBuffer, sizeof(charBuffer), "%d", value);
         buffer = charBuffer;
         argi[flag] = value;
         help[flag] = "<int>: " + description + "\n\tDefault: " + buffer;
@@ -72,7 +77,8 @@ bool param_t::addFlag(string flag, char value, string label, string description)
     {
         string buffer;
         char charBuffer[100];
-        sprintf(charBuffer, "%c", value);
+        //sprintf(charBuffer, "%c", value);
+        snprintf(charBuffer, sizeof(charBuffer), "%c", value);
         buffer = charBuffer;
         argch[flag] = value;
         help[flag] = "<char>: " + description + "\n\tDefault: " + buffer;
@@ -115,7 +121,8 @@ bool param_t::addListFlag(string flag, int value, string label, string descripti
     {
         string buffer;
         char charBuffer[100];
-        sprintf(charBuffer, "%d", value);
+        //sprintf(charBuffer, "%d", value);
+        snprintf(charBuffer, sizeof(charBuffer), "%d", value);
         buffer = charBuffer;
         listargi[flag].push_back(value);
         help[flag] = "<int1> ... <intN>: " + description + "\n\tDefault: " + buffer;
@@ -156,46 +163,56 @@ void param_t::printHelp()
 {
     map<string, string>::iterator it;
 
-    cerr << preamble << endl;
+    // U12: help goes to stdout (it was stderr, so `--help | less` was empty)
+    cout << preamble << endl;
 
-    cerr << "----------Command Line Arguments----------\n\n";
+    cout << "----------Command Line Arguments----------\n\n";
 
     for (it = help.begin(); it != help.end(); it++)
     {
         if (labels[(*it).first].compare("SILENT") != 0)
         {
-            cerr << (*it).first << " " << (*it).second << "\n\n";
+            cout << (*it).first << " " << (*it).second << "\n\n";
         }
     }
 
     return;
 }
 
+// U5: a numeric value must be a complete number. Only digits, a sign, a
+// decimal point and an exponent are allowed, the whole token must be
+// consumed, and the value must be finite and (for integers) in int range.
+// 3.0.1 accepted "", "-" and "." (read as 0) and integers too large for
+// int (undefined behaviour), and rejected 1e-3 and a leading '+'.
 bool param_t::goodDouble(string str)
 {
-    string::iterator it;
-    //int dashCount = 0;
-    int decimalCount = 0;
-    for (it = str.begin(); it != str.end(); it++)
-    {
-        if (!isdigit(*it) && *it != '.' && *it != '-') return 0;
-        if (*it == '.') decimalCount++;
-        if (*it == '-' && it != str.begin()) return 0;
-        if (/*dashCount > 1 || */decimalCount > 1) return 0;
-    }
+    if (str.empty()) return 0;
+    for (char c : str)
+        if (!isdigit((unsigned char)c) && c != '.' && c != '-' && c != '+' && c != 'e' && c != 'E') return 0;
+    const char *s = str.c_str();
+    char *end = nullptr;
+    errno = 0;
+    double v = strtod(s, &end);
+    if (end == s || *end != '\0' || errno == ERANGE || !std::isfinite(v)) return 0;
     return 1;
 }
 
 bool param_t::goodInt(string str)
 {
-    string::iterator it;
-    //int dashCount = 0;
-    for (it = str.begin(); it != str.end(); it++)
+    if (str.empty()) return 0;
+    for (size_t i = 0; i < str.size(); i++)
     {
-        if (!isdigit(*it) && *it != '-') return 0;
-        if (*it == '-' && it != str.begin()) return 0;
-        //if (dashCount > 1) return 0;
+        char c = str[i];
+        if (isdigit((unsigned char)c)) continue;
+        if ((c == '-' || c == '+') && i == 0) continue;
+        return 0;
     }
+    const char *s = str.c_str();
+    char *end = nullptr;
+    errno = 0;
+    long long v = strtoll(s, &end, 10);
+    if (end == s || *end != '\0' || errno == ERANGE) return 0;
+    if (v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max()) return 0;
     return 1;
 }
 
@@ -310,6 +327,13 @@ bool param_t::parseCommandLine(int argc, char *argv[])
                 badFlags++;
                 break;
             }
+            else if (flagExists(string(argv[i + 1])))
+            {
+                // U6: the next token is another option, not a value
+                cerr << "ERROR: No argument found for " << argv[i] << " (" << argv[i + 1] << " is an option).\n";
+                badFlags++;
+                break;
+            }
             else
             {
                 args[argv[i]] = argv[i + 1];
@@ -379,7 +403,8 @@ bool param_t::parseCommandLine(int argc, char *argv[])
     if (getBoolFlag(ARG_HELP))
     {
         this->printHelp();
-        throw 0;
+        exit(EXIT_SUCCESS);
+        //throw 0;
     }
 
     if (badFlags) throw 0;
@@ -457,4 +482,9 @@ void param_t::setPreamble(string str)
 {
     preamble = str;
     return;
+}
+
+
+bool param_t::flagWasSet(const std::string &flag) {
+    return isSet.count(flag) > 0 && isSet[flag];
 }
